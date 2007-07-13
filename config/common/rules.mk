@@ -318,4 +318,4 @@ depend.mk:
 #	done
 	touch depend.mk
 
-include depend.mk
+#include depend.mk
