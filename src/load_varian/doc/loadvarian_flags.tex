@@ -1,0 +1,180 @@
+\documentclass[12pt, a4paper]{article}
+
+\usepackage{parskip}
+\usepackage{times}
+\usepackage{graphics}
+\usepackage{url}
+
+\title{Flags in Load Varian}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Usage:}
+\begin{verbatim}
+   load_varian input_filename output_filename [-options]
+\end{verbatim}
+
+\section*{Options:}
+
+\subsection*{Reordering}
+\begin{description}
+\item[-ms] Reorder data acquired in multislice.
+\item[-epi] Reorder data acquired using EPI, reversing alternate
+  echoes.
+\item[-lpss n] Reorder data acquired with the slice position (pss)
+  shifted every volume (looppss).  The number of blocks that the
+  slices are split into is specified by n.  The number of slices
+  divided by the number of blocks must be an integer.  Must be used in
+  conjunction with the -epi flag.
+\item[-fmap] Reorder data acquired using the field mapping sequence
+  (spin-echo, asymmetric spin-echo pairs). Must be used in
+  conjunction with the -ms flag.
+\item[-sear n] Reorder data from a multislice experiment (with
+  seqcon='ncsnn') where a parameter has been arrayed.  The number of
+  steps in the arrayed parameter is specified by n. Must be used in
+  conjunction with the -ms flag.
+\end{description}
+
+\subsection*{Processing}
+\begin{description}
+\item[-ft2d] Perform a 2D Fourier Transform on a slice by slice basis
+  through the data series.
+\item[-ft3d] Perform a 3D Fourier Transform on each volume of the data
+  series.
+\item[-ftr] Fourier Transforms the rows only.
+\item[-bl] Correct the baseline offset.
+\item[-zero n] Zeropad each slice matrix to n x n.
+\item[-zzero n] Zeropad in the z (slice) direction to n.  If the data
+  requires only 2D Fourier transformation then it is inverse Fourier
+  transformed in the z direction prior to zeropadding and then
+  transformed back.
+\item[-rot] Rotate each slice by 90 degrees.
+\item[-negrot] Rotate each slice by -90 degrees.
+\item[-revproc] Process the volumes in reverse order, but maintain the
+  original ordering in the output.  This is useful if the last volume
+  in the series is a better estimate of those parameters taken from
+  the first volume only (e.g. scaling, self-reference phase
+  correction, phase rotation).
+\item[-revload] Process and output the volumes in reverse order.
+\item[-hks] Apply half-kspace (half-Fourier) processing.  There are a
+  number of other flags that can control the type of half-kspace
+  processing options used, but these are intended for development and
+  testing.
+\item[-hkspad] Process the data as half-kspace, but without the
+  phasing or conjugation.
+\item[-nav n/m/p/mp] Signifies that the data has been acquired with
+  navigator echoes.  Follow -nav with n to remove the navigator echoes
+  but do no processing with them.  Specify m or p to use the navigator
+  to correct magnitude or phase of the data respectively and mp to
+  correct both magnitude and phase.  Note that this is for EPI data
+  only and is in development.
+\item[-shift n] Shift the data array by n pixels (tep correction).
+  Note that n must be an integer.
+
+\end{description}
+
+\subsection*{Input format}
+\begin{description}
+\item[-start n] Ignore the first n volumes.
+\item[-num n] Process n volumes only.
+\item[-avwin] Input file is a complex AVW file of time data.
+\item[-raw x y z v] Input file contains raw time data in the form of
+  real-imaginary pairs of short integers (shorts).  The matrix
+  dimensions are specified in x,y,z and v.
+\item[-series] Process all images in a series.  For example if the
+  input filename is \mbox{series\_3.1} then files
+  \mbox{series\_3.1.fid}, \mbox{series\_3.2.fid},
+  \mbox{series\_3.3.fid} etc. will be processed.
+\item[-orig] Read the raw data from the file
+  \url{input_filename.fid/fid.orig} instead of
+  \url{input_filename.fid/fid}.
+\item[-ne n] Specifies the number of echoes in a multi-echo data set.
+  This is only necessary if the number of echoes (ne) in procpar is
+  not correct.
+\end{description}
+
+\subsection*{Output format}
+\begin{description}
+\item[-16] Output the data as 16-bit integers (shorts).  The data will
+  automatically by scaled such that the maximum (0.99 percentile) is
+  20000.
+\item[-mod] Output the modulus of the complex data.
+\item[-phs] Output the phase of the complex data.
+\item[-re] Output the real part of the complex data.
+\item[-im] Output the imaginary part of the complex data.
+\item[-resl] Reslice the output data to the axial plane.
+\item[-segx low num] Segment the output volume in the x direction
+  starting from low, for num points.
+\item[-segy low num] Segment the output volume in the y direction
+  starting from low, for num points.
+\item[-segz low num] Segment the output volume in the z direction
+  starting from low, for num points.
+\item[-cp fn] Duplicates the output to this filename (fn).
+\end{description}
+
+\subsection*{EPI phase correction}
+\begin{description}
+\item[-ref fn] The name (fn) of a reference scan to use in the
+  phase correction.  In the absence of either -buo or -hu flags then
+  the reference scan is assumed to be a single volume EPI with no
+  phase-encoding.
+\item[-buo] Phase correction is done according to the Buonocore (self
+  reference) method.  If no reference scan is supplied (the normal
+  case) then the first volume of the series is used to correct all the
+  data.  If a reference scan file name is supplied (with the -ref
+  option) then this is taken to be a single phase-encoded volume from
+  which the phase correction will be calculated.
+\item[-buov] Apply the Buonocore correction (self reference)
+  correction on a volume by volume basis.
+\item[-hu] Phase correction is done according to the Hu method.  This
+  requires the name of a phase-encoded reference scan (supplied with
+  the -ref option) with the phase-encoding of opposite polarity to the
+  main data.
+\item[-con] Constrains the phase correction to be a single linear
+  correction of alternate lines in the slice.
+\item[-poly] Constrains the phase correction to be a single fifth
+  order polynomial correction of alternate lines in the slice.
+\item[-ph0 n] Apply a zeroth order alternate line phase correction of
+  n.
+\item[-ph1 n] Apply a first order alternate line phase correction of
+  n.  
+\end{description}
+
+\subsection*{Image post-processing}
+\begin{description}
+\item[{-scsl [fn]}] Scale slices in a volume based on slice position
+  and the scale values specified in a file
+  \url{FSLDIR/tcl/{rfcoil}.scale} or in the specified filename (fn).
+\item[-scale n] Scale all the values in the output data by a factor of
+  n.
+\item[-max n] Scale all the values in the output data so that the
+  maximum (based on 0.99 percentile) is equal to n.
+\item[-kmb n] Mask the border of each slice in k-space by n pixels
+  before Fourier Transform.
+\item[-imb n] Mask the border of each slice in the output image by n pixels.
+\item[-phrot n] Phase rotate volumes (in blocks of n) such that the
+  phase of the first volume in the block is zero across the whole
+  volume.
+\item[-smod n] Determine the sign of the phase of the data and output the
+  data as signed modulus.  The data series is treated in blocks of n volumes.
+\item[-phmap fn] Apply a phase map to the output {\em volume} based on
+  the values in a complex AVW file (fn).
+\end{description}
+
+\subsection*{Other}
+\begin{description}
+\item[-help] View the help message.
+\item[-overx n] Force the x dimension in the header file to be n.
+\item[-overy n] Force the y dimension in the header file to be n.
+\item[-overz n] Force the z dimension in the header file to be n.
+\item[-overv n] Force the v dimension in the header file to be n.
+  Note that these values affect the output header file only and not
+  how the data is processed.
+\item[-opss] Extract the slice position array (pss) to a file named
+  \mbox{\url{output_filename.pss}}.
+\end{description}
+
+\end{document}

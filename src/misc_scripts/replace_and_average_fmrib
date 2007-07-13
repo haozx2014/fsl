@@ -1,0 +1,329 @@
+#!/usr/local/bin/bash
+#averages multiple repeats and simultaneously remove dodgy volumes
+#to be used after regscript - for DTI images acquired at FMRIB 
+
+Usage() {
+echo ""
+echo "replace_and_average_fmrib - Preprocessing for DTI images acquired at FMRIB "
+echo "                    run after regscript to average multiple repeats"
+echo ""
+echo "if necessary, indicate dodgy volumes to be removed"
+echo ""
+echo "_________________________________________________________________________"
+echo "Usage: replace_and_average_fmrib <numb_acqs> volno volno ... volno "
+echo ""
+echo "output file will be called data"
+echo "Note that the first volume is 0 and not 1"
+echo ""
+echo "Example: if you want to remove vols 4 and 5 from data1"
+echo "                               vols 10 and 19 from data2"
+echo "                               vol 40 from data3"
+echo "         having acquired 3 repeats, 60 directions"
+echo ""
+echo " to the volumes corresponding to data2 (10 and 19)"
+echo " you should add the total number of volumes in each file,"
+echo " in this case 63 (= 3 non-DW + 60 direc)"
+echo " 126 (= 2*63) to the ones corresponding to data3 and so on..."
+echo ""
+echo "you should therefore type something like - "
+echo "              replace_and_average_fmrib 3 4 5 73 82 166" 
+echo "_________________________________________________________________________"
+
+exit
+}
+
+#===================================================================
+rem_vols() {
+
+#===================================================================
+# Arg_1 = input_file 
+# Arg_2 = num_acqs
+# Arg_3 ... Arg_n dodgy_vols 
+
+   
+input_file=$1
+numb_acqs=$2
+shift 2
+
+dodgy_vols=`cat dodgy_vols`
+echo "removing vols $dodgy_vols"
+
+current_dir=`pwd`
+
+acq=1
+while [ $acq -le $numb_acqs ];do
+  if [ ! `imtest ${input_file}${acq}` ]; then
+      echo Cant find $input_file 
+      exit
+  fi
+  acq=`expr $acq + 1`;
+done
+
+if [ ! -e bvals ]; then
+    echo Cant find bvals
+    exit
+fi
+
+if [ ! -e bvecs ]; then
+    echo Cant find bvecs
+    exit
+fi
+
+nvols=`avwval ${input_file}1 dim4`;
+
+acq=1
+while [ $acq -le $numb_acqs ]; do
+  echo splitting $input_file$acq
+  avwsplit $input_file$acq
+  volume=0;
+  if [ $nvols -lt 10 ]; then
+     while [ $volume -lt $nvols ]; do
+        immmv vol000$volume vol000${volume}_${acq}
+        volume=`expr $volume + 1`
+     done
+  else
+     volume=0
+     while [ $volume -lt 10 ]; do
+        immv vol000${volume} vol000${volume}_${acq}
+        volume=`expr $volume + 1`
+     done
+     while [ $volume -lt $nvols ]; do
+        immv vol00${volume} vol000${volume}_${acq}
+	volume=`expr $volume + 1`
+     done
+  fi
+ acq=`expr $acq + 1`;
+done
+
+vol=0
+num_dodgy_vols=`expr $#`
+while [ $vol -lt $num_dodgy_vols ]; do
+  v=$1
+  shift
+  if [ `imtest vol000${v}_1` ]; then
+    rm vol000${v}_* -f
+  fi 
+  if [ `imtest vol00${v}_1` ]; then
+    rm vol00${v}_* -f
+  fi 
+
+  vol=`expr $vol + 1`
+done
+
+acq=1
+while [ $acq -le $numb_acqs ]; do
+   rm ${input_file}${acq}* -f
+   avwmerge -t data$acq `$FSLDIR/bin/imglob -oneperimage vol*_$acq`
+   acq=`expr $acq + 1`; 
+done
+
+matlab -nodisplay -nojvm -nosplash 1> matlab.out1 2>&1 <<EOF
+
+addpath('/usr/people/dtiuser/etc/FMRIB_bvals_bvecs/')
+remove_vols('$current_dir')
+EOF
+rm matlab.out1 -f
+rm vol0* -f
+}
+#===================================================================
+check_vols() {
+
+#===================================================================
+# Arg_1 = n_vols
+# Arg_2 = num_acqs
+   
+n_vols=$1
+numb_acqs=$2
+
+matlab -nodisplay -nojvm -nosplash 1> matlab.out1 2>&1 <<EOF
+
+addpath('/usr/people/dtiuser/etc/FMRIB_bvals_bvecs/')
+check_vols($n_vols,$numb_acqs)
+EOF
+rm matlab.out1 -f
+}
+
+#===================================================================
+
+
+
+[ "$1" = "" ] && Usage
+
+numb_acqs=$1
+
+if [ $# -gt 1 ]; then
+  shift 1
+
+  if [ $numb_acqs -lt 2 ]; then
+    echo "replacevols_fmrib should be used when several repeats were acquired"
+    echo "use remove_vols instead if you want to remove dodgy volumes from single datasets"
+  fi
+ 
+  echo -n ""> vol_list
+
+  for i in $@ ; do
+    vol=$i
+    echo -n "$vol " >> vol_list
+    shift  
+  done
+
+  nvols=`avwval data1 dim4`;
+  n_vols=`echo $nvols`
+  dodgy_volumes=`cat vol_list`
+  echo dodgy volumes: $dodgy_volumes
+
+  check_vols $n_vols $numb_acqs
+  
+ if [ -e dodgy_vols ]; then
+      dodgy=`cat dodgy_vols`
+      rem_vols data $numb_acqs $dodgy
+  else
+      echo No volumes need to be removed
+  fi
+  
+  nvols=`avwval data1 dim4`;
+  
+  echo output will have $nvols volumes
+  
+  dodgy_volumes=`cat vol_list`
+  dodgy_volumes=`echo $dodgy_volumes`
+  
+  if [ -e dodgy_vols ]; then
+      if [ "$dodgy_volumes" != "" ]; then 
+	  echo dogdy volumes updated taking into account removed volumes
+	  echo dodgy volumes are now: $dodgy_volumes
+      fi
+  fi
+  
+  if [ "$dodgy_volumes" != "" ]; then  
+      acq=1
+      
+      echo "">file_list  
+      
+      while [ $acq -le $numb_acqs ];do
+	  echo data$acq >> file_list
+	  acq=`expr $acq + 1`;
+      done  
+      
+      file_list=`cat file_list`
+      avwmerge -t bigdata $file_list
+      rm file_list -f
+      
+      echo "0 $nvols" >average_file
+      acq=1
+      first=0
+      second=$nvols
+      while [ $acq -lt $numb_acqs ];do
+	  first=`expr $first + $nvols`;
+	  echo "$first $second">>average_file;
+	  acq=`expr $acq + 1`;
+      done
+      
+      echo "">>average_file
+      
+      acq=0 
+      n_vols=`echo $nvols`
+      
+      if [ $n_vols -lt 63 ]; then
+	  b0=0;
+	  while [ $acq -lt $numb_acqs ];do
+	      echo -n "$b0 " >> average_file
+	      acq=`expr $acq + 1`;
+	      b0=`expr $b0 + $n_vols`; 
+	  done;
+      else
+	  b0=0;b0_1=1;b0_2=2;echo ""
+	  while [ $acq -lt $numb_acqs ]; do
+	      echo -n "$b0 $b0_1 $b0_2 " >> average_file
+	      acq=`expr $acq + 1`;
+	      b0=`expr $b0 + $n_vols`;
+	      b0_1=`expr $b0_1 + $n_vols`;
+	      b0_2=`expr $b0_2 + $n_vols`;
+	  done;  
+      fi
+      
+      if [ $FSLOUTPUTTYPE != 'ANALYZE' ]; then
+	  avwchfiletype ANALYZE bigdata
+	  rm bigdata.nii.gz -f
+      fi
+      replacevols bigdata average_file $dodgy_volumes tmp_file
+      
+      if [ -e tmp_file.img.gz ]; then
+	  gunzip tmp_file.img.gz
+	  if [ -e tmp_file.hdr.gz ]; then
+	      gunzip tmp_file.hdr.gz
+	  fi
+      fi
+
+      if [ $FSLOUTPUTTYPE != 'ANALYZE' ]; then
+	  avwchfiletype $FSLOUTPUTTYPE tmp_file
+      fi
+
+      nvols=`avwval tmp_file dim4`;
+      n_vols=`echo $nvols` 
+      volsacqs=`avwval data1 dim4`;
+      vols_per_acqs=`echo $volsacqs`;
+      
+      rm bigdata* -f
+      avwroi tmp_file data 0 ${vols_per_acqs};
+      avwmaths data -mul 0 data;
+      
+      acq=0;
+      while [ ${acq} -lt ${numb_acqs} ]; do
+	  vol=0
+	  while [ ${vol} -lt ${vols_per_acqs} ]; do
+	      v_tmp=`expr $vol + ${vols_per_acqs} \* ${acq}`
+	      if [ $vol -lt 10 ]; then
+		  avwroi tmp_file vol${acq}_000${vol} $v_tmp 1;
+	      else
+		  avwroi tmp_file vol${acq}_00${vol} $v_tmp 1;
+	      fi
+	      vol=`expr $vol + 1`;
+	  done
+	 
+	  avwmerge -t data${acq}_all `$FSLDIR/bin/imglob -oneperimage vol${acq}_*`
+	  avwmaths data${acq}_all -div ${numb_acqs} data${acq}_all;
+	  avwmaths data -add data${acq}_all data;
+          rm data${acq}_all* vol${acq}* -f  
+      	  acq=`expr $acq + 1`;
+      done 
+      rm *_all* -f
+       rm tmp* -f
+       rm average_file -f
+  else
+      echo averaging the data
+      volsacqs=`avwval data1 dim4`;
+      vols_per_acqs=`echo $volsacqs`;
+      avwroi data1 data 0 ${vols_per_acqs};
+      avwmaths data -mul 0 data;
+      acq=1;
+      while [ ${acq} -le ${numb_acqs} ]; do
+	  avwmaths data${acq} -div ${numb_acqs} data${acq};
+	  avwmaths data -add data${acq} data;
+	  acq=`expr $acq + 1`;
+      done
+  fi
+  
+  rm dodgy_vols -f
+  rm vol_list -f
+  rm vol*_* -f
+
+else
+    echo no dodgy volumes
+    echo averaging the data
+    volsacqs=`avwval data1 dim4`;
+    vols_per_acqs=`echo $volsacqs`;
+    avwroi data1 data 0 ${vols_per_acqs};
+    avwmaths data -mul 0 data;
+    acq=1;
+    while [ ${acq} -le ${numb_acqs} ]; do
+        avwmaths data${acq} -div ${numb_acqs} data${acq};
+	avwmaths data -add data${acq} data;
+	acq=`expr $acq + 1`;
+    done
+fi
+
+echo extracting nodif image from averaged data
+avwroi data nodif 0 1
+rm tmp* -f
+rm vol* -f

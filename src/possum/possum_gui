@@ -1,0 +1,110 @@
+#!/bin/sh
+#POSSUM SCRIPT, runs pulse to creat pulse seq "pulse" and "pulse.info" ,then possum to create signal "signal", then signal2image to creat image "image"
+#e
+#################################################
+#DIRECTORIES and SCRIPTS
+INPUT=${HOME}/possum_data/input
+POSSUMDIR=${HOME}/fsl/${FSLMACHTYPE}/bin
+#POSSUMDIR=${FSLDIR}/bin
+#CODE=${HOME}/fslsrc/possum 
+
+#################################################
+#OBJECT
+OBJECT=${INPUT}/phantom/brain_basic+glial
+T1T2PD=${OBJECT}_T1T22PDCS_3T  
+
+#################################################
+#B0 PERTURBATION
+b0=zero                     #b0=${INPUT}/b0inh/b0
+
+#################################################
+#RF PULSE (slcprof_boxcar or slcprof_gaus)
+SLCPROF=${INPUT}/rf/slcprof_boxcar 
+
+#################################################
+#RF INHOMOGENEITIES
+RFrec=${INPUT}/rf/rfrec_hom
+RFtrans=${INPUT}/rf/rftrans_hom
+
+#################################################
+#ACTIVATION
+ACTIVATION=zero
+TIMECOURSE=zero
+
+#################################################
+#MOTION
+MOTION=${INPUT}/motion/zeromotion        
+
+#################################################
+#NOISE
+SIGMA=0                    #sigma=contrast/(2*64)
+
+#################################################
+#PULSE SEQUENCE
+seq=epi #epi or ge, def=epi
+TE=0.03 #(s), def=0.03        
+TR=3    #(s), def=3   
+TRslc=0.12    #(s), def=0.12                                 
+Nx=64   #def=64  
+Ny=64   #def=64
+dx=0.004 #(m),def=0.004
+dy=0.004 #(m),def=0.004
+maxG=0.055 #(T/m),def=0.055
+riseT=0.00022 #(s), def=0.00022
+BW=100000 #(Hz), def=100000=100KHz                               
+                                         
+numvol=1 # def=1                                  
+numslc=1 #for full vol with 6mm slices its needed 24 slices-collin brain, def=1                             
+slcthk=0.001 #(m), def=0.006  
+zstart=0.04 #(m), def=0
+gap=0 #(m), def=0  
+
+##################################################
+#WORK
+
+mkdir $1
+cd $1
+
+${POSSUMDIR}/pulse -i ${OBJECT} -o pulse --te=${TE} --tr=${TR} --trslc=${TRslc} --nx=${Nx} --ny=${Ny} --dx=${dx} --dy=${dy} --maxG=${maxG} --riset=${riseT} --bw=${BW} --numvol=${numvol} --numslc=${numslc} --slcthk=${slcthk} --zstart=${zstart} --seq=${seq} 
+
+
+#==========PRODUCE POSSUM SOLUTION==============================
+command="${POSSUMDIR}/possum -i ${OBJECT} -x ${T1T2PD} -o signal -f ${SLCPROF} -p pulse -m ${MOTION} -e mainmatrix"
+
+if [ ${RFrec} != zero ]; then
+  command="$command -r ${RFrec}"
+  ln -s ${RFrec}.nii.gz RFrec.nii.gz
+fi
+ if [ ${RFtrans} != zero ]; then
+  command="$command -s ${RFtrans}"
+  ln -s ${RFtrans}.nii.gz RFtrans.nii.gz
+fi
+
+if [ ${ACTIVATION} != zero ]; then
+  command="$command -q ${ACTIVATION} -u ${TIMECOURSE}"
+  ln -s ${ACTIVATION}.nii.gz T2.nii.gz
+fi
+
+if [ ${b0} != zero ]; then
+  command="$command -b ${b0}"
+  ln -s ${b0}.nii.gz b0.nii.gz
+fi
+
+echo $command
+$command
+#=========APPLY SIGNAL2IMAGE====================================
+${POSSUMDIR}/signal2image -i signal -o image -a -p pulse 
+${POSSUMDIR}/signal2image -i signal -k kspace -a -p pulse 
+${POSSUMDIR}/signal2image -i signal -k kspace -p pulse 
+
+ln -s ${POSSUMDIR}/generate_noise generate_noise
+ln -s ${POSSUMDIR}/generate_image generate_image
+ln -s ${POSSUMDIR}/generate_kspace generate_kspace
+ln -s ${OBJECT}.nii.gz object.nii.gz
+ln -s ${SLCPROF} slcprof
+ln -s ${MOTION} motion
+
+##################################################
+cd ..
+
+

@@ -1,0 +1,204 @@
+<html>
+<head>
+   <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+   <title>Fitting Functions to Images</title>
+</head>
+
+<hr width="100%">
+<center><h1>Fitting Functions to Images</h1></center>
+<hr width="100%">
+
+<p>
+iFit will calculate the parameters in a standard equation that best
+fit the time course of the input image group.  These fits are done on
+a pixel by pixel basis, returning an image of each parameter.
+
+<hr width="100%">
+
+<ul>
+<li><a href="#RunningiFit">Running iFit</a>
+<li><a href="#ChoosingFuncs">Choosing a Function and Fitting Method</a>
+<li><a href="#Advanced">Advanced Options</a>
+</ul>
+
+<hr width="100%">
+<a name="RunningiFit"></a>
+<h2>Running Image Fitting</h2>
+
+<ul>
+<li>
+For the script to successfully run you need to have a folder open in
+MEDx.
+
+<li>
+From the FSL menu, select <i>General</i>,
+then <i>iFit</i>.
+
+<li>
+The following window will appear
+</ul>
+
+<p><center><img src="basic.gif"></center>
+
+<ul>
+<li>Enter the group page containing the time series to be fit in the
+<i>Input Group</i> box.  The images in this group must be of either
+short integer or float data type.
+
+<li>The time taken in fitting the images will be greatly reduced if a
+mask is used.  Enter the appropriate image page in the <i>Mask</i>
+box.  This image can be of character, short integer or float data
+type.  It should be zero in regions not to be fitted, and non-zero in
+regions to be fitted.
+
+<li>Enter the number of data points in the fit in the <i>Number</i>
+box.  This is, for example, the number of inversion time volumes in
+the input group.  If the whole series of inversion times is repeated
+then set the number of averages appropriately. For example:
+
+<i>
+<p>If you have 10 volumes with inversion times 100, 200, 300,
+400, 500, 600, 700, 800, 900, 1000 ms then the <b>Number</b> of data
+values is 10 and the <b>Averages</b> 1.  <p>If you have 10 volumes
+with inversion times 100, 200, 300, 400, 500, 100, 200, 300, 400, 500
+ms then the <b>Number</b> of data values is 5 and the <b>Averages</b>
+2.
+</i>
+
+<li>If the x-values (time points) in the data series are regular then
+select <i>Regular</i> and enter the starting value and increment in
+the appropriate boxes. For example:
+
+<i>
+<p>If you have 10 volumes with inversion times 100, 200, 300,
+400, 500, 600, 700, 800, 900, 1000 ms then the <b>Start Value</b> is
+100 and the <b>Increment</b> is 100.
+</i>
+
+<li>If the x-values are irregular then select <i>Irregular</i> and
+press the edit values button.  An appropriate number of boxes will
+appears for you enter x-values in.  For example:
+
+<i>
+<p>If you have 4 volumes with inversion times of 100, 200, 400 and 800
+ms then set the <b>Number</b> to 4, select irregular and edit the
+values in the boxes.
+<p><center><img src="edit.gif"></center>
+</i>
+
+<li>Choose the appropriate function and fitting method as outlined
+below.
+
+<li>Press <i>OK</i> or <i>Apply</i> to run.
+
+</ul>
+
+<hr width="100%">
+<a name="ChoosingFuncs"></a>
+<h2>Choosing a Function and Fitting Method</h2>
+
+<p>There are seven functions available to fit the images to, and three
+fitting methods.  Not all functions can be fit with all methods.  The
+three fitting methods are described below, followed by a listing of
+the functions, the available methods and how the behaviour of the fit
+changes depending on other input parameters.
+
+<ul>
+<li><b>Regression</b>
+<br>Regression analysis it the only analytical method.  It uses the
+standard regression equation find the best fit line to the data.
+<br>
+<li><b>Powell</b>
+<br>This method is a basic minimisation routine.  It varies each of the
+input parameters until a minimum is found.  It can get stuck in local
+minima, and it's success depends upon the accuracy of the initial
+parameter estimates.  Parameter estimates must be entered either in
+the appropriate boxes (labled <i>Start from</i>), or a starting image
+can be entered (see <a href="#Advanced">Advanced options</a>)
+<br>
+<li><b>Levenberg-Marquardt</b>
+<br>This is a nonlinear modelling method, and is recommended for most
+cases.  Parameter estimates are required.
+</ul>
+
+
+<p>There are seven functions that can be fitted to the data
+
+<ul>
+<li><b>Linear: Y = A.X + B</b>
+<br>A straight forward linear fit to the data.  The regression method
+is recommended for this simple fit, which requires no initial estimates.
+<br>
+<li><b>Saturation Recovery : Y = A.(1-exp(-X/B))</b>
+<li><b>Inversion Recovery : Y = A.(1-2exp(-X/B))</b>
+<br>These fit to experiments with a single saturation/inversion pulse
+followed by a delay X.  For inversion recovery fit, the slope of the
+data will be automatically forced positive, if necessary, by
+multiplying every value by -1.
+These functions can be fitted using either Powell or
+Levenberg-Marquardt.  Levenberg-Marquardt is recommended.  Improved
+fits will be obtained using an image starting parameter (see
+<a href="#Advanced">Advanced options</a>).
+<br>
+<li><b>Exponential Decay : Y = A.exp(-X/B)</b>
+<br>This can be fitted using any of the methods.  For a single
+exponential decay, then use the regression method.  For a
+multi-exponential decay, use Levenberg-Marquardt (see
+<a href="#Advanced">Advanced options</a> for multiple curve definition)
+<br>
+<li><b>Modulus Inv Rec : Y = A.|1-2exp(-X/B)|</b>
+<br>This can only be fitted using Powell.
+<br>
+<li><b>Incomplete Inv Rec : Y = A.(1-(1-cosC).exp(-X/B))</b>
+<br>Here, the parameter C can be either fitted or set.  If an initial
+starting value is provided in the box <i>C</i> then this parameter
+will be fitted (i.e. a three parameter fit will be performed).  If a C
+image is provided then the value of C in the fitted equation will be
+set to that specified that particular voxel of the image (i.e. a two
+parameter fit will be performed).  The Levenberg-Marquardt method will
+only allow a C image and not a C fit.
+
+<li><b>Modulus Incomplete Inv Rec : Y = A.|1-(1-cosC).exp(-X/B)|</b>
+<br>As above, but can only be fitted using Powell.
+
+</ul>
+
+<hr width="100%">
+<a name="Advanced"></a>
+<h2>Advanced Options</h2>
+
+<p>Advanced options are revealed by clicking on the triangular button
+to the side of <i>Advanced</i>.
+
+<ul>
+<li><b>Fitting Limits</b>
+<br>Before saving the fitted parameters to images, the values can be
+clipped to specified values.  These fitting limits do not affect how
+the fit is done, only what is saved.  i.e. If the fit finds that the
+best values of A and B are 100000 and -30, then A and B will be set to
+zero of A has a maximum of 1000 and B a minimum of zero.  No attempt
+will be made to specifically find a good fit in the region specified.
+<br>
+<li><b>Number of Curves</b>
+<br>The Levenberg-Marquardt method allows for multiple curves to be
+fit to the data.  The stability of this has not been tested, so should
+be used with caution.  The initial guesses for the second and
+subsequent curves are all zero.
+<br>
+<li><b>Using Parameter Images</b>
+<br>Parameter images can greatly improve the fit.  If you have an
+image which gives a good estimate of the A parameter then this can be
+entered in the <i>'A' Image</i> box, revealed by checking the A(guess)
+box under advanced options.  The values in these image are used as the
+<b>initial parameter guesses</b> in the fit.  A <i>'C' image</i> can
+also be used.  This however is not used as a guess, but as the <b>actual
+value</b> in the function.
+<br>
+
+</ul>
+
+<hr width="100%">
+
+<div align=right><font size=-2>Stuart Clare 18.2.00</font></div>
+</body>
+</html>

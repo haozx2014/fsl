@@ -1,0 +1,11 @@
+#!/bin/sh
+# FSL GCC finder
+#  - Used by fslmachtype to report that GCC is not installed
+
+# Written by Duncan Mortimer
+#  FMRIB Analysis Group, University of Oxford
+
+# SHCOPYRIGHT
+
+echo "No GCC"
+exit 1

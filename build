@@ -1,0 +1,18 @@
+#!/bin/sh
+
+if [ $# -ge 1 ] ; then
+  PROJECTS="$@";
+else
+  PROJECTS="freeware utils znzlib niftiio fslio miscmaths \
+newimage libhfunc libss libvis meshclass misc_tcl bint \
+afni avwutils bet bet2 cluster fast fdt feat5 film filmbabe flame flirt \
+fslpres fugue mcflirt melodic2 misc_c miscvis mm \
+randomise siena slicetimer susan tbss \
+dropouts ifit load_varian taldaemon misc_scripts fast4 shapeModel first possum";
+fi
+
+echo "Building projects - see build.log file for progress..."
+./config/common/buildproj $PROJECTS > ./build.log 2>&1
+echo "Finished build : end of log file shows ..."
+tail -10 build.log
+

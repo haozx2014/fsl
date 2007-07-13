@@ -1,0 +1,264 @@
+<html>
+<head>
+   <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+   <title>Loading Varian FID Files into Medx</title>
+</head>
+
+<body>
+
+<hr width="100%">
+<center><h1>Loading Varian FID files into Medx</h1></center>
+<hr width="100%">
+
+<ul>
+<li>
+<a href="#Running_the_script">Processing data from conventional sequences.</a>
+<li>
+<a href="#Advanced_options">Advanced processing options.</a>
+<li>
+<a href="#LoadVarian_script">Running LoadVarian from a tcl script.</a>
+</ul>
+
+<a name="Running_the_script"></a>
+<hr width="100%">
+
+<h2>Processing data acquired using conventional sequences</h2>
+
+<p>
+<ul>
+<li>
+From the FSL menu, select <i>Load Varian</i>.
+<li>
+The following window will appear:
+</ul>
+
+<p><center><img src="basic.gif"></center>
+
+<p>
+<ul>
+<li>Enter the name of the fid file that is to be processed in the <i>Input
+filename</i> box. Pressing <i>Browse</i> will bring up a file select
+window box to make this easier.
+<li>The type of processing that is required should be automatically detected.
+<li>Press <I>OK</i> or <i>Apply</i> to load the data into Medx.
+<li>The data is loaded into Medx as 16-bit short integer numbers.
+</ul>
+
+<a name="Advanced_options"></a>
+<hr width="100%">
+
+<center><h2>Advanced processing options</h2></center>
+
+<ul>
+<li>The advanced options can be accessed by clicking on the triangle adjacent
+to the label.
+<li>These options allow a greater control over how the data is loaded into medx.
+<li>Common tasks under the advanced options
+
+<ul>
+<li><a href="#load">Loading a small set of volumes from a large set.</a>
+<li><a href="#series">Loading all the images in the series.</a>
+<li><a href="#general">Turning off some of the processing options.</a>
+<li><a href="#output">Loading the images as floats or complex data.</a>
+<li><a href="#EPI">Using a different EPI phase correction scheme or reference scan.</a>
+<li><a href="#procpar">Searching the parameter file or changing image dimensions.</a>
+<li><a href="#copy">Saving the image to an AVW file of specified name.</a>
+<li><a href="#advanced">Running one of the advanced options available to load varian.</a>
+</ul>
+</ul>
+
+<a name="load"></a>
+<h3>Loading a small set of volumes from a large set</h3>
+
+<ul>
+<li>Select the <i>Load</i> tab from the options menu.
+<p align=center><img src="load.gif">
+<li>Select the Load volumes <i>Selected</i> checkbutton.
+<li>Enter the number volumes to ignore in the <i>Offset</i> box.
+<li>Enter the number of volumes to load in the <i>Number</i> box.
+<li>If the offset box is left empty then the default will be zero.
+<li>If the number box is left empty then the default will be all volumes from
+offset to the end of the file.
+</ul>
+
+<a name="series"></a>
+<h3>Loading all the images in the series</h3>
+<ul>
+<li>In the input filename select <i>one</i> FID from the series you want to load.
+<li>Select the <i>Load</i> tab from the options menu.
+<li>Select the <i>All FIDs in series</i> option.
+<li>All images in the series will be processed using the same options.
+</ul>
+
+<a name="general"></a>
+<h3>Turning off some of the processing options</h3>
+
+<ul>
+<li>Select the <i>General</i> tab from the options menu.
+<p align=center><img src="general.gif">
+<li>The major processing steps can be turned off if required.
+
+<ul>
+<li><i>Reorder Lines</i> is either set for EPI data, multislice data or for no reordering.
+<li><i>FT Baseline</i> performs a baseline correction to remove the central point artefact.
+<li><i>2DFT</i> performs a two dimensional Fourier transform.
+<li><i>Orient</i> rotates the image as appropriate.
+<li><i>Slice Intensity Scale</i> scales the slices to compensate for rf coil artefact.
+<li><i>Slice Reorder</i> will reorder slices which were acquired in a segmented fashion.
+</ul>
+
+</ul>
+
+<a name="output"></a>
+<h3>Loading the images as floats or complex data</h3>
+
+<ul>
+<li>The data can be output in either modulus form (default) or as complex data.
+<li>In addition, modulus data can be loaded as 16 bit signed shorts (default)
+or 32 bit floating point numbers.
+<li>To load phase data, add the -phs flag to the advanced options.
+</ul>
+
+<a name="EPI"></a>
+<h3>Using a different EPI phase correction scheme or reference scan</h3>
+
+<ul>
+<li>Select the <i>EPI</i> tab from the options menu.
+<p align=center><img src="epi.gif">
+<li>If the data is acquired using a basic EPI sequence then some form of phase
+correction is required.
+<li>There are number of phase corrections that can be applied.
+
+<ul>
+<li>No phase correction.
+<li>Unconstrained reference scan - a line by line phase correction.
+<li>Linear constrained reference scan. <B><i>Recommended</i></B>
+<li>Polynomial constrained reference scan.
+<li>Self referencing correction (only for single shot EPI images with little
+overlap between image and ghost).
+<li>Linear or polynomial constrained self referencing correction (again only for single shot EPI).
+</ul>
+
+<li>The recommended phase correction is the linear constrained reference scan.
+To run this, enter the name of the FID file containing the reference scan
+in the appropriate box. In most cases the linear constrained reference scan
+will give the best phase correction, however if you are unhappy with the
+level of ghosting in the image then try one of the other options.
+
+<li>The self reference method (constrained or unconstrained) requires single
+shot EPI data, and at least eight lines in the centre of the image where
+the ghost and image do <i>not</i> overlap.
+</ul>
+
+<a name="procpar"></a>
+<h3>Searching the parameter file or changing image dimensions</h3>
+
+<ul>
+<li>Select the <i>Procpar</i> tab from the options menu.
+<p align=center><img src="procpar.gif">
+<li>If a file has been selected in the input filename then the matrix dimensions of the image will appear in the boxes.
+<li>In some cases it is desirable to change the way the slices and volumes are read into MEDx. If the override dimensions button is checked then the dimension boxes can me changed.  Be careful though - the data is not changed, just the way it is read in.
+<li>To search the FID parameter file for the value of a parameter (for example tr) type the parameter name in the appropriate box and press search.
+
+</ul>
+
+<a name="copy"></a>
+<h3>Saving the image to an AVW file of specified name</h3>
+
+<ul>
+<li>Select the <i>Advanced</i> tab from the options menu.
+<p align=center><img src="advanced.gif">
+<li>In the <i>Extra flags</i> box type
+<pre>-cp filename</pre>
+where filename is the name and path of the file you want to save the data in.
+<b>N.B. You do not need to append the filename with .hdr since this will be added automatically</b>
+</ul>
+
+<a name="advanced"></a>
+<h3>Running one of the advanced options available to load varian</h3>
+
+<ul>
+<li>Select the <i>Advanced</i> tab from the options menu.
+<li>A list of advanced options (from the help notes of <i>process</i>) will appear.
+<li>Enter the extra command line flags with appropriate arguments in the <i>Extra Flags</i> box.
+</ul>
+
+<a name="LoadVarian_script"></a>
+<hr width="100%">
+
+<center><h2>Running LoadVarian from a tcl script</h2></center>
+
+<p>Two functions are available for loading Varian data as part of a tcl script.  The first is easier to call, but makes certain assumptions about the data, and what processing is needed.  It is the equivelent of just entering the filename in the <i>Load Varian</i> dialog box and pressing OK.  If your data does not process properly in this way then you need to use the second function described below.
+
+<h3>LoadVarian</h3>
+
+<ul>
+<li>Your script must have defined the PXHOME variable as usual with running MEDx scripts.
+<li>You need to put the lines
+<pre>
+if { [ info exists env(FSLDIR) ] } {
+    set FSLDIR $env(FSLDIR)
+} else {
+    set FSLDIR $PXHOME/fsl
+}
+set BINPATH ${FSLDIR}/bin
+source $FSLDIR/tcl/load_varian_proc.tcl
+</pre>
+before you use the LoadVarian Command.
+<li>To process your file use the syntax
+<pre>LoadVarian "filename"</pre>
+<li>The data will be opened in your current MEDx working folder, or in a new folder if one does not exist.
+<li>An example of using this is given in the file
+<pre>/usr/freeware/medx/fmrib/src/load_varian/example_script.tcl</pre>
+</ul>
+
+<h3>load_varian_proc</h3>
+
+<table>
+<tr><td><pre>   </pre></td>
+<td valign=top><pre><b>Usage:</b></pre></td>
+<td><pre>
+load_varian_proc $filename $process $phasecor $refname $constrain \
+                 $baseline $2dft $orient $resl $rot $scsl $pss $fmt $bits \
+		 $load $from $to
+</pre></td></tr> 
+
+<tr><td><pre>   </pre></td>
+<td valign=top><pre><b>Parameters:</b></pre></td>
+<td><pre>
+$filename  - Full filename to process (without .fid)
+$process   - "ms" (multislice) or "epi"
+$phasecor  - "" (none), "ref" (ref scan), "buo" (self ref)
+$refname   - Filename of reference scan or ""
+$constrain - "" (none), "lin" (linear), "poly" (polynomial) 
+$baseline  - 1 or 0
+$2dft      - 1 or 0
+$orient    - 1 or 0
+$resl      - 1 or 0
+$rot       - 1 or 0
+$scsl      - 1 or 0 
+$pss       - 1 or 0
+$fmt       - "mod" (modulus) or "cplx" (complex)
+$bits      - "short" or "float"
+$load      - "all" or "part"
+$from      - <i>n</i>
+$to        - <i>n</i>
+</pre></td></tr>
+
+<tr><td><pre>   </pre></td>
+<td valign=top><pre><b>Returns:</b></pre></td>
+<td><pre>0 if successful 1 otherwise</pre></td></tr>
+
+<tr><td><pre>   </pre></td>
+<td valign=top><pre><b>Summary:</b></pre></td>
+<td><pre>
+Processes Varian data (multislice or epi) using the supplied parameters.
+</pre></td></tr>
+
+</table>
+
+<hr width="100%">
+
+<div align=right><font size=-2>Stuart Clare 21.5.99</font></div>
+</body>
+</html>

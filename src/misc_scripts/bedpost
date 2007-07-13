@@ -1,0 +1,196 @@
+#!/bin/sh
+
+#   Copyright (C) 2004 University of Oxford
+#
+#   Part of FSL - FMRIB's Software Library
+#   http://www.fmrib.ox.ac.uk/fsl
+#   fsl@fmrib.ox.ac.uk
+#   
+#   Developed at FMRIB (Oxford Centre for Functional Magnetic Resonance
+#   Imaging of the Brain), Department of Clinical Neurology, Oxford
+#   University, Oxford, UK
+#   
+#   
+#   LICENCE
+#   
+#   FMRIB Software Library, Release 3.3 (c) 2006, The University of
+#   Oxford (the "Software")
+#   
+#   The Software remains the property of the University of Oxford ("the
+#   University").
+#   
+#   The Software is distributed "AS IS" under this Licence solely for
+#   non-commercial use in the hope that it will be useful, but in order
+#   that the University as a charitable foundation protects its assets for
+#   the benefit of its educational and research purposes, the University
+#   makes clear that no condition is made or to be implied, nor is any
+#   warranty given or to be implied, as to the accuracy of the Software,
+#   or that it will be suitable for any particular purpose or for use
+#   under any specific conditions. Furthermore, the University disclaims
+#   all responsibility for the use which is made of the Software. It
+#   further disclaims any liability for the outcomes arising from using
+#   the Software.
+#   
+#   The Licensee agrees to indemnify the University and hold the
+#   University harmless from and against any and all claims, damages and
+#   liabilities asserted by third parties (including claims for
+#   negligence) which arise directly or indirectly from the use of the
+#   Software or the sale of any products based on the Software.
+#   
+#   No part of the Software may be reproduced, modified, transmitted or
+#   transferred in any form or by any means, electronic or mechanical,
+#   without the express permission of the University. The permission of
+#   the University is not required if the said reproduction, modification,
+#   transmission or transference is done without financial return, the
+#   conditions of this Licence are imposed upon the receiver of the
+#   product, and all original and amended source code is included in any
+#   transmitted product. You may be held legally responsible for any
+#   copyright infringement that is caused or encouraged by your failure to
+#   abide by these terms and conditions.
+#   
+#   You are not permitted under this Licence to use this Software
+#   commercially. Use for which any financial return is received shall be
+#   defined as commercial use, and includes (1) integration of all or part
+#   of the source code or the Software into a product for sale or license
+#   by or on behalf of Licensee to third parties or (2) use of the
+#   Software or any derivative of it for research with the final aim of
+#   developing software products for sale or license to a third party or
+#   (3) use of the Software or any derivative of it for research with the
+#   final aim of developing non-software products for sale or license to a
+#   third party, or (4) use of the Software to provide any service to an
+#   external organisation for which payment is received. If you are
+#   interested in using the Software commercially, please contact Isis
+#   Innovation Limited ("Isis"), the technology transfer company of the
+#   University, to negotiate a licence. Contact details are:
+#   innovation@isis.ox.ac.uk quoting reference DE/1112.
+
+if [ "x$SGE_ROOT" = "x" ] ; then
+  if [ -f /usr/local/share/sge-6.0/default/common/settings.sh ] ; then
+    . /usr/local/share/sge-6.0/default/common/settings.sh
+  else if [ -f /usr/local/sge-6/default/common/settings.sh ] ; then
+      . /usr/local/sge-6/default/common/settings.sh
+    else
+      echo "bedpost: Couldn\'t locate SGE_ROOT\!"
+      exit 255
+    fi
+  fi
+fi
+
+Usage() {
+    echo ""
+    echo "Usage: bedpost <subject directory> "
+    echo ""
+    echo "expects to find bvals and bvecs in subject directory"
+    echo "expects to find data nodif_brain_mask nodif in subject directory"
+    echo ""
+    exit
+}
+
+make_absolute(){
+    dir=$1;
+    if [ -d ${dir} ]; then
+	OLDWD=`pwd`
+	cd ${dir}
+	dir_all=`pwd`
+	cd $OLDWD
+    else
+	dir_all=${dir}
+    fi
+    echo ${dir_all}
+}
+
+
+[ "$1" = "" ] && Usage
+
+subjdir=`make_absolute $1`
+subjdir=`echo $subjdir | sed 's/\/$/$/g'`
+
+echo subjectdir is $subjdir
+
+#check that all required files exist
+
+if [ ! -d $subjdir ]; then
+	echo "subject directory $1 not found"
+fi
+
+if [ ! -e ${subjdir}/bvecs ]; then
+	echo "${subjdir}/bvecs not found"
+fi
+
+if [ ! -e ${subjdir}/bvals ]; then
+	echo "${subjdir}/bvals not found"
+fi
+
+if [ `${FSLDIR}/bin/imtest ${subjdir}/data` -eq 0 ]; then
+	echo "${subjdir}/data not found"
+fi
+
+if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif` -eq 0 ]; then
+	echo "${subjdir}/nodif not found"
+fi
+
+if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif_brain_mask` -eq 0 ]; then
+	echo "${subjdir}/nodif_brain_mask not found"
+fi
+
+echo Making bedpost directory structure
+
+mkdir -p ${subjdir}.bedpost/
+mkdir -p ${subjdir}.bedpost/diff_slices
+mkdir -p ${subjdir}.bedpost/logs
+mkdir -p ${subjdir}.bedpost/logs/pid_${$}
+mkdir -p ${subjdir}.bedpost/xfms
+
+mailto=`whoami`@fmrib.ox.ac.uk
+
+echo Queuing preprocessing stages
+preprocid=`qsub -M $mailto -V -q short.q \
+    -o ${subjdir}.bedpost/logs -e ${subjdir}.bedpost/logs \
+    ${FSLDIR}/bin/bedpost_preproc.sh ${subjdir} | \
+    awk '{print $3}'`
+
+echo Queuing parallel processing stage
+nslices=`avwval ${subjdir}/data dim3`
+bedpostid=`qsub -M $mailto -hold_jid $preprocid -V -q long.q -t 1-$nslices \
+    -o ${subjdir}.bedpost/logs -e ${subjdir}.bedpost/logs \
+    ${FSLDIR}/bin/bedpost_single_slice.sh $subjdir | \
+    awk '{print $3}' | awk -F. '{print $1}'`
+
+echo Queuing post processing stage
+mergeid=`qsub -M $mailto -hold_jid $bedpostid -V -q short.q \
+    -o ${subjdir}.bedpost/logs -e ${subjdir}.bedpost/logs \
+    ${FSLDIR}/bin/bedpost_postproc.sh $subjdir | \
+    awk '{print $3}'`
+
+echo
+echo Type ${subjdir}.bedpost/monitor to show progress.
+cat <<EOM > ${subjdir}.bedpost/monitor
+#!/bin/sh
+finished=0
+logdir=${subjdir}.bedpost/logs
+while [ \$finished -eq 0 ] ; do
+    nfin=0
+    if [ -f \$logdir/bedpost.o$bedpostid.1 ] ; then
+      nfin=\`cat \$logdir/bedpost.o$bedpostid.* |\
+        grep Done | wc -w | awk '{print \$1}'\` 
+    fi
+    if [ \$nfin -eq $nslices ] ; then
+        finished=1
+    fi
+
+    echo "\$nfin slices processed"
+    sleep 600;
+done
+EOM
+chmod +x ${subjdir}.bedpost/monitor
+
+echo Type ${subjdir}.bedpost/cancel to terminate the task.
+cat <<EOC > ${subjdir}.bedpost/cancel
+#!/bin/sh
+qdel $mergeid $bedpostid $preprocid
+EOC
+chmod +x ${subjdir}.bedpost/cancel
+
+echo
+echo You will get an email at the end of the post-processing stage.
+echo

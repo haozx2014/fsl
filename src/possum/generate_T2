@@ -1,0 +1,75 @@
+#!/usr/local/bin/bash
+Usage() {
+    echo ""
+    echo "Usage: generate_T2 <fmri data> <zstart> <thc>"
+    echo ""
+    echo "Inputs are:"
+    echo "the FMRI data you estimate T2* from"
+    echo "zstart in the volume(same space as the space of the digital phantom)"
+    echo "thc : amount of the z direction needed (in mm)"
+    echo "Output is the T2* data registered to the POSSUM digital phantom."
+    exit
+}
+[ "$1" = "" ] && Usage
+
+DATA=$1
+zstart=$2 #starting z
+thc=$3
+
+TE=0.03
+NoV=177 #number of volumes, have to find out what is the command to extract number of volumes from the data.. avwhd but ??
+NoV1=`expr ${NoV} - 1`
+
+avwinfo ${DATA}
+
+echo "making ones"
+avwmaths ${DATA} -add 1 ${DATA}_ones
+avwmaths ${DATA}_ones -bin ${DATA}_ones
+
+echo "making TE"
+avwmaths_32R ${DATA}_ones -mul ${TE} ${DATA}_TE
+
+echo "motion removal"
+mcflirt -in ${DATA}
+
+#equation is ${DATA}=${DATA}_S0*exp(-${DATA}_TE/${DATA}_t2) and we need ${DATA}_t2 which is:
+#  ${DATA}_t2=${DATA}_TE/log(${DATA}_S0/${DATA}) and we choose ${DATA}_S0=max(${DATA})*exp(1/2) because we
+#  need t2 to be somewhere between 0.05 and 0.07 (from real data)
+
+echo "making S0"
+avwmaths_32R ${DATA}_mcf -Tmax ${DATA}_S0
+avwmaths_32R ${DATA}_S0 -mul 1.6 ${DATA}_S0
+avwmaths_32R ${DATA}_ones -mul ${DATA}_S0 ${DATA}_S0
+rm ${DATA}_ones*
+
+echo "Calculating T2* map"
+avwmaths_32R ${DATA}_S0 -div ${DATA}_mcf ${DATA}_S0
+avwmaths_32R ${DATA}_S0 -log ${DATA}_S0
+avwmaths_32R ${DATA}_TE -div ${DATA}_S0 ${DATA}_t2
+rm ${DATA}_mcf*
+rm ${DATA}_TE*
+rm ${DATA}_S0*
+
+REF=/usr/people/ivana/possum_data/input/phantom/brain_basictissue_ref
+
+echo "Registering T2* map to the POSSUM input digital phantom "
+
+echo "1.first vol from the T2* data to REF vol of the dig phantom -- resolution fit"
+avwroi ${DATA} ${DATA}_reg 0 1
+flirt -in ${DATA}_reg -ref ${REF} -omat transmat
+rm ${DATA}_reg*
+
+echo "2.applying derived transmat on all volumes of the T2* data -- into higher resolution"
+i=0
+avwroi ${REF} ${DATA}_t2_IC2 0 181 0 217 ${zstart} ${thc}
+while [ $i -le ${NoV1} ] ; do
+  avwroi ${DATA}_t2 ${DATA}_t2_$i $i 1 
+  flirt -in ${DATA}_t2_$i -ref ${REF} -applyxfm -init transmat -out ${DATA}_t2_$i
+  avwroi ${DATA}_t2_$i ${DATA}_t2_$i 0 181 0 217 ${zstart} ${thc}
+  avwmerge -t ${DATA}_t2_IC2 ${DATA}_t2_IC2 ${DATA}_t2_$i 
+  rm ${DATA}_t2_$i*
+  i=`expr $i + 1`
+  echo $i
+done
+avwroi ${DATA}_t2_IC2 ${DATA}_t2_IC2 1 ${NoV}
+avwinfo ${DATA}_t2_IC2

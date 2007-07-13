@@ -1,0 +1,31 @@
+#!/bin/sh
+
+echo [`date`] [`hostname`] [`uname -a`] [`pwd`] [$0 $@] >> .tbsslog
+
+cd FAi
+
+mkdir -p ../stats
+
+echo "transforming all FA images into MNI152 space"
+for f in *FAi.hdr ; do
+    f=`$FSLDIR/bin/remove_ext $f`
+    echo $f
+    ${FSLDIR}/bin/applywarp -i $f -o ${f}_to_target_nonlinear_hr -r target -w ${f}_to_target_nonlinear --rel
+done
+
+echo "merging all upsampled FA images into single 4D image"
+${FSLDIR}/bin/avwmerge -t ../stats/all_FA `$FSLDIR/bin/imglob -oneperimage *_nonlinear_hr.*`
+cd ../stats
+
+$FSLDIR/bin/flirt -in $FSLDIR/etc/standard/avg152T1_brain -ref $FSLDIR/etc/standard/avg152T1 -out MNI152 -applyisoxfm 1
+$FSLDIR/bin/avwcpgeom MNI152 all_FA -d
+
+# create mean FA and skeleton and skeleton-mask
+echo "creating mean FA"
+${FSLDIR}/bin/avwmaths all_FA -Tmean mean_FA
+echo "skeletonising mean FA"
+${FSLDIR}/bin/tbss_skeleton -i mean_FA -o mean_FA_skeleton
+
+echo "now view mean_FA_skeleton to check whether the default threshold of 2000 needs changing, when running:"
+echo "tbss_4_prestats [threshold]"
+

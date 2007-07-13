@@ -1,0 +1,12 @@
+float calc_mean(float *data,long imsize,char *mask);
+float calc_max(float *data,long imsize,char *mask);
+float calc_var(float *data,long imsize,char *mask,float mean);
+float calc_med(float *data,long imsize,char *mask);
+float calc_medv(float *data,long imsize,char *mask,float med);
+float calc_pc(float *data,long imsize,char *mask,int pc);
+float calc_mode(float *data,long imsize,char *mask,float max,float min);
+float nrselect(unsigned long k, unsigned long n, float arr[]);
+float calc_min(float *data,long imsize,char *mask);
+long calc_hist(float *data,long imsize,char *mask,float min,float max,int bins,int *hist);
+float calc_sum(float *data,long imsize,char *mask);
+float calc_entropy(float *data,long imsize,char *mask);

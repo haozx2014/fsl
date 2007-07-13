@@ -1,0 +1,265 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+<HEAD>
+<TITLE>Flags in Load Varian</TITLE>
+</HEAD>
+<BODY >
+<H1 ALIGN="CENTER">Flags in Load Varian</H1>
+<P ALIGN="CENTER"></P>
+<P ALIGN="LEFT"></P>
+
+<P>
+
+<H1><A NAME="SECTION00010000000000000000">
+Usage:</A>
+</H1>
+<PRE>
+   load_varian input_filename output_filename [-options]
+</PRE>
+<P>
+
+<H1><A NAME="SECTION00020000000000000000">
+Options:</A>
+</H1>
+
+<P>
+
+<H2><A NAME="SECTION00021000000000000000">
+Reordering</A>
+</H2>
+<DL>
+<DT><STRONG>-ms</STRONG>
+<DD>Reorder data acquired in multislice.
+<DT><STRONG>-epi</STRONG>
+<DD>Reorder data acquired using EPI, reversing alternate
+echoes.
+<DT><STRONG>-lpss n</STRONG>
+<DD>Reorder data acquired with the slice position (pss)
+  shifted every volume (looppss).  The number of blocks that the
+  slices are split into is specified by n.  The number of slices
+  divided by the number of blocks must be an integer.  Must be used in
+  conjunction with the -epi flag.
+<DT><STRONG>-fmap</STRONG>
+<DD>Reorder data acquired using the field mapping sequence
+  (spin-echo, asymmetric spin-echo pairs). Must be used in
+  conjunction with the -ms flag.
+<DT><STRONG>-sear n</STRONG>
+<DD>Reorder data from a multislice experiment (with
+  seqcon='ncsnn') where a parameter has been arrayed.  The number of
+  steps in the arrayed parameter is specified by n. Must be used in
+  conjunction with the -ms flag.
+</DL>
+<P>
+
+<H2><A NAME="SECTION00022000000000000000">
+Processing</A>
+</H2>
+<DL>
+<DT><STRONG>-ft2d</STRONG>
+<DD>Perform a 2D Fourier Transform on a slice by slice basis
+through the data series.
+<DT><STRONG>-ft3d</STRONG>
+<DD>Perform a 3D Fourier Transform on each volume of the data
+  series.
+<DT><STRONG>-ftr</STRONG>
+<DD>Fourier Transforms the rows only.
+<DT><STRONG>-bl</STRONG>
+<DD>Correct the baseline offset.
+<DT><STRONG>-zero n</STRONG>
+<DD>Zeropad each slice matrix to n x n.
+<DT><STRONG>-zzero n</STRONG>
+<DD>Zeropad in the z (slice) direction to n.  If the data
+  requires only 2D Fourier transformation then it is inverse Fourier
+  transformed in the z direction prior to zeropadding and then
+  transformed back.
+<DT><STRONG>-rot</STRONG>
+<DD>Rotate each slice by 90 degrees.
+<DT><STRONG>-negrot</STRONG>
+<DD>Rotate each slice by -90 degrees.
+<DT><STRONG>-revproc</STRONG>
+<DD>Process the volumes in reverse order, but maintain the
+  original ordering in the output.  This is useful if the last volume
+  in the series is a better estimate of those parameters taken from
+  the first volume only (e.g. scaling, self-reference phase
+  correction, phase rotation).
+<DT><STRONG>-revload</STRONG>
+<DD>Process and output the volumes in reverse order.
+<DT><STRONG>-hks</STRONG>
+<DD>Apply half-kspace (half-Fourier) processing.  There are a
+  number of other flags that can control the type of half-kspace
+  processing options used, but these are intended for development and
+  testing.
+<DT><STRONG>-hkspad</STRONG>
+<DD>Process the data as half-kspace, but without the
+  phasing or conjugation.
+<DT><STRONG>-nav n/m/p/mp</STRONG>
+<DD>Signifies that the data has been acquired with
+  navigator echoes.  Follow -nav with n to remove the navigator echoes
+  but do no processing with them.  Specify m or p to use the navigator
+  to correct magnitude or phase of the data respectively and mp to
+  correct both magnitude and phase.  Note that this is for EPI data
+  only and is in development.
+<DT><STRONG>-shift n</STRONG>
+<DD>Shift the data array by n pixels (tep correction).
+  Note that n must be an integer.
+
+<P>
+</DL>
+<P>
+
+<H2><A NAME="SECTION00023000000000000000">
+Input format</A>
+</H2>
+<DL>
+<DT><STRONG>-start n</STRONG>
+<DD>Ignore the first n volumes.
+<DT><STRONG>-num n</STRONG>
+<DD>Process n volumes only.
+<DT><STRONG>-avwin</STRONG>
+<DD>Input file is a complex AVW file of time data.
+<DT><STRONG>-raw x y z v</STRONG>
+<DD>Input file contains raw time data in the form of
+real-imaginary pairs of short integers (shorts).  The matrix
+  dimensions are specified in x,y,z and v.
+<DT><STRONG>-series</STRONG>
+<DD>Process all images in a series.  For example if the
+  input filename is series_3.1 then files
+  series_3.1.fid, series_3.2.fid,
+  series_3.3.fid etc. will be processed.
+<DT><STRONG>-orig</STRONG>
+<DD>Read the raw data from the file
+  input_filename.fid/fid.orig instead of
+  input_filename.fid/fid.
+<DT><STRONG>-ne n</STRONG>
+<DD>Specifies the number of echoes in a multi-echo data set.
+  This is only necessary if the number of echoes (ne) in procpar is
+  not correct.
+</DL>
+<P>
+
+<H2><A NAME="SECTION00024000000000000000">
+Output format</A>
+</H2>
+<DL>
+<DT><STRONG>-16</STRONG>
+<DD>Output the data as 16-bit integers (shorts).  The data will
+automatically by scaled such that the maximum (0.99 percentile) is
+  20000.
+<DT><STRONG>-mod</STRONG>
+<DD>Output the modulus of the complex data.
+<DT><STRONG>-phs</STRONG>
+<DD>Output the phase of the complex data.
+<DT><STRONG>-re</STRONG>
+<DD>Output the real part of the complex data.
+<DT><STRONG>-im</STRONG>
+<DD>Output the imaginary part of the complex data.
+<DT><STRONG>-resl</STRONG>
+<DD>Reslice the output data to the axial plane.
+<DT><STRONG>-segx low num</STRONG>
+<DD>Segment the output volume in the x direction
+  starting from low, for num points.
+<DT><STRONG>-segy low num</STRONG>
+<DD>Segment the output volume in the y direction
+  starting from low, for num points.
+<DT><STRONG>-segz low num</STRONG>
+<DD>Segment the output volume in the z direction
+  starting from low, for num points.
+<DT><STRONG>-cp fn</STRONG>
+<DD>Duplicates the output to this filename (fn).
+</DL>
+<P>
+
+<H2><A NAME="SECTION00025000000000000000">
+EPI phase correction</A>
+</H2>
+<DL>
+<DT><STRONG>-ref fn</STRONG>
+<DD>The name (fn) of a reference scan to use in the
+phase correction.  In the absence of either -buo or -hu flags then
+  the reference scan is assumed to be a single volume EPI with no
+  phase-encoding.
+<DT><STRONG>-buo</STRONG>
+<DD>Phase correction is done according to the Buonocore (self
+  reference) method.  If no reference scan is supplied (the normal
+  case) then the first volume of the series is used to correct all the
+  data.  If a reference scan file name is supplied (with the -ref
+  option) then this is taken to be a single phase-encoded volume from
+  which the phase correction will be calculated.
+<DT><STRONG>-buov</STRONG>
+<DD>Apply the Buonocore correction (self reference)
+  correction on a volume by volume basis.
+<DT><STRONG>-hu</STRONG>
+<DD>Phase correction is done according to the Hu method.  This
+  requires the name of a phase-encoded reference scan (supplied with
+  the -ref option) with the phase-encoding of opposite polarity to the
+  main data.
+<DT><STRONG>-con</STRONG>
+<DD>Constrains the phase correction to be a single linear
+  correction of alternate lines in the slice.
+<DT><STRONG>-poly</STRONG>
+<DD>Constrains the phase correction to be a single fifth
+  order polynomial correction of alternate lines in the slice.
+<DT><STRONG>-ph0 n</STRONG>
+<DD>Apply a zeroth order alternate line phase correction of
+  n.
+<DT><STRONG>-ph1 n</STRONG>
+<DD>Apply a first order alternate line phase correction of
+  n.  
+</DL>
+<P>
+
+<H2><A NAME="SECTION00026000000000000000">
+Image post-processing</A>
+</H2>
+<DL>
+<DT><STRONG>-scsl [fn]</STRONG>
+<DD>Scale slices in a volume based on slice position
+and the scale values specified in a file
+  FSLDIR/tcl/rfcoil.scale or in the specified filename (fn).
+<DT><STRONG>-scale n</STRONG>
+<DD>Scale all the values in the output data by a factor of
+  n.
+<DT><STRONG>-max n</STRONG>
+<DD>Scale all the values in the output data so that the
+  maximum (based on 0.99 percentile) is equal to n.
+<DT><STRONG>-kmb n</STRONG>
+<DD>Mask the border of each slice in k-space by n pixels
+  before Fourier Transform.
+<DT><STRONG>-imb n</STRONG>
+<DD>Mask the border of each slice in the output image by n pixels.
+<DT><STRONG>-phrot n</STRONG>
+<DD>Phase rotate volumes (in blocks of n) such that the
+  phase of the first volume in the block is zero across the whole
+  volume.
+<DT><STRONG>-smod n</STRONG>
+<DD>Determine the sign of the phase of the data and output the
+  data as signed modulus.  The data series is treated in blocks of n volumes.
+<DT><STRONG>-phmap fn</STRONG>
+<DD>Apply a phase map to the output <EM>volume</EM> based on
+  the values in a complex AVW file (fn).
+</DL>
+<P>
+
+<H2><A NAME="SECTION00027000000000000000">
+Other</A>
+</H2>
+<DL>
+<DT><STRONG>-help</STRONG>
+<DD>View the help message.
+<DT><STRONG>-overx n</STRONG>
+<DD>Force the x dimension in the header file to be n.
+<DT><STRONG>-overy n</STRONG>
+<DD>Force the y dimension in the header file to be n.
+<DT><STRONG>-overz n</STRONG>
+<DD>Force the z dimension in the header file to be n.
+<DT><STRONG>-overv n</STRONG>
+<DD>Force the v dimension in the header file to be n.
+Note that these values affect the output header file only and not
+  how the data is processed.
+<DT><STRONG>-opss</STRONG>
+<DD>Extract the slice position array (pss) to a file named
+  output_filename.pss.
+</DL>
+<P>
+</BODY>
+</HTML>

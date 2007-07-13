@@ -1,0 +1,63 @@
+#!/bin/sh
+
+if [ $# -lt 1 ] ; then
+  ${0}_exe ;
+  exit;
+fi
+
+# save outputtype for now and set it to write analyze (for fast)
+STORETYPE=$FSLOUTPUTTYPE
+BIAS=0
+FDF=0
+
+args=""
+for arg in $@ ; do
+    case $arg in
+    -avw) FSLOUTPUTTYPE=ANALYZE;;
+    -avwgz) FSLOUTPUTTYPE=ANALYZE_GZ;;
+    -nii) FSLOUTPUTTYPE=NIFTI;;
+    -niigz) FSLOUTPUTTYPE=NIFTI_GZ;;
+    -bias) BIAS=1;;
+    -fdf) FDF=1;args="$args $arg";;
+    *) args="$args $arg";
+    esac
+done
+
+#echo "${0}_exe $args"
+${0}_exe $args
+
+if [ $FDF -eq 1 ]; then
+    FSLOUTPUTTYPE=$STORETYPE
+    exit
+fi 
+
+if [ $? -eq 0 ]; then
+
+    OUTNAME="";
+    if [ `${FSLDIR}/bin/imtest $2` = 1 ] ; then
+	OUTNAME=$2
+    else
+	if [ `${FSLDIR}/bin/imtest $1` = 1 ] ; then
+	    OUTNAME=$1
+	fi
+    fi
+    
+    if [ "X$OUTNAME" != "X" ] ; then 
+	/bin/mv ${OUTNAME}.hdr ${OUTNAME}tmp.hdr
+	/bin/mv ${OUTNAME}.img ${OUTNAME}tmp.img
+	${FSLDIR}/bin/avwchfiletype $FSLOUTPUTTYPE ${OUTNAME}tmp ${OUTNAME}
+	/bin/rm ${OUTNAME}tmp.hdr
+	/bin/rm ${OUTNAME}tmp.img
+
+	if [ $BIAS = 1 ] ; then
+	    ${FSLDIR}/bin/bet ${OUTNAME} ${OUTNAME}_tmp_brain >& /dev/null
+	    ${FSLDIR}/bin/fast -i 50 -l 200 -oba 200 -t1 -c 3 -ob -od ${OUTNAME}_tmp ${OUTNAME}_tmp_brain >& /dev/null
+	    ${FSLDIR}/bin/immv ${OUTNAME} ${OUTNAME}_uncor
+	    ${FSLDIR}/bin/avwmaths ${OUTNAME}_tmp_abias -mul ${OUTNAME}_uncor -uthr 32700 ${OUTNAME}_tmp
+	    ${FSLDIR}/bin/avwmaths ${OUTNAME}_uncor -sub ${OUTNAME}_uncor -add ${OUTNAME}_tmp ${OUTNAME}
+	    #/bin/rm ${OUTNAME}_tmp*
+	fi
+    fi
+fi
+
+FSLOUTPUTTYPE=$STORETYPE

@@ -1,0 +1,143 @@
+<HTML><HEAD>
+<TITLE>BET - Brain Extraction Tool</TITLE>
+</HEAD><BODY BACKGROUND="../images/fsl-bg.jpg">
+<hr><TABLE BORDER=0 WIDTH="100%"><TR>
+<TD ALIGN=CENTER><H1>BET - Brain Extraction Tool - User Guide</H1>BET Version 1.2
+<TD ALIGN=RIGHT><a href="../index.html"><IMG BORDER=0 SRC="../images/fsl-logo.jpg"></a>
+</TR></TABLE>
+
+<HR><H2>INTRODUCTION</H2>
+ 
+<P>BET (Brain Extraction Tool) deletes non-brain tissue from an
+image of the whole head. It can also estimate the external skull
+surface.
+
+<P>For more detail on BET and an updated journal reference, see the <A
+HREF="http://www.fmrib.ox.ac.uk/analysis/research/bet/">BET research
+web page</A>. If you use BET in your research, please quote the
+journal reference listed there.
+
+<p>The different BET programs are:
+<UL>
+<LI><a href="#Bet">Bet</a> - BET GUI<br>
+<LI><a href="#bet">bet</a> - command-line BET program<br>
+<LI><a href="#betfunc">betfunc</a> - command-line script using bet to
+process 4D FMRI data
+<LI><a href="#bet_robust">bet_robust</a> - command-line script to
+improve the robustness of BET (for example) when there is lots of neck
+present in the input data
+<LI><a href="#betpremask">betpremask</a> - command-line script to
+carry out brain masking using FLIRT registration and a standard-space
+mask, instead of BET
+</UL>
+
+<A NAME="Bet"></A><hr><H2>Bet GUI</H2>
+
+<H3>MAIN OPTIONS</H3>
+
+<P>First set the <b>Input image</b> filename and the <b>Output
+    image</b> filename. The output name is also used to generate the
+    filenames for any optional outputs that are turned
+    on in <b>Advanced options</b>.
+ 
+<P>Changing <B>Fractional intensity threshold</B> from its default
+value of 0.5 will cause the overall segmented brain to become larger
+(<0.5) or smaller (>0.5). This threshold must lie between 0 and 1.
+
+<p>If you turn on <b>Use robust centre-of-brain estimation</b> then
+  the wrapper script <b>bet_robust</b> will be called instead
+  of <b>bet</b> (see below); note that if you set any other BET
+  options in the GUI then <b>bet_robust</b> will pass these on to BET.
+
+<H3>ADVANCED OPTIONS</H3>
+ 
+<P>By default the only output from BET is an image with all non-brain
+matter removed - this is the <B>Output brain-extracted image</B>
+option.
+
+<P>The <B>Output binary brain mask image</B> option tells BET to
+output a binary brain mask (0 outside of the brain and 1 inside). This
+can then be used in later processing, to mask other images derived
+from the original.
+
+<P>The <B>Apply thresholding to brain and mask image</B> option causes
+BET to apply thresholding to the segmented brain image (and also the
+brain mask if selected). Thus, inside the estimated brain, some voxels
+can be "zeroed" after segmentation, if their intensity falls below an
+automatically estimated threshold.
+
+<P>The <B>Output exterior skull surface image</B> option tells BET
+to produce an image which is an estimate of the exterior surface of
+the skull. All non-skull-surface points are 0 in this image, and
+skull-surface points are 100.
+
+<p>The 
+<B>Output brain surface overlaid onto original image</B> option
+creates an output image which is a copy of the original image, with
+additionally an outline of the brain's surface drawn on top.
+
+<P>Changing <B>Threshold gradient</B> from its default value of 0
+causes a gradient to be apply to the previous threshold. Thus setting
+a positive value here causes the primary threshold to be reduced at
+the bottom of the brain, giving a larger brain estimate there, and a
+smaller estimate of the brain towards the top of the image. This value
+must lie between -1 and 1.
+
+<A NAME="bet"></A><HR><H2>bet COMMAND-LINE PROGRAM</H2>
+
+<p>Type <b>bet</b> to get usage.
+  
+<A NAME="betfunc"></A><HR><H2>betfunc COMMAND-LINE SCRIPT</H2>
+
+<p>Type <b>betfunc</b> to get usage; the input and output filenames
+must be the filename roots (i.e. without any filename extension). This
+script uses <b>bet</b> to determine a brain mask on the basis of the
+first volume in a 4D data set, and applies this to the whole data
+set. This is principally intended for use on FMRI data, for example to
+remove eyeballs. Because it is normally important (in this
+application) that masking be liberal (ie that there be little risk of
+cutting out valid brain voxels) the -f threshold is reduced to 0.3,
+and also the brain mask is "dilated" slightly before being used.
+
+<p>Note that if you just use <b>bet</b> on 4D data, this will work;
+the brain mask is derived from the first time point, and then applied
+to all time points.
+
+<A NAME="bet_robust"></A><HR><H2>bet_robust COMMAND-LINE SCRIPT</H2>
+
+<p><b>bet_robust</b> is a very simple script, which repeatedly
+  calls <b>bet</b>, each time using the same input image and the same
+  options, except that the <b>-c</b> option (which sets the starting
+  centre of the brain estimation) is set each time to the
+  centre-of-gravity of the previously estimated brain extraction. The
+  primary purpose is to improve the brain extraction when the input
+  data contains a lot of non-brain matter - most likely when there is
+  a lot of neck included in the input image. By iterating in this way
+  the centre-of-gravity should move up each time towards the true
+  centre, resulting in a better final estimate. The iterations stop
+  when the centre-of-gravity stops moving, up to a maximum of 10 iterations.
+
+<A NAME="betpremask"></A><HR><H2>betpremask COMMAND-LINE SCRIPT</H2>
+
+<p>Type <b>betpremask</b> to get usage; the input and output filenames
+must be the filename roots. This script uses <b>flirt</b> to register the input
+image to a standard space whole-head image; the resulting transform is
+then inverted and a standard-space brain mask is transformed into the
+space of the input image, and then applied to this to create the
+output.
+
+<p><b>betpremask</b> can be useful if BET cannot be made to work
+well.
+
+
+<p><HR><FONT SIZE=1>Copyright &copy; 2000, University of
+Oxford. Written by <A
+HREF="http://www.fmrib.ox.ac.uk/~steve/index.html">S. Smith</A>.</FONT>
+
+<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+
+</BODY></HTML>
+

@@ -1,0 +1,19 @@
+#!/usr/local/bin/bash
+
+main_dir='/home/fs10/dtiuser/RITA/gating'
+
+for direc in 03Aug04_SL
+do
+cd $direc
+
+	for a in  13
+	do
+	#avwroi data1 gated_$a 0 128 0 128 $a 1
+	#  avwroi data2 notgated_$a 0 128 0 128 $a 1
+	  diffmodmhgibbs -k notgated_${a} -o gated_$a -m mask_sl$a -r bvecs -b bvals -B 1000 -S 20200 --saverat=20 --scj --noprec;
+	 # diffmodmhgibbs -k notgated_${a} -o notgated_$a -m mask_sl$a -r bvecs -b bvals -B 1000 -S 20200 --saverat=20 --scj;
+	done	
+cd $main_dir
+done
+
+

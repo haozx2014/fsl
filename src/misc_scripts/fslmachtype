@@ -1,0 +1,14 @@
+OSNAME=`uname -s`
+OSVER=`uname -r`
+
+PROCESSOR=Unknown
+if [ x${OSNAME} == xDarwin ] ; then
+  PROCESSOR=`system_profiler -detailLevel -2 | grep "CPU Type" | sed 's/^[ \t]*//' | sed 's/CPU Type: PowerPC \(G[3-5]\).*/\1/' | sed 's/CPU Type: \(Intel\) Core.  */\1/'`
+fi
+
+FSLMACHTYPE=`gcc -dumpmachine`-gcc`gcc -dumpversion`
+if [ "X${PROCESSOR}X" = "XG5X" ]; then
+ FSLMACHTYPE=${FSLMACHTYPE}-G5
+fi 
+
+echo $FSLMACHTYPE

@@ -1,0 +1,224 @@
+<!-- {{{ start -->
+
+<HTML><HEAD>
+<TITLE>FIRST - FMRIB's Integrated Registration and Segmentation Tool</TITLE>
+</HEAD><BODY BACKGROUND="../images/fsl-bg.jpg">
+<hr><TABLE BORDER=0 WIDTH="100%"><TR>
+<TD ALIGN=CENTER><H1>FIRST - FMRIB's Integrated Registration and Segmentation Tool - v1.0</H1>
+
+Sub-cortical segmentation of T1-weighted data.<br><br>
+
+<TD ALIGN=RIGHT><a href="../index.html"><IMG BORDER=0 SRC="../images/fsl-logo.jpg"></a>
+</TR></TABLE>
+
+<!-- }}} -->
+<!-- {{{ Introduction -->
+
+<a name="intro"></a><p><hr><H2>Introduction</H2>
+
+<p> FIRST is a model-based segmentation/registration tool. The shape/appearance models used in FIRST are constructed from manually segmented images
+provided by the Center for Morphometric Analysis (CMA), Boston. The manual labels are parameterized as surface meshes and modelled as a point distribution.
+ Deformable surfaces are used 
+to automatically parameterize the volumetric labels in terms of meshes; the deformable surfaces are constrained to preserve vertex correspondence across the training data.
+Furthermore, normalized intensities along the surface normals are sampled and modelled. The shape and appearance model is based on multivariate Gaussian
+assumptions.
+Shape is then expressed as a mean with modes of variation (principal components). Based on our learned models, FIRST searches through linear combinations
+of shape modes of variation for the most probable shape instance given
+  the observed intensities in your T1 image.
+
+<p>For more information on FIRST, see the FMRIB <A HREF="http://www.fmrib.ox.ac.uk/analysis/techrep/tr07bp1/tr07bp1.pdf">technical report</a>. If you use FIRST in your research, please contact us regarding referencing it.
+
+
+<hr><b>Referencing </b>
+<br>
+<br>
+To come...<i>the reference</i>...
+<font size=-1><em>
+
+</em></font>
+
+<!-- }}} -->
+<!-- {{{ overview -->
+
+<a name="overview"></a><p><hr><H2>Running FIRST - Overview</H2>
+
+<p>Running FIRST requires two simple steps:
+
+<UL>
+
+<LI><b>first_flirt</b> - This script runs two two-stage affine registrations to MNI152 space at 1mm resolution (we will assume for these instructions
+that the image is named im1.nii.gz). The first stage of both registrations is a standard 12 degree of freedom registration to the template. The second stage of the first registration applies a 12 degrees of freedom registration using a subcortical mask
+  to exclude voxels outside the subcortical
+  regions.The second stage of the second registration applies a 12 degrees of freedom registration using a brain mask (excluding the brain stem) to exclude voxels outside the brain and barinstem.
+
+The second registration is used to fit the left/right hemispheres and the left/right cerebellum. 
+ <b>first_flirt</b> should be used on whole-head (non-betted) images.
+<br>
+<br>
+Usage: 
+<br>
+<br>
+<b>first_flirt</b> im1 im1_to_mni
+<br>
+<br>
+This command will generate the two registered images (<b>im1_to_mni_sub</b> and <b>im1_to_mni_cort</b>), as well as the two corresponding transformation matrices (<b>im1_to_mni_sub.mat</b> and <b>im1_to_mni_cort.mat</b> ).
+<br>
+<br>
+You are now ready to run FIRST.
+<br>
+<br>
+<LI><b>run_first</b> - This script will run FIRST with the suggested options.
+<br>
+<br>
+Usage:
+<br>
+<br>
+<b> run_first</b> im1 im1_to_mni.mat 60 output_name ${FSLDIR}/etc/standard/first_models_317_bin/L_Hipp_bin.bmv 
+<br>
+<br>
+<UL>
+<LI>The first input to the script (<b>im1</b>) is the T1-weighted image to be segmented.
+<br>
+<br>
+<LI>The second input (<b>im1_to_mni.mat</b>) is the matrix that describes the transformation of <b>im1</b> into standard space.
+<br>
+<br>
+<LI>The third input (<b>60</b>) is the number of modes of variation  to be used in the fitting. The more modes
+of variation used the finer details FIRST may capture, however you may decrease the robustness/reliability of the results. 
+The more modes that are included the longer FIRST will take to run. The current suggested number of modes is 60. 
+The maximum number of modes available is 317.
+<br>
+<br>
+<LI>The fourth input (<b>output_name</b>) is the basename of the files that FIRST will output, for example, for the command above FIRST will output the image 
+<b>output_name_first</b>.
+<br>
+<br>
+<LI>The fifth input  (<b>L_Hipp_bin.bmv</b>) is the individual structures' model files; they are located in <b>${FSLDIR}/etc/standard/first_models_317_bin/</b>.
+You will need to use the full path to the model. 
+<br>
+<br>
+<LI> Currently, each structure is currently run independently of each other. There is the option to use a conditional search.
+<br>
+<br>
+ </UL>
+<LI><b>run_first_sh_prior</b> - This script will run FIRST taking into account a previously segmented structure.
+<br>
+<br>
+Usage:
+<br>
+<br>
+<b> run_first_sh_prior</b> im1 im1_to_mni.mat 60 output_name im1_L_thal.bvars ${FSLDIR}/etc/standard/first_models_317_bin/condMaps/L_CaudGivenThal.bmap ${FSLDIR}/etc/standard/first_models_317_bin/L_Caud_bin.bmv 
+<br>
+<br>
+<UL>
+<LI> The first four inputs are the same as for <b>run_first</b>.
+<br>
+<br>
+<LI> The fifth input (<b>im1_L_thal.bvars</b>) is the <b>.bvars</b> file that was output by FIRST for a previous structure.
+<br>
+<br>
+<LI> The sixth input (<b>L_CaudCondThal.bmap</b> is the information FIRST need to transform the mode parameters into conditional mode parameters. These mapping matrices 
+are found in <b>${FSLDIR}/etc/standard/first_models_317_bin/condMaps/</b>. The direction of the conditional is important, for example, <b>L_CaudCondThal.bmap</b> is used
+for the left caudate conditioned on the left thalamus, i.e. the thalamus is segmented first then the caudate.
+<br>
+<br>
+<LI> The seventh input is the  (<b>L_Hipp_bin.bmv</b>) is the individual structures' model files; they are located in <b>${FSLDIR}/etc/standard/first_models_317_bin/</b>.
+You will need to use the full path to the model.
+<br>
+<br>
+</UL>
+<LI><b>run_first_all</b> - This script will run FIRST on all the models (structures), apply boundary correction (see below), and add them into a single image.
+<br>
+<br>
+Usage:
+<br>
+<br>
+<b> run_first_all</b> im1 60 2.94 output_name  
+<br>
+<br>
+<UL>
+<LI> The first three inputs are the same as for <b>run_first</b>.
+<br>
+<br>
+<LI> The fourth input (<b>2.94</b>) is the z-threshold used to threshold the boundary voxels.
+<br>
+<br>
+<LI> The fourth input (<b>output_name</b>) is the basename. <b> run_first_all</b> will append the number of modes of variation and threshold used to the file name.
+For example, the command above would produce output_name_m60_295_first.nii.gz. 
+<br>
+<br>
+<LI> Please be aware that there is no guarantee that neighbouring structures will overlap. In the case where there is overlap the script will add the labels together.
+</UL>
+</UL>
+
+</UL>
+<a name="output"></a><p><hr><H2>Output</H2>
+<UL>
+<LI><b>output_name_first</b> :  This is the segmented output image. The image is produced by filling the mesh. The output uses the CMA standard
+labels (the color table is built into FSLVIEW). Currently, the interior is represented with the standard CMA label, the boundary uses the standard CMA label
+plus 100. Click on the link for a list of the labels used and their corresponding structures. <a href="./cma_subcortical_label.html">sub-cortical labels</a>.
+<br>
+<br>
+<LI><b>output_name_first.vtk</b> : This is the mesh representation of the final segmentation.
+<br>
+<br>
+<LI><b>output_name_first.bvars</b>: Do not delete this file. It contains the mode parameters and the model used. This file along with the
+model can reconstruct the other two outputs. The mode parameters are what FIRST optimizes. In the future this output may be used as a shape prior to segment other shapes. 
+It may also be used as input for multivariate analysis tools. 
+</UL>
+
+</UL>
+<a name="Models"></a><p><hr><H2>Models</H2>
+<UL>
+<LI> The shape/appearance models used are stored in <b> ${FSLDIR}/etc/standard/first_models_317_bin/ </b>. The models were constructed 
+from 317 subjects consisting of children and adults, normals and
+  subjects with pathologies. As FIRST is still in development please check back here periodically to ensure you are using valid models 
+for the current state of FIRST. 
+<br>
+<br>
+<LI> The posterior horns of the lateral ventricles are not yet fully modelled, so there will typically be areas of the ventricle horns not labelled as ventricle.
+<br>
+<br>
+<LI> Please do not copy the model files into your own directories, they are large. 
+</UL>
+<a name="Future"></a><p><hr><H2>Boundary Correction</H2>
+The script <b>first_bcorr</b> is a script used for the classification of the boundary voxels. It takes the segmentation image outputted by FIRST as input and
+classifies the boundary voxels as belonging to the structure or not. The output volume will have only a single label. <b>first_bcorr</b> only works for a single 
+structure in an image.
+<br><br>
+Usage:
+<br><br>
+<b>first_bcorr</b> output_name_first.nii.gz im1.nii.gz 2.94 output_bcorr </b>
+<UL>
+<LI> The first input is the segmentation image outputted from FIRST.
+<br>
+<br>
+<LI> The second input is the original T1-weighted image.
+<br>
+<br>
+<LI> The third input is the z-threshold used to threshold the boundary voxels.
+<br>
+<br>
+<LI> The fourth input is the output name.
+</UL>
+
+<a name="Future"></a><p><hr><H2>To come...</H2>
+As FIRST is still in a state of development, we suggest you check back here periodically to see if any changes have been made.
+<br>
+<br>
+Here is a small list of some of the updates that could be expected to be seen in the near future.
+<UL>
+<LI> The ability to use conditional shape priors. That is, to use one or several shapes to constrain the fit of another shape.
+<br>
+<br>
+<LI> Lateral ventricles, and brain stem models.
+<br>
+<br>
+<LI> Multivariate shape analysis with Relevance Vector Machines.
+</UL>
+
+
+<a name="contact"></a><p><hr><H2>Questions, Comments, and Feedback</H2>
+If you have any questions, comments or feedback please e-mail brian@fmrib.ox.ac.uk
+<!-- }}} -->
+

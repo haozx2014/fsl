@@ -1,0 +1,62 @@
+# $Id: Makefile,v 1.45 2007/06/29 13:41:42 mark Exp $
+include ${FSLCONFDIR}/default.mk
+
+PROJNAME = possum
+
+#USRINCFLAGS = -I${INC_NEWMAT} -I${INC_PROB} -I${INC_CEPHES}
+#USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_PROB} -L${LIB_CEPHES}
+#with the next line it will do table version automatically when I do make possum
+#USRCXXFLAGS = -DTABLE
+USRINCFLAGS = -I${INC_NEWMAT} -I${INC_PROB} -I${INC_ZLIB}
+USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_PROB} -L${LIB_ZLIB}
+
+LIBS=-lnewimage -lmiscmaths -lfslio -lnewmat -lutils -lprob -lniftiio -lznz -lm -lz
+
+BOBJS=b0calc.o
+SOBJS=spharm_rm.o
+IOBJS=possum.o possumfns.o 
+SIOBJS=signal2image.o
+PSOBJS=test_possum.o
+AOBJS=pulse.o 
+BSOBJS=b0sim.o
+SNOBJS=systemnoise.o
+PAROBJS=proc_sum.o
+
+RUNTCLS=Possum
+XFILES=possum spharm_rm signal2image pulse systemnoise proc_sum b0calc
+TESTXFILES=b0sim test_possum
+SCRIPTS = sge_possum sge_possum_postproc.sh sge_possum_single_proc.sh possumRun possumX generate_pulse possum_docs generate_brainb0
+MFILES=read_pulse.m write_pulse.m
+
+all: ${XFILES} matlabfiles
+
+b0calc: ${BOBJS}
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${BOBJS} ${LIBS} 
+
+spharm_rm: ${SOBJS}
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${SOBJS} ${LIBS} 
+
+possum:   ${IOBJS}
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${IOBJS} ${LIBS} 
+
+signal2image:   ${SIOBJS}
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${SIOBJS} ${LIBS} 
+
+test_possum:   ${PSOBJS}
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${PSOBJS} ${LIBS} 
+
+pulse:   ${AOBJS}
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${AOBJS} ${LIBS} 
+
+b0sim:	${BSOBJS}
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${BSOBJS} ${LIBS} 
+
+systemnoise:	${SNOBJS}
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${SNOBJS} ${LIBS} 
+
+proc_sum: ${PAROBJS}
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${PAROBJS} ${LIBS} 
+
+matlabfiles:
+	@if [ ! -d ${DESTDIR}/etc/matlab ] ; then ${MKDIR} -p ${DESTDIR}/etc/matlab ; ${CHMOD} -R g+w ${DESTDIR}/etc ; fi
+	${CP} ${MFILES} ${DESTDIR}/etc/matlab

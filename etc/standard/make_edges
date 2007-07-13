@@ -1,0 +1,17 @@
+
+# masks to split periphery from inside
+avwmaths avg152T1_brain_mask -ero -ero -ero -ero -ero -ero grot_maskcentre
+avwmaths avg152T1_brain_mask -dil -dil -dil -sub grot_maskcentre grot_maskperiph
+
+#good for periphery
+avwmaths avg152T1_gray -add avg152T1_white -thr 64 -bin grot_periph
+avwmaths_16SI grot_periph -ero -mul -1 -add grot_periph -mas grot_maskperiph grot_periph
+
+#good for inside
+avwmaths avg152T1_gray -add avg152T1_white -thr 192 -bin grot_centre
+avwmaths_16SI grot_centre -ero -mul -1 -add grot_centre -mas grot_maskcentre grot_centre
+
+avwmaths_8UI grot_centre -add grot_periph -bin avg152T1_edges
+
+/bin/rm grot_*
+

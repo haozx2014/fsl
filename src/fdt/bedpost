@@ -1,0 +1,296 @@
+#!/bin/sh
+
+#   Part of FSL - FMRIB's Software Library
+#   http://www.fmrib.ox.ac.uk/fsl
+#   fsl@fmrib.ox.ac.uk
+#   
+#   Developed at FMRIB (Oxford Centre for Functional Magnetic Resonance
+#   Imaging of the Brain), Department of Clinical Neurology, Oxford
+#   University, Oxford, UK
+#   
+#   
+#   LICENCE
+#   
+#   FMRIB Software Library, Release 3.3 (c) 2006, The University of
+#   Oxford (the "Software")
+#   
+#   The Software remains the property of the University of Oxford ("the
+#   University").
+#   
+#   The Software is distributed "AS IS" under this Licence solely for
+#   non-commercial use in the hope that it will be useful, but in order
+#   that the University as a charitable foundation protects its assets for
+#   the benefit of its educational and research purposes, the University
+#   makes clear that no condition is made or to be implied, nor is any
+#   warranty given or to be implied, as to the accuracy of the Software,
+#   or that it will be suitable for any particular purpose or for use
+#   under any specific conditions. Furthermore, the University disclaims
+#   all responsibility for the use which is made of the Software. It
+#   further disclaims any liability for the outcomes arising from using
+#   the Software.
+#   
+#   The Licensee agrees to indemnify the University and hold the
+#   University harmless from and against any and all claims, damages and
+#   liabilities asserted by third parties (including claims for
+#   negligence) which arise directly or indirectly from the use of the
+#   Software or the sale of any products based on the Software.
+#   
+#   No part of the Software may be reproduced, modified, transmitted or
+#   transferred in any form or by any means, electronic or mechanical,
+#   without the express permission of the University. The permission of
+#   the University is not required if the said reproduction, modification,
+#   transmission or transference is done without financial return, the
+#   conditions of this Licence are imposed upon the receiver of the
+#   product, and all original and amended source code is included in any
+#   transmitted product. You may be held legally responsible for any
+#   copyright infringement that is caused or encouraged by your failure to
+#   abide by these terms and conditions.
+#   
+#   You are not permitted under this Licence to use this Software
+#   commercially. Use for which any financial return is received shall be
+#   defined as commercial use, and includes (1) integration of all or part
+#   of the source code or the Software into a product for sale or license
+#   by or on behalf of Licensee to third parties or (2) use of the
+#   Software or any derivative of it for research with the final aim of
+#   developing software products for sale or license to a third party or
+#   (3) use of the Software or any derivative of it for research with the
+#   final aim of developing non-software products for sale or license to a
+#   third party, or (4) use of the Software to provide any service to an
+#   external organisation for which payment is received. If you are
+#   interested in using the Software commercially, please contact Isis
+#   Innovation Limited ("Isis"), the technology transfer company of the
+#   University, to negotiate a licence. Contact details are:
+#   innovation@isis.ox.ac.uk quoting reference DE/1112.
+
+if [ "x$SGE_ROOT" != "x" ] && [ -f $FSLDIR/bin/sge_bedpost ] ; then
+    exec $FSLDIR/bin/sge_bedpost $@
+fi
+
+Usage() {
+    echo ""
+    echo "Usage: bedpost <subject directory> "
+    echo ""
+    echo "expects to find bvals and bvecs in subject directory"
+    echo "expects to find data nodif_brain_mask nodif in subject directory"
+    echo ""
+    exit
+}
+
+trap Clean_Exit 2
+
+
+Clean_Exit(){
+
+	if [ -d ${subjdir}.bedpost/logs/pid_${$} ];then
+	    i=`ls  ${subjdir}.bedpost/logs/pid_${$}`
+	    for j in ${i};do 
+		host=`echo $j | awk -F _fdt_ '{print $1}'`
+		pid=`echo $j | awk -F _fdt_ '{print $2}'`
+		if [ "x${FSLMACHINELIST}" != "x" ]; then
+#	            ${FSLREMOTECALL} $host "kill -KILL $pid" #this leaves one child process per processor - what can you do?
+		 echo "if [ -r /usr/local/etc/fslconf/fsl.sh ];then . /usr/local/etc/fslconf/fsl.sh;fi; if [ -r /etc/fslconf/fsl.sh ];then . /etc/fslconf/fsl.sh;fi; if [ -r \${HOME}/.fslconf/fsl.sh ]; then . \${HOME}/.fslconf/fsl.sh; fi; if [ x\${FSLDIR} != "x" ];then \${FSLDIR}/bin/bedpost_kill_pid ${pid} >/dev/null 2>&1; else echo FSLDIR not set in any default location on machine `hostname`;fi" | $FSLREMOTECALL $host /bin/sh >/dev/null 2>&1 &
+		else
+		    ${FSLDIR}/bin/bedpost_kill_pid ${pid}
+		fi
+		rm ${subjdir}.bedpost/logs/pid_${$}/${j}
+	    done
+	fi
+	ExitUnlock;
+}
+
+Lock(){
+    if [ "x${FSLLOCKDIR}" != "x" ];then
+	touch ${FSLLOCKDIR}/.bedpost.lock
+    fi
+}
+
+ExitUnlock(){
+    if [ -f ${FSLLOCKDIR}/.bedpost.lock ];then
+	rm ${FSLLOCKDIR}/.bedpost.lock
+    fi
+
+    #clean up slices
+    ndat_sl=`echo ${subjdir}/data_slice_* | grep -v "slice_\*" |wc -w` 
+    nnodif_sl=`echo ${subjdir}/nodif_brain_mask_slice_* | grep -v "slice_\*" |wc -w` 
+    if [ $ndat_sl -ge 0 ] ;then 
+	rm -f ${subjdir}/data_slice_*
+    fi
+    
+    if [ $nnodif_sl -ge 0 ] ;then 
+	rm -f ${subjdir}/nodif_brain_mask_slice_*
+    fi
+    
+    exit
+}
+
+LockTest(){
+    if [ "x${FSLLOCKDIR}" = "x" ];then
+	echo 1;
+    elif [ ! -f ${FSLLOCKDIR}/.bedpost.lock ];then
+	echo 1;
+    else
+	echo 0;
+    fi
+}
+
+make_absolute(){
+    dir=$1;
+    if [ -d ${dir} ]; then
+	OLDWD=`pwd`
+	cd ${dir}
+	dir_all=`pwd`
+	cd $OLDWD
+    else
+	dir_all=${dir}
+    fi
+    echo ${dir_all}
+}
+
+
+
+[ "$1" = "" ] && Usage
+
+if [ `LockTest` -eq 0 ]; then
+    echo "bedpost is currently being run - try again later"
+    exit
+fi
+
+if [ "x${FSLMACHINELIST}" != "x" ];then
+    if [ "x${FSLREMOTECALL}" = "x" ];then
+	echo "error: you must set FSLREMOTECALL if you have set FSLMACHINELIST"
+	exit
+    fi
+fi
+
+Lock;
+
+subjdir=`make_absolute $1`
+subjdir=`echo $subjdir | sed 's/\/$/$/g'`
+
+echo subjectdir is $subjdir
+
+#check that all required files exist
+
+
+if [ ! -d $subjdir ]; then
+	echo "subject directory $1 not found"
+	ExitUnlock
+fi
+
+if [ ! -f ${subjdir}/bvecs ]; then
+	echo "${subjdir}/bvecs not found"
+	ExitUnlock
+fi
+
+if [ ! -f ${subjdir}/bvals ]; then
+	echo "${subjdir}/bvals not found"
+	ExitUnlock
+fi
+
+if [ `${FSLDIR}/bin/imtest ${subjdir}/data` -eq 0 ]; then
+	echo "${subjdir}/data not found"
+	ExitUnlock
+fi
+
+if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif` -eq 0 ]; then
+	echo "${subjdir}/nodif not found"
+	ExitUnlock
+fi
+
+if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif_brain_mask` -eq 0 ]; then
+	echo "${subjdir}/nodif_brain_mask not found"
+	ExitUnlock
+fi
+
+
+echo making bedpost directory
+mkdir -p ${subjdir}.bedpost/
+mkdir -p ${subjdir}.bedpost/diff_slices
+
+echo copying files to bedpost directory
+cp ${subjdir}/bvecs ${subjdir}/bvals ${subjdir}.bedpost
+${FSLDIR}/bin/imcp ${subjdir}/nodif ${subjdir}/nodif_brain_mask ${subjdir}.bedpost
+${FSLDIR}/bin/avwmaths ${subjdir}/nodif -mas ${subjdir}/nodif_brain_mask ${subjdir}.bedpost/nodif_brain
+
+
+mkdir -p ${subjdir}.bedpost/logs
+mkdir -p ${subjdir}.bedpost/logs/pid_${$}
+
+nslices=`${FSLDIR}/bin/avwval ${subjdir}/data dim3`
+
+${FSLDIR}/bin/avwslice ${subjdir}/data
+${FSLDIR}/bin/avwslice ${subjdir}/nodif_brain_mask
+
+#for parallel processing, the following need to be setup elsewhere
+#FSLMACHINELIST="list of machines (can be duplicated for two processors etc.)"
+#FSLREMOTECALL="ssh (or rsh or whatever you want to use)"
+
+if [ "x$FSLMACHINELIST" = "x" ] ; then
+    echo "processing data on local host"
+    ${FSLDIR}/bin/bedpost_proc $subjdir $nslices ${subjdir}.bedpost/logs/pid_${$} &
+else
+    echo "processing data on hosts: $FSLMACHINELIST"
+    for machine in $FSLMACHINELIST; do
+	echo "if [ -r /usr/local/etc/fslconf/fsl.sh ];then . /usr/local/etc/fslconf/fsl.sh;fi; if [ -r /etc/fslconf/fsl.sh ];then . /etc/fslconf/fsl.sh;fi; if [ -r \${HOME}/.fslconf/fsl.sh ]; then . \${HOME}/.fslconf/fsl.sh; fi; if [ x\${FSLDIR} != "x" ];then \${FSLDIR}/bin/bedpost_proc $subjdir $nslices ${subjdir}.bedpost/logs/pid_${$}; else echo FSLDIR not set in any default location on machine `hostname`;fi"|	$FSLREMOTECALL $machine /bin/sh  &
+    done
+fi
+
+
+b=0
+finished=0;
+while [ $finished -eq 0 ];do
+    b=`expr $b + 1 `
+    sleep 60;
+    nfin=`echo ${subjdir}.bedpost/logs/.*_finished | grep -v ".\*" |wc -w` 
+    if [ $nfin -eq $nslices ];then
+	finished=1;
+    fi
+    if [ $b -eq 10 ]; then 
+	echo "$nfin slices processed"
+	b=0
+    fi	
+done
+
+#postprocessing
+#postprocess $subjdir
+
+##this will have to change..
+echo "Merging outputs into 4D files"
+
+${FSLDIR}/bin/avwmerge -z ${subjdir}.bedpost/merged_thsamples `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpost/diff_slices/data_slice_*/th_samples`
+${FSLDIR}/bin/avwmerge -z ${subjdir}.bedpost/merged_phsamples `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpost/diff_slices/data_slice_*/ph_samples`
+${FSLDIR}/bin/avwmerge -z ${subjdir}.bedpost/merged_fsamples  `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpost/diff_slices/data_slice_*/f_samples`
+${FSLDIR}/bin/avwmaths ${subjdir}.bedpost/merged_thsamples -Tmean ${subjdir}.bedpost/mean_thsamples
+${FSLDIR}/bin/avwmaths ${subjdir}.bedpost/merged_phsamples -Tmean ${subjdir}.bedpost/mean_phsamples
+${FSLDIR}/bin/avwmaths ${subjdir}.bedpost/merged_fsamples -Tmean ${subjdir}.bedpost/mean_fsamples
+
+${FSLDIR}/bin/make_dyadic_vectors ${subjdir}.bedpost/merged_thsamples ${subjdir}.bedpost/merged_phsamples ${subjdir}.bedpost/nodif_brain_mask ${subjdir}.bedpost/dyadic_vectors
+
+if [ ${finished} -eq 1 ];then
+    if [ `imtest ${subjdir}.bedpost/merged_thsamples` -eq 1 ];then
+	if [ `imtest ${subjdir}.bedpost/merged_phsamples` -eq 1 ];then
+	    if [ `imtest ${subjdir}.bedpost/merged_fsamples` -eq 1 ];then
+		rm -rf ${subjdir}.bedpost/diff_slices
+		rm -f ${subjdir}/data_slice_*
+		rm -f ${subjdir}/nodif_brain_mask_slice_*
+	    fi
+	fi
+    fi
+fi
+
+
+
+mkdir -p ${subjdir}.bedpost/xfms
+xfmdir=${subjdir}.bedpost/xfms
+echo 1 0 0 0 > ${xfmdir}/eye.mat
+echo 0 1 0 0 >> ${xfmdir}/eye.mat
+echo 0 0 1 0 >> ${xfmdir}/eye.mat
+echo 0 0 0 1 >> ${xfmdir}/eye.mat
+
+echo "DONE"
+ExitUnlock
+
+
+
+
+

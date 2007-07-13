@@ -1,0 +1,30 @@
+#!/bin/sh
+
+if [ $# -lt 1 ];then
+    echo "Usage: linkbedpost <sourcedir>"
+    echo ""
+    echo "linkbedpost /usr/people/dtiuser/OCMR/CONTROLS/2mmdata/OCMR_20_001.bedpost"
+    exit
+fi
+
+
+source=$1;
+targ=`basename $1`
+
+
+mkdir $targ 
+mkdir ${targ}/xfms
+
+for i in `imglob ${source}/dti_* ${source}/mean_* ${source}/merged_* ${source}/dyad* ${source}/nodif_* ${source}/nodif_* ${source}/struct* ${source}/standard*`; do
+    j=`basename $i`;
+    ln -s $i ${targ}/$j
+done
+
+for i in ${source}/xfms/*.mat;do 
+    j=`basename $i`;
+    ln -s $i ${targ}/xfms/${j}
+done
+for i in ${source}/bv*;do
+    j=`basename $i`;
+    ln -s $i ${targ}/$j
+done

@@ -1,0 +1,23 @@
+#!/bin/sh
+
+if [ $# -lt 1 ] ; then
+  echo "Usage: $0 <filename>" ;
+  exit -1 ;
+fi
+
+fn=`${FSLDIR}/bin/remove_ext $1`;
+
+echo "Finding bad/unusual volumes (typically takes 10-20 seconds)"
+echo " "
+
+dropouts $fn 0
+
+echo "Ordered list of 10 most unusual volumes"
+nums=`grep Volume $fn.dropouts | awk '{ print $3 " " $1 " " $2 }' | sort -rn | head -10 | awk '{ print $3 }' | sed 's/]//g'`;
+echo $nums
+
+echo " "
+echo "Number of fixed (altered) volumes is:"
+grep FIXED ${fn}.dropouts
+
+

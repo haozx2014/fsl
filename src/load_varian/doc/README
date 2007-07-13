@@ -1,0 +1,190 @@
+======================================================================
+                      *  L O A D  V A R I A N *
+======================================================================
+
+Stuart Clare, FMRIB Physics Group
+Copyright (c) 1997-2000 University of Oxford
+
+
+======================================================================
+                 L I C E N S E   I N F O R M A T I O N
+======================================================================
+
+Part of FSL - FMRIB's Software Library
+WWW:      http://www.fmrib.ox.ac.uk/fsl
+Email:    fsl@fmrib.ox.ac.uk
+    
+Developed at FMRIB (Oxford Centre for Functional Magnetic Resonance
+Imaging of the Brain), Department of Clinical Neurology, Oxford
+University, Oxford, UK
+    
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or (at
+your option) any later version.
+    
+This program is distributed in the hope that it will be useful, but in
+order that the University as a charitable foundation protects its
+assets for the benefit of its educational and research purposes, the
+University makes clear that no condition is made or to be implied, nor
+is any warranty given or to be implied, as to the accuracy of FSL, or
+that it will be suitable for any particular purpose or for use under
+any specific conditions.  Furthermore, the University disclaims all
+responsibility for the use which is made of FSL.  See the GNU General
+Public License for more details.
+    
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
+USA
+
+
+======================================================================
+                  P L E A S E   R E A D   T H I S
+======================================================================
+
+The functionality of this program has grown over the past three years
+and as a result the code is not necessarily clear.  Some of the
+processing options correspond to specific sequences available at FMRIB
+and not necessarily of use.  Although every care has been taken, some
+combinations of option flags may not work together.  Were possible,
+warnings are given.  One important feature is how LoadVarian
+interprets the procpar file in the Varian FID.  Some of these may be
+particular to the way images are acquired here at FMRIB.  Here is a
+summary of the assumptions/interpretation:
+
+
+======================================================================
+          P A R A M E T E R   F I L E   A S S U M P T I O N S
+======================================================================
+
+* The raw data is stored as two or four byte integers, ordered in the
+  same way as on a SUN workstation.
+
+* np contains the number of complex points per row of the image.
+
+* nv contains the number of rows in each slice.
+
+* ne contains the number of echos.  Conventional reordering (-ms flag)
+  will assume that the echo will occur after a row.  EPI reordering will
+  assume that the echo will occur after a slice.  Parameter seqcon is
+  not read.
+
+* The number of elements in the array pss is the number of slices per
+  volume UNLESS nv2 is greater than 1 in which case nv2 is the number
+  of slices per volume.
+
+* thk contains the slice thickness UNLESS nD is 3 in which case t_thk
+  contains the slice thickness.
+
+* lro/np/2 gives the point spacing in image space.
+
+* lpe/nv gives the line spacing in image space.
+
+* phi, theta and psi determine the orientation (Axial, Sagittal,
+  Coronal).  The orientation will be assigned as follows
+    theta ~ 0 and psi ~ 0  =>  orient is axial
+    theta ~ 90 and psi ~ 0  =>  orient is sagittal
+    theta ~ 90 and psi ~ 90  =>  orient is coronal
+    if phi ~ 90 then the rotate flag will be automatically turned off.
+  If phi, theta or psi are within 30 degrees of the above angles then
+  they will be rounded to the nearest 90 degrees.
+
+* If the parameter nav exists and is set to 'y' then num_ints
+  navigator echos (rows) will be expected per slice.
+
+* tr gives the time spacing per volume UNLESS parameter TR exists in
+  which case the time spacing per volume is set to this.
+
+* If EPI reordering is specified (-epi flag) then the parameter
+  num_ints specifies the number of interleaves.  If num_ints does not
+  exist then single shot EPI is assumed.
+
+* If EPI reordering is specified (-epi flag) and the number of echos
+  is greater than 1 then the parameter spinecho must exist, set to 'y'
+  or 'n' appropriately.
+
+
+======================================================================
+                 U S I N G   L O A D  V A R I A N
+======================================================================
+
+The action of the load_varian binary is controlled by supplying a
+number of command line arguments.  The basic syntax is
+
+load_varian infile outfile [arguments]
+
+The infile should be a valid .fid directory, specified without the
+.fid extension.  The outfile should be in a user writable directory
+and specified without extension.
+
+For example:
+
+load_varian rawdata/image1 imagedata/image1
+
+Will read the fid rawdata/image1.fid and write out the AVW files
+imagedata/image1.img and imagedata/image1.hdr. 
+
+With no arguments the output will be the complex k-space data in AVW
+format.  For typical conventional multislice reordering the following
+arguments should be supplied:
+
+load_varian infile outfile -ms -ft -bl -mod -16
+
+                            ^   ^   ^    ^   ^
+                 Multislice |   |   |    |   |
+           2D Fourier transform |   |    |   |
+                   Baseline correct |    |   |
+                    Output modulus image |   |
+                       Output 16bit integers |   
+
+And for EPI:
+
+load_varian infile outfile -epi -ft -bl -mod -16 -ref refname -con
+
+                                                   ^            ^
+        File name of FID containing reference scan |            |
+                   Constrain the reference scan with linear fit |
+
+For a full list of command line options type load_varian -h
+
+Other useful options are:
+
+-buo         : Use the self reference ghost correction of Buonocore
+-phs -re -im : Output phase, real or imaginary data only
+-rot         : Rotate image matrix
+-start n     : Ignore the first n volumes in the fid
+-num n       : Load n volumes only
+-pss         : Reorder slices in increasing slice position
+-zero n      : Zero pad the slice matrix to n x n
+
+
+======================================================================
+       T H E   G R A P H I C A L   U S E R   I N T E R F A C E
+======================================================================
+
+The graphical user interface make selection of options easier.  It was
+originally written as an add on to the MEDx package, but will work
+under the tixwish.  One feature of the GUI is the defaults it sets.
+These are designed to work with the file naming conventions used here
+at FMRIB.  In particular, when a new FID file name is selected then
+the parameter seq_type searched for.  If it exists and is set to "epi"
+then the defaults for EPI are enabled, otherwise the defaults for
+multislice reordering are used.
+
+
+======================================================================
+                          W A R N I N G S
+======================================================================
+
+* Some of the options don't work that well, particularly navigator
+  correction, half-kspace reconstruction and the Hu method for ghost
+  correction. 
+
+* The code has not been written for optimum speed, but for
+  flexibility.
+
+* Delve into the code at your peril.  I haven't always commented it
+  well, and am not always consistent with naming conventions.  You can
+  use it, but please don't criticize it.  If you can do better then
+  you are welcome to.

@@ -1,0 +1,25 @@
+#!/bin/sh
+
+# the next line restarts using wish \
+exec $FSLTCLSH "$0" "$@"
+
+if { [ lindex $argv 0 ] == "" } {
+    puts "Usage: feat <featsetupfile.fsf> \[session_id\]"
+    puts "\[session_id\] allows you to run just one of multiple setups in the same design.fsf"
+    exit
+}
+
+set INGUI 0
+set FSLDIR $env(FSLDIR)
+
+source ${FSLDIR}/tcl/feat.tcl
+
+set task_id 0
+if { $argc == 2 } {
+	set task_id [ lindex $argv 1 ]
+}
+
+feat5:proc [ file rootname [ lindex $argv 0 ] ] $task_id
+
+exit
+

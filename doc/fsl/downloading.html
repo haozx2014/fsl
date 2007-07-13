@@ -1,0 +1,95 @@
+<HTML><HEAD><TITLE>FSL</TITLE></HEAD><BODY BACKGROUND="../images/fsl-bg.jpg" BGCOLOR="white">
+
+<H2>DOWNLOADING AND INSTALLING</H2>
+ 
+<p><br><H3>Downloading</H3>
+
+<P> FSL is available precompiled for various different operating
+systems (Linux, Mac OS X, Windows, SunOS). The sources are also
+available if you want to compile it yourself.
+
+<P> <B><A HREF="http://www.fmrib.ox.ac.uk/fsldownloads/"
+target="_top">Download FSL</A></B>
+
+<p><br><H3>Unpacking</H3>
+
+<P>To unpack a distribution, you need gunzip and tar. First cd to the
+directory where you want FSL installed (for example /usr/local). Then
+uncompress and untar the distribution - for example, if you have
+downloaded the Redhat 9 distribution to your home directory, type
+
+<PRE>
+gunzip ~/fsl-3.2-redhat9.tar.gz
+tar xvf ~/fsl-3.2-redhat9.tar
+</PRE>
+
+<br><br><H3>Special instructions for installation if:</H3> 
+<UL>
+
+<LI><a href="macosx.html">You are installing on Mac OS X</a>
+
+<LI><a href="windowsxp.html">You are installing on Windows XP</a>
+
+<LI><a href="compiling.html">You are compiling the source distribution
+instead of taking a binary distribution</a>
+
+</UL>
+
+
+<br><br><H3>Running</H3>
+
+<P>Put the following somewhere in your shell setup file (.bashrc,
+.profile, .cshrc etc., depending on what shell you use), setting the
+"/usr/local/fsl" to wherever you have installed FSL:
+
+<p><b>bash / sh / ksh</b><code><br>
+FSLDIR=/usr/local/fsl<br>
+. ${FSLDIR}/etc/fslconf/fsl.sh<br>
+PATH=${FSLDIR}/bin:${PATH}<br>
+export FSLDIR PATH</code>
+
+<p><b>tcsh / csh</b><code><br>
+setenv FSLDIR /usr/local/fsl<br>
+source ${FSLDIR}/etc/fslconf/fsl.csh<br>
+setenv PATH ${FSLDIR}/bin:${PATH}</code>
+
+<P>To run the FSL tools from the command line, you can find the
+tools in $FSLDIR/bin. In general command-line programs are lower case
+(e.g. '<b>bet</b>'). In general the GUI version is capitalised
+(e.g. '<b>Bet</b>'), except on Mac/Windows, where '_gui' is appended
+because those file systems can't tell the difference between upper and
+lower case (e.g. '<b>Bet_gui</b>').
+
+<p>To bring up a simple GUI which is just a menu of the main
+individual FSL GUI tools, just type <b>fsl</b>.
+
+
+<br><br><H3>Customising (for different output datatypes, etc.) </H3>
+
+<p>There are several environment variables which FSL uses to determine
+certain user preferences, such as the output file format (NIFTI,
+Analyze, etc). The defaults for these are set when you source the
+setup file as shown above (i.e., ${FSLDIR}/etc/fslconf/fsl.sh or
+${FSLDIR}/etc/fslconf/fsl.csh). If you wish to change these defaults
+then you need to:<pre>
+cd
+mkdir .fslconf
+cd .fslconf</pre>
+
+and in this directory create a file called fsl.sh or fsl.csh,
+depending on the shell that you use, setting any or all of the
+variables that appear in the central ${FSLDIR}/etc/fslconf/fsl.sh or
+${FSLDIR}/etc/fslconf/fsl.csh files. 
+<p>
+<b>
+DO NOT copy the central files into <kbd>~/.fslconf/</kbd> as it
+will cause a loop that will stop your login from working.
+</b>
+<p>
+It is recommended that the files <kbd>~/.fslconf/fsl.sh</kbd> or
+<kbd>~/.fslconf/fsl.csh</kbd> only include a few variable definitions
+and nothing more.  Note that whoever installs FSL can also edit the
+central files in <kbd>$FSLDIR/etc/fslconf</kbd> to change the
+preferences for all users.
+
+</BODY></HTML>
