@@ -32,9 +32,9 @@ clean:
 	${RM} -f /tmp/fslgrot *.o *.a *.exe core depend.mk
 
 install:
-	@${MAKE} "DESTDIR=${FSLDEVDIR}" master-install-script
+	@${MAKE} "DESTDIR=${DEB_DESTDIR}" master-install-script
 
-install-fmrib: 
+install-fmrib:
 	@numunst=`cvs status | grep "Sticky Tag" | grep -v -i stable | wc -l` ; export numunst ; \
 	if [ $$numunst -ge 1 ] ; then \
 	  echo " " ; \
@@ -303,18 +303,19 @@ update:
 commit:
 	cvs -q commit
 
-depend: 
+depend:
 	${RM} -f /tmp/fslgrot depend.mk
 	${MAKE} depend.mk
 
 depend.mk:
-	@echo Building dependency file depend.mk
-	@for srcfile in *.c *.cc *.cpp *.inc *.hpp verylongdummyname ; do \
-		if [ -f $$srcfile ] ; then \
-			${CC} ${DEPENDFLAGS} ${AccumulatedIncFlags} $$srcfile >> depend.mk ; \
-		else \
-			touch depend.mk; \
-		fi \
-	done
+#	@echo Building dependency file depend.mk
+#	@for srcfile in *.c *.cc *.cpp *.inc *.hpp verylongdummyname ; do \
+#		if [ -f $$srcfile ] ; then \
+#			${CC} ${DEPENDFLAGS} ${AccumulatedIncFlags} $$srcfile >> depend.mk ; \
+#		else \
+#			touch depend.mk; \
+#		fi \
+#	done
+	touch depend.mk
 
 include depend.mk

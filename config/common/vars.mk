@@ -3,13 +3,13 @@
 INCDIR = ${FSLDIR}/include
 LIBDIR = ${FSLDIR}/lib
 
-DEVINCDIR = ${FSLDEVDIR}/include
-DEVLIBDIR = ${FSLDEVDIR}/lib
+DEVINCDIR = ${FSLDIR}/include
+DEVLIBDIR = ${FSLDIR}/lib
 
-DESTDIR = ${FSLDEVDIR}
+DESTDIR = ${DEB_DESTDIR}
 
-dest_INCDIR = ${DESTDIR}/include
-dest_LIBDIR = ${DESTDIR}/lib
+dest_INCDIR = ${FSLDIR}/include
+dest_LIBDIR = ${FSLDIR}/lib
 dest_BINDIR = ${DESTDIR}/bin
 dest_MANDIR = ${DESTDIR}/man
 dest_TCLDIR = ${DESTDIR}/tcl
