@@ -72,7 +72,7 @@
 #include<stdlib.h>
 #include<string.h>
 #include<math.h>
-#include"fslio/fslio.h"
+#include<fslio.h>
 
 #define MAXLEN 128
 

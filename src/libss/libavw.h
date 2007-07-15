@@ -1,7 +1,7 @@
 #ifndef _LIBAVW_H_
 #define _LIBAVW_H_
 
-#include "fslio/fslio.h"
+#include <fslio.h>
 
 void avw_read(const char*, image_struct*);
 void avw_write(const char*, image_struct);

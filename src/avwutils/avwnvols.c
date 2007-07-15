@@ -67,7 +67,7 @@
     University, to negotiate a licence. Contact details are:
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
-#include "fslio/fslio.h"
+#include <fslio.h>
 
 int main(int argc, char **argv)
 {

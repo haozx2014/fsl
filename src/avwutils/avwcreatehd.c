@@ -67,7 +67,7 @@
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
 
-#include "fslio/fslio.h"
+#include <fslio.h>
 
 void usage(void)
 {

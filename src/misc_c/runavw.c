@@ -72,7 +72,7 @@
 /* }}} */
 /* {{{ includes */
 
-#include "fslio/fslio.h"
+#include <fslio.h>
 #include <unistd.h>
 #include <errno.h>
 

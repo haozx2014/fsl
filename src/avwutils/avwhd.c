@@ -72,8 +72,8 @@
 /* }}} */
 /* {{{ defines, includes and typedefs */
 
-#include "fslio/fslio.h"
-#include "fslio/dbh.h"
+#include <fslio.h>
+#include <dbh.h>
 
 void usage(void);
 

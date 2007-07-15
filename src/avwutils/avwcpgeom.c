@@ -73,7 +73,7 @@
 
 /* #include "libss/libss.h" */
 /* #include "libss/libavw.h" */
-#include "fslio/fslio.h"
+#include <fslio.h>
 
 void usage(void);
 

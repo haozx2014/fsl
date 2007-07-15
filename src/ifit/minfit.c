@@ -76,7 +76,7 @@
 #include "vector.h"
 #include "matrix.h"
 #include "nr.h"
-#include"fslio/fslio.h"
+#include <fslio.h>
 
 #define LINEAR 1
 #define SATREC 2

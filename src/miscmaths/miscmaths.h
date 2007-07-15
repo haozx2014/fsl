@@ -83,7 +83,7 @@
 #include <sstream>
 #include <string>
 #include <iterator>
-#include "fslio/fslio.h"
+#include <fslio.h>
 //#include "config.h"
 #include "newmatap.h"
 #include "kernel.h"

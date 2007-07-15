@@ -72,7 +72,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-#include "fslio/fslio.h"
+#include <fslio.h>
 
 #define LINEAR 1
 #define SATREC 2

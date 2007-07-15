@@ -71,7 +71,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "fslio/fslio.h"
+#include <fslio.h>
 
 int main(int argc, char **argv)
 {

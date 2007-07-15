@@ -70,7 +70,7 @@
 #define __fmribmain_h
 
 #include <iostream>
-#include "fslio/fslio.h"
+#include <fslio.h>
 
 using namespace std;
 

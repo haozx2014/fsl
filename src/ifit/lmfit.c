@@ -73,7 +73,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
-#include "fslio/fslio.h"
+#include <fslio.h>
 #include "vector.h"
 #include "matrix.h"
 #include "nr.h"
