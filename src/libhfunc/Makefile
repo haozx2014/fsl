@@ -2,13 +2,13 @@ include ${FSLCONFDIR}/default.mk
 
 PROJNAME = libhfunc
 
-AFILES = libhfunc.a
+AFILES = libhfunc.so
 HFILES = libhfunc.h dbh.h
 XFILES = 
 
 OBJS = libhfunc.o
 
-all: libhfunc.a
+all: libhfunc
 
-libhfunc.a: ${OBJS}
-	${AR} -r libhfunc.a ${OBJS}
+libhfunc: ${OBJS}
+	${CXX} -shared -o libhfunc.so ${OBJS} ${LDFLAGS} -fPIC
