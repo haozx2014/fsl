@@ -70,7 +70,7 @@
 #define probtrackxOptions_h
 
 #include <string> 
-#include <iostream.h>
+#include <iostream>
 #include <fstream.h>
 #include <stdlib.h>
 #include <stdio.h>

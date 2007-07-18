@@ -7,7 +7,7 @@
 /*  CCOPYRIGHT */
 
 #include <fstream>
-#include <strstream>
+#include <sstream>
 #include <cstdio>
 #include "mstring.h"
 using namespace std;
@@ -175,7 +175,7 @@ bool GetParameterNumber(const char* filename, const char* keyname, double& numbe
 
 bool isNumber(const string& keyword) 
 {
-	strstream tmp; tmp << keyword;
+	stringstream tmp; tmp << keyword;
 	float number;
 	if(!(tmp >> number)) return false; 
 	return true;

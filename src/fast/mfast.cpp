@@ -71,7 +71,7 @@
 #include <ctime>
 #include <iostream>
 #include <fstream>
-#include <strstream>
+#include <sstream>
 #include <string.h>
 #include "imageio.h"
 #include "imalgorithm.h"

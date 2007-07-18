@@ -69,7 +69,7 @@
 #define WANT_STREAM
 #define WANT_MATH
 
-#include <iostream.h>
+#include <iostream>
 #include <fstream.h>
 #include <stdlib.h>
 #include <stdio.h>
