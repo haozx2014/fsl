@@ -29,7 +29,7 @@ SCRIPTS = melodicreport
 all: ggmix melodic
 
 ggmix: ${GGMIX_OBJS}
-	${AR} -r libggmix.a ${GGMIX_OBJS} 
+	${CXX} -shared -o libggmix.so ${GGMIX_OBJS} ${LDFLAGS} -fPIC -lnewmat -lmiscmaths -lnewimage
 
 melodic: ${MELODIC_OBJS}
 	$(CXX) ${CXXFLAGS} ${LDFLAGS} -o $@ ${MELODIC_OBJS} ${LIBS}
