@@ -18,10 +18,10 @@ SOBJS = ${NOBJS} skeletonapp.o
 TESTXFILES = testprog skeletonapp
 XFILES = 
 
-all: libnewimage.a
+all: libnewimage
 
-libnewimage.a: ${NOBJS}
-	${AR} -r libnewimage.a ${NOBJS}
+libnewimage: ${NOBJS}
+	${CXX} -shared -o libnewimage.so ${NOBJS} ${LDFLAGS} -fPIC -lnewmat -lfslio -lmiscmaths -lniftiio
 
 skeletonapp: ${SOBJS}
 	$(CXX)  ${CXXFLAGS} ${LDFLAGS} -o $@ ${SOBJS} ${LIBS}
