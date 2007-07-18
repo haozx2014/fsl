@@ -31,4 +31,5 @@ SGI_ANSI_FLAGS = -ansi -fullwarn
 ANSI_FLAGS = ${GNU_ANSI_FLAGS} -I/usr/include/nifti -I/usr/include/newmat \
              -I${FSLDIR}/extras/include -I${FSLDIR}/include/libprob \
              -DHAVE_LIBFREETYPE
-ARCHLDFLAGS = -Wl,--unresolved-symbols=ignore-in-shared-libs
+#ARCHLDFLAGS = -Wl,--unresolved-symbols=ignore-in-shared-libs
+ARCHLDFLAGS = -Wl,--no-undefined -Wl,--as-needed
