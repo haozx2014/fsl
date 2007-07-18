@@ -40,7 +40,7 @@ MAKEOPTIONS="${MAKEOPTIONS} FSLEXTLIB=${FSLEXTLIB} FSLEXTINC=${FSLEXTINC}"
 
 errorprojs="" ; export errorprojs ;
 
-PROJECTS="libprob libcprob cprob cephes"
+PROJECTS="libprob cprob cephes"
 
 for projname in $PROJECTS; do
 
