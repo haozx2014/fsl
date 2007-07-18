@@ -35,7 +35,7 @@ CXXFLAGS = ${ANSI_FLAGS} ${DBGFLAGS} ${USEDCXXSTATICFLAGS} ${USRCXXFLAGS} ${ARCH
 	${AccumulatedIncFlags}
 
 HFILES = *.h
-AFILES = *.a
+AFILES = *.a *.so
 XFILES = 
 SCRIPTS =
 TCLFILES = *.tcl
