@@ -8,12 +8,12 @@ stdtr.o unity.o polevl.o const.o xmath.o
 
 USRCFLAGS = -std=gnu99
 
-all: libprob.a
+all: libprob
 
 dftest: all dftest.o
 	$(CC) $(CFLAGS) -L. -o dftest dftest.o -lprob
 
-libprob.a: $(OBJS) $(INCS)
+libprob: $(OBJS) $(INCS)
 	${CXX} -shared -o libprob.so $(OBJS) -fPIC ${LDFLAGS}
 	rm -f libcprob.so
 	ln -s libprob.so libcprob.so
