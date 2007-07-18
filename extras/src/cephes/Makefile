@@ -16,8 +16,8 @@ OBJS = zetac.o j0.o i0.o chbevl.o j1.o i1.o
 
 LIBS = -lm -lcprob
 
-MOBJS = mtst.o libcephes.a
-COBJS = ctest.o libcephes.a
+MOBJS = mtst.o libcephes
+COBJS = ctest.o libcephes
 
 USRINCFLAGS = -I${INC_CPROB} -I../cprob
 
@@ -26,10 +26,10 @@ AFILES = libcephes.a
 HFILES = libcephes.h
 TESTXFILES = mtst ctest
 
-all: libcephes.a
+all: libcephes
 
-libcephes.a: ${OBJS}
-	${AR} -r libcephes.a ${OBJS}
+libcephes: ${OBJS}
+	${CXX} -shared -o libcephes.so ${OBJS} -fPIC ${LDFLAGS} -lcprob
 
 mtst: all ${MOBJS}
 	${CC} ${CFLAGS} ${LDFLAGS} -o $@ ${MOBJS} ${LIBS} 
