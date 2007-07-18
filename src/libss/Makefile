@@ -4,11 +4,11 @@ include $(FSLCONFDIR)/default.mk
 
 PROJNAME = libss
 
-all: libss_8UI.a
+all: libss_8UI
 
-libss_8UI.a: libss_8UI.o libavw_8UI.o libtessa_8UI.o libpicio_8UI.o
+libss_8UI: libss_8UI.o libavw_8UI.o libtessa_8UI.o libpicio_8UI.o
 	for FDT in 8UI 8SI 16UI 16SI 32UI 32SI 32R 64R ; do $(DATATYPES) ; \
-	$(AR) -r libss_$$FDT.a libss_$$FDT.o libavw_$$FDT.o libtessa_$$FDT.o libpicio_$$FDT.o ; \
+	$(CC) -shared -o libss_$$FDT.so libss_$$FDT.o libavw_$$FDT.o libtessa_$$FDT.o libpicio_$$FDT.o ${LDFLAGS} -fPIC -lfslio -lm; \
 	done
 
 libss_8UI.o: libss.c libss.h libssbase.h 
