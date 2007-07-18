@@ -14,7 +14,6 @@ dftest: all dftest.o
 	$(CC) $(CFLAGS) -L. -o dftest dftest.o -lprob
 
 libprob.a: $(OBJS) $(INCS)
-	ar rv libprob.a $(OBJS)
-	ranlib libprob.a
-	rm -f libcprob.a
-	ln -s libprob.a libcprob.a
+	${CXX} -shared -o libprob.so $(OBJS) -fPIC ${LDFLAGS}
+	rm -f libcprob.so
+	ln -s libprob.so libcprob.so
