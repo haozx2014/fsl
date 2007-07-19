@@ -1,0 +1,7 @@
+fsl (3.3.11-2) unstable; urgency=low
+
+  * FSL config file /etc/fsl/fsl.conf has been renamed to /etc/fsl/fsl.sh to
+    be consistent with upstream FSL versions and to get correctly identified as
+    a shell scripts.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Thu, 19 Apr 2007 14:40:21 +0200

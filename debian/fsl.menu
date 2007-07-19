@@ -1,0 +1,144 @@
+?package(fsl):\
+    needs="X11" \
+    section="Apps/Science" \
+    title="FSL" \
+    longtitle="FMRIB Software Library" \
+    command="/usr/bin/fsl" \
+    icon="/usr/share/pixmaps/fsl.xpm" \
+    hints="MRI,fMRI,FSL"
+
+?package(fsl):\
+    needs="X11" \
+    section="Apps/Science" \
+    title="ApplyXFM" \
+    longtitle="FSL: Apply FLIRT Transformations" \
+    command="/usr/bin/ApplyXFM" \
+    icon="/usr/share/pixmaps/fsl.xpm" \
+    hints="MRI,fMRI,FSL"
+
+?package(fsl):\
+    needs="X11" \
+    section="Apps/Science" \
+    title="BET" \
+    longtitle="FSL: Brian Extraction Tool" \
+    command="/usr/bin/Bet" \
+    icon="/usr/share/pixmaps/fsl.xpm" \
+    hints="MRI,fMRI,FSL"
+
+?package(fsl):\
+    needs="X11" \
+    section="Apps/Science" \
+    title="ConcatXFM" \
+    longtitle="FSL" \
+    command="/usr/bin/ConcatXFM" \
+    icon="/usr/share/pixmaps/fsl.xpm" \
+    hints="MRI,fMRI,FSL"
+
+?package(fsl):\
+    needs="X11" \
+    section="Apps/Science" \
+    title="Fast" \
+    longtitle="FSL" \
+    command="/usr/bin/Fast" \
+    icon="/usr/share/pixmaps/fsl.xpm" \
+    hints="MRI,fMRI,FSL"
+
+?package(fsl):\
+    needs="X11" \
+    section="Apps/Science" \
+    title="Fdt" \
+    longtitle="FSL" \
+    command="/usr/bin/Fdt" \
+    icon="/usr/share/pixmaps/fsl.xpm" \
+    hints="MRI,fMRI,FSL"
+
+?package(fsl):\
+    needs="X11" \
+    section="Apps/Science" \
+    title="Feat" \
+    longtitle="FSL fMRI Analysis" \
+    command="/usr/bin/Feat" \
+    icon="/usr/share/pixmaps/fsl.xpm" \
+    hints="MRI,fMRI,FSL"
+
+?package(fsl):\
+    needs="X11" \
+    section="Apps/Science" \
+    title="Featquery" \
+    longtitle="FSL" \
+    command="/usr/bin/Featquery" \
+    icon="/usr/share/pixmaps/fsl.xpm" \
+    hints="MRI,fMRI,FSL"
+
+?package(fsl):\
+    needs="X11" \
+    section="Apps/Science" \
+    title="Flirt" \
+    longtitle="FSL" \
+    command="/usr/bin/Flirt" \
+    icon="/usr/share/pixmaps/fsl.xpm" \
+    hints="MRI,fMRI,FSL"
+
+?package(fsl):\
+    needs="X11" \
+    section="Apps/Science" \
+    title="Glm" \
+    longtitle="FSL" \
+    command="/usr/bin/Glm" \
+    icon="/usr/share/pixmaps/fsl.xpm" \
+    hints="MRI,fMRI,FSL"
+
+?package(fsl):\
+    needs="X11" \
+    section="Apps/Science" \
+    title="InvertXFM" \
+    longtitle="FSL" \
+    command="/usr/bin/InvertXFM" \
+    icon="/usr/share/pixmaps/fsl.xpm" \
+    hints="MRI,fMRI,FSL"
+
+?package(fsl):\
+    needs="X11" \
+    section="Apps/Science" \
+    title="Make_flobs" \
+    longtitle="FSL" \
+    command="/usr/bin/Make_flobs" \
+    icon="/usr/share/pixmaps/fsl.xpm" \
+    hints="MRI,fMRI,FSL"
+
+?package(fsl):\
+    needs="X11" \
+    section="Apps/Science" \
+    title="Melodic" \
+    longtitle="FSL" \
+    command="/usr/bin/Melodic" \
+    icon="/usr/share/pixmaps/fsl.xpm" \
+    hints="MRI,fMRI,FSL"
+
+?package(fsl):\
+    needs="X11" \
+    section="Apps/Science" \
+    title="Nudge" \
+    longtitle="FSL" \
+    command="/usr/bin/Nudge" \
+    icon="/usr/share/pixmaps/fsl.xpm" \
+    hints="MRI,fMRI,FSL"
+
+?package(fsl):\
+    needs="X11" \
+    section="Apps/Science" \
+    title="Renderhighres" \
+    longtitle="FSL" \
+    command="/usr/bin/Renderhighres" \
+    icon="/usr/share/pixmaps/fsl.xpm" \
+    hints="MRI,fMRI,FSL"
+
+?package(fsl):\
+    needs="X11" \
+    section="Apps/Science" \
+    title="Susan" \
+    longtitle="FSL" \
+    command="/usr/bin/Susan" \
+    icon="/usr/share/pixmaps/fsl.xpm" \
+    hints="MRI,fMRI,FSL"
+

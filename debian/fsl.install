@@ -1,0 +1,4 @@
+fsl.xpm usr/share/pixmaps
+../desktop/*.desktop usr/share/applications
+../../lib/*.so usr/lib/fsl
+../fsl.sh etc/fsl

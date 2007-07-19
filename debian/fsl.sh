@@ -7,6 +7,9 @@
 
 #### Set up standard FSL user environment variables ####
 
+# Debian has a fixed FSLDIR
+FSLDIR=/usr/share/fsl
+
 # The following variable selects the default output image type
 # Legal values are:
 # ANALYZE, NIFTI, NIFTI_PAIR, ANALYZE_GZ, NIFTI_GZ, NIFTI_PAIR_GZ
@@ -44,6 +47,11 @@ export FSLLOCKDIR FSLMACHINELIST FSLREMOTECALL
 ###################################################
 ####    DO NOT ADD ANYTHING BELOW THIS LINE    ####
 ###################################################
+
+# Configure the linker search path for Debian FSLs internal shared libraries
+LD_LIBRARY_PATH=/usr/lib/fsl
+export LD_LIBRARY_PATH
+
 
 # load user configuration
 if [ -f "${HOME}/.fsl/fsl.sh" ] ; then

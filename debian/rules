@@ -1,0 +1,149 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+
+# get octave paths (have to build-depend on octave-headers)
+include /usr/share/octave/debian/defs.make
+
+# This has to be exported to make some magic below work.
+export DH_OPTIONS
+
+
+#Architecture
+build:
+	dh_testdir
+
+	# FSL does not separate build and install properly
+	# create temporary install dir now
+	if [ ! -d $(CURDIR)/debian/tmp ]; then mkdir -p $(CURDIR)/debian/tmp; fi
+
+	# build the monster
+	LD_LIBRARY_PATH=$(CURDIR)/lib \
+		FSLDIR=$(CURDIR) \
+		FSL_CLEAN_SRC=0 \
+		DEB_DESTDIR=$(CURDIR)/debian/tmp \
+			./build
+
+	# fix permissions
+	find debian/tmp/tcl/BWidget -type f -exec chmod -x {} \;
+	chmod 644 debian/tmp/tcl/*.tcl
+	chmod 644 debian/tmp/tcl/*.xbm
+	chmod 644 debian/tmp/tcl/*.ppm
+	chmod 644 debian/tmp/tcl/*.ico
+	chmod -x debian/tmp/etc/flirtsch/*
+	chmod -x debian/tmp/etc/fslpres/*
+
+
+clean:
+	dh_testdir
+	dh_testroot
+
+	# Add here commands to clean up after the build process.
+	FSLDIR=$(CURDIR) FSL_CLEAN_SRC=1 DEB_DESTDIR=$(CURDIR)/debian/tmp ./build
+
+	# remove leftovers
+	find $(CURDIR) -name '*.so' -exec rm {} \;
+	rm -f src/fdt/{xfibres,fdt_matrix_ops,indexer,replacevols,probtrackx,reord_OM,sausages}
+	rm -f src/ifit/mfilt
+
+
+	# clean the remaining temp dir
+	rm -rf include
+
+	# finally clean package
+	dh_clean
+
+
+# checks that the included desktop files are ok
+validate-desktop-files:
+	for f in $(CURDIR)/debian/desktop/*.desktop; do \
+		desktop-file-validate $${f} ; \
+	done
+
+
+install: build
+	# make FSL logo for menu entries
+	convert debian/tmp/tcl/fsl-logo-tiny.ppm \
+		-resize x32 -crop 32x32+6+0 debian/tmp/fsl.xpm
+
+
+# Must not depend on anything. This is to be called by
+# binary-arch/binary-indep
+# in another 'make' thread.
+binary-common:
+	dh_testdir
+	dh_testroot
+	dh_install --sourcedir=debian/tmp
+	dh_installchangelogs
+	dh_installman
+	dh_installdocs
+	dh_installmenu
+	dh_link
+	dh_strip
+	dh_compress
+	dh_fixperms
+	dh_installdeb
+	dh_shlibdeps
+	# get the correct dependency for octave
+	octave-depends
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+
+# Build architecture independent packages using the common target.
+binary-indep: install
+	dh_installdirs -i
+	# move the docs into the doc package
+	cp -r doc/*  debian/fsl-doc/usr/share/fsl/doc/
+	cp -r debian/tmp/doc debian/fsl-doc/usr/share/fsl
+
+	# remove the images that are necessary for fsl runtime
+	# to avoid duplicates
+	rm -r debian/fsl-doc/usr/share/fsl/doc/images
+
+	# cleanup doc path
+	rm debian/fsl-doc/usr/share/fsl/doc/feat5/DO
+	rm debian/fsl-doc/usr/share/fsl/doc/siena/siena*
+
+	$(MAKE) -f debian/rules DH_OPTIONS=-i binary-common
+
+
+# Build architecture dependant packages using the common target.
+binary-arch: install
+	dh_installdirs -a
+	# binaries
+	cp debian/tmp/bin/* debian/fsl/usr/lib/fsl
+	# the whole fsl package in /usr/share/fsl
+	cp -r debian/tmp/tcl/* debian/fsl/usr/share/fsl/tcl
+	# remove previous link to make repeated builds work
+	-rm debian/fsl/usr/share/fsl/etc/fslconf/feat.tcl
+
+	# copy etc path (from source AND install path)
+	cp -rf etc debian/fsl/usr/share/fsl
+	cp -r debian/tmp/etc debian/fsl/usr/share/fsl
+
+	# we need the config file in /etc/fsl
+	rm -f mv debian/fsl/usr/share/fsl/etc/fslconf/fsl.sh
+	mv debian/fsl/usr/share/fsl/etc/fslconf/feat.tcl debian/fsl/etc/fsl
+
+	# images needed by the FSL frontend
+	cp -r doc/images/*      debian/fsl/usr/share/fsl/doc/images/
+
+	# install GUI application wrapper
+	cp debian/fsl_gui_app_wrapper debian/fsl/usr/lib/fsl
+	chmod +x debian/fsl/usr/lib/fsl/fsl_gui_app_wrapper
+
+	$(MAKE) -f debian/rules DH_OPTIONS=-a binary-common
+
+
+# this target downloads the upstream tarball and turns it into the
+# orig source of the Debian package
+get-orig-source:
+	if [ -x debian/fsl-orig-source.sh ]; then debian/fsl-orig-source.sh && mv fsl*orig.tar.gz .. ; \
+	else echo "This must be run from the root of the unpackaged source package." && exit 1; \
+	fi
+
+
+binary: binary-arch binary-indep
+.PHONY: build clean binary-indep binary-arch binary
+

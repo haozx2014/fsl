@@ -1,0 +1,239 @@
+This package was debianized by Michael Hanke <michael.hanke@gmail.com> on
+Sat,  3 Sep 2005 19:56:46 +0200.
+
+It was downloaded from http://www.fmrib.ox.ac.uk/fsldownloads/
+
+
+FSL license
+-----------
+
+FMRIB Software Library, Release 3.3 (c) 2006, The University of
+Oxford (the "Software")
+
+The Software remains the property of the University of Oxford ("the
+University").
+
+The Software is distributed "AS IS" under this Licence solely for
+non-commercial use in the hope that it will be useful, but in order
+that the University as a charitable foundation protects its assets for
+the benefit of its educational and research purposes, the University
+makes clear that no condition is made or to be implied, nor is any
+warranty given or to be implied, as to the accuracy of the Software,
+or that it will be suitable for any particular purpose or for use
+under any specific conditions. Furthermore, the University disclaims
+all responsibility for the use which is made of the Software. It
+further disclaims any liability for the outcomes arising from using
+the Software.
+
+The Licensee agrees to indemnify the University and hold the
+University harmless from and against any and all claims, damages and
+liabilities asserted by third parties (including claims for
+negligence) which arise directly or indirectly from the use of the
+Software or the sale of any products based on the Software.
+
+No part of the Software may be reproduced, modified, transmitted or
+transferred in any form or by any means, electronic or mechanical,
+without the express permission of the University. The permission of
+the University is not required if the said reproduction, modification,
+transmission or transference is done without financial return, the
+conditions of this Licence are imposed upon the receiver of the
+product, and all original and amended source code is included in any
+transmitted product. You may be held legally responsible for any
+copyright infringement that is caused or encouraged by your failure to
+abide by these terms and conditions.
+
+You are not permitted under this Licence to use this Software
+commercially. Use for which any financial return is received shall be
+defined as commercial use, and includes (1) integration of all or part
+of the source code or the Software into a product for sale or license
+by or on behalf of Licensee to third parties or (2) use of the
+Software or any derivative of it for research with the final aim of
+developing software products for sale or license to a third party or
+(3) use of the Software or any derivative of it for research with the
+final aim of developing non-software products for sale or license to a
+third party, or (4) use of the Software to provide any service to an
+external organisation for which payment is received. If you are
+interested in using the Software commercially, please contact Isis
+Innovation Limited ("Isis"), the technology transfer company of the
+University, to negotiate a licence. Contact details are:
+innovation@isis.ox.ac.uk quoting reference DE/1112.
+
+
+
+FSLView license
+---------------
+
+FSLView v2.4
+
+FSLView v2.4 sources are released under the terms of the GPL 
+(http://www.gnu.org/copyleft/gpl.html). FSLView binaries use Qt 
+(http://www.trolltech.com) which is released under GPL for X11 and 
+under the "Qt non-commercial licence" for Windows.  The FSLView 
+binaries are released under the GPL, with the added exception that we 
+also give permission to link this program with the Qt non-commercial 
+edition, and distribute the resulting executable, without including the 
+source code for the Qt non-commercial edition in the source distribution.
+
+FSLView is distributed "AS IS" under this Licence in the hope that it
+will be useful, but in order that the University as a charitable
+foundation protects its assets for the benefit of its educational and
+research purposes, the University makes clear that no condition is
+made or to be implied, nor is any warranty given or to be implied, as
+to the accuracy of the Software, or that it will be suitable for any
+particular purpose or for use under any specific conditions.
+Furthermore, the University disclaims all responsibility for the use
+which is made of the Software. It further disclaims any liability for
+the outcomes arising from using the Software.
+
+On Debian systems, the complete text of the GNU General
+Public License can be found in `/usr/share/common-licenses/GPL'.
+
+
+src/misc_c/gifmerge.c
+---------------------
+
+Copyright (C) 1990,1991,1992,1993 by Mark Podlipec.
+All rights reserved.
+
+This software may be freely copied, modified and redistributed
+without fee provided that this copyright notice is preserved
+intact on all copies and modified copies.
+
+There is no warranty or other guarantee of fitness of this software.
+It is provided solely "as is". The author(s) disclaim(s) all
+responsibility and liability with respect to this software's usage
+or its effect upon hardware or computer systems.
+
+
+
+src/misc_tcl/collapsible.tcl
+----------------------------
+
+Copyright (C) 1993 by General Electric company.  All rights reserved.
+Permission to use, copy, modify, and distribute this
+software and its documentation for any purpose and without
+fee is hereby granted, provided that the above copyright
+notice appear in all copies and that both that copyright
+notice and this permission notice appear in supporting
+documentation, and that the name of General Electric not be used in
+advertising or publicity pertaining to distribution of the
+software without specific, written prior permission.
+
+General Electric makes no representations about the suitability of
+this software for any purpose.  It is provided ``as is''
+without express or implied warranty.
+
+This work was supported in part by the DARPA Initiative in Concurrent
+Engineering (DICE) through DARPA Contracts MDA972-88-C-0047 and
+MDA972-92-C-0027.
+
+This work was supported in part by the Tri-Services Microwave and
+Millimeter-Wave Advanced Computational Environment (MMACE) program
+under Naval Research Laboratory contract N00014-92-C-2044.
+
+
+
+src/misc_tcl/FSLFileDirBox.tcl
+src/misc_tcl/FSLFileDirDlg.tcl
+------------------------------
+
+Copyright (c) 1996, Expert Interface Technologies
+
+LICENSE is missing.
+
+
+
+src/miscvis/readpng.(h|c)
+src/miscvis/writepng.(h|c)
+src/miscvis/(d|w)png.c
+---------------------------------
+
+Copyright (c) 1998-2001 Greg Roelofs.  All rights reserved.
+
+This software is provided "as is," without warranty of any kind,
+express or implied.  In no event shall the author or contributors
+be held liable for any damages arising in any way from the use of
+this software.
+
+Permission is granted to anyone to use this software for any purpose,
+including commercial applications, and to alter it and redistribute
+it freely, subject to the following restrictions:
+
+1. Redistributions of source code must retain the above copyright
+   notice, disclaimer, and this list of conditions.
+2. Redistributions in binary form must reproduce the above copyright
+   notice, disclaimer, and this list of conditions in the documenta-
+   tion and/or other materials provided with the distribution.
+3. All advertising materials mentioning features or use of this
+   software must display the following acknowledgment:
+
+This product includes software developed by Greg Roelofs
+and contributors for the book, "PNG: The Definitive Guide,"
+published by O'Reilly and Associates.
+
+
+
+src/susan/susan_smooth.c
+------------------------
+
+Oxford Centre for Functional Magnetic Resonance Imaging of the Brain
+Department of Clinical Neurology, Oxford University, Oxford, UK
+(Previously in Computer Vision and Image Processing Group - now
+Computer Vision and Electro Optics Group - DERA Chertsey, UK)
+Email:    steve@fmrib.ox.ac.uk
+WWW:      http://www.fmrib.ox.ac.uk/~steve
+
+(C) Crown Copyright (1995-1999), Defence Evaluation and Research Agency,
+Farnborough, Hampshire, GU14 6TD, UK
+DERA WWW site:
+http://www.dera.gov.uk/
+DERA Computer Vision and Electro Optics Group WWW site:
+http://www.dera.gov.uk/imageprocessing/dera/group_home.html
+DERA Computer Vision and Electro Optics Group point of contact:
+Dr. John Savage, jtsavage@dera.gov.uk, +44 1344 633203
+
+A UK patent has been granted: "Method for digitally processing
+images to determine the position of edges and/or corners therein for
+guidance of unmanned vehicle", UK Patent 2272285. Proprietor:
+Secretary of State for Defence, UK. 15 January 1997
+
+This code is issued for research purposes only and remains the
+property of the UK Secretary of State for Defence. This code must
+not be passed on without this header information being kept
+intact. This code must not be sold.
+
+
+Package maintainer comment:
+
+As this license looks very restrictive the Debian package maintainer asked
+upstream for clarification. Steve Smith answered:
+
+"1. Only the SUSAN corner and edge detection are patented, not SUSAN
+    smoothing, which is what we are using in FSL.
+ 2. We didn't derive the FSL smoothing code from the publically
+    available SUSAN code (I wrote it and hence effectively sourced it
+    independently) so it's not covered by the copyright on the 
+    available SUSAN code."
+
+
+extras/libprob
+--------------
+This code comes from the CEPHES library which does not have a proper license.
+
+Debian already include code from CEPHES library. Please see
+
+http://packages.debian.org/changelogs/pool/main/l/labplot/labplot_1.5.1-1/labplot.copyright
+
+for references.
+
+
+src/niftiio, src/znzlib
+-----------------------
+
+This code is part of the nifticlibs (http://niftilib.sourceforge.net/) and is
+release to the public domain.
+
+
+The Debian packaging is (C) 2005-2007, Michael Hanke <michael.hanke@gmail.com>
+and is licensed under the GPL, see above.
+

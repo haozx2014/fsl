@@ -1,0 +1,180 @@
+fsl (4.0-1) unstable; urgency=low
+
+  * Debian diff is now handled with a nice GIT repository. Build-dependency
+    to dpatch is now obsolete.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Sat,  7 Jul 2007 11:21:59 +0200
+
+fsl (3.3.11-2) unstable; urgency=low
+
+  * Removed manpage links of FSL internal cmdline tools to prevent namespace
+    conflicts.
+  * Disabled FSL developer variables in /etc/fsl/fsl.conf to prevent error
+    messages when the file is sourced, but no compiler is installed.
+  * Added wrapper script (similar to ssh-argv0) to be able to automatically
+    source the FSL configuration on startup. This adds the opportunity to
+    include menu and .desktop files.
+  * Add proper menu and .desktop files for all FSL GUI applications.
+  * Added build-depend on imagemagick to be able to generate a 32x32 icon for
+    the FSL menu entries from included artwork.
+  * Renamed fsl config file from fsl.conf to fsl.sh. This is done to reduce
+    the differences between upstream releases and the Debian package.
+    A preinst script was added to move old config files on package upgrades.
+    The new behavior is noted in debian/NEWS.
+  * Added XS-Vcs-Svn and XS-Vcs-Browser to debian/control.
+  * Added comments about the CEPHES and Susan licensing to debian/copyright.
+  * Added a link to the FSLView binary to /usr/share/fsl/bin, because Nudge
+    was complaining about not beeing able to find it. Thanks to Yaroslav
+    Halchenko for pointing at this issue.
+  * Added manpage for fslview.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Tue, 01 May 2007 19:53:06 +0200
+
+fsl (3.3.11-1) unstable; urgency=low
+
+  * New upstream release. Fixes another minor randomize bug.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Sat, 31 Mar 2007 19:32:42 +0200
+
+fsl (3.3.10-1) unstable; urgency=low
+
+  * New upstream release. Fixes a bug in randomise.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Fri, 16 Mar 2007 18:38:08 +0100
+
+fsl (3.3.9-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Fri, 16 Feb 2007 13:03:14 +0100
+
+fsl (3.3.8-1) unstable; urgency=low
+
+  * New upstream release.
+  * Minor bugfixes fixes to avwmerge++ and avwmaths++.
+  * Modified FSLView makefile to fix FTBFS due to missing fslio linrary.
+  * Added debian/backports to the source package. It contains a patch that
+    disables the fslview package when backporting to sarge using pbuilder-ssh.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Fri, 12 Jan 2007 10:42:06 +0100
+
+fsl (3.3.7-3) unstable; urgency=low
+
+  * Added missing changelog entries for 3.3.7-2.
+  * Renamed the fsl-sbrain package to fsl-data.
+  * Added missing licenses to debian/copyright.
+  * Moved default FEAT configuration to /etc/fsl.
+  * Temporarily added libvtk5-qt3 to the build-depends to work-around
+    bug #389521.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Mon, 30 Oct 2006 11:02:14 +0100
+
+fsl (3.3.7-2) unstable; urgency=low
+
+  * Include FSLView docs in the fsl-doc package.
+  * Added patch to fix FTBFS due to an issue with template instantiation.
+    Thanks to Yaroslav Halchenko.
+  * Minor enhancement for FSLView compilation (force Qt3 with Qt4 also
+    present).
+  * Fixed missing example_FA_target in $FSLDIR/etc/standard.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Sat,  9 Sep 2006 09:51:41 +0200
+
+fsl (3.3.7-1) unstable; urgency=low
+
+  * New upstream release.
+  * Added FSLView package.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Sun, 30 Jul 2006 13:56:52 +0200
+
+fsl (3.3.6-2) unstable; urgency=low
+
+  * Bumped Standards-Version to 3.7.2; no changes necessary.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Mon,  3 Jul 2006 21:37:31 +0200
+
+fsl (3.3.6-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Sun, 18 Jun 2006 08:18:51 +0200
+
+fsl (3.3.5-2) unstable; urgency=low
+
+  * Added patch for gcc4.1 compatibility (Thanks to Mark Jenkinson).
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Sat, 10 Jun 2006 09:02:11 +0200
+
+fsl (3.3.5-1) unstable; urgency=low
+
+  * New upstream release
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Tue,  2 May 2006 09:32:13 +0200
+
+fsl (3.3.4-1) unstable; urgency=low
+
+  * New upstream release (missed 3.3.3). FSLView source code is now included,
+    but FSLView still cannot be build, because it build-depends on VTK 5.0.
+    No Debian package of this version is currently available.
+  * Added build conflict to libnifti0-dev. FSL sources contain an incompatible
+    fork of this library. This situation should vanish with the next major
+    release.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Wed, 26 Apr 2006 10:51:08 +0200
+
+fsl (3.3.2-1) unstable; urgency=low
+
+  * New upstream release.
+  * Moved all binaries to /usr/lib/fsl after experiencing name clashes with
+    other packages.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Tue, 11 Apr 2006 16:20:27 +0200
+
+fsl (3.3.0-1) unstable; urgency=low
+
+  * New upstream version.
+  * Split standard space brain data into a separate package.
+  * Made matlab m-files available for Octave.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Sat, 18 Mar 2006 23:56:31 +0100
+
+fsl (3.2beta-4) unstable; urgency=low
+
+  * Added the possibility to define additional compiler flags for
+    arch-dependend optimization by defining them in the DEB_ARCH_OPT_FLAGS
+    environment variable.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Thu, 23 Feb 2006 20:50:57 +0100
+
+fsl (3.2beta-3) unstable; urgency=low
+
+  * Split the dpatch patches into several smaller parts.
+  * Added patches to replace most of the deprecated headers.
+  * Improved patch to FAST for GCC4 compatiility.
+  * Removed libcprob and newran from the tarball, since they are unnecessary
+    for building FSL.
+  * Added patch to libvis that makes it possible to use a dependency to the
+    official Debian libgdchart-gd2 package instead of compiling the custom
+    version from the FSL source tarball.
+  * Switch package dependency for newmat to a package that provides a shared
+    library (Thanks to Philippe Coval).
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Sun, 19 Feb 2006 22:05:24 +0100
+
+fsl (3.2beta-2) unstable; urgency=low
+
+  * Added build-dependency to libnewmat10-dev and stopped compiling the
+    included version.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Mon,  2 Jan 2006 14:46:14 +0100
+
+fsl (3.2beta-1) unstable; urgency=low
+
+  * Initial Release (Closes: #332666).
+  * Upstream tarball was repackaged, because it contained lots of binaries of
+    software available as proper Debian packages (see get-orig-source target
+    in debian/rules).
+  * Includes some fixes for compatibility with GCC4 (thanks to Andre Piel).
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Wed, 28 Dec 2005 17:11:34 +0100
+

@@ -1,0 +1,1 @@
+* Catch exception in FSL GUI when fsl-data package is missing.

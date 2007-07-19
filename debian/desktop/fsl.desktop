@@ -1,0 +1,11 @@
+[Desktop Entry]
+Encoding=UTF-8
+GenericName=Software Collection for (f)MRI Data Analysis
+GenericName[de]=Software-Kollektion zur (f)MRT-Daten Analyse 
+Name=FSL
+Exec=fsl
+TryExec=fsl
+Icon=fsl.xpm
+Type=Application
+Terminal=false
+Categories=Science;MedicalSoftware;

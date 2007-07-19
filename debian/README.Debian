@@ -1,0 +1,16 @@
+FSL for Debian
+--------------
+
+Most (if not all) FSL binaries require the presence of some environment 
+variables set properly. To achieve this, one needs to source the FSL config
+script, which is at /etc/fsl/fsl.sh.
+
+The FSL user interface sometimes refers to an 'FSLDIR'. For Debian systems this
+is /usr/share/fsl.
+
+The original tarball included several additional tools in binary form (>50 MB)
+which are available as separate packages in Debian. For that reason the source
+tarball has been repackaged with all unnecessary parts removed. See the 
+debian/fsl-orig-source.sh script for the exact procedure.
+
+ -- Michael Hanke <michael.hanke@gmail.com>, Sat, 31 Jan 2006 18:43:23 +0200
