@@ -1,6 +1,10 @@
 #!/usr/bin/make -f
 # -*- makefile -*-
 
+# enable exented globbing in the shell to be able to use more
+# sophisticated stuff in dh_install files
+SHELL := /bin/bash -O extglob
+
 # get octave paths (have to build-depend on octave-headers)
 include /usr/share/octave/debian/defs.make
 
@@ -72,7 +76,7 @@ install: build
 binary-common:
 	dh_testdir
 	dh_testroot
-	dh_install --sourcedir=debian/tmp
+	dh_install
 	dh_installchangelogs
 	dh_installman
 	dh_installdocs
@@ -93,17 +97,13 @@ binary-common:
 # Build architecture independent packages using the common target.
 binary-indep: install
 	dh_installdirs -i
-	# move the docs into the doc package
-	cp -r doc/*  debian/fsl-doc/usr/share/fsl/doc/
-	cp -r debian/tmp/doc debian/fsl-doc/usr/share/fsl
 
-	# remove the images that are necessary for fsl runtime
-	# to avoid duplicates
-	rm -r debian/fsl-doc/usr/share/fsl/doc/images
+	# install docs (except images which are in fsl package)
+	cp -r doc/!(images) debian/fsl-doc/usr/share/fsl/doc
 
 	# cleanup doc path
-	rm debian/fsl-doc/usr/share/fsl/doc/feat5/DO
-	rm debian/fsl-doc/usr/share/fsl/doc/siena/siena*
+	rm debian/tmp/doc/feat5/DO
+	rm debian/tmp/doc/siena/siena*
 
 	$(MAKE) -f debian/rules DH_OPTIONS=-i binary-common
 
@@ -111,27 +111,12 @@ binary-indep: install
 # Build architecture dependant packages using the common target.
 binary-arch: install
 	dh_installdirs -a
-	# binaries
-	cp debian/tmp/bin/* debian/fsl/usr/lib/fsl
-	# the whole fsl package in /usr/share/fsl
-	cp -r debian/tmp/tcl/* debian/fsl/usr/share/fsl/tcl
+
 	# remove previous link to make repeated builds work
 	-rm debian/fsl/usr/share/fsl/etc/fslconf/feat.tcl
 
-	# copy etc path (from source AND install path)
-	cp -rf etc debian/fsl/usr/share/fsl
-	cp -r debian/tmp/etc debian/fsl/usr/share/fsl
-
-	# we need the config file in /etc/fsl
-	rm -f mv debian/fsl/usr/share/fsl/etc/fslconf/fsl.sh
-	mv debian/fsl/usr/share/fsl/etc/fslconf/feat.tcl debian/fsl/etc/fsl
-
-	# images needed by the FSL frontend
-	cp -r doc/images/*      debian/fsl/usr/share/fsl/doc/images/
-
-	# install GUI application wrapper
-	cp debian/fsl_gui_app_wrapper debian/fsl/usr/lib/fsl
-	chmod +x debian/fsl/usr/lib/fsl/fsl_gui_app_wrapper
+	# set execute permission for GUI application wrapper
+	chmod +x debian/fsl_gui_app_wrapper
 
 	$(MAKE) -f debian/rules DH_OPTIONS=-a binary-common
 

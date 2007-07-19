@@ -1,4 +1,11 @@
-fsl.xpm usr/share/pixmaps
-../desktop/*.desktop usr/share/applications
-../../lib/*.so usr/lib/fsl
-../fsl.sh etc/fsl
+debian/tmp/bin/* usr/lib/fsl
+debian/tmp/tcl usr/share/fsl
+debian/tmp/etc usr/share/fsl
+debian/tmp/etc/fslconf/feat.tcl etc/fsl
+etc usr/share/fsl
+debian/fsl.sh etc/fsl
+debian/tmp/fsl.xpm usr/share/pixmaps
+debian/desktop/*.desktop usr/share/applications
+lib/*.so usr/lib/fsl
+doc/images usr/share/fsl/doc
+debian/fsl_gui_app_wrapper usr/lib/fsl
