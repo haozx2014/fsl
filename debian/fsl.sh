@@ -9,6 +9,7 @@
 
 # Debian has a fixed FSLDIR
 FSLDIR=/usr/share/fsl
+export FSLDIR
 
 # The following variable selects the default output image type
 # Legal values are:
@@ -54,6 +55,6 @@ export LD_LIBRARY_PATH
 
 
 # load user configuration
-if [ -f "${HOME}/.fsl/fsl.sh" ] ; then
-  . "${HOME}/.fsl/fsl.sh" ;
+if [ -f "${HOME}/.fslconf/fsl.sh" ] ; then
+  . "${HOME}/.fslconf/fsl.sh" ;
 fi
