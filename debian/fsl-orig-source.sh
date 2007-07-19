@@ -170,6 +170,7 @@ parts="libiconv fftw* libgd libgdc libpng newmat newran zlib include"
 for p in $parts; do 
 	rm -rf fsl/extras/src/$p
 done
+rm -rf fsl/extras/include
 
 echo "Remove FSL parts that are available from other packages"
 parts="niftiio znzlib fslio newmat"
