@@ -34,7 +34,7 @@ clean:
 install:
 	@${MAKE} "DESTDIR=${DEB_DESTDIR}" master-install-script
 
-install-fmrib:
+install-fmrib: 
 	@numunst=`cvs status | grep "Sticky Tag" | grep -v -i stable | wc -l` ; export numunst ; \
 	if [ $$numunst -ge 1 ] ; then \
 	  echo " " ; \
