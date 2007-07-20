@@ -3,11 +3,13 @@
 INCDIR = ${FSLDIR}/include
 LIBDIR = ${FSLDIR}/lib
 
+# for the Debian build FSLDIR and FSLDEVDIR is the same
 DEVINCDIR = ${FSLDIR}/include
 DEVLIBDIR = ${FSLDIR}/lib
 
 DESTDIR = ${DEB_DESTDIR}
 
+# do not install the libs and headers with the binaries
 dest_INCDIR = ${FSLDIR}/include
 dest_LIBDIR = ${FSLDIR}/lib
 dest_BINDIR = ${DESTDIR}/bin
@@ -35,6 +37,7 @@ CXXFLAGS = ${ANSI_FLAGS} ${DBGFLAGS} ${USEDCXXSTATICFLAGS} ${USRCXXFLAGS} ${ARCH
 	${AccumulatedIncFlags}
 
 HFILES = *.h
+# install the shared libs as well
 AFILES = *.a *.so
 XFILES = 
 SCRIPTS =

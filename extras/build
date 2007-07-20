@@ -40,6 +40,7 @@ MAKEOPTIONS="${MAKEOPTIONS} FSLEXTLIB=${FSLEXTLIB} FSLEXTINC=${FSLEXTINC}"
 
 errorprojs="" ; export errorprojs ;
 
+# do not build stuff that is available in 3rd party packages
 PROJECTS="libprob libcprob cprob cephes"
 
 for projname in $PROJECTS; do
