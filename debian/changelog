@@ -1,9 +1,24 @@
-fsl (3.99.pre2-1) unstable; urgency=low
+fsl (3.99.pre3-1) unstable; urgency=low
 
+  * New upstream release.
+  * Repackaged the FSL source tarball due to its size and the mixture of
+    licenses and split it into three independent source packages: 'fsl' contains
+    all non-free source code, 'fslview' contains FSLView and all other
+    DFSG-compliant sources and 'fsldata' contains the arch-independent datasets
+    (>800MB).
+  * Conflict with old fsl-fslview package and depend on the successor
+    'fslview'.
   * Debian diff is now handled with a nice GIT repository. Build-dependency
-    to dpatch is now obsolete.
+    to dpatch is obsolete.
+  * All internal libraries are compiled as shared libraries with
+    -W,l--no-undefined to be able to detect unresolved symbols that have been
+    an issue in the past. This also reduces the size of the binary package
+    significantly.
+  * FSL now uses libfslio, libniftiio and the im* tools from the corresponding
+    Debian packages instead of a compiling a local copy.
+  * Added 'dicomnifti' to the list of the suggested packages.
 
- -- Michael Hanke <michael.hanke@gmail.com>  Sat,  7 Jul 2007 11:21:59 +0200
+ -- Michael Hanke <michael.hanke@gmail.com>  Fri, 20 Jul 2007 17:36:28 +0200
 
 fsl (3.3.11-2) unstable; urgency=low
 
