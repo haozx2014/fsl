@@ -1,6 +1,10 @@
 #!/bin/sh
 
-#   Copyright (C) 2004 University of Oxford
+#   run_first_intref - wrapper script for "first", the main FIRST fitting
+#
+#   Brian Patenaude, FMRIB Image Analysis Group
+#
+#   Copyright (C) 2006-2007 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -64,18 +68,53 @@
 #   University, to negotiate a licence. Contact details are:
 #   innovation@isis.ox.ac.uk quoting reference DE/1112.
 
-if [ "x$FSLMACHINELIST" = "x" ] ; then
-    ${FSLDIR}/bin/bedpostX_kill_all
-else
-    unique_machines=`echo $FSLMACHINELIST |tr " " \\\n |sort -u`
-    echo $unique_machines;
-     for machine in $unique_machines; do
-	  echo "if [ -r /usr/local/etc/fslconf/fsl.sh ];then . /usr/local/etc/fslconf/fsl.sh;fi; if [ -r /etc/fslconf/fsl.sh ];then . /etc/fslconf/fsl.sh;fi; if [ -r \${HOME}/.fslconf/fsl.sh ]; then . \${HOME}/.fslconf/fsl.sh; fi; if [ x\${FSLDIR} != "x" ];then \${FSLDIR}/bin/bedpostX_kill_all; else echo FSLDIR not set in any default location on machine `hostname`;fi" | $FSLREMOTECALL $machine /bin/sh  &
-     done
-fi
+Usage() {
+    echo ""
+    echo "Usage:   run_first_intref <input_image> <input_to_mni.mat> <N-modes> <output_basename> <model_name> <ref_model_name>"
+    echo ""
+    echo "e.g.:  run_first im1 im1_to_mni.mat 60 output_name ${FSLDIR}/etc/standard/first_models_317_bin/intref/L_Hipp_bin.bmv ${FSLDIR}/etc/standard/first_models_317_bin/L_Thal_bin.bmv "
+    echo ""
+    exit 1
+}
 
-if [ "x${FSLLOCKDIR}" != "x" ];then 
-    if [ -r ${FSLLOCKDIR}/.bedpostX.lock ];then
-	rm ${FSLLOCKDIR}/.bedpostX.lock
+[ "$5" = "" ] && Usage
+[ `${FSLDIR}/bin/imtest $1` = 0 ] && Usage
+
+file=`${FSLDIR}/bin/remove_ext $1`
+shift 
+trmat=$1
+shift
+g=$1
+shift 
+outname=`${FSLDIR}/bin/remove_ext $1`
+shift
+
+
+mean=-777 ;
+# disabled
+#use robust statistics
+ub=`${FSLDIR}/bin/avwstats $file -r | awk '{ print $2 }'`
+lb=`${FSLDIR}/bin/avwstats $file -r | awk '{ print $1 }'`
+
+count=0;
+model=$1
+shift 
+modelRef=$1
+shift
+
+    echo ${model}
+    echo ${modelRef}
+    if [ -f ${model} ]; then
+	if [ -f ${trmat} ]; then
+
+	#apply model	  
+	${FSLDIR}/bin/first --useIntRefModel --baam -i ${file} -l ${trmat}  -m ${model} -k  ${outname}_first -s 8 -g ${g}  -y ${lb} -z ${ub} -a ${mean} -n ${modelRef} ; 
+	
+	else
+	    echo "linear transformation matrix file not found"
+	fi
+    else
+	echo "model file not found"
     fi
-fi
+
+

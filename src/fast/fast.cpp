@@ -150,7 +150,7 @@ void usage(bool full=false)
 		cerr << "    -h:\t\tadvanced options\n\n";
 	}
 
-	exit(0);
+	exit(1);
 }
 
 void ParameterAnalyze(int argc, char** argv)

@@ -1,8 +1,8 @@
-/*  avworient.cc
+/*  fslorient.cc
 
-    Mark Jenkinson, FMRIB Image Analysis Group
+    Mark Jenkinson and Matthew Webster, FMRIB Image Analysis Group
 
-    Copyright (C) 2003-2004 University of Oxford  */
+    Copyright (C) 2003-20047 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -73,7 +73,7 @@
 using namespace NEWIMAGE;
 
 void print_usage() {
-  string progname="avworient";
+  string progname="fslorient";
   cout << "Usage: " << progname << " <main option> <filename>" << endl;
   cout << endl;
   cout << "  where the main option is one of:" << endl;
@@ -96,7 +96,7 @@ void print_usage() {
   cout << " Note: ANALYZE files are NOT modified by any of the commands" << endl;
   cout << "         - they are for NIFTI files ONLY!" << endl;
   cout << "       For NIFTI: the stored data order is never changed here - only the header info." << endl;
-  cout << "       To change the data storage use avwswapdim." << endl;
+  cout << "       To change the data storage use fslswapdim." << endl;
   cout << endl;
   cout << "  e.g.  " << progname << " -forceradiological myimage" << endl;
   cout << "        " << progname << " -copysform2qform myimage" << endl;
@@ -251,7 +251,7 @@ int fmrib_main(int argc,char *argv[])
     } else {
       cerr << "Cannot modify orientation for Analyze files" << endl;
       cerr << "  All Analyze files are treated as radiological" << endl;
-      cerr << "  To change the data storage use avwswapdim" << endl;
+      cerr << "  To change the data storage use fslswapdim" << endl;
       retval=-1;
     }
   }

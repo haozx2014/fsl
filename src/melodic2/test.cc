@@ -1,6 +1,6 @@
 /*  test.cc
     
-    Copyright (C) 1999-2004 University of Oxford */
+    Copyright (C) 1999-2007 University of Oxford */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -64,89 +64,318 @@
     University, to negotiate a licence. Contact details are:
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
-#include <iostream>
-#include "newmatap.h"
-#include "newmatio.h"
-#include "newimage/newimageall.h"
+#include "libvis/miscplot.h"
 #include "miscmaths/miscmaths.h"
 #include "miscmaths/miscprob.h"
-#include <string>
-#include "utils/log.h"
-#include "melgmix.h"
-#include "meloptions.h"
+#include "utils/options.h"
+#include <vector>
+#include "newimage/newimageall.h"
 #include "melhlprfns.h"
-#include <time.h>
-#include "miscmaths/miscprob.h"
 
-
-using namespace std;
+using namespace MISCPLOT;
+using namespace MISCMATHS;
 using namespace Utilities;
-using namespace NEWIMAGE;
-using namespace Melodic;
+using namespace std;
 
+// The two strings below specify the title and example usage that is
+// printed out as the help or usage message
 
-void usage(void)
-{
-  cout << "Usage: test infile ICfile [mixfile]" << endl;
-  exit(1);
+  string title=string("fsl_glm (Version 1.0)")+
+		string("\nCopyright(c) 2007, University of Oxford (Christian F. Beckmann)\n")+
+		string(" \n Simple GLM usign ordinary least-squares regression on\n")+
+		string(" time courses and/or 3D/4D volumes\n\n");
+  string examples="fsl_glm <input> -d <design> [options]";
+
+//Command line Options {
+  Option<string> fnin(string("-i,--in"), string(""),
+		string("input file name (matrix 3D or 4D image)"),
+		true, requires_argument);
+  Option<string> fnout(string("-o,--out"), string(""),
+		string(""),
+		true, requires_argument);
+  Option<string> fndesign(string("-d,--design"), string(""),
+		string("file name of the GLM design matrix (time courses or spatial maps)"),
+		true, requires_argument);
+  Option<string> fnmask(string("-m,--mask"), string(""),
+		string("mask image"),
+		false, requires_argument);
+  Option<string> fncontrasts(string("-c,--contrasts"), string(""),
+		string("matrix of t-statistics contrasts"),
+		false, requires_argument);
+  Option<string> fnftest(string("-f,--ftests"), string(""),
+		string("matrix of F-tests on contrasts"),
+		false, requires_argument);
+	Option<int> dofset(string("--dof"),0,
+		string("set degrees-of-freedom explicitly"),
+		false, requires_argument);
+	Option<string> filter(string("--filter"),string(""),
+		string("filter out part of the regression model"),
+		false, requires_argument);
+	Option<bool> perfvn(string("--vn"),FALSE,
+		string("perfrom variance-normalisation on data"),
+		false, requires_argument);
+	Option<int> help(string("-h,--help"), 0,
+		string("display this help text"),
+		false,no_argument);
+	// Output options	
+	Option<string> outcope(string("--out_cope"),string(""),
+		string("output COPEs"),
+		false, requires_argument);
+	Option<string> outz(string("--out_z"),string(""),
+		string("output Z-stats"),
+		false, requires_argument);
+	Option<string> outt(string("--out_t"),string(""),
+		string("output t-stats"),
+		false, requires_argument);
+	Option<string> outp(string("--out_p"),string(""),
+		string("output p-values of Z-stats"),
+		false, requires_argument);
+	Option<string> outf(string("--out_f"),string(""),
+		string("output F-value of full model fit"),
+		false, requires_argument);
+	Option<string> outpf(string("--out_pf"),string(""),
+		string("output p-value for full model fit"),
+		false, requires_argument);
+	Option<string> outfilt(string("--out_filt"),string(""),
+		string("output filtered data"),
+		false, requires_argument);
+	Option<string> outres(string("--out_res"),string(""),
+		string("output residuals"),
+		false, requires_argument);
+	Option<string> outvarcb(string("--out_varcb"),string(""),
+		string("output variance of COPEs"),
+		false, requires_argument);
+	Option<string> outsigsq(string("--out_sigsq"),string(""),
+		string("output residual noise variance sigma-square"),
+		false, requires_argument);
+	Option<string> outdata(string("--out_data"),string(""),
+		string("output data"),
+		false, requires_argument);
+	Option<string> outvnscales(string("--out_vnscales"),string(""),
+		string("output scaling factors for variance normalisation"),
+		false, requires_argument);
+		/*
+}
+*/
+//Globals {
+	Melodic::basicGLM glm;
+	bool isimage = FALSE;
+	Matrix data;
+	Matrix design;
+	Matrix contrasts;
+	Matrix fcontrasts;
+	Matrix meanR;
+	RowVector vnscales;
+	volume<float> mask;
+	volumeinfo volinf;  /*
+}
+*/
+////////////////////////////////////////////////////////////////////////////
+
+// Local functions
+void save4D(Matrix what, string fname){
+		if(what.Ncols()==data.Ncols()||what.Nrows()==data.Nrows()){
+			volume4D<float> tempVol;
+			if(what.Nrows()>what.Ncols())
+				tempVol.setmatrix(what.t(),mask);
+			else
+				tempVol.setmatrix(what,mask);
+			save_volume4D(tempVol,fname,volinf);
+		}
 }
 
-int main(int argc, char *argv[])
-{
-  Matrix Mats;
-
-  Matrix A,C;
-  RowVector B;
-
-  Mats = normrnd(5,10);
-  std_pca(Mats,C,A,B);
-
-  cout << " STD PCA : " << endl << A << endl << endl << B << endl << endl;
-  em_pca(Mats, A, B, 4);
-  cout << "  EM PCA : " << endl << A << endl << endl << B << endl << endl;
-
-  string RAWfname;
-  RAWfname = string(argv[1]);
-
-  volume4D<float> RawData;
-  volumeinfo VolInfo;
-  cout << " Reading orig. data " << RAWfname << " ... " << endl<< endl;
-  read_volume4D(RawData,RAWfname,VolInfo);
-  Matrix mat;
-  
-  volume<float> RawData2;
-  read_volume(RawData2,RAWfname);
-
-  print_size(RawData2);
-
-  A = normrnd(7,3);
-  C = normrnd(5,3);
-
-  cout << " here " << endl;
-  Mats = krprod(A,C);
-
-  cout << " A : " << A << endl << endl;
-  cout << " B : " << C << endl << endl;
-  
-  cout << " C : " << Mats << endl << endl;
-  
-  write_ascii_matrix(string("A"),A);
-  write_ascii_matrix(string("B"),C);
-  write_ascii_matrix(string("C"),Mats);
-
-  Matrix tmpA, tmpB;
-  tmpA = zeros(A.Nrows(),A.Ncols());
-  tmpB = zeros(C.Nrows(),C.Ncols());
-
-  krfact(Mats, tmpA, tmpB);
-
-  cout << " A2 : " << tmpA << endl << endl; 
-  cout << " B2 : " << tmpB << endl << endl; 
-  write_ascii_matrix(string("A2"),tmpA);
-  write_ascii_matrix(string("B2"),tmpB);
-
-  tmpA = krapprox(Mats,tmpA.Nrows());
-  write_ascii_matrix(string("C2"),tmpA);
-  
-  return 0;
+void saveit(Matrix what, string fname){
+	if(isimage)
+		save4D(what,fname);
+	else
+		write_ascii_matrix(what,fname);
 }
+
+int dofilter(){
+	if(!isimage){
+		cerr << "ERROR: need to specify 4D input to use filtering" << endl;
+		return 1;
+	}
+  Matrix unmixMatrix = pinv(design);
+  Matrix maps = unmixMatrix * data;
+
+  Matrix noisedes;
+  Matrix noisemaps;
+
+  int ctr=0;    
+  char *p;
+  char t[1024];
+  const char *discard = ", [];{(})abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ~!@#$%^&*_-=+|\':><./?";
+  
+  strcpy(t, filter.value().c_str());
+  p=strtok(t,discard);
+  ctr = atoi(p);
+  if(ctr>0 && ctr<=design.Ncols()){
+    noisedes = design.Column(ctr);
+    noisemaps  = maps.Row(ctr).t();    
+  }
+
+  do{
+    p=strtok(NULL,discard);
+    if(p){
+			ctr = atoi(p);
+      if(ctr>0 && ctr<=design.Ncols()){
+  			noisedes |= design.Column(ctr);
+  			noisemaps  |= maps.Row(ctr).t();
+			}
+    }
+  }while(p);
+  Matrix newData;
+  newData = data - noisedes * noisemaps.t();
+  newData = newData + ones(newData.Nrows(),1)*meanR;
+  
+	save4D(newData,outfilt.value());
+  return 0;	
+}
+
+int setup(){
+	if(fsl_imageexists(fnin.value())){//read data
+		//input is 3D/4D vol
+		isimage = TRUE;
+		volume4D<float> tmpdata;
+		read_volume4D(tmpdata,fnin.value(),volinf);
+		
+		// create mask
+		if(fnmask.value()>""){
+			read_volume(mask,fnmask.value());
+			if(!samesize(tmpdata[0],mask)){
+				cerr << "ERROR: Mask image does not match input image" << endl;
+				return 1;
+			};
+		}else{
+			mask = tmpdata[0]*0.0+1.0;	
+		}
+		
+		data = tmpdata.matrix(mask);
+	}
+	else
+		data = read_ascii_matrix(fnin.value());	
+
+	if(fsl_imageexists(fndesign.value())){//read design
+		volume4D<float> tmpdata;
+		read_volume4D(tmpdata,fndesign.value());
+		if(!samesize(tmpdata[0],mask)){
+			cerr << "ERROR: GLM design does not match input image in size" << endl;
+			return 1;
+		}
+		design = tmpdata.matrix(mask).t();
+		data = data.t();
+		isimage = FALSE;
+	}else{
+		design = read_ascii_matrix(fndesign.value());
+	}
+
+	meanR=mean(data,1);
+	data = remmean(data,1);
+	design = remmean(design,1);
+	if(perfvn.value())
+		vnscales = Melodic::varnorm(data);
+	if(fncontrasts.value()>""){//read contrast		
+		contrasts = read_ascii_matrix(fncontrasts.value());
+		if(!(contrasts.Ncols()==design.Ncols())){
+			cerr << "ERROR: contrast matrix GLM design does not match GLM design" << endl;
+			return 1;
+		}
+	}else{
+		contrasts = Identity(design.Ncols());
+		contrasts &= -1.0 * contrasts;
+	}
+	return 0;	
+}
+
+void write_res(){	
+	if(fnout.value()>"")
+		saveit(glm.get_beta(),fnout.value());
+	if(outcope.value()>"")
+		saveit(glm.get_cbeta(),outcope.value());
+	if(outz.value()>"")
+		saveit(glm.get_z(),outz.value());
+	if(outt.value()>"")
+		saveit(glm.get_t(),outt.value());
+	if(outp.value()>"")
+		saveit(glm.get_p(),outp.value());
+	if(outf.value()>"")
+		saveit(glm.get_f_fmf(),outf.value());
+	if(outpf.value()>"")
+		saveit(glm.get_pf_fmf(),outpf.value());
+	if(outres.value()>"")
+		saveit(glm.get_residu(),outres.value());
+	if(outvarcb.value()>"")
+		saveit(glm.get_varcb(),outvarcb.value());
+	if(outsigsq.value()>"")
+		saveit(glm.get_sigsq(),outsigsq.value());
+	if(outdata.value()>"")
+		saveit(data,outdata.value());
+	if(outvnscales.value()>"")
+		saveit(vnscales,outvnscales.value());
+}
+
+int do_work(int argc, char* argv[]) {
+  if(setup())
+		exit(1);
+	
+	if(filter.value()>"")
+		if(dofilter())
+		exit(1);	
+	else{
+		glm.olsfit(data,design,contrasts,dofset.value());
+		write_res();
+  }
+	return 0;
+}
+
+////////////////////////////////////////////////////////////////////////////
+
+	int main(int argc,char *argv[]){
+	  Tracer tr("main");
+	  OptionParser options(title, examples);
+	  try{
+	    // must include all wanted options here (the order determines how
+	    //  the help message is printed)
+			options.add(fnin);
+			options.add(fnout);
+			options.add(fndesign);
+			options.add(fnmask);
+			options.add(fncontrasts);
+			options.add(fnftest);
+			options.add(dofset);
+			options.add(filter);
+			options.add(perfvn);
+			options.add(help);
+			options.add(outcope);
+			options.add(outz);
+			options.add(outt);
+			options.add(outp);
+			options.add(outf);
+			options.add(outpf);
+			options.add(outfilt);
+			options.add(outres);
+			options.add(outvarcb);
+			options.add(outsigsq);
+			options.add(outdata);
+			options.add(outvnscales);
+	    options.parse_command_line(argc, argv);
+
+	    // line below stops the program if the help was requested or 
+	    //  a compulsory option was not set
+	    if ( (help.value()) || (!options.check_compulsory_arguments(true)) ){
+				options.usage();
+				exit(EXIT_FAILURE);
+	    }else{
+	  		// Call the local functions
+	  		return do_work(argc,argv);
+			}
+		}catch(X_OptionError& e) {
+			options.usage();
+	  	cerr << endl << e.what() << endl;
+	    exit(EXIT_FAILURE);
+	  }catch(std::exception &e) {
+	    cerr << e.what() << endl;
+	  } 
+	}
+

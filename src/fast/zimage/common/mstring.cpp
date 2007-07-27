@@ -175,7 +175,7 @@ bool GetParameterNumber(const char* filename, const char* keyname, double& numbe
 
 bool isNumber(const string& keyword) 
 {
-	stringstream tmp; tmp << keyword;
+  std::stringstream tmp; tmp << keyword;
 	float number;
 	if(!(tmp >> number)) return false; 
 	return true;

@@ -1,8 +1,8 @@
-/*  quick.cc
+/*  possum_sum.cc
 
-    Mark Woolrich, FMRIB Image Analysis Group
+    Ivana Drobnjak, FMRIB Image Analysis Group
 
-    Copyright (C) 1999-2000 University of Oxford  */
+    Copyright (C) 2006 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -66,126 +66,102 @@
     University, to negotiate a licence. Contact details are:
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
-#include <iostream>
-#include <fstream>
-#include <iomanip>
-#include <sstream>
-#define WANT_STREAM
-#define WANT_MATH
+// Combining many different possum outputs into one (for use on a cluster)
 
-#include "newmatap.h"
-#include "newmatio.h"
-#include <string>
-#include <math.h>
-#include "glmrand.h"
-#include "miscmaths/volume.h"
-#include "utils/log.h"
-#include "histogram.h"
-#include "miscmaths/t2z.h"
-#include "miscmaths/f2z.h"
+#define _GNU_SOURCE 1
+#define POSIX_SOURCE 1
+
+#include "utils/options.h"
+#include "newimage/newimageall.h"
 #include "miscmaths/miscmaths.h"
-#include "libprob.h"
+#include "miscmaths/miscprob.h"
 #include <time.h>
 
-using namespace Utilities;
-using namespace NEWMAT;
-using namespace FILM;
 using namespace MISCMATHS;
+using namespace NEWIMAGE;
+using namespace Utilities;
 
-int main(int argc, char *argv[])
+// The two strings below specify the title and example usage that is
+//  printed out as the help or usage message
+
+string title="possum_sum (Version 1.0)\nCopyright(c) 2006, University of Oxford (Ivana Drobnjak)";
+string examples="possum_sum -i <inname> -o <outname> -n <nproc> ";
+
+
+Option<bool> verbose(string("-v,--verbose"), false, 
+		     string("switch on diagnostic messages"), 
+		     false, no_argument);
+Option<bool> help(string("-h,--help"), false,
+		  string("display this message"),
+		  false, no_argument);
+Option<int> opt_nproc(string("-n,--nproc"), 1,
+		  string("Number of processors"),
+		  false, requires_argument);
+Option<string> inname(string("-i,--in"), string(""),
+		  string("input signal for one processor (possum output matrix)"),
+		  true, requires_argument);
+Option<string> outname(string("-o,--out"), string(""),
+		  string("output signal: sum of all the processors (possum matrix form)"),
+		  true, requires_argument);
+
+int nonoptarg;
+
+////////////////////////////////////////////////////////////////////////////
+
+
+
+int do_work(int argc, char* argv[]) 
 {
-  try{
-    rand();
-
-//     Log::getInstance().setDir(".");
-
-//     //    cerr << "z = " << T2z::getInstance().convert(9.02,958) << endl;
-//     int X = 20;
-//     int Y = 20;
-//     int Z = 1;
-//     int T = 200;
-    
-//     int N = X*Y*Z*T;
-//     //Matrix mat(N,N);
-//     SymmetricBandMatrix mat(N,X*Y*Z);
-//     mat = 0;
-
-//     cerr << "X*Y*Z*T=" << N << endl;
-//     cerr << "X*Y*Z=" << X*Y*Z << endl;
-//     int mba = 0;
-
-//     for(float j=0;j<=0.8;j+=0.4)
-//       {
-// 	for(float i=-0.8;i<=0.8;i+=0.8)
-// 	  {
-	
-//       for(int t = 1; t <= T; t++)
-//       for(int z = 1; z <= Z; z++)
-// 	for(int y = 1; y <= Y; y++)
-// 	  for(int x = 1; x <= X; x++)
-// 	    {
-// 	      int a = x+(y-1)*X+(z-1)*X*Y+(t-1)*Y*X*Z;
-
-// 	      for(int t2 = Max(t-1,1); t2 <= Min(t+1,T); t2++)
-// 		for(int z2 = Max(z-1,1); z2 <= Min(z+1,Z); z2++)
-// 		  for(int y2 = Max(y-1,1); y2 <= Min(y+1,Y); y2++)
-// 		    for(int x2 = Max(x-1,1); x2 <= Min(x+1,X); x2++)
-// 		      {		    
-// 			int b = x2+(y2-1)*X+(z2-1)*X*Y+(t2-1)*Y*X*Z;						
-// 			if(b-a > mba)
-// 			  mba = b-a;
-
-// // 			cerr <<"t="<<t;
-// // 			cerr <<"z="<<z;
-// // 			cerr <<"y="<<z;
-// // 			cerr <<"x="<<x;
-// // 			cerr <<"t2="<<t2;
-// // 			cerr <<"z2="<<z2;
-// // 			cerr <<"y2="<<z2;
-// // 			cerr <<"x2="<<x2<<endl;
-
-// 			if (x==x2 && y==y2 && z==z2 && t==t2)
-// 			  {			    
-// 			    mat(a,b) = 1;
-// 			  }
-// 			else
-// 			  {
-// 			    if(t==t2)
-// 			      mat(a,b) = -j;
-// 			    else if(x==x2 && y==y2 && z==z2)
-// 			      mat(a,b) = -i;
-// 			  }			
-// 		      }
-// 	    }
-//       //cerr << "mba=" << mba <<endl;
-//       //write_ascii_matrix(mat,"mat");
-      
-//       clock_t start = clock();
-	        
-//       //cerr << "det(mat)=" << mat.Determinant() << endl;
-      
-//       cerr << "logdet(mat)=" << mat.LogDeterminant().LogValue() << endl;
-    //	  }
-    //      }
-      
-
-    //      cerr << "time taken=" << (clock()-start)/float(CLOCKS_PER_SEC) << endl;
+  Matrix signal, signal1;
+  signal=read_binary_matrix(inname.value()+ num2str(0));
+  int nproc=opt_nproc.value();
+  for (int i=1;i<nproc;i++){
+    signal1=read_binary_matrix(inname.value()+ num2str(i));
+    if (verbose.value()) { cout << "proc name = " << inname.value()+ num2str(i) << endl; }
+    signal +=signal1; 
   }
-  catch(Exception p_excp) 
-    {
-      cerr << p_excp.what() << endl;
-    }
+  write_binary_matrix(signal,outname.value());
+ 
   return 0;
 }
 
+////////////////////////////////////////////////////////////////////////////
 
+int main(int argc,char *argv[])
+{
 
+  Tracer tr("main");
+  OptionParser options(title, examples);
 
+  try {
+    // must include all wanted options here (the order determines how
+    //  the help message is printed)
+    options.add(inname);
+    options.add(outname);
+    options.add(opt_nproc);
+    options.add(help);
+    options.add(verbose);
+   
+    nonoptarg = options.parse_command_line(argc, argv);
 
+    // line below stops the program if the help was requested or 
+    //  a compulsory option was not set
+    if ( (help.value()) || (!options.check_compulsory_arguments(true)) )
+      {
+	options.usage();
+	exit(EXIT_FAILURE);
+      }
+    
+  }  catch(X_OptionError& e) {
+    options.usage();
+    cerr << endl << e.what() << endl;
+    exit(EXIT_FAILURE);
+  } catch(std::exception &e) {
+    cerr << e.what() << endl;
+  } 
 
+  // Call the local functions
 
-
-
-
-
+  return do_work(argc,argv);
+}
 

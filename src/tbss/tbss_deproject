@@ -1,6 +1,6 @@
 #!/bin/sh
 
-#   tbss_deproject - taken skeleton-space voxels back to all_FA space and then native space
+#   tbss_deproject - take skeleton-space voxels back to all_FA space and then, optionally, native space
 #
 #   Stephen Smith, FMRIB Image Analysis Group
 #
@@ -70,46 +70,84 @@
 
 Usage() {
     echo ""
-    echo "Usage: tbss_deproject <skeleton-space-image> [-n]"
+    echo "Usage: tbss_deproject <skeleton-space-input-image> <final-space> [-n]"
     echo ""
-    echo "-n : project image all the way back to subjects' native space (not just the space of all_FA)"
+    echo "Final-space options:"
+    echo "1: just deproject <skeleton-space-input-image> onto the space of each subject in all_FA"
+    echo "2: do the above and also invert nonlinear warping, to get back to subjects' native space in FAi"
+    echo "3: do the above and also pad the end slices to get back to subjects' native space in orig"
     echo ""
-    exit
+    echo "-n : use nearest-neighbour interpolation (instead of trilinear) to keep exact values from <skeleton-space-input-image>"
+    echo ""
+    exit 1
 }
 
-[ "$1" = "" ] && Usage
-
-IN=$1
+[ "$2" = "" ] && Usage
+IN=`${FSLDIR}/bin/remove_ext $1`
+SPACE=$2
+if [ _$3 != _ ] ; then
+    interp="--interp=nn"
+fi
 
 echo "de-projecting <skeleton-space-image> into all_FA (nonlinearly aligned) subject space"
-echo "output will be ${IN}_2_all_FA"
-#$FSLDIR/bin/tbss_skeleton -i mean_FA -p `cat thresh.txt` mean_FA_skeleton_mask_dst $FSLDIR/etc/standard/lower-cingulum all_FA ${IN}_tmp -D $IN
-$FSLDIR/bin/immv ${IN}_tmp_deprojected ${IN}_2_all_FA
+echo "output will be ${IN}_to_all_FA"
+$FSLDIR/bin/tbss_skeleton -i mean_FA -p `cat thresh.txt` mean_FA_skeleton_mask_dst $FSLDIR/etc/standard/lower-cingulum all_FA ${IN}_tmp -D $IN
+$FSLDIR/bin/immv ${IN}_tmp_deprojected ${IN}_to_all_FA
 $FSLDIR/bin/imrm ${IN}_tmp
-echo "done"
+echo "de-projection done"
 
-if [ _$2 != _ ] ; then
-
-    $FSLDIR/bin/avwsplit ${IN}_2_all_FA
+if [ $SPACE -ge 2 ] ; then
 
     echo "now creating inverse warp fields..."
-    cd ../FAi
+    $FSLDIR/bin/fslsplit ${IN}_to_all_FA
+
     preaffine=""
-    if [ -f ../stats/target_to_MNI152.mat ] ; then
-	preaffine="--premat=../stats/target_to_MNI152.mat"
+    if [ -f target_to_MNI152.mat ] ; then
+	$FSLDIR/bin/convert_xfm -omat MNI152_to_target.mat -inverse target_to_MNI152.mat
+	preaffine="--premat=../stats/MNI152_to_target.mat"
     fi
-    list=`$FSLDIR/bin/imglob -oneperimage *_nonlinear.*`
+
+    cd ../FAi
+    list=`$FSLDIR/bin/imglob -oneperimage *_FAi.*`
     list=`$FSLDIR/bin/remove_ext $list`
+    echo list of original images = $list
+    target=`cat best.msf`
+    echo original target = $target
+
     for g in $list ; do
-	echo "inverting and applying ${g}"
-	#batch -q long.q -a lx24-amd64 ~steve/fsl_dev/src/fugue/invwarptest -w $g -o ${g}_inv --rel
+	echo "processing ${g}:"
 	nextvol=`$FSLDIR/bin/imglob -oneperimage ../stats/vol0* | awk '{print $1}'`
-	groot=`echo $g | sed 's/_to_target_nonlinear//g'`
-	$FSLDIR/bin/applywarp -i $nextvol -o ${groot}_${IN} -r $groot -w ${g}_inv --rel $preaffine --postmat=fix.mat   #FOOBAR
+	warp=${g}_to_${target}_nonlinear
+	if [ `$FSLDIR/bin/imtest ${warp}_inv` -eq 0 ] ; then
+	    $FSLDIR/bin/invwarp -w $warp -o ${warp}_inv -r $g --rel
+	fi
+	$FSLDIR/bin/applywarp -i $nextvol -o ../stats/${g}_${IN} -r $g -w ${warp}_inv --rel $preaffine $interp
 	$FSLDIR/bin/imrm $nextvol
 
-	# then end by padding to original space
+	# pad end slices if required
+	if [ $SPACE -ge 3 ] ; then
+	    cd ../stats
+	    orig=`echo ${g}_${IN} | sed 's/_FAi/_orig/g'`
+	    X=`${FSLDIR}/bin/fslval ${g}_${IN} dim1`
+	    Y=`${FSLDIR}/bin/fslval ${g}_${IN} dim2`
+	    Z=`${FSLDIR}/bin/fslval ${g}_${IN} dim3`
+	    $FSLDIR/bin/fslroi ${g}_${IN} ${orig}_tmpslice 0 $X 0 $Y 0 1
+	    $FSLDIR/bin/fslmaths ${orig}_tmpslice -mul 0 ${orig}_tmpslice
+	    $FSLDIR/bin/fslmerge -z $orig ${orig}_tmpslice ${g}_${IN} ${orig}_tmpslice
+	    Z=`echo "$Z 2 + p" | dc -`
+	    $FSLDIR/bin/fslroi $orig ${orig}_tmpslice 0 $X 0 1 0 $Z
+	    $FSLDIR/bin/fslmaths ${orig}_tmpslice -mul 0 ${orig}_tmpslice
+	    $FSLDIR/bin/fslmerge -y $orig ${orig}_tmpslice $orig ${orig}_tmpslice
+	    Y=`echo "$Y 2 + p" | dc -`
+	    $FSLDIR/bin/fslroi $orig ${orig}_tmpslice 0 1 0 $Y 0 $Z
+	    $FSLDIR/bin/fslmaths ${orig}_tmpslice -mul 0 ${orig}_tmpslice
+	    $FSLDIR/bin/fslmerge -x $orig ${orig}_tmpslice $orig ${orig}_tmpslice
+	    $FSLDIR/bin/imrm ${orig}_tmpslice
+	    cd ../FAi
+	fi
     done    
 
 fi
+
+exit 0
 

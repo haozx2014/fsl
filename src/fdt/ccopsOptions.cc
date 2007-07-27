@@ -70,7 +70,7 @@
 #define WANT_MATH
 
 #include <iostream>
-#include <fstream.h>
+#include <fstream>
 #include <stdlib.h>
 #include <stdio.h>
 #include "ccopsOptions.h"

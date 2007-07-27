@@ -72,6 +72,8 @@
 #include "melhlprfns.h"
 #include "libprob.h"
 #include "miscmaths/miscprob.h"
+#include "miscmaths/t2z.h"
+#include "miscmaths/f2z.h"
 
 namespace Melodic{
 
@@ -182,7 +184,7 @@ namespace Melodic{
   RowVector varnorm(Matrix& in, Matrix& Corr, int dim, float level)
   { 
     Matrix tmpE, white, dewhite;
-    RowVector tmpD;
+    RowVector tmpD, tmpD2;
 
     std_pca(in, Corr, tmpE, tmpD);
     calc_white(tmpE,tmpD, dim, white, dewhite);
@@ -193,6 +195,11 @@ namespace Melodic{
 	if(std::abs(ws(ctr2,ctr1)) < level)
 	  ws(ctr2,ctr1)=0;
     tmpD = stdev(in - dewhite*ws);
+    for(int ctr1 = 1; ctr1<=tmpD.Ncols(); ctr1++)
+      if(tmpD(ctr1) < 0.01){
+	tmpD(ctr1) = 1.0;
+	in.Column(ctr1) = 0.0*in.Column(ctr1);
+      }
     in = SP(in,pow(ones(in.Nrows(),1) * tmpD,-1));
     return tmpD;
   }  //RowVector varnorm
@@ -552,7 +559,6 @@ namespace Melodic{
     return res;
   }  //int ppca_dim
 
-
   int ppca_dim(const Matrix& in, const Matrix& weights, float resels, string which)
   {
     ColumnVector PPCA;
@@ -835,5 +841,55 @@ namespace Melodic{
     }
     return res;
   }  //Matrix gen_arCorr
+
+	void basicGLM::olsfit(const Matrix& data, const Matrix& design, 
+		const Matrix& contrasts, int DOFadjust)
+	{
+		beta = zeros(design.Ncols(),1); 
+		residu = zeros(1); sigsq = -1.0*ones(1); varcb = -1.0*ones(1); 
+		t = zeros(1); z = zeros(1); p=-1.0*ones(1);
+		dof = (int)-1; cbeta = -1.0*ones(1); 
+
+		if(data.Nrows()==design.Nrows()){
+			Matrix dat = remmean(data,1);
+			Matrix tmp = design.t()*design;
+			Matrix pinvdes = tmp.i()*design.t();
+			
+			beta = pinvdes * dat;
+			residu = dat - design*beta;
+//			Matrix R = Identity(design.Nrows()) - design * pinvdes;
+//			Matrix R2 = R*R;
+//			float tR = R.Trace();
+//			sigsq = sum(SP(residu,residu))/tR;
+			
+//			dof = (int)(tR*tR/R2.Trace() - DOFadjust);
+			dof = design.Nrows() - design.Ncols();
+			sigsq = sum(SP(residu,residu))/dof;
+			
+			float fact = float(design.Nrows() - 1 - design.Ncols()) / design.Ncols();
+			f_fmf = SP(var(design*beta),pow(var(residu),-1))* fact;
+			pf_fmf = f_fmf.Row(1); 
+			for(int ctr1=1;ctr1<=f_fmf.Ncols();ctr1++)
+				pf_fmf(1,ctr1) = 1.0-MISCMATHS::fdtr(design.Ncols(),
+				int(design.Nrows() -1 -design.Ncols()),f_fmf.Column(ctr1).AsScalar());
+				
+			if(contrasts.Storage()>0 && contrasts.Ncols()==beta.Nrows()){
+				cbeta = contrasts*beta;
+				Matrix tmp = contrasts*pinvdes*pinvdes.t()*contrasts.t();
+				varcb = diag(tmp)*sigsq;
+				t = SP(cbeta,pow(varcb,-0.5));
+				z = t; p=t; 
+				for(int ctr1=1;ctr1<=t.Ncols();ctr1++){
+					ColumnVector tmp = t.Column(ctr1);
+					T2z::ComputeZStats(varcb.Column(ctr1),cbeta.Column(ctr1),dof, tmp);
+					z.Column(ctr1) << tmp;
+					T2z::ComputePs(varcb.Column(ctr1),cbeta.Column(ctr1),dof, tmp);
+					p.Column(ctr1) << exp(tmp);
+				}
+			}
+		}	
+	
+	}
+
 
 }

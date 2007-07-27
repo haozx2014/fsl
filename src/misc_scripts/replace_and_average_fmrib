@@ -1,4 +1,4 @@
-#!/usr/local/bin/bash
+#!/bin/sh
 #averages multiple repeats and simultaneously remove dodgy volumes
 #to be used after regscript - for DTI images acquired at FMRIB 
 
@@ -29,7 +29,7 @@ echo "you should therefore type something like - "
 echo "              replace_and_average_fmrib 3 4 5 73 82 166" 
 echo "_________________________________________________________________________"
 
-exit
+exit 1
 }
 
 #===================================================================
@@ -69,12 +69,12 @@ if [ ! -e bvecs ]; then
     exit
 fi
 
-nvols=`avwval ${input_file}1 dim4`;
+nvols=`fslval ${input_file}1 dim4`;
 
 acq=1
 while [ $acq -le $numb_acqs ]; do
   echo splitting $input_file$acq
-  avwsplit $input_file$acq
+  fslsplit $input_file$acq
   volume=0;
   if [ $nvols -lt 10 ]; then
      while [ $volume -lt $nvols ]; do
@@ -113,7 +113,7 @@ done
 acq=1
 while [ $acq -le $numb_acqs ]; do
    rm ${input_file}${acq}* -f
-   avwmerge -t data$acq `$FSLDIR/bin/imglob -oneperimage vol*_$acq`
+   fslmerge -t data$acq `$FSLDIR/bin/imglob -oneperimage vol*_$acq`
    acq=`expr $acq + 1`; 
 done
 
@@ -167,7 +167,7 @@ if [ $# -gt 1 ]; then
     shift  
   done
 
-  nvols=`avwval data1 dim4`;
+  nvols=`fslval data1 dim4`;
   n_vols=`echo $nvols`
   dodgy_volumes=`cat vol_list`
   echo dodgy volumes: $dodgy_volumes
@@ -181,7 +181,7 @@ if [ $# -gt 1 ]; then
       echo No volumes need to be removed
   fi
   
-  nvols=`avwval data1 dim4`;
+  nvols=`fslval data1 dim4`;
   
   echo output will have $nvols volumes
   
@@ -206,7 +206,7 @@ if [ $# -gt 1 ]; then
       done  
       
       file_list=`cat file_list`
-      avwmerge -t bigdata $file_list
+      fslmerge -t bigdata $file_list
       rm file_list -f
       
       echo "0 $nvols" >average_file
@@ -243,7 +243,7 @@ if [ $# -gt 1 ]; then
       fi
       
       if [ $FSLOUTPUTTYPE != 'ANALYZE' ]; then
-	  avwchfiletype ANALYZE bigdata
+	  fslchfiletype ANALYZE bigdata
 	  rm bigdata.nii.gz -f
       fi
       replacevols bigdata average_file $dodgy_volumes tmp_file
@@ -256,17 +256,17 @@ if [ $# -gt 1 ]; then
       fi
 
       if [ $FSLOUTPUTTYPE != 'ANALYZE' ]; then
-	  avwchfiletype $FSLOUTPUTTYPE tmp_file
+	  fslchfiletype $FSLOUTPUTTYPE tmp_file
       fi
 
-      nvols=`avwval tmp_file dim4`;
+      nvols=`fslval tmp_file dim4`;
       n_vols=`echo $nvols` 
-      volsacqs=`avwval data1 dim4`;
+      volsacqs=`fslval data1 dim4`;
       vols_per_acqs=`echo $volsacqs`;
       
       rm bigdata* -f
-      avwroi tmp_file data 0 ${vols_per_acqs};
-      avwmaths data -mul 0 data;
+      fslroi tmp_file data 0 ${vols_per_acqs};
+      fslmaths data -mul 0 data;
       
       acq=0;
       while [ ${acq} -lt ${numb_acqs} ]; do
@@ -274,16 +274,16 @@ if [ $# -gt 1 ]; then
 	  while [ ${vol} -lt ${vols_per_acqs} ]; do
 	      v_tmp=`expr $vol + ${vols_per_acqs} \* ${acq}`
 	      if [ $vol -lt 10 ]; then
-		  avwroi tmp_file vol${acq}_000${vol} $v_tmp 1;
+		  fslroi tmp_file vol${acq}_000${vol} $v_tmp 1;
 	      else
-		  avwroi tmp_file vol${acq}_00${vol} $v_tmp 1;
+		  fslroi tmp_file vol${acq}_00${vol} $v_tmp 1;
 	      fi
 	      vol=`expr $vol + 1`;
 	  done
 	 
-	  avwmerge -t data${acq}_all `$FSLDIR/bin/imglob -oneperimage vol${acq}_*`
-	  avwmaths data${acq}_all -div ${numb_acqs} data${acq}_all;
-	  avwmaths data -add data${acq}_all data;
+	  fslmerge -t data${acq}_all `$FSLDIR/bin/imglob -oneperimage vol${acq}_*`
+	  fslmaths data${acq}_all -div ${numb_acqs} data${acq}_all;
+	  fslmaths data -add data${acq}_all data;
           rm data${acq}_all* vol${acq}* -f  
       	  acq=`expr $acq + 1`;
       done 
@@ -292,14 +292,14 @@ if [ $# -gt 1 ]; then
        rm average_file -f
   else
       echo averaging the data
-      volsacqs=`avwval data1 dim4`;
+      volsacqs=`fslval data1 dim4`;
       vols_per_acqs=`echo $volsacqs`;
-      avwroi data1 data 0 ${vols_per_acqs};
-      avwmaths data -mul 0 data;
+      fslroi data1 data 0 ${vols_per_acqs};
+      fslmaths data -mul 0 data;
       acq=1;
       while [ ${acq} -le ${numb_acqs} ]; do
-	  avwmaths data${acq} -div ${numb_acqs} data${acq};
-	  avwmaths data -add data${acq} data;
+	  fslmaths data${acq} -div ${numb_acqs} data${acq};
+	  fslmaths data -add data${acq} data;
 	  acq=`expr $acq + 1`;
       done
   fi
@@ -311,19 +311,19 @@ if [ $# -gt 1 ]; then
 else
     echo no dodgy volumes
     echo averaging the data
-    volsacqs=`avwval data1 dim4`;
+    volsacqs=`fslval data1 dim4`;
     vols_per_acqs=`echo $volsacqs`;
-    avwroi data1 data 0 ${vols_per_acqs};
-    avwmaths data -mul 0 data;
+    fslroi data1 data 0 ${vols_per_acqs};
+    fslmaths data -mul 0 data;
     acq=1;
     while [ ${acq} -le ${numb_acqs} ]; do
-        avwmaths data${acq} -div ${numb_acqs} data${acq};
-	avwmaths data -add data${acq} data;
+        fslmaths data${acq} -div ${numb_acqs} data${acq};
+	fslmaths data -add data${acq} data;
 	acq=`expr $acq + 1`;
     done
 fi
 
 echo extracting nodif image from averaged data
-avwroi data nodif 0 1
+fslroi data nodif 0 1
 rm tmp* -f
 rm vol* -f

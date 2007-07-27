@@ -31,7 +31,7 @@ int main(int argc,char *argv[])
   int i;
 
   if(argc<3){
-    printf("usage: set_hdr_info headerfile flag info");
+    printf("usage: set_hdr_info headerfile flag info\n");
     exit(1);
   }
 

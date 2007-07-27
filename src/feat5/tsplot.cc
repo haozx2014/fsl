@@ -2,9 +2,9 @@
 
 /*  tsplot - FMRI time series and model plotting
 
-    Stephen Smith and Mark Woolrich, FMRIB Image Analysis Group
+    Stephen Smith, Mark Woolrich and Matthew Webster, FMRIB Image Analysis Group
 
-    Copyright (C) 1999-2006 University of Oxford  */
+    Copyright (C) 1999-2007 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -273,17 +273,6 @@ void smooth(ColumnVector &x,ColumnVector &y,ColumnVector &dy,int npoint,double s
    }
 }
 */
-
-
-
-
-
-
-
-
-
-
-
 
 /* }}} */
 /* {{{ usage */
@@ -787,36 +776,41 @@ ymin-=(ymax-ymin)/20;
     else title+= ": Z stat of "+num2str(maxz)+" at selected voxel ("+num2str(X)+" "+num2str(Y)+" "+num2str(Z)+")";
   } 
   else title+= ": averaged over "+num2str(count)+" voxels";
-  
+  Matrix blank=TS_data;
+  blank=log(-1.0);
   if (!modelfree)
   {
     if (j==0)
     {
-      newplot.add_label("data");
-      newplot.add_label("cope partial model fit");
       newplot.add_label("full model fit");
-      newplot.timeseries((TS_data | TS_copemodel | TS_model).t(),string(gpname),title,1,GRPHSIZE,4,2,false);
-      newplot.remove_labels(3);
-      newplot.add_label("reduced data");
       newplot.add_label("cope partial model fit");
-      newplot.timeseries((TS_residuals+TS_copemodel | TS_copemodel).t(),string(gpname)+"p",title,1,GRPHSIZE,4,2,false);
-      newplot.remove_labels(2);
+      newplot.add_label("data");
+      newplot.timeseries((TS_model | TS_copemodel | TS_data).t(),string(gpname),title,1,GRPHSIZE,4,2,false);
+      newplot.remove_labels(3);
+      newplot.add_label("");
+      newplot.add_label("cope partial model fit");
+      newplot.add_label("reduced data");
+      newplot.timeseries((blank | TS_copemodel | TS_residuals+TS_copemodel ).t(),string(gpname)+"p",title,1,GRPHSIZE,4,2,false);
+      newplot.remove_labels(3);
       sprintf(rofpF,"%sFull model fit - <a href=\"%sp.png\">Partial model fit</a> - <a href=\"%s.txt\">Raw data</a><br>\n<IMG BORDER=0 SRC=\"%s.png\"><br><br>\n",rofpF,gprootname,gprootname,gprootname);
     }
     else
     {
-      newplot.add_label("data");
       newplot.add_label("full model fit");
-      newplot.timeseries((TS_data | TS_model).t(),string(gpname),title,1,GRPHSIZE,4,2,false);
-      newplot.remove_labels(2);
+      newplot.add_label("");
+      newplot.add_label("data");
+      newplot.timeseries((TS_data | blank | TS_model).t(),string(gpname),title,1,GRPHSIZE,4,2,false);
+      newplot.remove_labels(3);
       sprintf(rofpF,"%sFull model fit - <a href=\"%s.txt\">Raw data</a><br>\n<IMG BORDER=0 SRC=\"%s.png\"><br><br>\n",rofpF,gprootname,gprootname);
     }
   }
   else
-  {
+  {    
+      newplot.add_label("");
+      newplot.add_label("");
       newplot.add_label("data");
-      newplot.timeseries(TS_data.t(),string(gpname),title,1,GRPHSIZE,4,2,false);
-      newplot.remove_labels(1);
+      newplot.timeseries((blank | blank | TS_data).t(),string(gpname),title,1,GRPHSIZE,4,2,false);
+      newplot.remove_labels(3);
       sprintf(rofpF,"%sData plot - <a href=\"%s.txt\">Raw data</a>\n<IMG BORDER=0 SRC=\"%s.png\"><br><br>\n",rofpF,gprootname,gprootname);
   }
 /* picture for main web index page */
@@ -829,8 +823,8 @@ ymin-=(ymax-ymin)/20;
     for(ev=0; ev<nevs; ev++) if (triggers[ev]>0.5)
     {
       float ps_period=triggers[((int)triggers[ev]+1)*nevs+ev];
-      Matrix ps_compact(10*(int)ps_period,3);
-      if (!modelfree) ps_compact.ReSize(10*(int)ps_period,6);
+      Matrix ps_compact((int)(10*ps_period)+1,3);
+      if (!modelfree) ps_compact.ReSize((int)(10*ps_period)+1,6);
 
       int size=0;
       for(int which_event=1;which_event<=triggers[ev];which_event++)
@@ -847,9 +841,9 @@ ymin-=(ymax-ymin)/20;
         for(t=int_min_t+1;t<=max_t;t++)
 	{
           Matrix input(1,ps_compact.Ncols());
-          if (!modelfree) input.Row(1) << ((int)((t-min_t-1)*10))/10.0 << TS_residuals(t)+TS_model(t) << TS_pemodel(ev*npts+t) << TS_model(t) << TS_residuals(t)+TS_pemodel(ev*npts+t) << 1;  //(restricted temporal accuraccy (0.1*TR)
+          if (!modelfree) input.Row(1) << ((int)((t-min_t-1)*10))/10.0 << TS_residuals(t)+TS_model(t) << TS_model(t) << TS_pemodel(ev*npts+t) << TS_residuals(t)+TS_pemodel(ev*npts+t) << 1;  //(restricted temporal accuraccy (0.1*TR)
           else input.Row(1) << t-min_t-1 << TS_residuals(t)+TS_model(t) << 1;
-          ps_compact.Row(((int)((t-min_t-1)*10)))+=input.Row(1); 
+          ps_compact.Row(((int)((t-min_t-1)*10))+1)+=input.Row(1); 
           ps_full.Row(++ptr) = input.SubMatrix(1,1,1,input.Ncols()-1); 
 	}
       }
@@ -876,11 +870,10 @@ ymin-=(ymax-ymin)/20;
       for(int j=1;j<=ps_compact.Nrows();j++) 
 	{
 	  if (ps_compact(j,6)) ps_compact.Row(j)/=ps_compact(j,6);
-	  else  ps_compact.Row(j)=log10(-1); //deliberately set to nan
+	  else  ps_compact.Row(j)=log10(-1.0); //deliberately set to nan
 	}
 
       Matrix ps_interp=ps_compact.t();
-      ps_interp = ps_interp.Column(1) | ps_interp;
 
       PSSIZE = MISCMATHS::Min(MISCMATHS::Max(ps_period*3,400),3000);
       newplot.set_minmaxscale(1.001);
@@ -898,28 +891,33 @@ ymin-=(ymax-ymin)/20;
         ps_compact=ps_full.SubMatrix(1,ps_full.Nrows(),1,2);
         ps_compact.Column(1)*=10;
 
-        newplot.setscatter(ps_compact,10*(ps_period+3));  //12+2
-        newplot.add_label("EV "+num2str(ev+1)+" model fit");
+        newplot.setscatter(ps_compact,(int)(10*(ps_period+3)));  //12+2
         newplot.add_label("full model fit");
+	newplot.add_label("EV "+num2str(ev+1)+" model fit");
         newplot.add_label("data");
-        newplot.timeseries(ps_interp.SubMatrix(3,4,1,ps_interp.Ncols()),string(gpname),title,-0.1,PSSIZE,4,2,false);
+        newplot.timeseries(ps_interp.SubMatrix(3,4,1,ps_interp.Ncols()),string(gpname),title,-0.1,PSSIZE,3,2,false);
         newplot.remove_labels(3);
         ps_compact=ps_full.SubMatrix(1,ps_full.Nrows(),1,1) | ps_full.SubMatrix(1,ps_full.Nrows(),5,5);
         ps_compact.Column(1)*=10;
-        newplot.setscatter(ps_compact,10*(ps_period+3));
-        newplot.add_label("EV "+num2str(ev+1)+" model fit");
+        newplot.setscatter(ps_compact,(int)(10*(ps_period+3)));
         newplot.add_label("");
+        newplot.add_label("EV "+num2str(ev+1)+" model fit");
         newplot.add_label("reduced data");
-        newplot.timeseries(ps_interp.SubMatrix(3,3,1,ps_interp.Ncols()),string(gpname)+"p",title,-0.1,PSSIZE,4,2,false);
+        ps_interp.Row(3)=log(-1.0);
+        newplot.timeseries(ps_interp.SubMatrix(3,4,1,ps_interp.Ncols()),string(gpname)+"p",title,-0.1,PSSIZE,3,2,false);
 	newplot.deletescatter();
         newplot.remove_labels(3);
-        sprintf(rofpP,"%s<td>Full model fit - <a href=\"%sp.png\">Partial model fit</a> - <a href=\"%s.txt\">Raw data</a><br>\n<IMG BORDER=0 SRC=\"%s.png\">\n",rofpP,gprootname,gprootname,gprootname);
+	sprintf(rofpP,"%s<td>Full model fit - <a href=\"%sp.png\">Partial model fit</a> - <a href=\"%s.txt\">Raw data</a><br>\n<IMG BORDER=0 SRC=\"%s.png\">\n",rofpP,gprootname,gprootname,gprootname);
       }
       else
       {
+	Matrix blank=ps_full.SubMatrix(2,2,1,ps_compact.Ncols());
+	blank=log(-1.0);
+        newplot.add_label("");
+        newplot.add_label("");
         newplot.add_label("data");
-        newplot.timeseries(ps_full.SubMatrix(2,2,1,ps_compact.Ncols()),string(gpname),title,-0.1,PSSIZE,4,2,false);
-        newplot.remove_labels(1);
+        newplot.timeseries(blank & blank & ps_full.SubMatrix(2,2,1,ps_compact.Ncols()),string(gpname),title,-0.1,PSSIZE,3,2,false);
+        newplot.remove_labels(3);
         sprintf(rofpP,"%sData plot - <a href=\"%s.txt\">Raw data</a>\n<IMG BORDER=0 SRC=\"%s.png\"><br><br>\n",rofpP,gprootname,gprootname);
       }
       newplot.remove_xlabel();
@@ -937,7 +935,8 @@ if((rofp=fopen(thestring,"wb"))==NULL)
   exit(1);
 }
 
-fprintf(rofp,"<HTML>\n<TITLE>%s%d</TITLE>\n<BODY BACKGROUND=\"file:%s/doc/images/fsl-bg.jpg\">\n<hr><CENTER>\n<H1>FEAT Time Series Report - %s%d</H1>\n</CENTER>\n<hr><b>Full plots</b><p>\n%s\n<hr><b>Peristimulus plots</b><p>\n%s\n<HR></BODY></HTML>\n\n",statname,i+1,fsldir,statname,i+1,rofpF,rofpP);
+  if (use_triggers) fprintf(rofp,"<HTML>\n<TITLE>%s%d</TITLE>\n<BODY BACKGROUND=\"file:%s/doc/images/fsl-bg.jpg\">\n<hr><CENTER>\n<H1>FEAT Time Series Report - %s%d</H1>\n</CENTER>\n<hr><b>Full plots</b><p>\n%s\n<hr><b>Peristimulus plots</b><p>\n%s\n<HR></BODY></HTML>\n\n",statname,i+1,fsldir,statname,i+1,rofpF,rofpP);
+  else fprintf(rofp,"<HTML>\n<TITLE>%s%d</TITLE>\n<BODY BACKGROUND=\"file:%s/doc/images/fsl-bg.jpg\">\n<hr><CENTER>\n<H1>FEAT Time Series Report - %s%d</H1>\n</CENTER>\n<hr><b>Full plots</b><p>\n%s\n</BODY></HTML>\n\n",statname,i+1,fsldir,statname,i+1,rofpF);
 
 fclose(rofp);
 

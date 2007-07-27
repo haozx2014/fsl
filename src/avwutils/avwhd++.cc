@@ -1,4 +1,4 @@
-//     avwhd++.cc - show image header
+//     fslhd.cc - show image header
 //     Steve Smith, Mark Jenkinson and Matthew Webster, FMRIB Image Analysis Group
 //     Copyright (C) 2000-2005 University of Oxford  
 //     COPYRIGHT  
@@ -11,7 +11,7 @@ using namespace NEWIMAGE;
 void print_usage(const string& progname) 
 {
   cout << endl;
-  cout << "Usage: avwhd [-x] <input>" << endl;
+  cout << "Usage: fslhd [-x] <input>" << endl;
   cout << "       -x : instead print an XML-style NIFTI header" << endl;
 }
 

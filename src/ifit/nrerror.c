@@ -3,6 +3,7 @@
 
 #include "nrerror.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 void nrerror(char error_text[])
 /* Numerical Recipes standard error handler */

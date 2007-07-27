@@ -64,11 +64,20 @@
 #   University, to negotiate a licence. Contact details are:
 #   innovation@isis.ox.ac.uk quoting reference DE/1112.
 
-if [ -e "x$SGE_ROOT" && $2 == "sge" ] ; then
-      echo "Running the code using sge enviroment" 
-      sge_possum $1 $3 $4
-    else
-      echo "Running the code using possumX"
-      possumX $1
-    fi
+if [ $# -lt 1 ] ; then
+  echo "Usage: possumRun <possum output directory> [sge num num]"
+  exit 1
+fi
+
+arg2=$2;
+if [ $# -lt 2 ] ; then
+    arg2=singleproc;
+fi
+
+if [ -e "x$SGE_ROOT" -a "$arg2" == "sge" ] ; then
+    echo "Running the code using sge enviroment" 
+    sge_possum $1 $3 $4
+else
+    echo "Running the code using possumX"
+    possumX $1
 fi

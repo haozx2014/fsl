@@ -69,7 +69,7 @@
 #   innovation@isis.ox.ac.uk quoting reference DE/1112.
 
 Usage() {
-    echo "Usage: avwval <input> <keyword>"
+    echo "Usage: fslval <input> <keyword>"
     exit 1
 }
 
@@ -82,5 +82,5 @@ then
     export FSLDIR
 fi
 
-#$FSLDIR/bin/avwhd $1 | cat -v | grep $2 | head -n 1 | awk '{print $2 $3}'
-$FSLDIR/bin/avwhd $1 | cat -v | grep $2 | head -n 1 | awk '{ for (i = 2; i <= NF; i++) printf "%s ", $i ; printf "\n" }'
+#$FSLDIR/bin/fslhd $1 | cat -v | grep $2 | head -n 1 | awk '{print $2 $3}'
+$FSLDIR/bin/fslhd $1 | cat -v | grep $2 | head -n 1 | awk '{ for (i = 2; i <= NF; i++) printf "%s ", $i ; printf "\n" }'

@@ -317,7 +317,7 @@ while { $i <= $vars($w,statss) } {
 	FSLSaveAs $statspage($i) AVW ${OV}_s${i}.hdr true
 	set fentries($w,$i) ${OV}_s${i}
 
-	if { $i == 1 && [ exec sh -c "$FSLDIR/bin/avwval $fentries($w,$i) pitbix" ] == 32 && $vars($w,output) == 0 } {
+	if { $i == 1 && [ exec sh -c "$FSLDIR/bin/fslval $fentries($w,$i) pitbix" ] == 32 && $vars($w,output) == 0 } {
 	    set IsStats 1
 	}
 
@@ -334,9 +334,9 @@ while { $i <= $vars($w,statss) } {
 #}}}
     #{{{ check dimensions are consistent
 
-    set xdim($i) [ exec sh -c "$FSLDIR/bin/avwval $fentries($w,$i) dim1" ]
-    set ydim($i) [ exec sh -c "$FSLDIR/bin/avwval $fentries($w,$i) dim2" ]
-    set zdim($i) [ exec sh -c "$FSLDIR/bin/avwval $fentries($w,$i) dim3" ]
+    set xdim($i) [ exec sh -c "$FSLDIR/bin/fslval $fentries($w,$i) dim1" ]
+    set ydim($i) [ exec sh -c "$FSLDIR/bin/fslval $fentries($w,$i) dim2" ]
+    set zdim($i) [ exec sh -c "$FSLDIR/bin/fslval $fentries($w,$i) dim3" ]
 
     if { $i > 0 } {
 	if { $zdim($i) != $zdim(0) || $ydim($i) != $ydim(0) || $xdim($i) != $xdim(0) } {
@@ -358,7 +358,7 @@ while { $i <= $vars($w,statss) } {
 	set RANGE -r
     }
 
-    catch { exec sh -c "${FSLDIR}/bin/avwstats $fentries($w,$i) $RANGE" } minmax
+    catch { exec sh -c "${FSLDIR}/bin/fslstats $fentries($w,$i) $RANGE" } minmax
 
     if { $vars($w,statsmin,$i) == "min" } {
 	set vars($w,statsmin,$i) [ lindex $minmax 0 ]

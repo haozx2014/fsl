@@ -1,8 +1,8 @@
 /*  pngappend - simple programm to append sets of png
 
-    Christian Beckmann, FMRIB Image Analysis Group
+    Christian Beckmann and Matthew Webster, FMRIB Image Analysis Group
 
-    2002 University of Oxford  */
+    2007 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -197,8 +197,8 @@ int main(int argc, char *argv[])
 	toprx = 0;
 	topry = im_tmp->sy + gap;
       }else
-	toprx += gap;
-      
+	toprx += gap;      
+
       newx = max(toprx + im_read->sx, im_tmp->sx);
       newy = max(topry + im_read->sy, im_tmp->sy);
 

@@ -11,30 +11,29 @@ LIBS = -lnewimage -lmiscmaths -lprob -lfslio -lnewmat -lutils -lniftiio -lznz -l
 IOLIBS = -lfslio -lniftiio -lznz -lm -lz
 SSLIBS = -lss_32R $(IOLIBS)
 
-XFILES = avwcpgeom avwmerge avwnvols avwsplit \
-	 avw2ascii_8UI \
-         avw2ascii_16SI avw2ascii_32SI \
-         avw2ascii_32R avw2ascii_64R avwhd avwcreatehd \
-	 avwmaths_8UI avwmaths_16SI \
-         avwmaths_32SI avwmaths_32R avwmaths_64R \
-	 avwcc_8UI avwcc_16SI \
-         avwcc_32SI avwcc_32R avwcc_64R \
-	 avwinterleave_8UI \
-         avwinterleave_16SI avwinterleave_32SI \
-         avwinterleave_32R avwinterleave_64R avwroi_8UI \
-         avwroi_16SI avwroi_32SI avwroi_32R avwroi_64R \
-	 avwstats avwcomplex \
-         avwstats++ avwfft avwmeants avwcheck avwswapdim avwconv \
-         avwslice avworient avwpspec avwroi++ avwnvols++ avw2ascii++ \
+FSLFILES = avworient avwstats++ avwmerge \
+         avwpspec avwroi++ avwnvols++ avw2ascii++  \
          avwsplit++ avwcc++ avwinterleave++ \
-         avwhd++ avwcpgeom++ avwcreatehd++ avwmaths++
+         avwhd++ avwcpgeom++ avwcreatehd++ avwmaths++ \
+         avwcomplex avwfft avwmeants avwcheck avwconv avwslice
+
+XFILES = avwsplit avwhd avwstats avwcreatehd avwcpgeom avwswapdim\
+	 avw2ascii_8UI avw2ascii_16SI avw2ascii_32SI avw2ascii_32R avw2ascii_64R \
+	 avwmaths_8UI avwmaths_16SI avwmaths_32SI avwmaths_32R avwmaths_64R \
+	 avwcc_8UI avwcc_16SI avwcc_32SI avwcc_32R avwcc_64R \
+	 avwinterleave_8UI avwinterleave_16SI avwinterleave_32SI avwinterleave_32R avwinterleave_64R \
+         avwroi_8UI avwroi_16SI avwroi_32SI avwroi_32R avwroi_64R ${FSLFILES}
 
 SCRIPTS = avwval avwchpixdim avwanimate sliceanimate avwsize avwinfo avwedithd avwchfiletype
-FSCRIPTS = fmriborient
+
+AVSCRIPTS = avwval avwchpixdim avwanimate avwsize avwinfo avwedithd avwchfiletype 
+
+FSCRIPTS = fmriborient avwswapdim++
 
 RUNAVWS = avw2ascii avwmaths avwcc avwroi avwfill avwinterleave
 
 all: ${XFILES}
+	@ for file in ${FSLFILES} ${AVSCRIPTS} ; do file2=$${file/++/} ; cp "$${file}" ${FSLDIR}/bin/fsl$${file2:3} ; done ; cp avwnvols++ ${FSLDIR}/bin/avwnvols
 
 
 avwcheck: avwcheck.cc

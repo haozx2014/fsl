@@ -95,7 +95,7 @@ namespace FILM {
 	xrow(),
 	dummy(),
 	realifft(), 
-	mn(pxdata.getNumSeries()),
+	dm_mn(),
 	zeropad(0)
 	{ 
 	  zeropad = MISCMATHS::nextpow2(pxdata.getNumVolumes());
@@ -154,7 +154,7 @@ namespace FILM {
      
       ColumnVector dummy;
       ColumnVector realifft;
-      ColumnVector mn;
+      ColumnVector dm_mn;
 
       int zeropad;
     };

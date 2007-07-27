@@ -4,7 +4,7 @@ Usage() {
     echo ""
     echo "Copy this file from its location to your working dir"
     echo "use ti as gui"
-exit
+exit 1
 }
 [ "$1" = "" ] && Usage
 

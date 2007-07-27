@@ -5,7 +5,7 @@
 
     Christian F. Beckmann, FMRIB Image Analysis Group
     
-    Copyright (C) 1999-2004 University of Oxford */
+    Copyright (C) 1999-2007 University of Oxford */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -87,16 +87,13 @@ using namespace NEWIMAGE;
 
 namespace Melodic{
   
-  class MelodicICA
-    {
+  class MelodicICA{
     public:
       MelodicICA(MelodicData &pmelodat, MelodicOptions &popts, Log &plogger, MelodicReport &preport):  
-	melodat(pmelodat),
-	opts(popts),
-	logger(plogger),
-	report(preport)
-	{		
-	} 
+				melodat(pmelodat),
+				opts(popts),
+				logger(plogger),
+				report(preport){} 
       
       void perf_ica(const Matrix &Data);
       
@@ -123,7 +120,7 @@ namespace Melodic{
       void sort();
       Matrix sign(const Matrix &Inp);
 
-    };   
+  };   
 }
 
 #endif

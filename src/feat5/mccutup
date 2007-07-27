@@ -2,7 +2,7 @@
 
 Usage() {
     echo "Usage: mccutup <feat_directory>"
-    exit
+    exit 1
 }
 
 [ "$1" = "" ] && Usage

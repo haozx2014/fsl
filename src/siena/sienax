@@ -82,7 +82,7 @@ Usage() {
     echo "-lm <mask>      : use lesion (or lesion+CSF) mask to remove incorrectly labelled \"grey matter\" voxels"
     echo "-S \"segopts\"    : options to pass to FAST segmentation (inside double-quotes), e.g. -S \"-i 20\""
     echo ""
-    exit
+    exit 1
 }
 
 if [ _$FSLDIR = _ ] ; then
@@ -110,8 +110,8 @@ betopts=""
 segopts=""
 nseg=3
 stdroi=""
-origin3=37 # `avwval ${FSLDIR}/etc/standard/avg152T1 origin3`
-pixdim3=2  # `avwval ${FSLDIR}/etc/standard/avg152T1 pixdim3`
+origin3=37 # `fslval ${FSLDIR}/etc/standard/avg152T1 origin3`
+pixdim3=2  # `fslval ${FSLDIR}/etc/standard/avg152T1 pixdim3`
 imtype=-t1
 
 while [ _$1 != _ ] ; do
@@ -162,7 +162,7 @@ fi
 
 echo "----------  extract brain  --------------------------------------------" >> ${I}.sienax
 ${FSLDIR}/bin/bet $I ${I}_brain -s -m $betopts >> ${I}.sienax
-${FSLDIR}/bin/avwmaths++ ${I}_brain -sub `$FSLDIR/bin/avwstats++ ${I}_brain -p 0` -mas ${I}_brain_mask ${I}_brain -odt float
+${FSLDIR}/bin/fslmaths ${I}_brain -sub `$FSLDIR/bin/fslstats ${I}_brain -p 0` -mas ${I}_brain_mask ${I}_brain -odt float
 
 echo ""                                                                        >> ${I}.sienax
 echo "----------  register to stdairach space using brain and skull  --------" >> ${I}.sienax
@@ -180,19 +180,19 @@ echo "----------  mask with std mask  ---------------------------------------" >
 ${FSLDIR}/bin/convert_xfm -inverse -omat ${I}2std_inv.mat ${I}2std.mat
 MASK=${FSLDIR}/etc/standard/avg152T1_brain_mask_dil
 if [ "$stdroi" != "" ] ; then
-    ${FSLDIR}/bin/avwmaths $MASK $stdroi ${I}_stdmaskroi
+    ${FSLDIR}/bin/fslmaths $MASK $stdroi ${I}_stdmaskroi
     MASK=${I}_stdmaskroi
 fi
 ${FSLDIR}/bin/flirt -in $MASK -ref ${I}_brain -out ${I}_stdmask -applyxfm -init ${I}2std_inv.mat
-${FSLDIR}/bin/avwmaths ${I}_stdmask -thr 0.5 -bin ${I}_stdmask
-${FSLDIR}/bin/avwmaths ${I}_brain -mask ${I}_stdmask ${I}_stdmaskbrain
+${FSLDIR}/bin/fslmaths ${I}_stdmask -thr 0.5 -bin ${I}_stdmask
+${FSLDIR}/bin/fslmaths ${I}_brain -mas ${I}_stdmask ${I}_stdmaskbrain
 
 if [ $regional = 1 ] ; then
     ${FSLDIR}/bin/flirt -in ${FSLDIR}/etc/standard/avg152T1_strucseg_periph -ref ${I}_brain -out ${I}_stdmask_segperiph -applyxfm -init ${I}2std_inv.mat
-    ${FSLDIR}/bin/avwmaths ${I}_stdmask_segperiph -thr 0.5 -bin ${I}_stdmask_segperiph
-    ${FSLDIR}/bin/avwmaths ${FSLDIR}/etc/standard/avg152T1_strucseg -thr 4.5 -bin ${I}_tmpmask
+    ${FSLDIR}/bin/fslmaths ${I}_stdmask_segperiph -thr 0.5 -bin ${I}_stdmask_segperiph
+    ${FSLDIR}/bin/fslmaths ${FSLDIR}/etc/standard/avg152T1_strucseg -thr 4.5 -bin ${I}_tmpmask
     ${FSLDIR}/bin/flirt -in ${I}_tmpmask -ref ${I}_brain -out ${I}_stdmask_segvent -applyxfm -init ${I}2std_inv.mat
-    ${FSLDIR}/bin/avwmaths ${I}_stdmask_segvent -thr 0.5 -bin ${I}_stdmask_segvent
+    ${FSLDIR}/bin/fslmaths ${I}_stdmask_segvent -thr 0.5 -bin ${I}_stdmask_segvent
     /bin/rm ${I}_tmpmask*
 fi
 
@@ -202,21 +202,21 @@ if [ $nseg = 2 ] ; then
     ${FSLDIR}/bin/fast1 -c 2 $imtype -e -ov $segopts ${I}_stdmaskbrain >> ${I}.sienax 2>&1
     echo "" >> ${I}.sienax
     echo "----------  convert brain volume into normalised volume  --------------" >> ${I}.sienax
-    S=`${FSLDIR}/bin/avwstats ${I}_stdmaskbrain_pve_1 -m -v`
+    S=`${FSLDIR}/bin/fslstats ${I}_stdmaskbrain_pve_1 -m -v`
     xa=`echo $S | awk '{print $1}'`
     xb=`echo $S | awk '{print $3}'`
     ubrain=`echo "2 k $xa $xb * 1 / p" | dc -`
     nbrain=`echo "2 k $xa $xb * $vscale * 1 / p" | dc -`
 else
     if [ _$lm != _ ] ; then
-	${FSLDIR}/bin/avwmaths_32R $lm -bin -mul -1 -add 1 -mul ${I}_stdmaskbrain ${I}_stdmaskbrain
+	${FSLDIR}/bin/fslmaths $lm -bin -mul -1 -add 1 -mul ${I}_stdmaskbrain ${I}_stdmaskbrain -odt float
     fi
 
     ${FSLDIR}/bin/fast1 $imtype -e -ov $segopts ${I}_stdmaskbrain >> ${I}.sienax 2>&1
 
     if [ _$lm != _ ] ; then
-	${FSLDIR}/bin/avwmaths_32R $lm -bin -max ${I}_stdmaskbrain_pve_2 ${I}_stdmaskbrain_pve_2
-	${FSLDIR}/bin/avwmaths_32SI $lm -bin -mul 3 -max ${I}_stdmaskbrain_seg ${I}_stdmaskbrain_seg
+	${FSLDIR}/bin/fslmaths $lm -bin -max ${I}_stdmaskbrain_pve_2 ${I}_stdmaskbrain_pve_2 -odt float
+	${FSLDIR}/bin/fslmaths $lm -bin -mul 3 -max ${I}_stdmaskbrain_seg ${I}_stdmaskbrain_seg -odt int
     fi
 
     echo "" >> ${I}.sienax
@@ -224,29 +224,29 @@ else
     echo "" >> ${I}.sienax
     echo "tissue             volume    unnormalised-volume" >> ${I}.sienax
     if [ $regional = 1 ] ; then
-	${FSLDIR}/bin/avwmaths_32R ${I}_stdmaskbrain_pve_1 -mas ${I}_stdmask_segperiph ${I}_stdmaskbrain_pve_1_segperiph
-	S=`${FSLDIR}/bin/avwstats ${I}_stdmaskbrain_pve_1_segperiph -m -v`
+	${FSLDIR}/bin/fslmaths ${I}_stdmaskbrain_pve_1 -mas ${I}_stdmask_segperiph ${I}_stdmaskbrain_pve_1_segperiph -odt float
+	S=`${FSLDIR}/bin/fslstats ${I}_stdmaskbrain_pve_1_segperiph -m -v`
 	xa=`echo $S | awk '{print $1}'`
 	xb=`echo $S | awk '{print $3}'`
 	uxg=`echo "2 k $xa $xb * 1 / p" | dc -`
 	xg=`echo "2 k $xa $xb * $vscale * 1 / p" | dc -`
 	echo "pgrey              $xg $uxg (peripheral grey)" >> ${I}.sienax
 
-	${FSLDIR}/bin/avwmaths_32R ${I}_stdmaskbrain_pve_0 -mas ${I}_stdmask_segvent ${I}_stdmaskbrain_pve_0_segvent
-	S=`${FSLDIR}/bin/avwstats ${I}_stdmaskbrain_pve_0_segvent -m -v`
+	${FSLDIR}/bin/fslmaths ${I}_stdmaskbrain_pve_0 -mas ${I}_stdmask_segvent ${I}_stdmaskbrain_pve_0_segvent -odt float
+	S=`${FSLDIR}/bin/fslstats ${I}_stdmaskbrain_pve_0_segvent -m -v`
 	xa=`echo $S | awk '{print $1}'`
 	xb=`echo $S | awk '{print $3}'`
 	uxg=`echo "2 k $xa $xb * 1 / p" | dc -`
 	xg=`echo "2 k $xa $xb * $vscale * 1 / p" | dc -`
 	echo "vcsf               $xg $uxg (ventricular CSF)" >> ${I}.sienax
     fi
-    S=`${FSLDIR}/bin/avwstats ${I}_stdmaskbrain_pve_1 -m -v`
+    S=`${FSLDIR}/bin/fslstats ${I}_stdmaskbrain_pve_1 -m -v`
     xa=`echo $S | awk '{print $1}'`
     xb=`echo $S | awk '{print $3}'`
     ugrey=`echo "2 k $xa $xb * 1 / p" | dc -`
     ngrey=`echo "2 k $xa $xb * $vscale * 1 / p" | dc -`
     echo "GREY               $ngrey $ugrey" >> ${I}.sienax
-    S=`${FSLDIR}/bin/avwstats ${I}_stdmaskbrain_pve_2 -m -v`
+    S=`${FSLDIR}/bin/fslstats ${I}_stdmaskbrain_pve_2 -m -v`
     xa=`echo $S | awk '{print $1}'`
     xb=`echo $S | awk '{print $3}'`
     uwhite=`echo "2 k $xa $xb * 1 / p" | dc -`

@@ -1,4 +1,4 @@
-//     avwmerge++.cc concatenate AVW files into a single output
+//     fslmerge.cc concatenate AVW files into a single output
 //     Steve Smith, David Flitney, Stuart Clare and Matthew Webster, FMRIB Image Analysis Group
 //     Copyright (C) 2000-2005 University of Oxford  
 /*  Part of FSL - FMRIB's Software Library
@@ -71,7 +71,7 @@ using namespace NEWIMAGE;
 void print_usage(const string& progname) 
 {
   cout << endl;
-  cout << "Usage: avwmerge <-x/y/z/t/a> <output> <file1 file2 .......>" << endl;
+  cout << "Usage: fslmerge <-x/y/z/t/a> <output> <file1 file2 .......>" << endl;
   cout << "     -t : concatenate images in time" << endl;
   cout << "     -x : concatenate images in the x direction"  << endl;
   cout << "     -y : concatenate images in the y direction"  << endl;

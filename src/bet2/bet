@@ -104,19 +104,19 @@ Miscellaneous options:
   -d          debug (don't delete temporary intermediate images)
 
 EOF
-    exit
+    exit 1
 }
 
 # }}}
 # {{{ get_dims()
 
 get_dims() {
-    xdim=`${FSLDIR}/bin/avwval $1 dim1 | sed 's/-//g'`
-    ydim=`${FSLDIR}/bin/avwval $1 dim2 | sed 's/-//g'`
-    zdim=`${FSLDIR}/bin/avwval $1 dim3 | sed 's/-//g'`
-    xpixdim=`${FSLDIR}/bin/avwval $1 pixdim1 | sed 's/-//g'`
-    ypixdim=`${FSLDIR}/bin/avwval $1 pixdim2 | sed 's/-//g'`
-    zpixdim=`${FSLDIR}/bin/avwval $1 pixdim3 | sed 's/-//g'`
+    xdim=`${FSLDIR}/bin/fslval $1 dim1 | sed 's/-//g'`
+    ydim=`${FSLDIR}/bin/fslval $1 dim2 | sed 's/-//g'`
+    zdim=`${FSLDIR}/bin/fslval $1 dim3 | sed 's/-//g'`
+    xpixdim=`${FSLDIR}/bin/fslval $1 pixdim1 | sed 's/-//g'`
+    ypixdim=`${FSLDIR}/bin/fslval $1 pixdim2 | sed 's/-//g'`
+    zpixdim=`${FSLDIR}/bin/fslval $1 pixdim3 | sed 's/-//g'`
     #echo $xdim $ydim $zdim $xpixdim $ypixdim $zpixdim
 }
 
@@ -124,7 +124,7 @@ get_dims() {
 # {{{ find_centre_in_mm()
 
 # find_centre_in_mm() {
-#     centre=`${FSLDIR}/bin/avwstats++ $1 -l 0.001 -C`
+#     centre=`${FSLDIR}/bin/fslstats $1 -l 0.001 -C`
 #     x=`echo $centre $xpixdim | awk '{print "10 k " $1 " " $4 " * p"}' | dc -`
 #     y=`echo $centre $ypixdim | awk '{print "10 k " $2 " " $4 " * p"}' | dc -`
 #     z=`echo $centre $zpixdim | awk '{print "10 k " $3 " " $4 " * p"}' | dc -`
@@ -135,7 +135,7 @@ get_dims() {
 # {{{ find_centre_in_voxels()
 
 find_centre_in_voxels() {
-    centre=`${FSLDIR}/bin/avwstats++ $1 -l 0.001 -C`
+    centre=`${FSLDIR}/bin/fslstats $1 -l 0.001 -C`
     x=`echo $centre | awk '{print $1}'`
     y=`echo $centre | awk '{print $2}'`
     z=`echo $centre | awk '{print $3}'`
@@ -154,7 +154,7 @@ if [ `${FSLDIR}/bin/imtest $IN` = 0 ] ; then
     echo ""
     echo "Error: input image $IN not valid"
     echo ""
-    exit
+    exit 1
 fi
 
 # }}}
@@ -267,24 +267,24 @@ ${FSLDIR}/bin/bet2 ${OUT}_tmp_premask ${OUT}_tmp_premask_bet -n -m -f 0.4 $bet2o
 
 #### bring eye mask from standard space into native and dilate, mostly in 2D and then invert
 ${FSLDIR}/bin/flirt -ref $IN -in ${FSLDIR}/etc/standard/avg152T1_eye_mask -applyxfm -init ${OUT}_tmp_premask_tmp_to_std_inv.mat -datatype float -out ${OUT}_tmp_eye_mask
-${FSLDIR}/bin/avwmaths++ ${OUT}_tmp_eye_mask -thr 0.5 -bin -dilF -kernel 2D -dilF -dilF -dilF -dilF -dilF -dilF -dilF ${OUT}_tmp_eyes7dil -odt short
-${FSLDIR}/bin/avwmaths++ ${OUT}_tmp_eyes7dil -mul -1 -add 1 ${OUT}_tmp_eyes7dil_inv
+${FSLDIR}/bin/fslmaths ${OUT}_tmp_eye_mask -thr 0.5 -bin -dilF -kernel 2D -dilF -dilF -dilF -dilF -dilF -dilF -dilF ${OUT}_tmp_eyes7dil -odt short
+${FSLDIR}/bin/fslmaths ${OUT}_tmp_eyes7dil -mul -1 -add 1 ${OUT}_tmp_eyes7dil_inv
 
 #### mask original brain mask with inverted-eye-mask, ADD betpremask_bet_mask and X by original brain
-${FSLDIR}/bin/avwmaths++ ${OUT}_tmp_betraw -bin -mas ${OUT}_tmp_eyes7dil_inv -add ${OUT}_tmp_premask_bet_mask -bin -mul ${OUT}_tmp_betraw ${OUT}_tmp_prebrain
+${FSLDIR}/bin/fslmaths ${OUT}_tmp_betraw -bin -mas ${OUT}_tmp_eyes7dil_inv -add ${OUT}_tmp_premask_bet_mask -bin -mul ${OUT}_tmp_betraw ${OUT}_tmp_prebrain
 
 #### find upper threshold used to delete eyes
-Mean=`${FSLDIR}/bin/avwstats++ ${OUT}_tmp_prebrain -M`
-SD=`${FSLDIR}/bin/avwstats++ ${OUT}_tmp_prebrain -S`
+Mean=`${FSLDIR}/bin/fslstats ${OUT}_tmp_prebrain -M`
+SD=`${FSLDIR}/bin/fslstats ${OUT}_tmp_prebrain -S`
 thr=`echo "10 k 3.5 $SD * $Mean + p" | dc -`
 
 #### apply threshold and a little morphology (twice) to cleanup further and produce final brain image
-${FSLDIR}/bin/avwmaths++ ${OUT}_tmp_prebrain -uthr $thr -bin -ero -dilF -dilF -ero -mul ${OUT}_tmp_prebrain -uthr $thr -bin -kernel 2D -ero -dilF -mul ${OUT}_tmp_betraw $OUT
-${FSLDIR}/bin/avwmaths++ $OUT -bin ${OUT}_mask
+${FSLDIR}/bin/fslmaths ${OUT}_tmp_prebrain -uthr $thr -bin -ero -dilF -dilF -ero -mul ${OUT}_tmp_prebrain -uthr $thr -bin -kernel 2D -ero -dilF -mul ${OUT}_tmp_betraw $OUT
+${FSLDIR}/bin/fslmaths $OUT -bin ${OUT}_mask
 
 #### remove eyes from original skull to produce final skull image
-${FSLDIR}/bin/avwmaths++ ${OUT}_tmp_eyes7dil -ero -kernel 2D -ero -mul -1 -add 1 ${OUT}_tmp_eyes5dil_inv
-${FSLDIR}/bin/avwmaths++ ${OUT}_tmp_betraw_skull -mas ${OUT}_tmp_eyes5dil_inv ${OUT}_skull
+${FSLDIR}/bin/fslmaths ${OUT}_tmp_eyes7dil -ero -kernel 2D -ero -mul -1 -add 1 ${OUT}_tmp_eyes5dil_inv
+${FSLDIR}/bin/fslmaths ${OUT}_tmp_betraw_skull -mas ${OUT}_tmp_eyes5dil_inv ${OUT}_skull
 
 # }}}
 elif [ $variation = 3 ] ; then
@@ -301,8 +301,8 @@ if [ $npad -le 0 ] ; then
     exit
 fi
 
-${FSLDIR}/bin/avwroi++ $IN ${OUT}_tmp_bottom 0 $xdim 0 $ydim 0 1
-${FSLDIR}/bin/avwroi++ $IN ${OUT}_tmp_top    0 $xdim 0 $ydim `echo "$zdim 1 - p" | dc -` 1
+${FSLDIR}/bin/fslroi $IN ${OUT}_tmp_bottom 0 $xdim 0 $ydim 0 1
+${FSLDIR}/bin/fslroi $IN ${OUT}_tmp_top    0 $xdim 0 $ydim `echo "$zdim 1 - p" | dc -` 1
 
 n=1
 while [ $n -le $npad ] ; do
@@ -311,22 +311,22 @@ while [ $n -le $npad ] ; do
     n=`echo "$n 1 + p" | dc -`
 done
 
-${FSLDIR}/bin/avwmerge -z ${OUT}_tmp $bottomlist $IN $toplist
+${FSLDIR}/bin/fslmerge -z ${OUT}_tmp $bottomlist $IN $toplist
 
 ${FSLDIR}/bin/bet2 ${OUT}_tmp $OUT $bet2opts
 
 for f in `imglob -oneperimage ${OUT}*` ; do
-    ${FSLDIR}/bin/avwroi++ $f $f 0 $xdim 0 $ydim $npad $zdim
+    ${FSLDIR}/bin/fslroi $f $f 0 $xdim 0 $ydim $npad $zdim
 done
 
 # }}}
 elif [ $variation = 4 ] ; then
     # {{{ FMRI
 
-${FSLDIR}/bin/avwroi++ $IN ${OUT}_tmp 0 1
+${FSLDIR}/bin/fslroi $IN ${OUT}_tmp 0 1
 ${FSLDIR}/bin/bet2 ${OUT}_tmp ${OUT}_tmp_brain -m -n -f 0.3 $bet2opts
-${FSLDIR}/bin/avwmaths++ ${OUT}_tmp_brain_mask -dilF ${OUT}_mask
-${FSLDIR}/bin/avwmaths++ $IN -mas ${OUT}_mask $OUT
+${FSLDIR}/bin/fslmaths ${OUT}_tmp_brain_mask -dilF ${OUT}_mask
+${FSLDIR}/bin/fslmaths $IN -mas ${OUT}_mask $OUT
 
 # }}}
 elif [ $variation = 5 ] ; then
@@ -371,7 +371,7 @@ ${FSLDIR}/bin/standard_space_roi $IN ${OUT}_tmp_premask -b -d
 ${FSLDIR}/bin/fast -oba 100 ${OUT}_tmp_premask >& /dev/null
 
 #### apply bias correction to original
-${FSLDIR}/bin/avwmaths++ $IN -mul ${OUT}_tmp_premask_abias ${OUT}_tmp_unbiased
+${FSLDIR}/bin/fslmaths $IN -mul ${OUT}_tmp_premask_abias ${OUT}_tmp_unbiased
 
 #### re-run betpremask
 ${FSLDIR}/bin/standard_space_roi ${OUT}_tmp_unbiased ${OUT}_tmp_unbiased_premask -b -d

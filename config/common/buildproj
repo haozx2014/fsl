@@ -71,7 +71,10 @@ errorinstall="" ; export errorinstall ;
 
 for projname in $PROJECTS; do
 
-    if [ -d $FSLDIR/src/$projname ] ; then
+    if [ X"${projname}" = "Xextras" -a -d ${FSLDIR}/extras ] ; then
+      ( cd ${FSLDIR}/extras ; ./build ) ;
+      MAKEOPTIONS="${MAKEOPTIONS} FSLEXTLIB=${FSLDIR}/extras/lib FSLEXTINC=${FSLDIR}/extras/include" ;
+    elif [ -d $FSLDIR/src/$projname ] ; then
 
 	  echo " " ;
 	  echo " " ;

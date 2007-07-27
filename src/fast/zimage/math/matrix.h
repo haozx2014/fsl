@@ -202,12 +202,14 @@ public:
 
 template<class T> inline float det(const ZMatrix<T>& v)
 {
+  T* foo;
+  foo=NULL;
 	if(v.NRows() != v.NCols()) 
 	{
 		ZError("Matrix det", "The matrix is not square!");
 		return 0;
 	}
-	ZMatrix<float> A = v;  bool sign = LUdcmp(A);
+	ZMatrix<float> A = v;  bool sign = LUdcmp(A, foo);
 	float result=1; for(UINT i=0; i<v.NRows(); i++) result *= A[i][i];
 	return sign ? result : -result;
 }

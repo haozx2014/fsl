@@ -3,10 +3,7 @@ include ${FSLCONFDIR}/default.mk
 PROJNAME = fast
 
 OPTFLAGS = -O
-CXXFLAGS += -fpermissive
-
-CXX_alphaev6-dec-osf5.0-gcc2.95.2 = /usr/people/flitney/src/GCC3.2/install/bin/c++
-CXX_alphaev67-dec-osf5.1-gcc3.2 = /usr/people/flitney/src/GCC3.2/install/bin/c++
+#CXXFLAGS += -fpermissive
 
 USRINCFLAGS = -Izimage/common -Izimage/fundamental -Izimage/imagebase -Izimage/imageio -Izimage/imageprocess -Izimage/math -I${INC_ZLIB}
 USRLDFLAGS = -L${LIB_ZLIB}

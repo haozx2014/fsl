@@ -36,7 +36,7 @@ class ZProgressIndicator
 #ifdef _WINDOWS
 	CProgressBar bar;
 #endif		
-
+ private:
 	const char* m_txt;
 	int			m_max;
 	float		inc, step;
@@ -44,7 +44,7 @@ class ZProgressIndicator
 public:
 	static bool	m_progress;
 
-	ZProgressIndicator(const char* txt, int size, int max, bool enable=true) : m_txt(txt), m_max(max), m_enable(enable)
+ ZProgressIndicator(const char* txt, int size, int max, bool enable=true) : m_txt(txt), m_max(max), inc( 0 ), step( 0 ), m_enable(enable)
 	{
 		if(!m_progress) return;
 

@@ -6,7 +6,7 @@
 
     Christian F. Beckmann, FMRIB Image Analysis Group
      
-    Copyright (C) 1999-2004 University of Oxford */
+    Copyright (C) 1999-2007 University of Oxford */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -85,201 +85,200 @@ namespace Melodic {
 
 MelodicOptions* MelodicOptions::gopt = NULL;
 
-  void MelodicOptions::parse_command_line(int argc, char** argv, Log& logger, const string &p_version)
-{
-  //set version number and some other stuff
-  version = p_version;
-  filtermode = false;
-  explicitnums = false;
-  logfname = string("melodic.log");
+  void MelodicOptions::parse_command_line(int argc, char** argv, Log& logger, 
+		const string &p_version){
+  		//set version number and some other stuff
+  		version = p_version;
+  		filtermode = false;
+  		explicitnums = false;
+  		logfname = string("melodic.log");
 
-  // work out the path to the $FSLDIR/bin directory
-  if(getenv("FSLDIR")!=0){
-    binpath = (string) getenv("FSLDIR") + "/bin/";
-  }
-  else{
-    binpath = argv[0];
-    binpath = binpath.substr(0,binpath.length()-7);
-  }
+  		// work out the path to the $FSLDIR/bin directory
+  		if(getenv("FSLDIR")!=0){
+    		binpath = (string) getenv("FSLDIR") + "/bin/";
+  		} else{
+    		binpath = argv[0];
+    		binpath = binpath.substr(0,binpath.length()-7);
+  		}
 
-  // parse once to establish log directory name
-  for(int a = options.parse_command_line(argc, argv); a < argc; a++);
+  		// parse once to establish log directory name
+  		for(int a = options.parse_command_line(argc, argv); a < argc; a++);
 
-  // act on simple command line arguments
-  if(help.value())
-    {
-      print_usage(argc, argv);
-      exit(0);
-    } 
-  if(vers.value())
-    {
-      print_version();
-      cout << endl;
-      exit(0);
-    } 
-  if(copyright.value())
-    {
-      print_copyright();
-      exit(0);
-    } 
-  if(! options.check_compulsory_arguments())
-    {
-      print_version();
-      cout << endl;
-      cout << "Usage: melodic <options> -i <filename>" << endl <<
-	"Please specify input file name correctly or try melodic --help" 
-	   << endl << endl;
-      exit(2);
-    }     
+  		// act on simple command line arguments
+  		if(help.value()){
+      	print_usage(argc, argv);
+      	exit(0);
+    	} 
+  		if(vers.value()){
+      	print_version();
+      	cout << endl;
+      	exit(0);
+    	} 
+  		if(copyright.value()){
+      	print_copyright();
+      	exit(0);
+    	} 
+  		if(! options.check_compulsory_arguments()){
+				print_usage(argc, argv);
+      	exit(2);
+    	}     
 
-  // check for invalid values
-  if (inputfname.value().size()<1) {
-    cerr << "ERROR:: Input volume not found\n\n";
-    print_usage(argc,argv);
-    exit(2);
-  }
-  if (approach.value() != "symm" && approach.value() != "defl"  && 
-      approach.value() != "jade" && approach.value() != "maxent" &&
-      approach.value() != "tica" && approach.value() != "concat"){
-    cerr << "ERROR:: unknown approach \n\n";
-    print_usage(argc,argv);
-    exit(2);
-  }
-  if (nonlinearity.value() != "pow3" && nonlinearity.value() != "pow4" && nonlinearity.value() != "tanh" 
-      && nonlinearity.value() != "gauss" ){
-    cerr << "ERROR:: unknown nonlinearity \n\n";
-    print_usage(argc,argv);
-    exit(2);
-  }
-  if (maxNumItt.value() < 1){
-    cerr << "ERROR:: maxItt too small \n\n";
-    print_usage(argc,argv);
-    exit(2);
-  }
-  if (epsilon.value() < 0.000000001){
-    cerr << "ERROR:: epsilon too small  \n\n";
-    print_usage(argc,argv);
-    exit(2);    
-  }
-  if (epsilon.value() >= 0.01){
-    cerr << "ERROR:: epsilon too large  \n\n";
-    print_usage(argc,argv);
-    exit(2);
-  }
-  if (nlconst1.value() <= 0){
-    cerr << "ERROR:: nlconst1 negative  \n\n";
-    print_usage(argc,argv);
-    exit(2);
-  }
-  if (!remove_meanvol.value()){
-    varnorm.set_T(false);
-  }
-  if (filter.value().length()>0){
-    if (filtermix.value().length()<0){
-      cerr << "ERROR:: no mixing matrix for filtering (use --mix='filename') \n\n"; 
-      print_usage(argc,argv);
-      exit(2);
-    } else {   
-      filtermode = true;
-      varnorm.set_T(false);
-    } 
-  }
-  if (threshold.value()<=0){
-    use_mask.set_T(false);
-  }
-  if (output_all.value()){
-    output_unmix.set_T(true);
-    output_MMstats.set_T(true);
-    output_pca.set_T(true);
-    output_white.set_T(true);
-    output_origIC.set_T(true);
-    output_mean.set_T(true);
-  }
-  if (output_pca.value()){
-    output_white.set_T(true);
-  }
-  if(threshold.value()>=1){
-    threshold.set_T(threshold.value()/100);
-    if(threshold.value()>=1){
-      cerr << "ERROR:: threshold level not a percentage value  \n\n";
-      print_usage(argc,argv);
-      exit(2);
-    }
-  }
-  if (nlconst2.value() <= 0){
-    cerr << "ERROR:: nlconst2 negative  \n\n";
-    print_usage(argc,argv);
-    exit(2);
-  }
-  if (dummy.value() < 0){
-    cerr << "ERROR:: negative dummy value  \n\n";
-    print_usage(argc,argv);
-    exit(2);
-  }
-  if (repeats.value() < 1){
-    cerr << "ERROR:: repeats < 1 \n\n";
-    print_usage(argc,argv);
-    exit(2);
-  }
-  if (numICs.value() > 0){
-    explicitnums = true;
-  }
+  		// check for invalid values
+  		if (inputfname.value().size()<1) {
+    		cerr << "ERROR:: Input volume not found\n\n";
+    		print_usage(argc,argv);
+    		exit(2);
+  		}
+  		if (approach.value() != "symm" && approach.value() != "defl"  && 
+      	approach.value() != "jade" && approach.value() != "maxent" &&
+      	approach.value() != "tica" && approach.value() != "concat"){
+    			cerr << "ERROR:: unknown approach \n\n";
+    			print_usage(argc,argv);
+    			exit(2);
+  			}
+  		if (nonlinearity.value() != "pow3" && nonlinearity.value() != "pow4" && 
+				nonlinearity.value() != "tanh"  && nonlinearity.value() != "gauss" ){
+    			cerr << "ERROR:: unknown nonlinearity \n\n";
+    			print_usage(argc,argv);
+    			exit(2);
+  			}
+  		if (maxNumItt.value() < 1){
+    		cerr << "ERROR:: maxItt too small \n\n";
+    		print_usage(argc,argv);
+    		exit(2);
+  		}
+  		if (epsilon.value() < 0.000000001){
+    		cerr << "ERROR:: epsilon too small  \n\n";
+    		print_usage(argc,argv);
+    		exit(2);    
+  		}
+  		if (epsilon.value() >= 0.01){
+    		cerr << "ERROR:: epsilon too large  \n\n";
+    		print_usage(argc,argv);
+    		exit(2);
+  		}
+  		if (nlconst1.value() <= 0){
+    		cerr << "ERROR:: nlconst1 negative  \n\n";
+    		print_usage(argc,argv);
+    		exit(2);
+  		}
+  		if (!remove_meanvol.value()){
+    		varnorm.set_T(false);
+  		}
+  		if (filter.value().length()>0){
+    		if (filtermix.value().length()<0){
+      		cerr << "ERROR:: no mixing matrix for filtering (use --mix='filename') \n\n"; 
+      		print_usage(argc,argv);
+      		exit(2);
+    		} else {   
+      		filtermode = true;
+      		varnorm.set_T(false);
+    		} 
+  		}
+  		if (threshold.value()<=0){
+    		use_mask.set_T(false);
+  		}
+  		if (output_all.value()){
+    		output_unmix.set_T(true);
+    		output_MMstats.set_T(true);
+    		output_pca.set_T(true);
+    		output_white.set_T(true);
+    		output_origIC.set_T(true);
+    		output_mean.set_T(true);
+  		}
+  		if (output_pca.value()){
+    		output_white.set_T(true);
+  		}
+  		if(threshold.value()>=1){
+    		threshold.set_T(threshold.value()/100);
+    		if(threshold.value()>=1){
+      		cerr << "ERROR:: threshold level not a percentage value  \n\n";
+      		print_usage(argc,argv);
+      		exit(2);
+    		}
+  		}
+  		if (nlconst2.value() <= 0){
+    		cerr << "ERROR:: nlconst2 negative  \n\n";
+    		print_usage(argc,argv);
+    		exit(2);
+  		}
+  		if (dummy.value() < 0){
+    		cerr << "ERROR:: negative dummy value  \n\n";
+    		print_usage(argc,argv);
+    		exit(2);
+  		}
+  		if (repeats.value() < 1){
+    		cerr << "ERROR:: repeats < 1 \n\n";
+    		print_usage(argc,argv);
+    		exit(2);
+  		}
+  		if (numICs.value() > 0){
+    		explicitnums = true;
+  		}
   
-  //transform inputfnames to their basenames
-  std::vector< string > tmpfnames;
-  for(int ctr=0; ctr < (int)inputfname.value().size() ; ctr++){
-    string basename;
-    basename = inputfname.value().at(ctr);
-    make_basename(basename);
-    tmpfnames.push_back(basename);
-  }
-  inputfname.set_T(tmpfnames);
+  		//in the case of indirect inputs, create the vector of input names here
+  		if(!fsl_imageexists(inputfname.value().at(0))){
+    		std::vector< string > tmpfnames;
+    		ifstream fs(inputfname.value().at(0).c_str());
+    		string cline;
+    		while (!fs.eof()) {
+      		getline(fs,cline);
+      		if(cline.length()>0)
+						tmpfnames.push_back(cline);
+    		}	
+    		fs.close();
+    		inputfname.set_T(tmpfnames);
+  		}
 
-  //create melodic directory name
-  if(logdir.value()==string("melodic.log")){
-    logdir.set_T(string(inputfname.value().at(0)+".ica"));
-    logger.makeDir(logdir.value(),logfname);
-  }
-  else{
-    // setup logger directory
-    system(("mkdir "+ logdir.value() + " 2>/dev/null").c_str());
-    logger.setDir(logdir.value(),logfname);
-  }
-  message(endl << "Melodic Version " << version << endl << endl);
+  		//transform inputfnames to their basenames
+  		std::vector< string > tmpfnames;
+  		for(int ctr=0; ctr < (int)inputfname.value().size() ; ctr++){
+    		string basename;
+    		basename = inputfname.value().at(ctr);
+    		make_basename(basename);
+    		tmpfnames.push_back(basename);
+  		}
+  		inputfname.set_T(tmpfnames);
 
-  // parse again so that options are logged
-  for(int a = 0; a < argc; a++)
-    logger.str() << argv[a] << " ";
-  logger.str() << endl << "---------------------------------------------" << endl << endl;
+  		//create melodic directory name
+  		if(logdir.value()==string("melodic.log")){
+    		logdir.set_T(string(inputfname.value().at(0)+".ica"));
+    		logger.makeDir(logdir.value(),logfname);
+ 			} else{
+    		// setup logger directory
+    		system(("mkdir "+ logdir.value() + " 2>/dev/null").c_str());
+    		logger.setDir(logdir.value(),logfname);
+  		}
+  		message(endl << "Melodic Version " << version << endl << endl);
 
-  message("Melodic results will be in " << logger.getDir() << endl << endl);
-}
+  		// parse again so that options are logged
+  		for(int a = 0; a < argc; a++)
+    		logger.str() << argv[a] << " ";
+  			logger.str() << endl << "---------------------------------------------" 
+					<< endl << endl;
+  			message("Melodic results will be in " << logger.getDir() << endl << endl);
+    }
 
-void MelodicOptions::print_usage(int argc, char *argv[])
-{
-  print_version();
+void MelodicOptions::print_usage(int argc, char *argv[]){
+  print_copyright();
   options.usage();
   /* cout << "Usage: " << argv[0] << " ";
-
     Have own usage output here
   */
 }
 
-void MelodicOptions::print_version()
-{
-  cout << "MELODIC Version " << version;
+void MelodicOptions::print_version(){
+  cout << endl <<"MELODIC Version " << version;
   cout.flush();
 }
 
-void MelodicOptions::print_copyright()
-{
+void MelodicOptions::print_copyright(){
   print_version();
-  cout << endl << "Copyright (C) 1999-2002 University of Oxford " << endl;
+  cout << endl << "Copyright (C) 1999-2007 University of Oxford " << endl;
   cout.flush();
 }
 
-void MelodicOptions::status()
-{
+void MelodicOptions::status(){
   cout << " version = " << version << endl;
  
   cout << " logdir = "  << logdir.value() << endl;

@@ -70,7 +70,7 @@
 
 Usage() {
     echo "Usage: estnoise <4d_input_data> [spatial_sigma temp_hp_sigma temp_lp_sigma]"
-    exit
+    exit 1
 }
 
 [ "$1" = "" ] && Usage
@@ -85,23 +85,23 @@ IN=`${FSLDIR}/bin/remove_ext $1`
 TMP=`${FSLDIR}/bin/tmpnam /tmp/estnoise`
 
 # create mask for valid voxels above 20% threshold and erode a little to avoid edge voxels
-${FSLDIR}/bin/avwmaths++ $IN -thrp 20 -Tmin -bin -ero -ero ${TMP}_mask -odt char
+${FSLDIR}/bin/fslmaths $IN -thrp 20 -Tmin -bin -ero -ero ${TMP}_mask -odt char
 
 # do basic spatiotemporal filtering
-${FSLDIR}/bin/avwmaths++ $IN $IPOPTS -mas ${TMP}_mask $TMP -odt float
+${FSLDIR}/bin/fslmaths $IN $IPOPTS -mas ${TMP}_mask $TMP -odt float
 
 # create temporal mean image
-${FSLDIR}/bin/avwmaths++ $TMP -Tmean ${TMP}_mean
+${FSLDIR}/bin/fslmaths $TMP -Tmean ${TMP}_mean
 
 # create AR(1) coefficient image
-${FSLDIR}/bin/avwmaths++ $TMP -sub ${TMP}_mean -Tar1 -mas ${TMP}_mask ${TMP}_ar1
+${FSLDIR}/bin/fslmaths $TMP -sub ${TMP}_mean -Tar1 -mas ${TMP}_mask ${TMP}_ar1
 
 # create noise image: masked temporal std image, * 100, divide by mean
-${FSLDIR}/bin/avwmaths++ $TMP -Tstd -mas ${TMP}_mask -mul 100 -div ${TMP}_mean ${TMP}_noise
+${FSLDIR}/bin/fslmaths $TMP -Tstd -mas ${TMP}_mask -mul 100 -div ${TMP}_mean ${TMP}_noise
 
 # get median non-background value from noise and ar1 images
-noise=`${FSLDIR}/bin/avwstats++ ${TMP}_noise -P 50`
-ar=`${FSLDIR}/bin/avwstats++ ${TMP}_ar1 -P 50`
+noise=`${FSLDIR}/bin/fslstats ${TMP}_noise -P 50`
+ar=`${FSLDIR}/bin/fslstats ${TMP}_ar1 -P 50`
 echo $noise $ar
 
 # cleanup

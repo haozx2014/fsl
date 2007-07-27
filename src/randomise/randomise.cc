@@ -355,7 +355,7 @@ Matrix current_stat(1, original_stat.Ncols());
   }
 }
 
-void OutputClusterStat(const Matrix &original_stat,const Matrix &input_dist,const volume<float> &mask, const int n_perms,const string name, ranopts& opts,string tstatnumber,float threshold,volume4D<float> optional_volume)
+void OutputClusterStat(const Matrix &original_stat,const Matrix &input_dist,const volume<float> &mask, const int n_perms,const string name, ranopts& opts,string tstatnumber,float threshold,volume4D<float> optional_volume,const string mode)
 { 
 volume4D<float> output(mask.xsize(),mask.ysize(),mask.zsize(),1);
 volume4D<float> tstat4D(mask.xsize(),mask.ysize(),mask.zsize(),original_stat.Nrows()),tmp_tstat4D;
@@ -393,12 +393,12 @@ ColumnVector clustersizes;
     ofstream output_file;
     string foo;
     if (tstatnumber=="0") tstatnumber=num2str(row);
-    foo = opts.out_fileroot.value()+name+"_tstat"+tstatnumber+".txt";
+    foo = opts.out_fileroot.value()+name+mode+tstatnumber+".txt";
     output_file.open(foo.c_str(),ofstream::out);
     output_file << tmpvec.t();
     output_file.close();
     VoxelSignificance(output,clust_label,tmpvec,clustersizes,n_perms); 
-    save_volume4D(output,opts.out_fileroot.value()+name+"_tstat"+tstatnumber);
+    save_volume4D(output,opts.out_fileroot.value()+name+mode+tstatnumber);
   }
 }
 
@@ -547,6 +547,7 @@ Matrix generate_fstat(Matrix &model,Matrix &data,Matrix &W2,const float dof)
 void DoPermutationStatistics(ranopts& opts, const volume<float> &mask, Matrix &datam, Matrix &tc, Matrix &dm,int tstatnum, Matrix &NewW2, const float dof, permblock &permbl)
 {
   float tfce_delta=0;
+  float threshold=0;
   string tstatnumber;
   if (tstatnum<0) tstatnumber=num2str(-tstatnum);
   else tstatnumber=num2str(tstatnum);
@@ -554,31 +555,24 @@ void DoPermutationStatistics(ranopts& opts, const volume<float> &mask, Matrix &d
   volume<float> mask_sm;
   if(opts.var_sm_sig.value()>0) mask_sm=smooth(mask,opts.var_sm_sig.value());
   // containers for different inference distribution
-  Matrix tstat, tstat_ce, tstat_ceav, tstat_ce_orig, tstat_orig, maxdist ,maxdistCE, maxdistC,maxdistCN, maxdistCmass, vox_numbigger, fstat, fstat_orig, cope, varcope, *oldtstatce,tstat_cenorm;
+  Matrix tstat, tstat_ce, tstat_ceav, tstat_ce_orig, tstat_orig, maxdist ,maxdistCE, maxdistC,maxdistCN, maxdistCmass, vox_numbigger, cope, varcope, *oldtstatce,tstat_cenorm;
   oldtstatce=&tstat; //just to avoid uninit warning
-  volume4D<float> tstat4D, tmp_tstat4D;
-  RowVector maxdistF;
-  bool exhaustive,lowram=false;
+  volume4D<float> tstat4D;
+  bool exhaustive,lowram=opts.low_ram.value();
   long int n_perms=RequiredPerms(permbl.exhaust_perms,opts,exhaustive);
-
+  int n_distrows=1;
+  if (tstatnum>=0) n_distrows=tc.Nrows();
   // resize the containers for the relevant inference distributions
-  maxdist.ReSize(tc.Nrows(),n_perms);
+  maxdist.ReSize(n_distrows,n_perms);
   maxdist=0;
-  vox_numbigger.ReSize(tc.Nrows(),datam.Ncols()); //number of permuted  which are bigger than original
+  vox_numbigger.ReSize(n_distrows,datam.Ncols()); //number of permuted  which are bigger than original
   vox_numbigger=0;
-  if ( opts.cluster_thresh.value()>0 || opts.clustermass_thresh.value()>0 || opts.cluster_norm.value()>0 || opts.tfce_height.value()>0.0 ) { //cluster thresholding
-    maxdistC=maxdist;
-    maxdistCN=maxdist;
-    maxdistCmass=maxdist;
-    maxdistCE=maxdist;
-    tstat4D.reinitialize(mask.xsize(),mask.ysize(),mask.zsize(),tc.Nrows());
-  }
-  if (tstatnum<0)
-  {
-    maxdistF.ReSize(n_perms);
-    maxdistF=0;
-  }
-  volume4D<float> sumclusters,sumcluster_samples(mask.xsize(),mask.ysize(),mask.zsize(),tc.Nrows());
+  if ( opts.cluster_thresh.value()>0 || opts.f_thresh.value()>0 ) maxdistC=maxdist;
+  if ( opts.clustermass_thresh.value()>0 || opts.fmass_thresh.value()>0 ) maxdistCmass=maxdist;
+  if ( opts.cluster_norm.value()>0 ) maxdistCN=maxdist;
+  if ( opts.tfce_height.value()>0 ) maxdistCE=maxdist;
+  tstat4D.reinitialize(mask.xsize(),mask.ysize(),mask.zsize(),n_distrows);
+  volume4D<float> sumclusters,sumcluster_samples(mask.xsize(),mask.ysize(),mask.zsize(),n_distrows);
   sumcluster_samples=0;
   sumclusters=sumcluster_samples;
  
@@ -620,7 +614,7 @@ void DoPermutationStatistics(ranopts& opts, const volume<float> &mask, Matrix &d
     if(opts.var_sm_sig.value()==0) ols(datam,dmperm,tc,cope,varcope,dof);   
     else ols_var_sm(datam,dmperm,tc,cope,varcope,mask,mask_sm,opts.var_sm_sig.value(),dof);   
     tstat=SD(cope,sqrt(varcope));
-    if (opts.tfce_height.value()>0.0)
+    if (opts.tfce_height.value()>0.0 && tstatnum>=0 )
     {
       if (perm==1) tfce_delta=tstat.Maximum()/100;  // i.e. 100 subdivisions of the max input stat height
       tstat_ce=tfce(tstat,mask,tfce_delta,opts.tfce_height.value(),opts.tfce_size.value(),opts.tfce_connectivity.value());
@@ -633,35 +627,33 @@ void DoPermutationStatistics(ranopts& opts, const volume<float> &mask, Matrix &d
       {  
         tstat_ceav=tstat_ce;
         tstat_cenorm=SD(tstat_ce,tstat_ce);
-        try { oldtstatce=new Matrix(n_perms,tstat_ceav.Ncols());} //between 5e17 - 5e18 values for a 2gb machine
-        catch (...) {lowram=true;}         
+        tstat_ce_orig=tstat_ce;
+	if (!lowram)
+	{
+	  try { oldtstatce=new Matrix(n_perms,tstat_ceav.Ncols());} //between 5e17 - 5e18 values for a 2gb machine
+	  catch (...) {cerr << "using lowram" << endl; lowram=true;}         
+	  }
       }
       if(!lowram) oldtstatce->Row(perm)=tstat_ce.Row(1);
-      maxdistCE.Column(perm)<<max(tstat_ce.t()).t();
+      maxdistCE.Column(perm)=max(tstat_ce.t()).t();
     }
-    if ( tstatnum < 0 ) { //f-stat thresholding
-      fstat=generate_fstat(dmperm,datam,NewW2,dof);
-      maxdistF(perm)=fstat.Maximum();
-    }
+    if ( tstatnum < 0 ) tstat=generate_fstat(dmperm,datam,NewW2,dof);
+    if (perm==1) tstat_orig=tstat;
 
-    if (perm==1)
-    {
-       tstat_orig=tstat;
-       if(opts.tfce_height.value()>0.0) tstat_ce_orig=tstat_ce;
-       if ( tstatnum < 0 ) fstat_orig=fstat;
-    }
-    maxdist.Column(perm)<<max(tstat.t()).t(); // max stat recording
-    vox_numbigger+= geqt(tstat,tstat_orig); // voxelwise stats recording
-
-    if ( opts.cluster_thresh.value() > 0 ) { //cluster thresholding
+   maxdist.Column(perm)<<max(tstat.t()).t(); // max stat recording
+   vox_numbigger+= geqt(tstat,tstat_orig); // voxelwise stats recording
+   if (tstatnum>=0) threshold=opts.cluster_thresh.value();
+   else threshold=opts.f_thresh.value();
+   if (threshold>0) { //cluster thresholding
       tstat4D.setmatrix(tstat,mask);
-      tstat4D.binarise(opts.cluster_thresh.value());
+      tstat4D.binarise(threshold);
       for(int t=0;t<tstat4D.tsize();t++){
 	clust_label=connected_components(tstat4D[t],clustersizes,26);
 	if ( clustersizes.Nrows() > 0 )  // Store Max cluster size for each perm  
 	  maxdistC(t+1,perm)=int(clustersizes.MaximumAbsoluteValue());
       }
     }
+   
 
     if ( opts.cluster_norm.value() > 0 ) { //cluster norm thresholding
       tstat4D.setmatrix(tstat,mask);
@@ -680,11 +672,13 @@ void DoPermutationStatistics(ranopts& opts, const volume<float> &mask, Matrix &d
             }
       }
     }
-
-    if ( opts.clustermass_thresh.value() > 0 ) { //cluster mass thresholding
+  
+    if (tstatnum>=0) threshold=opts.clustermass_thresh.value();
+    else threshold=opts.fmass_thresh.value();
+    if ( threshold > 0 ) { //cluster mass thresholding
       tstat4D.setmatrix(tstat,mask);
-      tmp_tstat4D=tstat4D;
-      tstat4D.binarise(opts.clustermass_thresh.value());
+      volume4D<float>tmp_tstat4D(tstat4D);
+      tstat4D.binarise(threshold);
       for(int t=0;t<tstat4D.tsize();t++){
 	clust_label=connected_components(tstat4D[t],clustersizes,26);
 	clustersizes=0;	
@@ -790,31 +784,28 @@ void DoPermutationStatistics(ranopts& opts, const volume<float> &mask, Matrix &d
   if (tstatnum>=0) OutputStat(tstat_orig,maxdist,mask,n_perms,"_tstat",opts,tstatnumber);
   if (tstatnum>=0 && opts.tfce_height.value()>0.0) tstat_ce_orig=SD(tstat_ce_orig,tstat_ceav); 
   if (tstatnum>=0 && opts.tfce_height.value()>0.0) OutputStat(tstat_ce_orig,maxdistCE,mask,n_perms,"_ceav_tstat",opts,tstatnumber);
-  if ( opts.f_thresh.value() > 0 && tstatnum <0 )
-  {
-    Matrix maxdistF2(1,maxdistF.Ncols());
-    maxdistF2.Row(1)=maxdistF;
-    OutputStat(fstat_orig,maxdistF2,mask,n_perms,"_fstat",opts,tstatnumber);
-  }
+  if (tstatnum<0) OutputStat(tstat_orig,maxdist,mask,n_perms,"_fstat",opts,tstatnumber);
 
-  if (tstatnum >=0) // vox tstat
-  {
     volume4D<float> output(mask.xsize(),mask.ysize(),mask.zsize(),1);
-    for(int row=1; row<=tc.Nrows(); row++){
+    for(int row=1; row<=n_distrows; row++){
       if (tstatnum==0) tstatnumber=num2str(row);
       Matrix this_t_stat=1-vox_numbigger.Row(row)/float(n_perms);
       output.setmatrix(this_t_stat,mask); 
-      save_volume4D(output,opts.out_fileroot.value()+"_vox_tstat"+tstatnumber);
+      if (tstatnum>=0) save_volume4D(output,opts.out_fileroot.value()+"_vox_tstat"+tstatnumber);
+      else save_volume4D(output,opts.out_fileroot.value()+"_vox_fstat"+tstatnumber);
     }
-  }
 
-  if ( opts.cluster_thresh.value() > 0  && tstatnum >=0 ) OutputClusterStat(tstat_orig,maxdistC,mask,n_perms,"_maxc",opts,tstatnumber,opts.cluster_thresh.value(),sumclusters);
+    if ( opts.cluster_thresh.value() > 0  && tstatnum >=0 ) OutputClusterStat(tstat_orig,maxdistC,mask,n_perms,"_maxc",opts,tstatnumber,opts.cluster_thresh.value(),sumclusters,"_tstat");
+    if ( opts.f_thresh.value() > 0  && tstatnum <0 ) OutputClusterStat(tstat_orig,maxdistC,mask,n_perms,"_maxc",opts,tstatnumber,opts.cluster_thresh.value(),sumclusters,"_fstat");
+
   if (opts.cluster_norm.value()>0  && tstatnum >=0 ) 
   {
-    OutputClusterStat(tstat_orig,maxdistCN,mask,n_perms,"_maxcn",opts,tstatnumber,opts.cluster_thresh.value(),sumclusters);
+    OutputClusterStat(tstat_orig,maxdistCN,mask,n_perms,"_maxcn",opts,tstatnumber,opts.cluster_thresh.value(),sumclusters,"_tstat");
     save_volume4D(sumclusters,opts.out_fileroot.value()+"_clusternorm");
   }
- if ( opts.clustermass_thresh.value() > 0 && tstatnum >=0 )  OutputClusterStat(tstat_orig,maxdistCmass,mask,n_perms,"_maxcmass",opts,tstatnumber,opts.clustermass_thresh.value(),sumclusters);
+  if ( opts.clustermass_thresh.value() > 0 && tstatnum >=0 )  OutputClusterStat(tstat_orig,maxdistCmass,mask,n_perms,"_maxcmass",opts,tstatnumber,opts.clustermass_thresh.value(),sumclusters,"_tstat");
+  if ( opts.fmass_thresh.value() > 0 && tstatnum <0 )  OutputClusterStat(tstat_orig,maxdistCmass,mask,n_perms,"_maxcmass",opts,tstatnumber,opts.clustermass_thresh.value(),sumclusters,"_fstat");
+
   if (opts.tfce_height.value()>0.0 && !lowram) delete oldtstatce;
 }
 

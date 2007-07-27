@@ -68,6 +68,8 @@ typedef struct _mainprog_info {
     long width;
     long height;
     time_t modtime;
+    int quiet;
+    int overwrite;
     FILE *infile;
     FILE *outfile;
     void *png_ptr;

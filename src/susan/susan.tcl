@@ -237,7 +237,7 @@ proc susan:setrange { w  {dummy "" }} {
     set susanvars(input)  [ remove_ext $susanvars(input) ]
     set susanvars(output) [ remove_ext $susanvars(input) ]_susan
     
-    if { ! [ catch { exec sh -c "${FSLDIR}/bin/avwstats $susanvars(input) -r" } minmax ] } {
+    if { ! [ catch { exec sh -c "${FSLDIR}/bin/fslstats $susanvars(input) -r" } minmax ] } {
 	set min [ lindex $minmax 0 ]
 	set max [ lindex $minmax 1 ]
 	set susanvars(bt) [ expr ( $max - $min ) / 10.0 ]

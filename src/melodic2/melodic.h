@@ -5,7 +5,7 @@
 
     Christian F. Beckmann, FMRIB Image Analysis Group
     
-    Copyright (C) 1999-2006 University of Oxford */
+    Copyright (C) 1999-2007 University of Oxford */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -72,7 +72,7 @@
 #ifndef __MELODIC_h
 #define __MELODIC_h
 
-#include<strstream>
+#include <strstream>
 
 // a simple message macro that takes care of cout and log
 #define message(msg) { \
@@ -87,12 +87,14 @@
 }
 
 #define outMsize(msg,Mat) { \
-  cout << msg << "  " <<Mat.Nrows() << " x " << Mat.Ncols() << endl; \
+  MelodicOptions& opt = MelodicOptions::getInstance();		\
+  if(opt.debug.value())						\
+    cerr << "     " << msg << "  " <<Mat.Nrows() << " x " << Mat.Ncols() << endl;	\
 }
 
 namespace Melodic{
 
-const string version = "3.0 alpha 1";  
+const string version = "3.0 beta";  
 
 }
 

@@ -1,4 +1,4 @@
-//     avwnvols++.cc   REALLY advanced program for counting the volumes in a 4D file
+//     fslnvols.cc   REALLY advanced program for counting the volumes in a 4D file
 //     Stephen Smith and Matthew Webster, FMRIB Image Analysis Group
 //     Copyright (C) 1999-2005 University of Oxford  
 //     COPYRIGHT  
@@ -11,7 +11,7 @@ using namespace NEWIMAGE;
 void print_usage(const string& progname) 
 {
   cout << endl;
-  cout << "Usage: avwnvols <input>" << endl;
+  cout << "Usage: fslnvols <input>" << endl;
 }
 
 

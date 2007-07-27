@@ -81,7 +81,7 @@ Usage() {
     echo "-b <b>                : ignore from b (mm) downwards in MNI152/Talairach space; b should probably be -ve"
     echo "-S \"sienadiffopts\"    : options to pass to siena_diff timepoint differencing (inside double-quotes), e.g. -S \"-s -i 20\""
     echo ""
-    exit
+    exit 1
 }
 
 if [ _$FSLDIR = _ ] ; then
@@ -113,8 +113,8 @@ sdo="-m"
 dostd=0
 stdmask=0
 stdroi=""
-origin3=37 # `avwval ${FSLDIR}/etc/standard/avg152T1 origin3`
-pixdim3=2  # `avwval ${FSLDIR}/etc/standard/avg152T1 pixdim3`
+origin3=37 # `fslval ${FSLDIR}/etc/standard/avg152T1 origin3`
+pixdim3=2  # `fslval ${FSLDIR}/etc/standard/avg152T1 pixdim3`
 
 while [ _$1 != _ ] ; do
 
@@ -161,8 +161,8 @@ sdo="${sdo}${is_t2}"
 echo "----------  extract brain  --------------------------------------------" >> ${A}_to_${B}.siena
 ${FSLDIR}/bin/bet $A ${A}_brain -s -m $betopts >> ${A}_to_${B}.siena
 ${FSLDIR}/bin/bet $B ${B}_brain -s -m $betopts >> ${A}_to_${B}.siena
-${FSLDIR}/bin/avwmaths++ ${A}_brain -sub `$FSLDIR/bin/avwstats++ ${A}_brain -p 0` -mas ${A}_brain_mask ${A}_brain -odt float
-${FSLDIR}/bin/avwmaths++ ${B}_brain -sub `$FSLDIR/bin/avwstats++ ${B}_brain -p 0` -mas ${B}_brain_mask ${B}_brain -odt float
+${FSLDIR}/bin/fslmaths ${A}_brain -sub `$FSLDIR/bin/fslstats ${A}_brain -p 0` -mas ${A}_brain_mask ${A}_brain -odt float
+${FSLDIR}/bin/fslmaths ${B}_brain -sub `$FSLDIR/bin/fslstats ${B}_brain -p 0` -mas ${B}_brain_mask ${B}_brain -odt float
 
 echo ""                                                                        >> ${A}_to_${B}.siena
 echo "----------  register brains and skulls  -------------------------------" >> ${A}_to_${B}.siena
@@ -171,18 +171,18 @@ ${FSLDIR}/bin/siena_flirt $A $B >> ${A}_to_${B}.siena 2>&1
 
 echo ""                                                                        >> ${A}_to_${B}.siena
 echo "----------  produce valid masks  --------------------------------------" >> ${A}_to_${B}.siena
-XDIM=`${FSLDIR}/bin/avwval $A dim1` ; XDIM=`echo "$XDIM 2 - p" | dc -`
-YDIM=`${FSLDIR}/bin/avwval $A dim2` ; YDIM=`echo "$YDIM 2 - p" | dc -`
-ZDIM=`${FSLDIR}/bin/avwval $A dim3` ; ZDIM=`echo "$ZDIM 2 - p" | dc -`
-${FSLDIR}/bin/avwmaths ${A}_brain_mask -mul 0 -add 1 -roi 1 $XDIM 1 $YDIM 1 $ZDIM 0 1 ${A}_valid_mask
-XDIM=`${FSLDIR}/bin/avwval $B dim1` ; XDIM=`echo "$XDIM 2 - p" | dc -`
-YDIM=`${FSLDIR}/bin/avwval $B dim2` ; YDIM=`echo "$YDIM 2 - p" | dc -`
-ZDIM=`${FSLDIR}/bin/avwval $B dim3` ; ZDIM=`echo "$ZDIM 2 - p" | dc -`
-${FSLDIR}/bin/avwmaths ${B}_brain_mask -mul 0 -add 1 -roi 1 $XDIM 1 $YDIM 1 $ZDIM 0 1 ${B}_valid_mask
+XDIM=`${FSLDIR}/bin/fslval $A dim1` ; XDIM=`echo "$XDIM 2 - p" | dc -`
+YDIM=`${FSLDIR}/bin/fslval $A dim2` ; YDIM=`echo "$YDIM 2 - p" | dc -`
+ZDIM=`${FSLDIR}/bin/fslval $A dim3` ; ZDIM=`echo "$ZDIM 2 - p" | dc -`
+${FSLDIR}/bin/fslmaths ${A}_brain_mask -mul 0 -add 1 -roi 1 $XDIM 1 $YDIM 1 $ZDIM 0 1 ${A}_valid_mask
+XDIM=`${FSLDIR}/bin/fslval $B dim1` ; XDIM=`echo "$XDIM 2 - p" | dc -`
+YDIM=`${FSLDIR}/bin/fslval $B dim2` ; YDIM=`echo "$YDIM 2 - p" | dc -`
+ZDIM=`${FSLDIR}/bin/fslval $B dim3` ; ZDIM=`echo "$ZDIM 2 - p" | dc -`
+${FSLDIR}/bin/fslmaths ${B}_brain_mask -mul 0 -add 1 -roi 1 $XDIM 1 $YDIM 1 $ZDIM 0 1 ${B}_valid_mask
 ${FSLDIR}/bin/flirt -in ${B}_valid_mask -ref $A -out ${B}_valid_mask_to_${A} -applyxfm -init ${B}_to_${A}.mat -paddingsize 0
 ${FSLDIR}/bin/flirt -in ${A}_valid_mask -ref $B -out ${A}_valid_mask_to_${B} -applyxfm -init ${A}_to_${B}.mat -paddingsize 0
-${FSLDIR}/bin/avwmaths ${A}_valid_mask -mul ${B}_valid_mask_to_${A} ${A}_valid_mask_with_$B
-${FSLDIR}/bin/avwmaths ${B}_valid_mask -mul ${A}_valid_mask_to_${B} ${B}_valid_mask_with_$A
+${FSLDIR}/bin/fslmaths ${A}_valid_mask -mul ${B}_valid_mask_to_${A} ${A}_valid_mask_with_$B
+${FSLDIR}/bin/fslmaths ${B}_valid_mask -mul ${A}_valid_mask_to_${B} ${B}_valid_mask_with_$A
 
 if [ $dostd = 1 ] ; then
     echo ""                                                                        >> ${A}_to_${B}.siena
@@ -203,20 +203,20 @@ if [ $dostd = 1 ] ; then
     if [ $stdmask = 1 ] ; then
 	${FSLDIR}/bin/flirt -in ${FSLDIR}/etc/standard/avg152T1_brain_mask_dil2 -ref $A -out ${A}_stdmask -applyxfm -init ${A}_to_std_inv.mat
 	${FSLDIR}/bin/flirt -in ${FSLDIR}/etc/standard/avg152T1_brain_mask_dil2 -ref $B -out ${B}_stdmask -applyxfm -init ${B}_to_std_inv.mat
-	${FSLDIR}/bin/avwmaths ${A}_stdmask -thr 0.5 -bin ${A}_stdmask
-	${FSLDIR}/bin/avwmaths ${B}_stdmask -thr 0.5 -bin ${B}_stdmask
-	${FSLDIR}/bin/avwmaths ${A}_brain_mask -mas ${A}_stdmask ${A}_brain_mask
-	${FSLDIR}/bin/avwmaths ${B}_brain_mask -mas ${B}_stdmask ${B}_brain_mask
+	${FSLDIR}/bin/fslmaths ${A}_stdmask -thr 0.5 -bin ${A}_stdmask
+	${FSLDIR}/bin/fslmaths ${B}_stdmask -thr 0.5 -bin ${B}_stdmask
+	${FSLDIR}/bin/fslmaths ${A}_brain_mask -mas ${A}_stdmask ${A}_brain_mask
+	${FSLDIR}/bin/fslmaths ${B}_brain_mask -mas ${B}_stdmask ${B}_brain_mask
     fi
 
     if [ "$stdroi" != "" ] ; then
-	${FSLDIR}/bin/avwmaths ${FSLDIR}/etc/standard/avg152T1_brain_mask -mul 0 -add 1 $stdroi ${A}_and_${B}_stdmask
+	${FSLDIR}/bin/fslmaths ${FSLDIR}/etc/standard/avg152T1_brain_mask -mul 0 -add 1 $stdroi ${A}_and_${B}_stdmask
 	${FSLDIR}/bin/flirt -in ${A}_and_${B}_stdmask -ref $A -out ${A}_stdmask -applyxfm -init ${A}_to_std_inv.mat
 	${FSLDIR}/bin/flirt -in ${A}_and_${B}_stdmask -ref $B -out ${B}_stdmask -applyxfm -init ${B}_to_std_inv.mat
-	${FSLDIR}/bin/avwmaths ${A}_stdmask -thr 0.5 -bin ${A}_stdmask
-	${FSLDIR}/bin/avwmaths ${B}_stdmask -thr 0.5 -bin ${B}_stdmask
-	${FSLDIR}/bin/avwmaths ${A}_valid_mask_with_$B -mul ${A}_stdmask ${A}_valid_mask_with_$B
-	${FSLDIR}/bin/avwmaths ${B}_valid_mask_with_$A -mul ${B}_stdmask ${B}_valid_mask_with_$A
+	${FSLDIR}/bin/fslmaths ${A}_stdmask -thr 0.5 -bin ${A}_stdmask
+	${FSLDIR}/bin/fslmaths ${B}_stdmask -thr 0.5 -bin ${B}_stdmask
+	${FSLDIR}/bin/fslmaths ${A}_valid_mask_with_$B -mul ${A}_stdmask ${A}_valid_mask_with_$B
+	${FSLDIR}/bin/fslmaths ${B}_valid_mask_with_$A -mul ${B}_stdmask ${B}_valid_mask_with_$A
     fi
 fi
 
@@ -229,17 +229,17 @@ echo "corr1=$corr1 corr2=$corr2 corr=$corr" >> ${A}_to_${B}.siena
 
 echo "" >> ${A}_to_${B}.siena
 ${FSLDIR}/bin/siena_diff ${B} ${A} -c $corr $sdo $sdopts >> ${A}_to_${B}.siena
-pbvc_backward=`grep PBVC ${A}_to_${B}.siena | tail -1 | awk '{print $2}' | sed 's/-/_/g'`
+pbvc_backward=`grep PBVC ${A}_to_${B}.siena | tail -n 1 | awk '{print $2}' | sed 's/-/_/g'`
 
 echo "" >> ${A}_to_${B}.siena
 ${FSLDIR}/bin/siena_diff ${A} ${B} -c $corr $sdo $sdopts >> ${A}_to_${B}.siena
-pbvc_forward=`grep PBVC ${A}_to_${B}.siena | tail -1 | awk '{print $2}' | sed 's/-/_/g'`
+pbvc_forward=`grep PBVC ${A}_to_${B}.siena | tail -n 1 | awk '{print $2}' | sed 's/-/_/g'`
 
 echo "" >> ${A}_to_${B}.siena
 pbvc_average=`echo "10 k $pbvc_forward $pbvc_backward - 2.0 / p" | dc -`
 echo "finalPBVC $pbvc_average %" >> ${A}_to_${B}.siena
 
-${FSLDIR}/bin/avwmaths ${A}_to_${B}_flow -mul -1 ${A}_to_${B}_flowneg
+${FSLDIR}/bin/fslmaths ${A}_to_${B}_flow -mul -1 ${A}_to_${B}_flowneg
 ${FSLDIR}/bin/overlay 0 0 ${A}_halfwayto_${B} -a ${A}_to_${B}_flow 0.01 1 ${A}_to_${B}_flowneg 0.01 1 ${A}_halfwayto_${B}_render
 
 if [ $debug = 0 ] ; then

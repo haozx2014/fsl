@@ -69,7 +69,6 @@
 #if !defined(Time_Tracer_h)
 #define Time_Tracer_h
 
-#include <sstream>
 #include <iostream>
 #include <fstream>
 #include <string>

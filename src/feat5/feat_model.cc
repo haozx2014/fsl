@@ -1933,7 +1933,7 @@ for(y=0; y<ysize; y++)
 
 fclose(ofp2);
 
-sprintf(filename,"%s %s/tcl/ppm2gif.tcl  %s_cov.ppm ",getenv("FSLWISH"),getenv("FSLDIR"),argv[1]);
+sprintf(filename,"%s/bin/wpng -q -overwrite %s_cov.ppm ",getenv("FSLDIR"),argv[1]);
 system(filename);
 
 // }}}
@@ -2190,7 +2190,7 @@ for(y=0; y<ysize; y++)
 
 fclose(ofp2);
 
-sprintf(filename,"%s %s/tcl/ppm2gif.tcl  %s.ppm ",getenv("FSLWISH"),getenv("FSLDIR"),argv[1]);
+sprintf(filename,"%s/bin/wpng -q -overwrite  %s.ppm ",getenv("FSLDIR"),argv[1]);
 system(filename);
 
 // }}}
@@ -2199,4 +2199,3 @@ system(filename);
 
   return(0);
 }
-

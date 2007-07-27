@@ -153,9 +153,10 @@ bool LUdcmp(ZMatrix<float>& A, ZVector<int>& indx)
 	return ret;
 }
 
-bool LUdcmp(ZMatrix<float>& A)
+bool LUdcmp(ZMatrix<float>& A, void *foo)
 {
 	ZVector<int> indx;
+	foo=NULL;
 	return LUdcmp(A, indx);
 }
 

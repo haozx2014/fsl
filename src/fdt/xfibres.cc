@@ -69,7 +69,6 @@
 #include <iostream>
 #include <fstream>
 #include <iomanip>
-#include <sstream>
 #define WANT_STREAM
 #define WANT_MATH
 //  #include "newmatap.h"

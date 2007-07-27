@@ -102,8 +102,8 @@ class ranopts {
   Option<string> logdir;
   Option<bool> how_many_perms;
   Option<int> n_perm;
-  //  Option<string> test_stat;
   Option<float> f_thresh;
+  Option<float> fmass_thresh;
   Option<float> cluster_thresh;
   Option<float> clustermass_thresh;
   //  Option<float> p_thresh;
@@ -178,14 +178,11 @@ class ranopts {
    n_perm(string("-n"), 5000,
 	    string("~<n_perm>\tnumber of permutations (default 5000, set to 0 for exhaustive)"),
 	    false, requires_argument),  
-   //   test_stat(string("-s"), string("cluster"),
-   //    string("~<test_stat>\ttest statistic - options are max,voxelwise,cluster (default cluster)"),
-   //     false, requires_argument),
-   //   cluster_thresh(string("-c"), 1,
-   //  string("~<c_thresh>\tcluster-forming threshold"),
-   //  false, requires_argument),
    f_thresh(string("-F"), -1,
-	  string("~<f_thresh>\tcarry out f thresholding (as well as max and voxelwise)"),
+	  string("~<f_thresh>\tcarry out f cluster thresholding (as well as max and voxelwise)"),
+	  false, requires_argument),
+   fmass_thresh(string("-S"), -1,
+	  string("~<fmass_thresh>\tcarry out f cluster-mass thresholding (as well as max and voxelwise)"),
 	  false, requires_argument),
    cluster_thresh(string("-c"), -1,
 	  string("~<c_thresh>\tcarry out cluster-based thresholding (as well as max and voxelwise)"),
@@ -205,7 +202,7 @@ class ranopts {
    tfce_height(string("--tfce_height"), -1, string(""), false, requires_argument),
    tfce_size(string("--tfce_size"), -1, string(""), false, requires_argument),
    tfce_connectivity(string("--tfce_connectivity"), 26, string(""), false, requires_argument),
-  options("randomise v0.19 - Tim Behrens, Matthew Webster & Steve Smith (FMRIB) & Tom Nichols (UMich)", "randomise -i data -o output -d design.mat")
+  options("randomise v0.20 - Tim Behrens, Matthew Webster & Steve Smith (FMRIB) & Tom Nichols (UMich)", "randomise -i data -o output -d design.mat")
 {
      
     
@@ -224,12 +221,12 @@ class ranopts {
        options.add(gp_file);
        options.add(logdir);
        options.add(how_many_perms);
-       options.add(n_perm);
-       //       options.add(test_stat);  
+       options.add(n_perm); 
        options.add(tfce_height);     
        options.add(tfce_size);     
        options.add(tfce_connectivity);     
        options.add(f_thresh);     
+       options.add(fmass_thresh);     
        options.add(cluster_thresh);
        options.add(clustermass_thresh);
        //options.add(p_thresh);

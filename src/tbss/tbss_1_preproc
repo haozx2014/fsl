@@ -75,7 +75,7 @@ Usage() {
     echo "-f <intensity_scaling_factor>   : scale intensities of all input data by <intensity_scaling_factor>"
     echo "                                  this should result in a final intensity range of 0:1000"
     echo ""
-    exit
+    exit 1
 }
 
 [ "$2" = "" ] && Usage
@@ -100,17 +100,17 @@ for f in `$FSLDIR/bin/imglob -oneperimage $@` ; do
     echo processing $f
 
     # scale intensities then erode a little
-    $FSLDIR/bin/avwmaths++ $f -mul $FACTOR -ero FAi/${f}_FAi -odt short
+    $FSLDIR/bin/fslmaths $f -mul $FACTOR -ero FAi/${f}_FAi -odt short
 
-    $FSLDIR/bin/avwhd -x $f | sed "s/sform_code .*/sform_code = \'0\'/g" | sed "s/qform_code .*/qform_code = \'0\'/g" > grot.xml
-    $FSLDIR/bin/avwcreatehd grot.xml FAi/${f}_FAi.hdr
+    $FSLDIR/bin/fslhd -x $f | sed "s/sform_code .*/sform_code = \'0\'/g" | sed "s/qform_code .*/qform_code = \'0\'/g" > grot.xml
+    $FSLDIR/bin/fslcreatehd grot.xml FAi/${f}_FAi.hdr
     /bin/rm grot.xml
 
     # delete end slices
-    X=`${FSLDIR}/bin/avwval FAi/${f}_FAi dim1` ; X=`echo "$X 2 - p" | dc -`
-    Y=`${FSLDIR}/bin/avwval FAi/${f}_FAi dim2` ; Y=`echo "$Y 2 - p" | dc -`
-    Z=`${FSLDIR}/bin/avwval FAi/${f}_FAi dim3` ; Z=`echo "$Z 2 - p" | dc -`
-    $FSLDIR/bin/avwroi FAi/${f}_FAi FAi/${f}_FAi 1 $X 1 $Y 1 $Z 
+    X=`${FSLDIR}/bin/fslval FAi/${f}_FAi dim1` ; X=`echo "$X 2 - p" | dc -`
+    Y=`${FSLDIR}/bin/fslval FAi/${f}_FAi dim2` ; Y=`echo "$Y 2 - p" | dc -`
+    Z=`${FSLDIR}/bin/fslval FAi/${f}_FAi dim3` ; Z=`echo "$Z 2 - p" | dc -`
+    $FSLDIR/bin/fslroi FAi/${f}_FAi FAi/${f}_FAi 1 $X 1 $Y 1 $Z 
 
     $FSLDIR/bin/immv $f origdata
 	
@@ -119,6 +119,6 @@ done
 echo "Now running \"slicesdir\" to generate report of all converted images"
 cd FAi
 $FSLDIR/bin/slicesdir *.hdr > grot 2>&1
-cat grot | tail -2
+cat grot | tail -n 2
 /bin/rm grot
 

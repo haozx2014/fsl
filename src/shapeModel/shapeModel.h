@@ -46,13 +46,19 @@ public:
 		vector< vector<float> > getIntensityProfiles();
 		Mesh getDeformedMesh(vector<float> var, int shape, int numModes);
 		Mesh getDeformedMeshAff7( vector<float> var, int shape, int numModes);
+				Mesh getDeformedMeshAff6( vector<float> var, int shape, int numModes);
+
 		//Mesh getDeformedMeshP3dof( vector<float> var, int shape, int numModes,float tx, float ty, float tz);
 		Mesh getDeformedMeshP3dof( vector<float> var, int shape, int numModes,float tx, float ty, float tz);
 		vector<float> getDeformedIprof(vector<float> var, int shape,int numModes);
 		vector<float> getDeformedIprofAff7(vector<float> var, int shape,int numModes);
+				vector<float> getDeformedIprofAff6(vector<float> var, int shape,int numModes);
+
 	//	Mesh getTranslatedMesh( vector<float> var, int shape);
 		Mesh getTranslatedMesh( int shape);
 		Mesh getInverseTranslatedMesh( Mesh m );
+				vector<float> getProjectModeParameters( Mesh m, int shape, int trunc, float* res );
+
 		//void testRead();
 		void setImageParameters(int sx, int sy, int sz, float dx, float dy, float dz);
 		int getShapeIndex(int label) ;
@@ -93,15 +99,21 @@ public:
 		float volumeDistance(const volume<short>* segIm, const volume<float>* gold, int *gbounds, Mesh* M);
 		void volumeBounds(const volume<float>* gold, int *gbounds);
 		float EMgmm(vector<float>* vgl,bool lesser,int niter);
-		float EMgmm3(vector<float>* vgl,bool lesser,int niter,float* var);
+
+		float EMgmm3(vector<float>* vgl,bool lesser,int niter,vector<float>* vmu, vector<float>* vvars, float init0, float init1, float init2);
 		int meshDistance(const volume<short> gold,  int shape);
 		void setICondPrecMatrix(vector< vector<float> > iconds, vector<float> Eigs, int shape);
 		void setPlanarParameters(vector<float> best);
 		vector<float> getPlanarParameters();
 		int meshDistance(const volume<short>* gold, int shape, int tol, vector<float>* vdists);
 		void setOrigin(int orgx, int orgy, int orgz);
+						void meshReg(Mesh* m, string flirtmatname);
+						void worldToVoxelCoords(Mesh* m);
+						void voxelToWorldCoords(Mesh* m);
+
 		void modelReg(int appmode, string flirtmatname,int refxsize, int refysize, int refzsize, float refxdim, float refydim, float refzdim);
 		void meshReg(Mesh* m, Matrix flirtmat);
+
 		int intensityHist(const volume<float>* image, const volume<short>* mask, Mesh* m,int label , vector<float>* vgraylevels);
 				int intensityHistMaxMin(const volume<float>* image, const volume<short>* mask, Mesh* m,int label , vector<float>* vgraylevels, float* maxint, float*minint);
 

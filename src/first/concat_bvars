@@ -1,6 +1,12 @@
-#!/bin/sh
+#!/bin/sh 
 
-#   Copyright (C) 2004 University of Oxford
+#   concat_bvars - script to concatenate .bvars file that are output from 
+#   "first". The script retains a single header and keeps track of the number 
+#   subjects. All bvars should correspond to the same model.  
+#
+#   Brian Patenaude, FMRIB Image Analysis Group
+#
+#   Copyright (C) 2006-2007 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -66,34 +72,37 @@
 
 Usage() {
     echo ""
-    echo "Usage: bedpost_proc <subject_dir> <nslices> [piddir]"
+    echo "Usage:   concat_bvars <output_bvars.bvars> <list_of_input_bvars>"
+    echo ""
+    echo "e.g.:  concat_bvars  lhipp_all.bvars sub1_lhipp.bvars sub2_lhipp.bvars ... subN_lhipp.bvars"
     echo ""
     exit
 }
 
+output=$1;
+shift;
+echo "make sure all bvar files use the same model!!!!"
 
-[ "$2" = "" ] && Usage
-[ "$3" = "" ] || touch ${3}/`hostname`_fdt_${$}
+count=0;
+totalsub=0;
+rm temp.txt
+for i in $@; do 
 
+	#output models to test
+	cat ${i} | sed '2q;d';
 
-subjdir=$1
-nslices=$2
+	#keep track of number of subject
+	numSub=`cat ${i} | sed '3q;d' | awk '{ print $2 }'`;
+	totalsub=`echo "${totalsub}+${numSub}" | bc`
+	cat ${i} | sed '1,3d'>>temp.txt;
+	
+  	#move to next file
+	count=`echo "${count}+1" | bc`
+	
+done;
 
-
-
-slice=0
-while [ $slice -lt $nslices ];do
-    slicezp=`${FSLDIR}/bin/zeropad $slice 4`
-    if [ ! -f ${subjdir}.bedpost/logs/.$slicezp ] ; then
-	echo `hostname`_${$} > ${subjdir}.bedpost/logs/.$slicezp
-	sleep 10
-	if [ `hostname`_${$} = `cat ${subjdir}.bedpost/logs/.$slicezp | sed -n '1p'` ] ; then
-	    nice ${FSLDIR}/bin/diff_pvm --data=${subjdir}/data_slice_$slicezp --mask=${subjdir}/nodif_brain_mask_slice_$slicezp -b ${subjdir}/bvals -r ${subjdir}/bvecs --logdir=${subjdir}.bedpost/diff_slices/data_slice_$slicezp --nj=1300 --bi=300 --se=20 > ${subjdir}.bedpost/logs/log$slicezp
-	    touch ${subjdir}.bedpost/logs/.${slicezp}_finished
-	fi
-    fi
-    slice=`echo "$slice + 1" | bc`
-done
-
-[ "$3" = "" ] || rm ${3}/`hostname`_fdt_${$}
-sleep 10
+echo "this is a bvars file">${output}
+cat ${i} | sed '2q;d'>>${output};
+echo NumberOfSubjects ${totalsub} >> ${output}
+cat temp.txt >> ${output}
+rm temp.txt

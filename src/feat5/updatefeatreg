@@ -75,7 +75,7 @@ dirnm=$1
 
 if [ X${dirnm}X = XX ] ; then
   echo "Usage: $0 <feat_directory> [-pngs]"
-  exit 0;
+  exit 1;
 fi
 
 if [ X${dirnm}X = X.X ] ; then

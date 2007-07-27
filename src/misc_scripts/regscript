@@ -1,4 +1,4 @@
-#!/usr/local/bin/bash
+#!/bin/sh
 # preprocessing for DTI images acquired at FMRIB 
 ####################################################################
 #This script performs registration of all the volumes
@@ -49,7 +49,7 @@ echo "        T1-structural (optional - only if series_numb_dti is 2): struct"
 echo "        T2-structural (optional - only if series_numb_dti is 2): T2-weighted"
 echo "        Diffusion directions:     bvals and bvecs"                      
 echo ""
-exit
+exit 1
 }
 
 #===================================================================
@@ -60,7 +60,7 @@ correct_bvs() {
 
 fid_dir=$1
 
-rsh cayenne1 /usr/local/bin/matlab -nodisplay -nojvm -nosplash 1> matlab.out1 2>&1 <<EOF
+matlab -nodisplay -nojvm -nosplash 1> matlab.out1 2>&1 <<EOF
 
 addpath('/usr/people/dtiuser/etc/FMRIB_bvals_bvecs/');
 rotate_bvecs($number_acqs,$n_vols,'$fid_dir');
@@ -145,13 +145,13 @@ else
     exit;
 fi
 
-nvols_nodif=`avwval $output_dir/nodif dim4`
+nvols_nodif=`fslval $output_dir/nodif dim4`
 
 if [ $nvols_nodif -gt 1 ]; then
     echo nodif has more than 1 volume - file name will be changed to data
     echo first volume will be saved as nodif
     immv nodif dti1
-    avwroi dti1 nodif 0 1
+    fslroi dti1 nodif 0 1
 
     count=1
     image_numb=2
@@ -189,20 +189,20 @@ if [ $series_numb -eq 2 ]; then
 fi
 
 #Registers each volume in dti to the reference image nodif
-nvols=`avwval dti1 dim4`;
+nvols=`fslval dti1 dim4`;
 echo $nvols gradient directions
 count_acqs=0
 
 
 #checking if the # of slices is the same
-ns_nodif=`avwval nodif dim3`;
-ns_dti=`avwval dti1 dim3`;
+ns_nodif=`fslval nodif dim3`;
+ns_dti=`fslval dti1 dim3`;
 
 if [ $ns_nodif != $ns_dti ]; then
    rm nodif* -f
-   dim1=`avwval dti1 dim1`;
-   dim2=`avwval dti1 dim2`; 
-   avwroi dti1 nodif 0 $dim1 0 $dim2 0 $ns_dti 0 1
+   dim1=`fslval dti1 dim1`;
+   dim2=`fslval dti1 dim2`; 
+   fslroi dti1 nodif 0 $dim1 0 $dim2 0 $ns_dti 0 1
 fi
 
 correc=`echo $type_cor`;
@@ -215,7 +215,7 @@ case $correc
 
 	while [ $count_acqs -lt $number_acqs ]; do
 	    tmp_acqs=`expr $count_acqs + 1`; 
-	    avwsplit dti${tmp_acqs}
+	    fslsplit dti${tmp_acqs}
 		if [ $nvols -lt 9 ]; then
 		    count=0
 		    while [ ${count} != ${nvols} ];do
@@ -223,7 +223,7 @@ case $correc
 			flirt  -in vol000$count -ref nodif -out rvol000$count -nosearch -omat matrices/mat
 			
 			avscale matrices/mat vol000$count >matrices/tmp
-			head -4 matrices/tmp | tail -3 > matrices/MAT000${count}${tmp_acqs}
+			head -n 4 matrices/tmp | tail -n 3 > matrices/MAT000${count}${tmp_acqs}
 			count=`expr $count + 1`;
 			done
 		else
@@ -232,7 +232,7 @@ case $correc
 			echo FLIRT on volume ${count}
 			flirt  -in vol000$count -ref nodif -out rvol000$count -nosearch -omat matrices/mat
 			avscale matrices/mat vol000$count >matrices/tmp
-			head -4 matrices/tmp | tail -3 > matrices/MAT000${count}${tmp_acqs}
+			head -n 4 matrices/tmp | tail -n 3 > matrices/MAT000${count}${tmp_acqs}
 			imrm vol000${count}
 			count=`expr $count + 1`;
 			
@@ -241,7 +241,7 @@ case $correc
 			    echo FLIRT on volume ${count}
 			flirt -in vol00${count} -ref nodif -out rvol00${count} -nosearch -omat matrices/mat
 			avscale matrices/mat vol00$count >matrices/tmp
-			head -4 matrices/tmp | tail -3 > matrices/MAT00${count}${tmp_acqs}
+			head -n 4 matrices/tmp | tail -n 3 > matrices/MAT00${count}${tmp_acqs}
 			rm -f matrices/mat
 			rm -f matrices/tmp
 			imrm vol000${count}
@@ -255,10 +255,10 @@ case $correc
 		if [ $number_acqs -eq 1 ]
 		then
 		    echo creating file: data
-		    avwmerge -t data `$FSLDIR/bin/imglob -oneperimage rvol0*`
+		    fslmerge -t data `$FSLDIR/bin/imglob -oneperimage rvol0*`
 		else
 		    echo creating file: data${tmp_acqs}
-		    avwmerge -t data${tmp_acqs} `$FSLDIR/bin/imglob -oneperimage rvol00*`
+		    fslmerge -t data${tmp_acqs} `$FSLDIR/bin/imglob -oneperimage rvol00*`
 		fi
 	    
 		#Clean up unecessary files
@@ -272,7 +272,7 @@ case $correc
     ed) echo Correcting only for eddy currents
 	while [ $count_acqs -lt $number_acqs ]; do
 	    tmp_acqs=`expr $count_acqs + 1`; 
-	    avwsplit dti${tmp_acqs}
+	    fslsplit dti${tmp_acqs}
 	    if [ $nvols -lt 9 ]; then
 		count=0
 		while [ ${count} != ${nvols} ];do
@@ -301,11 +301,11 @@ case $correc
 	    if [ $number_acqs -eq 1 ]
 	    then
 		echo creating file: data
-		avwmerge -t data `$FSLDIR/bin/imglob -oneperimage rvol*`
+		fslmerge -t data `$FSLDIR/bin/imglob -oneperimage rvol*`
 	    else
 		echo creating file: data${tmp_acqs}
 		echo `$FSLDIR/bin/imglob -oneperimage rvol*`
-		avwmerge -t data${tmp_acqs} `$FSLDIR/bin/imglob -oneperimage rvol*`
+		fslmerge -t data${tmp_acqs} `$FSLDIR/bin/imglob -oneperimage rvol*`
 	    fi
 
 	    #Clean up unecessary files

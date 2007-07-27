@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
 FILE *fd;
 FSLIO *imfp = NULL;
 char thestring[10000], filename[10000], filename2[10000];
-int i, bitpix, sysret;
+int bitpix, sysret;
 short datatype;
 float slope, intercept;
 int doscaling;
@@ -134,20 +134,10 @@ int doscaling;
     }
   fclose(fd);
 
-  sprintf(thestring,"%s %s",thestring,filename2);
+  sysret = execv(thestring, argv );
 
-  for(i=2; i<argc; i++)
-    {
-      sprintf(thestring,"%s %s",thestring,argv[i]);
-    }
-
-  sysret =  system(thestring);
-  if (sysret!=0) {
-    if (errno!=0) {
-      fprintf(stderr,"errno = %d\n",errno);
-      perror("Unexpected exit code ");
-    }
-  };
+  fprintf(stderr,"errno = %d\n",errno);
+  perror("Unexpected exit code ");
   return sysret;
 }
 

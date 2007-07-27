@@ -4,7 +4,7 @@ if [ $# -lt 1 ];then
     echo "Usage: linkbedpost <sourcedir>"
     echo ""
     echo "linkbedpost /usr/people/dtiuser/OCMR/CONTROLS/2mmdata/OCMR_20_001.bedpost"
-    exit
+    exit 1
 fi
 
 

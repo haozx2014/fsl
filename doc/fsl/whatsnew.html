@@ -1,6 +1,109 @@
-<HTML><HEAD><TITLE>FSL</TITLE></HEAD><BODY BACKGROUND="../images/fsl-bg.jpg" BGCOLOR="white">
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<HTML><HEAD><meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+<link REL="stylesheet" TYPE="text/css" href="../fsl.css">
+<TITLE>FSL</TITLE></HEAD><BODY><OBJECT data="top.html"></OBJECT>
 
 <H2>WHAT'S NEW IN THIS RELEASE</H2>
+
+<hr><P><b>Release 4.0, August 2007</b><br>
+Minor release revision history <a href="#revisions">here</a>.<UL>
+
+<LI><a href="../melodic2/index.html" target="_top">MELODIC</a> v3.0 -
+  now contains multi-subject ICA, including Tensor-ICA
+  spaceXtimeXsubjects decomposition.
+
+<LI><a href="../first/index.html" target="_top">FIRST</a> - FMRIB's
+  Integrated Registration and Segmentation Tool. The first release of
+  a new tool which uses mesh models trained with a large amount of
+  rich hand-segmented training data to segment subcortical brain
+  structures.
+
+<LI><a href="../fdt/index.html" target="_top">FDTX</a> - FMRIB's
+  Diffusion Toolbox now has Bayesian crossing-fibre modelling with
+  automatic estimation of the number of crossing-fibres.
+
+<LI><a href="../possum/index.html" target="_top">POSSUM</a> -
+  Physics-Oriented Simulated Scanner for Understanding MRI. An FMRI
+  data simulator that produces realistic simulated images and FMRI
+  time series given a gradient echo pulse sequence, a segmented object
+  with known tissue parameters, and a motion sequence.
+
+<LI><a href="../fslview/atlases.html" target="_top">Standard Space
+    Atlases</a> - several complementary brain atlases, integrated into
+    FSLView, allowing viewing of structural and cytoarchitectonic
+    standard space labels and probability maps for cortical and
+    subcortical structures and white matter tracts.
+
+<LI><a href="../fslview/atlases.html" target="_top">FSLView</a> - in
+  addition to the new atlases, new functionality includes 3D surface
+  rendering and crossing-fibre diffusion direction viewing.
+
+<LI><a href="../vbm/index.html">FSLVBM</a> - an implementation of
+  VBM-style analysis of grey matter density using FSL tools.
+
+<LI><a href="../tbss/index.html" target="_top">TBSS</a> v1.1 -
+improved registration efficiency in conjunction with the release of a
+new standard space FA template, the FMRIB58FA. Also it is now possible
+to back-transform skeleton-space voxels into subjects' native DTI
+space, for example to allow the automated seeding of tractography in
+FDTX.
+
+<LI><a href="../beanmap/index.html">BEANMAP</a> - Bayesian Estimation
+   Blah Blah - efficient modelling and estimation of simultaneous
+   BOLD+ASL data using Variational Bayes.
+
+<LI>The mechanism for running FSL under windows has changed. Instead
+  of using Cygwin we now use VMware Player (freely available) with a
+  Linux virtual machine inside it.
+
+<LI><a href="../fnirt/index.html">FNIRT</a> - FMRIB's Nonlinear Image
+  Regsitration Tool - a beta release of a computationally efficient
+  generic nonlinear registration tool.
+
+<LI><a href="../fast4/index.html">FAST4</a> - a beta release of a new
+  version of the FAST generic segmentation tool.
+
+<LI><a href="">Randomise</a> permutation testing - new features
+  including: automatically correctly dealing with general contrasts
+  and confounds, f-tests, TFCE (threshold-free cluster enhancement, a
+  new method for cluster-based statistics).
+
+<LI>New standard space template: the MNI152(?) nonlinear template from
+MNI.
+
+<LI><a href="../feat5/index.html">FEAT</a> - v5.90, various minor
+  updates. "ip" is removed and replaced with calls to fslmaths.
+
+<LI><a href="../bet2/index/html">BET</a> - old C code now removed and
+  replaced with equivalent "bet2" C++ program; new wrapper script
+  "bet" which adds various functionality such as improved eye and neck
+  removal.
+
+<LI>avwutils all C++ utils ending with "++" now have had the "++"
+  stripped off, as all the old C code with a similar name has been
+  removed. Also, all programs starting with "avw" are now renamed to
+  start with "fsl", e.g. "fslmaths".
+
+<LI>Programs (such as FEAT) which used to append a "+" to the end of a
+  new output file (or directory) in order to avoid overwriting an
+  existing file have now changed. Now the existing file is renamed,
+  with a "-" added to the end, and the new file is created with
+  exactly the name requested.
+
+<LI>NIFTI i/o updated to use the sourceforge library.
+
+<LI>Flirt will initialise using the qform/sform if set in the NIFTI
+header.
+
+<LI>Warp field inversion is now possible with "invwarp".
+
+<LI>Slicetimer - definition of slice numbering has changed - now the
+  bottom slice is referred to as "0" (instead of "1").
+
+<LI>Removed FSL dependency on Tix, Gnuplot and ImageMagick; any
+  generic TCL/TK can now be used for the scripts and GUIs.
+
+</UL>
 
 <hr><P><b>Release 3.3, April 2006</b>
 
@@ -58,8 +161,6 @@ results may be very slightly different from the previous version.)
 valid-voxel mask generation.
 
 </UL>
-
-Minor release revision history <a href="#revisions">here</a>.
 
 <hr><P><b>Release 3.2<font size=-1>&beta;</font>, September 2004</b>
 
@@ -321,39 +422,43 @@ previous version (3.20).
 
 <a name="revisions"></a><hr>
 
-<b>FSL 3.3 minor release revision history</b><ul>
+<b>FSL 4.0 minor release revision history</b><ul>
 
-<LI>3.3.0 7/4/06 First release
-
-<LI>3.3.1 10/4/06 Fixed links for major version numbers pointing to minor
-numbers in libraries for FSLView.
-
-<LI>3.3.2 10/4/06 Fixed tbss_1_preproc to ensure +ve voxdims in all images.
-
-<LI>3.3.3 18/4/06 Added FSLView sources and user
-documentation. FSLView binaries for Apple on Intel now compiled to run
-native.
-
-<LI>3.3.4 24/4/06 Fixed FSLView binary on Cygwin.
-
-<LI>3.3.5 29/4/06 Added tbss_non_FA to allow running of TBSS on non-FA data.
-
-<LI>3.3.6 15/6/06 Fixed buglet in tbss_non_FA.
-
-<LI>3.3.7 21/7/06 Fixed buglet in randomise which caused it to
-hang/crash under certain conditions.
-
-<LI>3.3.8 10/01/07 Small fixes to avwmerge++ and avwmaths++.
-
-<LI>3.3.9 15/02/07 Dilation fix to avwmaths++, increase precision fix to betsurf, fix for randomise.
-
-<LI>3.3.10 15/03/07 Vox stats fix for randomise.
-
-<LI>3.3.11 27/03/07 Minor fix for randomise max stats.
-
-
+<LI>4.0.0 ?/?/07 First release
 
 </ul>
+
+<!-- <b>FSL 3.3 minor release revision history</b><ul> -->
+
+<!-- <LI>3.3.0 7/4/06 First release -->
+
+<!-- <LI>3.3.1 10/4/06 Fixed links for major version numbers pointing to minor -->
+<!-- numbers in libraries for FSLView. -->
+
+<!-- <LI>3.3.2 10/4/06 Fixed tbss_1_preproc to ensure +ve voxdims in all images. -->
+
+<!-- <LI>3.3.3 18/4/06 Added FSLView sources and user -->
+<!-- documentation. FSLView binaries for Apple on Intel now compiled to run -->
+<!-- native. -->
+
+<!-- <LI>3.3.4 24/4/06 Fixed FSLView binary on Cygwin. -->
+
+<!-- <LI>3.3.5 29/4/06 Added tbss_non_FA to allow running of TBSS on non-FA data. -->
+
+<!-- <LI>3.3.6 15/6/06 Fixed buglet in tbss_non_FA. -->
+
+<!-- <LI>3.3.7 21/7/06 Fixed buglet in randomise which caused it to -->
+<!-- hang/crash under certain conditions. -->
+
+<!-- <LI>3.3.8 10/01/07 Small fixes to avwmerge++ and avwmaths++. -->
+
+<!-- <LI>3.3.9 15/02/07 Dilation fix to avwmaths++, increase precision fix to betsurf, fix for randomise. -->
+
+<!-- <LI>3.3.10 15/03/07 Vox stats fix for randomise. -->
+
+<!-- <LI>3.3.11 27/03/07 Minor fix for randomise max stats. -->
+
+<!-- </ul> -->
 
 <br><br><br><br><br><br><br><br><br><br><br><br><br><br>
 <br><br><br><br><br><br><br><br><br><br><br><br><br><br>

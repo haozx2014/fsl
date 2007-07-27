@@ -1,4 +1,9 @@
-<HTML><TITLE>FEAT - FMRI Expert Analysis Tool - User Guide</TITLE><BODY BACKGROUND="../images/fsl-bg.jpg">
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<HTML><HEAD><meta http-equiv="Content-Type"
+content="text/html;charset=utf-8">
+<link REL="stylesheet" TYPE="text/css" href="../fsl.css">
+<TITLE>FSL</TITLE></HEAD><BODY><OBJECT data="top.html"></OBJECT>
 
 <H2>FEAT in Detail</H2>
 
@@ -64,12 +69,11 @@ FEAT directory/directories.
 <p><b>Balloon help</b> (the popup help messages in the FEAT GUI) can
 be turned off once you are familiar with FEAT.
 
-<p>The <b>Featwatcher</b> button allows you to tell Feat not to start
-the graphical program Featwatcher that shows you how the FEAT analysis
-is progressing. If you are running lots of analyses you probably want
-to turn this off; you can view the same logging information by looking
-at the report.log files in any FEAT directories instead, or start the
-<a href="featwatcher.html">Featwatcher</a> GUI by hand.
+<p>The <b>Progress watcher</b> button allows you to tell Feat not to
+start a web browser to watch the FEAT analysis progress. If you are
+running lots of analyses you probably want to turn this off; you can
+view the same logging information by looking at the report_log.html
+files in any FEAT directories instead.
 
 <p>For the above two settings, you can control the default behaviour
 of the FEAT GUI by putting the following, with appropriate values set,
@@ -79,11 +83,6 @@ in a file called <b>.fslconf/feat.tcl</b> in your home directory;
 <br>set fmri(help_yn) 1
 <br>set fmri(featwatcher_yn) 1
 </code>
-
-<p>If you are using FEAT to carry out multiple analyses, you might
-want to do this overnight, to reduce the load on your computer. You
-can use the <b>Delay</b> feature to tell FEAT how long to wait before
-starting the analyses.
 
 <p><b>Brain/background threshold, %</b> This is automatically
 calculated, as a % of the maximum input image intensity. It is used in
@@ -139,7 +138,7 @@ turned off.
 <a name="data"></a>
 <hr><H3>Data</H3>
 
-<p>First set the <b>Number of analyses</b>. At first level this is the
+<p>First set the <b>Number of inputs</b>. At first level this is the
 number of identical analyses you want to carry out. At higher level
 this is the number of FEAT directories to be input from the
 lower-level analysis to the higher.
@@ -240,11 +239,10 @@ target="_top">PRELUDE/FUGUE documentation</a> for more information on
 creating these images.  The two images that are required are (1) a
 fieldmap image which must have units of rad/s, and (2) a registered
 magnitude image (this is usually a standard magnitude-only
-reconstructed image from the fieldmap sequence data).  Next you need
-to enter the
-<b>EPI Dwell time</b> in milliseconds (this is the time between echoes
-in successive k-space lines - often also known as the echo spacing for
-EPI) and <b>EPI TE</b> (echo time) also in milliseconds. These two
+reconstructed image from the fieldmap sequence data). Next you need to
+enter the <b>EPI echo spacing</b> in milliseconds (this is also called
+the dwell time and is the time between echoes in successive k-space
+lines) and <b>EPI TE</b> (echo time) also in milliseconds. These two
 values relate to your FMRI EPI data, not the fieldmap data. You also
 need to specify the <b>Unwarp direction</b>, which is the
 phase-encoding direction of your FMRI EPI data. The sign of this

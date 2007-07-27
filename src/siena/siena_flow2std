@@ -72,7 +72,7 @@
 Usage() {
     echo "Usage: siena_flow2std <fileroot2> <fileroot2> [-d]"
     echo "-d : debug (don't delete intermediate files)"
-    exit
+    exit 1
 }
 
 if [ _$FSLDIR = _ ] ; then
@@ -108,14 +108,14 @@ ${FSLDIR}/bin/convert_xfm -omat ${A}_halfwayto_${B}_inv.mat -inverse ${A}_halfwa
 ${FSLDIR}/bin/convert_xfm -omat ${A}_halfwayto_${B}_to_std.mat -concat ${A}_to_std.mat ${A}_halfwayto_${B}_inv.mat
 
 # dilate flow image, -> standard space -> mask with ss edge image -> blur -> remask
-${FSLDIR}/bin/avwmaths ${A}_to_${B}_flow -dil -dil -dil -dil -dil -dil -dil -dil -dil -dil -dil -dil -dil -dil ${A}_to_${B}_flow_dil
-${FSLDIR}/bin/avwmaths ${B}_to_${A}_flow -dil -dil -dil -dil -dil -dil -dil -dil -dil -dil -dil -dil -dil -dil ${A}_to_${B}_flow_dilback
-${FSLDIR}/bin/avwmaths ${A}_to_${B}_flow_dil -sub ${A}_to_${B}_flow_dilback -div 2 ${A}_to_${B}_flow_dil
+${FSLDIR}/bin/fslmaths ${A}_to_${B}_flow -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM ${A}_to_${B}_flow_dil
+${FSLDIR}/bin/fslmaths ${B}_to_${A}_flow -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM ${A}_to_${B}_flow_dilback
+${FSLDIR}/bin/fslmaths ${A}_to_${B}_flow_dil -sub ${A}_to_${B}_flow_dilback -div 2 ${A}_to_${B}_flow_dil
 /bin/rm ${A}_to_${B}_flow_dilback*
 ${FSLDIR}/bin/flirt -in ${A}_to_${B}_flow_dil -ref ${FSLDIR}/etc/standard/avg152T1_brain -out ${A}_to_${B}_flow_to_std -applyxfm -init ${A}_halfwayto_${B}_to_std.mat
-${FSLDIR}/bin/avwmaths ${A}_to_${B}_flow_to_std -mas ${FSLDIR}/etc/standard/avg152T1_edges ${A}_to_${B}_flow_to_std
+${FSLDIR}/bin/fslmaths ${A}_to_${B}_flow_to_std -mas ${FSLDIR}/etc/standard/avg152T1_edges ${A}_to_${B}_flow_to_std
 ${FSLDIR}/bin/ip ${A}_to_${B}_flow_to_std ${A}_to_${B}_flow_to_std 0 -s 10
-${FSLDIR}/bin/avwmaths ${A}_to_${B}_flow_to_std -mas ${FSLDIR}/etc/standard/avg152T1_edges ${A}_to_${B}_flow_to_std
+${FSLDIR}/bin/fslmaths ${A}_to_${B}_flow_to_std -mas ${FSLDIR}/etc/standard/avg152T1_edges ${A}_to_${B}_flow_to_std
 
 # cleanup
 if [ $debug = 0 ] ; then

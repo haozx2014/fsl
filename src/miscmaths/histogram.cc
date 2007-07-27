@@ -69,7 +69,6 @@
 #include "miscmaths.h"
 #include "histogram.h"
 
-#include <strstream>
 using namespace std;
 
 #ifndef NO_NAMESPACE

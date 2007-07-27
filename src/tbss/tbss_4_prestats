@@ -76,7 +76,7 @@ Usage: tbss_4_prestats <threshold>
 The normal recommendation for <threshold> is 2000.
 
 EOF
-    exit
+    exit 1
 }
 
 [ "$1" = "" ] && Usage
@@ -89,10 +89,10 @@ cd stats
 
 echo "creating skeleton mask using threshold $thresh"
 echo $thresh > thresh.txt
-${FSLDIR}/bin/avwmaths++ mean_FA_skeleton -thr $thresh -bin mean_FA_skeleton_mask
+${FSLDIR}/bin/fslmaths mean_FA_skeleton -thr $thresh -bin mean_FA_skeleton_mask
 
 echo "creating skeleton distancemap (for use in projection search)"
-${FSLDIR}/bin/avwmaths++ mean_FA_mask -mul -1 -add 1 -add mean_FA_skeleton_mask mean_FA_skeleton_mask_dst
+${FSLDIR}/bin/fslmaths mean_FA_mask -mul -1 -add 1 -add mean_FA_skeleton_mask mean_FA_skeleton_mask_dst
 ${FSLDIR}/bin/distancemap -i mean_FA_skeleton_mask_dst -o mean_FA_skeleton_mask_dst
 
 echo "projecting all FA data onto skeleton"

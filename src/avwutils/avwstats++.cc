@@ -1,8 +1,8 @@
-/*  avwstats++.cc
+/*  fslstats.cc
 
-    Mark Jenkinson, FMRIB Image Analysis Group
+    Mark Jenkinson and Matthew Webster, FMRIB Image Analysis Group
 
-    Copyright (C) 2003-2005 University of Oxford  */
+    Copyright (C) 2003-2007 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -66,9 +66,6 @@
     University, to negotiate a licence. Contact details are:
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
-
-// Like avwstats but better!  :)
-
 #include "miscmaths/miscmaths.h"
 #include "newimage/newimageall.h"
 #include "newimage/costfns.h"
@@ -87,7 +84,7 @@ extern "C" {
 #endif
 
 void print_usage(const string& progname) {
-  cout << "Usage: avwstats++ <input> [options]" << endl << endl;
+  cout << "Usage: fslstats <input> [options]" << endl << endl;
   cout << endl;
   cout << "-l <lthresh> : set lower threshold" << endl;
   cout << "-u <uthresh> : set upper threshold" << endl;
@@ -427,9 +424,7 @@ int fmrib_main_float(int argc, char* argv[])
 	// convert from fsl mm to voxel to sform coord
 	cog.SubMatrix(1,3,1,1) = vol[0].cog();
 	cog(4) = 1.0;
-	if (vol[0].sform_code()!=NIFTI_XFORM_UNKNOWN) {
-	  cog = vol[0].sform_mat() * (vol[0].sampling_mat()).i() * cog; 
-	}
+	cog = vol[0].vox2mm_mat() * (vol[0].sampling_mat()).i() * cog; 
 	cout << cog(1) << " " << cog(2) << " " << cog(3) << " " ;
     } else if (sarg=="-C") {
     ColumnVector cog(4);

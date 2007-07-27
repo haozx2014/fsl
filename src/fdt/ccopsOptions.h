@@ -71,11 +71,10 @@
 
 #include <string>
 #include <iostream>
-#include <fstream.h>
+#include <fstream>
 #include <stdlib.h>
 #include <stdio.h>
 #include "utils/options.h"
-//#include "newmatall.h"
 using namespace Utilities;
 
 namespace CCOPS {

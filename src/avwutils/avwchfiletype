@@ -95,16 +95,16 @@ fi
 
 # determine if it is a complex image or not
 iscomplex=0;
-dtype=`$FSLDIR/bin/avwval $oldfile datatype`;
+dtype=`$FSLDIR/bin/fslval $oldfile datatype`;
 if [ X$dtype =   X32 ] ; then iscomplex=1; fi
 if [ X$dtype = X1792 ] ; then iscomplex=1; fi
 if [ X$dtype = X2048 ] ; then iscomplex=1; fi
 
 # do the copy / type conversion
 if [ $iscomplex = 1 ] ; then
-    $FSLDIR/bin/avwcomplex -copyonly $oldfile $newfile
+    $FSLDIR/bin/fslcomplex -copyonly $oldfile $newfile
 else
-    $FSLDIR/bin/avwmaths $oldfile $newfile
+    $FSLDIR/bin/fslmaths $oldfile $newfile
 fi
 
 # for inplace stuff remove and copy old one

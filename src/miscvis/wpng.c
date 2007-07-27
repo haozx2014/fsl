@@ -136,7 +136,8 @@ int main(int argc, char **argv)
     double default_display_exponent;    /* whole display system */
     double default_gamma = 0.0;
 
-
+    wpng_info.quiet = FALSE;
+    wpng_info.overwrite = FALSE;
     wpng_info.infile = NULL;
     wpng_info.outfile = NULL;
     wpng_info.image_data = NULL;
@@ -219,6 +220,10 @@ int main(int argc, char **argv)
             wpng_info.have_time = TRUE;
         } else if (!strncmp(*argv, "-text", 3)) {
             text = TRUE;
+        } else if (!strncmp(*argv, "-q", 2)) {
+             wpng_info.quiet = TRUE;
+        } else if (!strncmp(*argv, "-overwrite", 3)) {
+             wpng_info.overwrite = TRUE;
         } else if (!strncmp(*argv, "-gamma", 2)) {
             if (!*++argv)
                 ++error;
@@ -336,7 +341,7 @@ int main(int argc, char **argv)
                     strcpy(outname+len, ".png");
                 }
                 /* check if outname already exists; if not, open */
-                if ((wpng_info.outfile = fopen(outname, "rb")) != NULL) {
+                if ((wpng_info.outfile = fopen(outname, "rb")) != NULL && wpng_info.overwrite==FALSE ) {
                     fprintf(stderr, PROGNAME ":  output file exists [%s]\n",
                       outname);
                     fclose(wpng_info.outfile);
@@ -371,7 +376,9 @@ int main(int argc, char **argv)
          "\t\t  floating-point format (e.g., ``%.5f''); if image looks\n"
          "\t\t  correct on given display system, image gamma is equal to\n"
          "\t\t  inverse of display-system exponent, i.e., 1 / (LUT * CRT)\n"
-         "\t\t  (where LUT = lookup-table exponent and CRT = CRT exponent;\n"
+		"\t\t  (where LUT = lookup-table exponent and CRT = CRT exponent;\n"
+		, PROGNAME, PROGNAME, default_gamma);
+        fprintf(stderr, "\n"
          "\t\t  first varies, second is usually 2.2, all are positive)\n"
          "    bg  \tdesired background color for alpha-channel images, in\n"
          "\t\t  7-character hex RGB format (e.g., ``#ff7700'' for orange:\n"
@@ -379,16 +386,18 @@ int main(int argc, char **argv)
          "    -text\tprompt interactively for text info (tEXt chunks)\n"
          "    -time\tinclude a tIME chunk (last modification time)\n"
          "    -interlace\twrite interlaced PNG image\n"
-         "\n"
+         "\n");
+	fprintf(stderr,
 "pnmfile or stdin must be a binary PGM (`P5'), PPM (`P6') or (extremely\n"
 "unofficial and unsupported!) PAM (`P8') file.  Currently it is required\n"
 "to have maxval == 255 (i.e., no scaling).  If pnmfile is specified, it\n"
 "is converted to the corresponding PNG file with the same base name but a\n"
-"``.png'' extension; files read from stdin are converted and sent to stdout.\n"
+"``.png'' extension; files read from stdin are converted and sent to stdout.\n");
+	fprintf(stderr,
 "The conversion is progressive (low memory usage) unless interlacing is\n"
 "requested; in that case the whole image will be buffered in memory and\n"
 "written in one call.\n"
-         "\n", PROGNAME, PROGNAME, default_gamma);
+         "\n");
         exit(1);
     }
 
@@ -659,7 +668,7 @@ int main(int argc, char **argv)
     /* read and write the image, either in its entirety (if writing interlaced
      * PNG) or row by row (if non-interlaced) */
 
-    fprintf(stderr, "Encoding image data...\n");
+    if (wpng_info.quiet!=TRUE) fprintf(stderr, "Encoding image data...\n");
     fflush(stderr);
 
     if (wpng_info.interlaced) {
@@ -684,7 +693,7 @@ int main(int argc, char **argv)
             fprintf(stderr, "  (continuing anyway)\n");
         }
         if (writepng_encode_image(&wpng_info) != 0) {
-            fprintf(stderr, PROGNAME
+           fprintf(stderr, PROGNAME
               ":  libpng problem (longjmp) while writing image data\n");
             writepng_cleanup(&wpng_info);
             wpng_cleanup();
@@ -736,7 +745,7 @@ int main(int argc, char **argv)
 
     /* OK, we're done (successfully):  clean up all resources and quit */
 
-    fprintf(stderr, "Done.\n");
+    if (wpng_info.quiet != TRUE) fprintf(stderr, "Done.\n");
     fflush(stderr);
 
     writepng_cleanup(&wpng_info);

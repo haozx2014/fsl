@@ -75,10 +75,10 @@ for fn in ANALYZE:1 NIFTI_PAIR:2 NIFTI:3 ANALYZE_GZ:4 NIFTI_PAIR_GZ:5 NIFTI_GZ:6
   opt=`echo $fn | sed 's/:.*//'`;
   export FSLOUTPUTTYPE=$opt
   echo FSLOUTPUTTYPE=$opt
-  echo ./avwswapdim epi4 y z x epimj${num}
-  ./avwswapdim epi4 y z x epimj${num}
-  echo ./avwmaths_32R epi4 -mul 0.001 episs${num}
-  ./avwmaths_32R epi4 -mul 0.001 episs${num}
+  echo ./fslswapdim epi4 y z x epimj${num}
+  ./fslswapdim epi4 y z x epimj${num}
+  echo ./fslmaths epi4 -mul 0.001 episs${num} -odt float
+  ./fslmaths epi4 -mul 0.001 episs${num} -odt float
 done
 
 for fn in epimj[1-6].* episs[1-6].* ; do

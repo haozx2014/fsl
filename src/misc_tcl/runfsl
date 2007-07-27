@@ -76,12 +76,11 @@ Usage() {
     echo "-b                 : background (submit job and exit); otherwise runfsl waits to exit until <command> has finished"
     echo "-t <job-duration>  : expected duration of job, in minutes, for use by batch scheduler (default: between 120 and 1440)"
     echo ""
-    exit
+    exit 1
 }
 
 if [ _$1 = _ ] ; then
     Usage
-    exit 1
 fi
 
 logout=1

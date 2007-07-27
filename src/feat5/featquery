@@ -196,7 +196,7 @@ if { [ lindex $argv [ expr $pm + 1 ] ] != "" } {
 
     fsl:echo $fq "Using co-ordinates $cX $cY $cZ. "
 
-    fsl:exec "${FSLDIR}/bin/avwmaths++ $mask -mul 0 -add 1 -roi $cX 1 $cY 1 $cZ 1 0 1 ${fqroot}/mask"
+    fsl:exec "${FSLDIR}/bin/fslmaths $mask -mul 0 -add 1 -roi $cX 1 $cY 1 $cZ 1 0 1 ${fqroot}/mask"
     
     set mask ${fqroot}/mask
 }
@@ -208,26 +208,26 @@ if { ! [ imtest $mask ] } {
     fq_exit "Error - mask file $mask doesn't exist"
 }
 
-set maskdimx [ exec sh -c "$FSLDIR/bin/avwval $mask dim1" ]
-set maskdimy [ exec sh -c "$FSLDIR/bin/avwval $mask dim2" ]
-set maskdimz [ exec sh -c "$FSLDIR/bin/avwval $mask dim3" ]
+set maskdimx [ exec sh -c "$FSLDIR/bin/fslval $mask dim1" ]
+set maskdimy [ exec sh -c "$FSLDIR/bin/fslval $mask dim2" ]
+set maskdimz [ exec sh -c "$FSLDIR/bin/fslval $mask dim3" ]
 
 set spaces ""
 
 if { ! $higherlevel } {
     foreach possiblespaces { example_func highres standard } {
 	if { [ imtest reg/$possiblespaces ] &&
-	     $maskdimx == [ exec sh -c "$FSLDIR/bin/avwval reg/$possiblespaces dim1" ] &&
-	     $maskdimy == [ exec sh -c "$FSLDIR/bin/avwval reg/$possiblespaces dim2" ] &&
-	     $maskdimz == [ exec sh -c "$FSLDIR/bin/avwval reg/$possiblespaces dim3" ] } {
+	     $maskdimx == [ exec sh -c "$FSLDIR/bin/fslval reg/$possiblespaces dim1" ] &&
+	     $maskdimy == [ exec sh -c "$FSLDIR/bin/fslval reg/$possiblespaces dim2" ] &&
+	     $maskdimz == [ exec sh -c "$FSLDIR/bin/fslval reg/$possiblespaces dim3" ] } {
 	    set spaces $possiblespaces
 	}
     }
 } else {
     if { [ imtest example_func ] &&
-	 $maskdimx == [ exec sh -c "$FSLDIR/bin/avwval example_func dim1" ] &&
-	 $maskdimy == [ exec sh -c "$FSLDIR/bin/avwval example_func dim2" ] &&
-	 $maskdimz == [ exec sh -c "$FSLDIR/bin/avwval example_func dim3" ] } {
+	 $maskdimx == [ exec sh -c "$FSLDIR/bin/fslval example_func dim1" ] &&
+	 $maskdimy == [ exec sh -c "$FSLDIR/bin/fslval example_func dim2" ] &&
+	 $maskdimz == [ exec sh -c "$FSLDIR/bin/fslval example_func dim3" ] } {
 	set spaces example_func
     }
 }
@@ -251,28 +251,28 @@ if { [ string compare $spaces example_func ] != 0 } {
     set mask ${fqroot}/mask
 
     if { $coords == 1 } {
-	catch { exec sh -c "${FSLDIR}/bin/avwstats++ $mask -x" } themax
-	fsl:exec "${FSLDIR}/bin/avwmaths++ $mask -roi [ lindex $themax 0 ] 1 [ lindex $themax 1 ] 1 [ lindex $themax 2 ] 1 0 1 -bin $mask"
+	catch { exec sh -c "${FSLDIR}/bin/fslstats $mask -x" } themax
+	fsl:exec "${FSLDIR}/bin/fslmaths $mask -roi [ lindex $themax 0 ] 1 [ lindex $themax 1 ] 1 [ lindex $themax 2 ] 1 0 1 -bin $mask"
     } else {
-	fsl:exec "${FSLDIR}/bin/avwmaths++ $mask -thr $interpthresh $mask"
+	fsl:exec "${FSLDIR}/bin/fslmaths $mask -thr $interpthresh $mask"
     }
 
 }
 
 set maskbin "-bin"
 if { $maskweight } {
-    catch { exec sh -c "${FSLDIR}/bin/avwstats++ $mask -M" } maskmean
+    catch { exec sh -c "${FSLDIR}/bin/fslstats $mask -M" } maskmean
     set maskbin "-div $maskmean"
 }
 
-fsl:exec "${FSLDIR}/bin/avwmaths++ $mask $maskbin ${fqroot}/mask"
+fsl:exec "${FSLDIR}/bin/fslmaths $mask $maskbin ${fqroot}/mask"
 
 #}}}
     #{{{ setup percent
 
 if { $percent } {
     if { ! [ imtest mean_func ] } {
-	fsl:exec "${FSLDIR}/bin/avwmaths++ filtered_func_data -Tmean mean_func"
+	fsl:exec "${FSLDIR}/bin/fslmaths filtered_func_data -Tmean mean_func"
     }
     fsl:echo $fq "PE/COPE values converted into %."
 }
@@ -283,7 +283,7 @@ if { $percent } {
 fsl:echo $fq "<br>"
 
 if { [ imtest filtered_func_data ] } {
-    fsl:exec "${FSLDIR}/bin/avwmeants -i filtered_func_data -o ${fqroot}/mean_mask_ts.txt -m ${fqroot}/mask"
+    fsl:exec "${FSLDIR}/bin/fslmeants -i filtered_func_data -o ${fqroot}/mean_mask_ts.txt -m ${fqroot}/mask"
     fsl:echo $fq "<a href=\"mean_mask_ts.txt\">Mean time series (masked/weighted)</a>. "
 }
 
@@ -349,11 +349,11 @@ if { $percent } {
 }
 
 #}}}
-	#{{{ apply mask, run avwstats and convert max vox coords to standard space
+	#{{{ apply mask, run fslstats and convert max vox coords to standard space
 
-    fsl:exec "${FSLDIR}/bin/avwmaths++ $statsimage $percentcommand -mul ${fqroot}/mask ${fqroot}/tmp"
+    fsl:exec "${FSLDIR}/bin/fslmaths $statsimage $percentcommand -mul ${fqroot}/mask ${fqroot}/tmp"
 
-    catch { exec sh -c "${FSLDIR}/bin/avwstats++ ${fqroot}/tmp $threshcommand -M -R -V -P 10 -P 50 -P 90 -x" } thevals
+    catch { exec sh -c "${FSLDIR}/bin/fslstats ${fqroot}/tmp $threshcommand -M -R -V -P 10 -P 50 -P 90 -x" } thevals
 
     set themean  [ format %.2f [ lindex $thevals 0 ] ]
     set themin   [ format %.2f [ lindex $thevals 1 ] ]
@@ -387,7 +387,7 @@ set txtfiletxt "$statsimage"
 
 if { [ imtest filtered_func_data ] } {
     regsub -all "stats/" $statsimage "" statsname
-    fsl:exec "${FSLDIR}/bin/avwmeants -i filtered_func_data -o ${fqroot}/max_${statsname}_ts.txt -c $maxx $maxy $maxz"
+    fsl:exec "${FSLDIR}/bin/fslmeants -i filtered_func_data -o ${fqroot}/max_${statsname}_ts.txt -c $maxx $maxy $maxz"
     set txtfiletxt "<a href=\"max_${statsname}_ts.txt\">${statsimage}</a>"
 }
 

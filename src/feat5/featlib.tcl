@@ -70,949 +70,12 @@
 
 #}}}
 
-#{{{ feat5:setupdefaults
-
-proc feat5:setupdefaults { } {
-    global fmri FSLDIR HOME
-
-    set fmri(version) 5.70
-
-    # load defaults (mandatory!)
-    if { [ file exists ${FSLDIR}/etc/fslconf/feat.tcl ] } {
-	source ${FSLDIR}/etc/fslconf/feat.tcl
-    } else {
-	MxPause "error: FEAT default settings file ${FSLDIR}/etc/fslconf/feat.tcl doesn't exist!"
-	exit 1
-    }
-
-    # load user-specific defaults if they exist 
-    if { [ file exists ${HOME}/.fslconf/feat.tcl ] } {
-	source ${HOME}/.fslconf/feat.tcl
-    }
-
-    set fmri(design_help) "This is a graphical representation of the design matrix and parameter
-contrasts.
-
-The bar on the left is a representation of time, which starts at the
-top and points downwards. The white marks show the position of every
-10th volume in time. The red bar shows the period of the longest
-temporal cycle which was passed by the highpass filtering.
-
-The main top part shows the design matrix; time is represented on the
-vertical axis and each column is a different (real) explanatory
-variable (e.g., stimulus type). Both the red lines and the black-white
-images represent the same thing - the variation of the waveform in
-time.
-
-Below this is shown the requested contrasts; each row is a different
-contrast vector and each column refers to the weighting of the
-relevant explanatory variable. Thus each row will result in a Z
-statistic image.
-
-If F-tests have been specified, these appear to the right of the
-contrasts; each column is a different F-test, with the inclusion of
-particular contrasts depicted by filled squares instead of empty
-ones."
-
-    set fmri(infeat) 1
-
-    set fmri(filtering_yn) 1
-    set fmri(sh_yn) 0
-    set fmri(st_file) ""
-
-    set fmri(stats_yn) 1
-    set fmri(wizard_type) 1
-
-    set fmri(poststats_yn) 1
-
-    set fmri(threshmask) ""
-
-    set fmri(reg_yn) 1
-    set fmri(reginitial_highres_nonlinear_yn) 0
-    set fmri(reghighres_nonlinear_yn) 0
-    set fmri(regstandard_nonlinear_yn) 0
-
-    set fmri(ncopeinputs) 0
-    set fmri(inputtype) 1
-    set fmri(multiple) 1
-    set fmri(outputdir) ""
-    set fmri(relative_yn) 0
-    set fmri(constcol) 0
-    set fmri(con_mode) orig
-    set fmri(con_mode_old) orig
-    set fmri(evs_orig) 1
-    set fmri(evs_real) 1
-    set fmri(ncon_real) 1
-    set fmri(ncon_orig) 1
-    set fmri(nftests_real) 0
-    set fmri(nftests_orig) 0
-
-    set fmri(feat_filename) [ exec sh -c "${FSLDIR}/bin/tmpnam /tmp/feat" ].fsf
-
-}
-
-#}}}
-#{{{ feat5:scrollform_resize
-
-proc feat5:scrollform_resize { w0 viewport } {
-
-    set MAXWIDTH  950
-    set MAXHEIGHT 600
-
-    set fwidth  [ winfo width $viewport.f ]
-    if { $fwidth > $MAXWIDTH } {
-	set fwidth $MAXWIDTH
-	pack $w0.xsbar -fill x -in $w0
-    } else {
-	pack forget $w0.f.xsbar
-    }
-
-    set fheight [ winfo height $viewport.f ]
-    if { $fheight > $MAXHEIGHT } {
-	set fheight $MAXHEIGHT
-	pack $w0.f.ysbar -side right -fill y -in $w0.f
-    } else {
-	pack forget $w0.f.ysbar
-    }
-
-    $viewport configure -width $fwidth -height $fheight -scrollregion [ $viewport bbox all ]
-}
-
-#}}}
-#{{{ feat5:multiple_select
-
-proc feat5:multiple_select { w which_files windowtitle } {
-    global FSLDIR fmri VARS PWD feat_files unwarp_files unwarp_files_mag initial_highres_files highres_files
-
-    #{{{ setup window
-
-    set count 0
-    set w0 ".dialog[incr count]"
-    while { [ winfo exists $w0 ] } {
-        set w0 ".dialog[incr count]"
-    }
-
-    toplevel $w0
-
-    wm iconname $w0 "Select"
-    wm iconbitmap $w0 @${FSLDIR}/tcl/fmrib.xbm
-
-    wm title $w0 $windowtitle
-
-    frame $w0.f
-    pack $w0.f -expand yes -fill both -in $w0 -side top
-
-    canvas $w0.f.viewport -yscrollcommand "$w0.f.ysbar set"
-    scrollbar $w0.f.ysbar -command "$w0.f.viewport yview" -orient vertical
-    frame $w0.f.viewport.f
-    $w0.f.viewport create window 0 0 -anchor nw -window $w0.f.viewport.f
-    bind $w0.f.viewport.f <Configure> "feat5:scrollform_resize $w0 $w0.f.viewport"
-    pack $w0.f.viewport -side left -fill both -expand true -in $w0.f
-
-#}}}
-    #{{{ setup file selections
-
-set pastevar feat_files
-
-for { set i 1 } { $i <= $fmri(multiple) } { incr i 1 } {
-    if { $which_files < 1 } {
-	if { ( $fmri(level) == 1 && $fmri(analysis) != 4 && $fmri(analysis) != 0 ) || $fmri(inputtype) == 2 } {
-            FileEntry $w0.filename$i -textvariable feat_files($i) -filetypes IMAGE 
-	} else {
-            FileEntry $w0.filename$i -textvariable feat_files($i) -filetypes *.feat -dirasfile design.fsf
-	}
-    } elseif { $which_files == 1 } {
-        FileEntry $w0.filename$i -textvariable unwarp_files($i) -filetypes IMAGE 
-	set pastevar unwarp_files
-    } elseif { $which_files == 2 } {
-         FileEntry $w0.filename$i -textvariable unwarp_files_mag($i) -filetypes IMAGE 
-	set pastevar unwarp_files_mag
-    } elseif { $which_files == 3 } {
-         FileEntry $w0.filename$i -textvariable initial_highres_files($i) -filetypes IMAGE 
-	set pastevar initial_highres_files
-    } elseif { $which_files == 4 } {
-        FileEntry $w0.filename$i -textvariable highres_files($i) -filetypes IMAGE 
-	set pastevar highres_files
-    }
-    $w0.filename$i configure  -label " $i:   " -title "Select input data" -width 60 -filedialog directory
-    pack $w0.filename$i -in $w0.f.viewport.f -side top -expand yes -fill both -padx 3 -pady 3
-}
-
-#}}}
-    #{{{ setup buttons
-
-frame $w0.btns
-frame $w0.btns.b -relief raised -borderwidth 1
-
-button $w0.pastebutton -command "feat5:multiple_paste \"Input data\" 1 $fmri(multiple) $pastevar x" -text "Paste"
-
-button $w0.cancel -command "feat5:multiple_check $w $which_files 1 1 d; destroy $w0" -text "OK"
-
-pack $w0.btns.b -side bottom -fill x -padx 3 -pady 5
-pack $w0.pastebutton $w0.cancel -in $w0.btns.b -side left -expand yes -padx 3 -pady 3 -fill y
-pack $w0.btns -expand yes -fill x
-
-#}}}
-}
-
-#}}}
-#{{{ feat5:multiple_check
-
-proc feat5:multiple_check { w which_files load updateimageinfo dummy } {
-    global FSLDIR fmri feat_files unwarp_files unwarp_files_mag initial_highres_files highres_files
-    if { $which_files < 0 } {
-	set load 0
-	featquery_whichstats $w
-    }
-
-    if { $which_files > 0 } {
-
-	if { !$fmri(reg_yn) } {
-	    return 0
-	}
-
-	set fmri(regstandard) [ remove_ext $fmri(regstandard) ]
-	if { [ exec sh -c "${FSLDIR}/bin/avwnvols $fmri(regstandard) 2> /dev/null" ] < 1 } {
-	    MxPause "Warning: standard image not valid"
-	    return 1
-	}
-    }
-
-    if { $fmri(multiple) < 2 } {
-	set nmultiple 1
-    } else {
-	set nmultiple $fmri(multiple)
-    }
-
-    set AllOK 1
-
-    for { set i 1 } { $i <= $nmultiple } { incr i 1 } {
-
-	if { $which_files == 0 } {
-
-	    if { ! [ info exists feat_files($i) ] } {
-		set feat_files($i) ""
-	    }
-
-	    if { ! [ file exists $feat_files($i) ] && ! [ imtest $feat_files($i) ] } {
-		set AllOK 0
-	    } else {
-		if { $fmri(level) == 1 && $fmri(analysis) != 4 && $fmri(analysis) != 0 } {
-		    if {  $i == 1 && $updateimageinfo } {
-			feat5:updateimageinfo $w $i 1
-		    }
-		} else {
-
-		    if { $fmri(inputtype) == 1 } {
-			if { ! [ file exists $feat_files($i)/design.fsf ] } {
-			    set AllOK 0
-			} else {
-			    if { $load && $i == 1 && $fmri(level)==1 } {
-				feat5:load $w 0 $feat_files(1)/design.fsf
-				if { $fmri(level)==2 && $fmri(mixed_yn)==1 } {
-				    MxPause "Error: re-running just Post-stats is not possible on existing higher-level FEAT directories that were generated using FLAME 1+2.
-
-To change thresholding, either fully re-run FLAME 1+2 analysis with different Post-stats settings, or fully re-run using FLAME 1, after which it is possible to re-run purely Post-stats."
-				    set AllOK 0
-				} else {
-				    MxPause "Warning: have just loaded in design information from the design.fsf
-in the first FEAT directory in the list."
-				}
-			    }
-			}
-		    }
-		}
-	    }
-
-	    if { $fmri(level) == 2 && $AllOK } {
-		feat5:updateselect $w
-	    }
-
-	} elseif { $which_files == 1 } {
-
-	    if { ! [ info exists unwarp_files($i) ] } {
-		set unwarp_files($i) ""
-	    }
-
-	    set unwarp_files($i) [ remove_ext $unwarp_files($i) ]
-	    if { [ exec sh -c "${FSLDIR}/bin/avwnvols $unwarp_files($i) 2> /dev/null" ] < 1 } {
-		set AllOK 0
-	    }
-
-	} elseif { $which_files == 2 } {
-
-	    if { ! [ info exists unwarp_files_mag($i) ] } {
-		set unwarp_files_mag($i) ""
-	    }
-	    
-	    set unwarp_files_mag($i) [ remove_ext $unwarp_files_mag($i) ]
-	    if { [ exec sh -c "${FSLDIR}/bin/avwnvols $unwarp_files_mag($i) 2> /dev/null" ] < 1 } { 
-		set AllOK 0
-	    }
-
-	} elseif { $which_files == 3 } {
-
-	    if { ! [ info exists initial_highres_files($i) ] } {
-		set initial_highres_files($i) ""
-	    }
-
-	    set initial_highres_files($i) [ remove_ext $initial_highres_files($i) ]
-	    if { [ exec sh -c "${FSLDIR}/bin/avwnvols $initial_highres_files($i) 2> /dev/null" ] < 1 } {
-		set AllOK 0
-	    }
-
-	} elseif { $which_files == 4 } {
-
-	    if { ! [ info exists highres_files($i) ] } {
-		set highres_files($i) ""
-	    }
-
-	    set highres_files($i) [ remove_ext $highres_files($i) ]
-	    if { [ exec sh -c "${FSLDIR}/bin/avwnvols $highres_files($i) 2> /dev/null" ] < 1 } {
-		set AllOK 0
-	    }
-
-	}
-    }
-    if { ! $AllOK } {
-	MxPause "Warning: you haven't filled in all the relevant selections with valid
-filenames - this could include image data, FEAT directories,
-unwarp input files and high-resolution images."
-	return 1
-    }
-    return 0
-}
-
-#}}}
-#{{{ feat5:multiple_paste
-
-proc feat5:multiple_paste { windowtitle xdim ydim var1name var2 } {
-    global FSLDIR
-    upvar $var1name var1
-
-    #{{{ setup window
-
-set count 0
-set w0 ".dialog[incr count]"
-while { [ winfo exists $w0 ] } {
-    set w0 ".dialog[incr count]"
-}
-
-toplevel $w0
-
-wm iconname $w0 "Paste"
-wm iconbitmap $w0 @${FSLDIR}/tcl/fmrib.xbm
-
-wm title $w0 "$windowtitle - ${ydim}x$xdim Paste Window"
-
-#}}}
-    #{{{ setup main panel
-
-scrollbar $w0.xsbar -command "$w0.text xview" -orient horizontal
-scrollbar $w0.ysbar -command "$w0.text yview" -orient vertical
-
-text $w0.text -xscrollcommand "$w0.xsbar set" -yscrollcommand "$w0.ysbar set" \
-  -width 60 -height 20 -wrap none 
-
-pack $w0.xsbar -side bottom -fill x
-pack $w0.ysbar -side right  -fill y
-
-pack $w0.text -side left -expand yes -fill both
-
-#}}}
-    #{{{ setup buttons
-
-frame $w0.buttons
-
-button $w0.buttons.clear -command "$w0.text delete 0.0 end" -text "Clear"
-
-button $w0.buttons.cancel -command "feat5:multiple_paste_process $w0 $xdim $ydim $var1name $var2" -text "OK"
-
-pack $w0.buttons -before $w0.xsbar -side bottom
-
-pack $w0.buttons.clear $w0.buttons.cancel -in $w0.buttons -side left -padx 3 -pady 3
-
-#}}}
-    #{{{ fill paste window
-
-    for { set y 1 } { $y <= $ydim } { incr y 1 } {
-	for { set x 1 } { $x <= $xdim } { incr x 1 } {
-	    if { $var2 == "x" } {
-		$w0.text insert end "$var1(${y})"
-	    } else {
-		$w0.text insert end "$var1(${var2}${y}.${x})\t"
-	    }
-	}
-	$w0.text insert end "\n"
-    }
-
-#}}}
-}
-
-proc feat5:multiple_paste_process { w0 xdim ydim var1name var2 } {
-    upvar $var1name var1
-
-    set alltext [ concat [ $w0.text get 0.0 end ] ]
-
-    if { [ llength $alltext ] < [ expr $xdim * $ydim ] } {
-	MxPause "Not enough entries!"
-	return 1
-    }
-
-    set i 0
-    for { set y 1 } { $y <= $ydim } { incr y 1 } {
-	for { set x 1 } { $x <= $xdim } { incr x 1 } {
-	    if { $var2 == "x" } {
-		set var1(${y}) [ lindex $alltext $i ]
-	    } else {
-		set var1(${var2}${y}.${x}) [ lindex $alltext $i ]
-	    }
-	    incr i 1
-	}
-    }
-
-    destroy $w0
-}
-
-#}}}
-#{{{ feat5:apply
-
-proc feat5:apply { w } {
-    global fmri feat_files unwarp_files unwarp_files_mag initial_highres_files highres_files FSLDIR HOME
-
-    #{{{ update variables
-
-# not needed with the new non-tix widgets
-
-#foreach v { tr ndelete paradigm_hp brain_thresh smooth uncorrected voxel prob_thresh z_thresh zmin zmax } {
-#    $w.$v update
-#}
-
-#}}}
-    #{{{ write model
-
-if { $fmri(level) > 1 || $fmri(stats_yn) || $fmri(poststats_yn) } {
-    set createthemodel 1
-} else {
-    set createthemodel 0
-}
-
-if { [ feat5:write $w $createthemodel 1 1 $fmri(feat_filename) ] } {
-    return 1
-}
-
-#}}}
-    #{{{ if level>1 test for existing registration
-
-if { $fmri(level) > 1 && $fmri(analysis) != 4 } {
-
-    set problem 0
-
-    for { set i 1 } { $i <= $fmri(multiple) } { incr i 1 } {
-
-	set featdirname $feat_files($i)
-	if { $fmri(inputtype) == 2 } {
-	    set featdirname [ file dirname [ file dirname $featdirname ] ]
-	}
-
-	if { ! [ file exists $featdirname/reg/example_func2standard.mat ] && 
-	     ! [ file exists $featdirname/example_func2standard.mat ] && 
-	     ! [ file exists $featdirname/design.lev ] } {
-	    set problem 1
-	}
-    }
-
-    if { $problem } {
-	MxPause "Registration has not been run for all of the FEAT directories that you have selected for group analysis.
-
-Please turn on and setup registration."
-	return 1
-    }
-
-}
-
-#}}}
-    #{{{ create delay if required
-
-set thedelay ""
-if { $fmri(delay) > 0.003 } {
-    set thedelay "sleep [ expr int( $fmri(delay) * 60.0 * 60.0 ) ] ; "
-}
-
-#}}}
-
-    set FSFROOT [ file rootname $fmri(feat_filename) ]
-
-    set feat_script $FSLDIR/bin/feat
-    if { [ file exists /usr/local/bin/feat_fmrib ] } {
-	set feat_script /usr/local/bin/feat_fmrib
-    }
-
-    catch { exec sh -c "$thedelay $feat_script $FSFROOT" & } junk
-
-    set fmri(feat_filename) [ exec sh -c "${FSLDIR}/bin/tmpnam /tmp/feat" ].fsf
-
-    update idletasks
-}
-
-#}}}
-#{{{ feat5:updateanalysis and updatelevel
-
-proc feat5:updatelevel { w } {
-    global fmri
-   
-    if { $fmri(level) == 1 } {
-        $w.mode.analysis.menu entryconfigure 0 -state normal
-        $w.mode.analysis.menu entryconfigure 7 -state normal
-        $w.mode.analysis.menu entryconfigure 1 -state normal
-        $w.mode.analysis.menu entryconfigure 3 -state normal
-        $w.mode.analysis.menu entryconfigure 2 -state normal
-        $w.mode.analysis.menu entryconfigure 5 -state normal
-	set fmri(analysis) 7
-	set fmri(reg_yn) 1
-	set fmri(r_count) 30
-	set fmri(a_count) 30
-    } else {
-	set fmri(analysis) 6
-	set fmri(reg_yn) 0
-        $w.mode.analysis.menu entryconfigure 0 -state disabled
-        $w.mode.analysis.menu entryconfigure 7 -state disabled
-        $w.mode.analysis.menu entryconfigure 1 -state disabled
-        $w.mode.analysis.menu entryconfigure 3 -state disabled
-        $w.mode.analysis.menu entryconfigure 2 -state disabled
-        $w.mode.analysis.menu entryconfigure 5 -state disabled
-    }
-
-    feat5:setup_model_vars_simple $w
-    set fmri(filmsetup) 0
-    feat5:updateanalysis $w
-    #Im case model is already open, update to resize altered optionmenus
-    #if {[info exists fmri(evsf)]} { $fmri(evsf).evsnb compute_size; $fmri(notebook) compute_size }
-}
-
-proc feat5:updateanalysis { w } {
-    global fmri
-
-    set fmri(filtering_yn) [ expr   $fmri(analysis)       % 2 == 1 ]
-    set fmri(stats_yn)     [ expr ( $fmri(analysis) / 2 ) % 2 == 1 ]
-    set fmri(poststats_yn) [ expr ( $fmri(analysis) / 4 ) % 2 == 1 ]
-
-    #{{{ update notebook view
-
-if { !$fmri(filtering_yn) } {
-    $w.nb itemconfigure filtering -state disabled
-}  else {
-    $w.nb itemconfigure filtering -state normal
-}
-
-if { !$fmri(stats_yn) } {
-    $w.nb itemconfigure stats -state disabled
-}  else {
-    $w.nb itemconfigure stats -state normal
-}
-
-if { !$fmri(poststats_yn) } {
-    $w.nb itemconfigure poststats -state disabled
-} else {
-    $w.nb itemconfigure poststats -state normal
-    if { !$fmri(stats_yn) } {
-	set fmri(ndelete) 0
-    }
-}
-
-if { $fmri(level)==1 } {
-    $w.nb itemconfigure reg -state normal
-}  else {
-    $w.nb itemconfigure reg -state disabled
-}
-
-#}}}
-    #{{{ update misc and data
-
-pack forget $w.newdir_yn
-if { $fmri(analysis) == 0 || $fmri(analysis) == 4 } {
-    pack $w.newdir_yn -in $fmri(miscf) -anchor w -side top -padx 3 -pady 1
-}
-
-pack forget $w.contrastest $w.sscleanup
-if { $fmri(level) == 1 } {
-    pack $w.contrastest -in $fmri(miscf) -anchor w -side top -padx 3 -pady 1
-} else {
-    pack $w.sscleanup -in $fmri(miscf) -anchor w -side top -padx 5 -pady 1
-}    
-
-if { $fmri(level)==2 && $fmri(analysis)==4 } {
-    set fmri(inputtype) 1
-}
-
-pack forget $w.inputtype $w.datamain $w.outputdir  
-if { $fmri(analysis) != 0 && $fmri(analysis) != 4 } {
-    pack $w.outputdir -in $fmri(dataf) -anchor w -side top -pady 10
-    if { $fmri(level) == 1  } {
-	pack $w.datamain  -in $fmri(dataf) -anchor w -side top -pady 3
-    } else {
-	pack $w.inputtype -in $fmri(dataf) -before $w.multiple -anchor w -side top -pady 3
-    }
-}
-
-#}}}
-
-    feat5:updatestats $w 0
-    feat5:updatepoststats $w
-    feat5:updatereg $w
-    $w.nb raise data
-}
-
-#}}}
-#{{{ feat5:updateselect
-
-proc feat5:updateselect { w } {
-    global fmri feat_files
-
-    set fmri(anal_min) 1
-    if { $fmri(level)==2 && $fmri(analysis)!=4 } {
-        set fmri(anal_min) 2
-	if { $fmri(multiple) < 2 } {
-	    set fmri(multiple) 2
-	}
-    }
-    $w.multiple.number configure  -range " $fmri(anal_min) 10000 1 " -validate focusout -vcmd "validInt %W %V %P %s $fmri(anal_min) 10000"
-    if { $fmri(level) == 1 && $fmri(analysis) != 4 && $fmri(analysis) != 0 } {
-	$w.multiple.setup configure -text "Select 4D data"
-    } else {
-	if { $fmri(level) == 1 || $fmri(inputtype) == 1 } {
-	    if { $fmri(multiple) == 1 } {
-		$w.multiple.setup configure -text "Select FEAT directory"
-	    } else {
-		$w.multiple.setup configure -text "Select FEAT directories"
-	    }
-	} else {
-		$w.multiple.setup configure -text "Select cope images"
-	}
-    }
-
-    pack forget $fmri(unwarpff).unwarpmultiple $fmri(unwarpff).unwarpsingle $fmri(unwarpff).unwarpmagmultiple $fmri(unwarpff).unwarpmagsingle \
-	    $fmri(initial_highresf).initial_highresmultiple $fmri(initial_highresf).initial_highressingle \
-	    $fmri(highresf).highresmultiple $fmri(highresf).highressingle
-
-    if { ! $fmri(relative_yn) } {
-	if { $fmri(multiple) < 2 } {
-	    pack $fmri(unwarpff).unwarpsingle $fmri(unwarpff).unwarpmagsingle -in $fmri(unwarpff) -before $fmri(unwarpff).opts1 -anchor w -side top -pady 2 -padx 3
-	    pack $fmri(initial_highresf).initial_highressingle -in $fmri(initial_highresf) -before $fmri(initial_highresf).opts -anchor w -side top -pady 2 -padx 3
-	    pack $fmri(highresf).highressingle -in $fmri(highresf) -before $fmri(highresf).opts -anchor w -side top -pady 2 -padx 3
-	} else {
-	    pack $fmri(unwarpff).unwarpmultiple $fmri(unwarpff).unwarpmagmultiple -in $fmri(unwarpff) -before $fmri(unwarpff).opts1 -anchor w -side top -pady 2 -padx 3
-	    pack $fmri(initial_highresf).initial_highresmultiple -in $fmri(initial_highresf) -before $fmri(initial_highresf).opts -anchor w -side top -pady 2 -padx 3
-	    pack $fmri(highresf).highresmultiple -in $fmri(highresf) -before $fmri(highresf).opts -anchor w -side top -pady 2 -padx 3
-	}
-    }
-
-    if { [ winfo exists $w.copeinputs ] } {
-	destroy $w.copeinputs
-    }
-    if { $fmri(level) == 2 &&
-	 $fmri(inputtype) == 1 &&
-	 $fmri(analysis) != 4 &&
-	 [ info exists feat_files(1) ] &&
-	 [ file exists $feat_files(1) ] } {
-	#{{{ input cope select
-
-frame $w.copeinputs
-pack $w.copeinputs -in $fmri(dataf) -before $w.outputdir -side top -anchor w -padx 4 -pady 4
-
-set w0 $w.copeinputs
-frame $w0.f
-pack $w0.f -expand yes -fill both -in $w0 -side top
-canvas $w0.f.viewport -xscrollcommand "$w0.xsbar set" -borderwidth 0
-scrollbar $w0.xsbar -command "$w0.f.viewport xview" -orient horizontal
-frame $w0.f.viewport.f
-$w0.f.viewport create window 0 0 -anchor nw -window $w0.f.viewport.f
-bind $w0.f.viewport.f <Configure> "feat5:scrollform_resize $w0 $w0.f.viewport"
-pack $w0.f.viewport -side left -fill both -expand true -in $w0.f
-set v $w0.f.viewport.f
-
-set statslist [ lsort -dictionary [ imglob -oneperimage $feat_files(1)/stats/cope*.* ] ]
-set fmri(ncopeinputs) [ llength $statslist ]
-    
-if { $fmri(ncopeinputs) < 1 } {
-    MxPause "Warning: the first selected FEAT directory contains no stats/cope images"
-    return 1
-}
-
-label $v.0 -text "Use lower-level copes: "
-grid $v.0 -in $v -column 0 -row 0
-
-for { set nci 1 } { $nci <=  $fmri(ncopeinputs) } { incr nci 1 } {   
-    if { ! [ info exists fmri(copeinput.$nci) ] } {
-	set fmri(copeinput.$nci) 1
-    }
-    checkbutton $v.$nci -variable fmri(copeinput.$nci) -text "$nci "
-    grid $v.$nci -in $v -column $nci -row 0
-}
-balloonhelp_for $w.copeinputs "The higher-level FEAT analysis will be run separately for each
-lower-level contrast. You can tell FEAT to ignore certain lower-level
-contrasts by turning off the appropriate button."
-
-#}}}
-    }
-if { [ winfo exists $w.nb ] } {$w.nb compute_size }
-}
-
-#}}}
-#{{{ feat5:updatehelp
-
-proc feat5:updatehelp { w } {
-    global fmri 
-
-    balloonhelp_control $fmri(help_yn)
-}
-
-#}}}
-#{{{ feat5:updateperfusion
-
-proc feat5:updateperfusion { w } {
-    global fmri
-
-    set fmri(templp_yn) 0
-
-    if { ! $fmri(perfsub_yn) } {
-        set fmri(prewhiten_yn) 1
-        pack forget $w.temp.tcmenu
-    } else {
-        set fmri(prewhiten_yn) 0
-        pack $w.temp.tcmenu -in $w.temp -after $w.temp.ps_yn -side top -side left -padx 5
-    }
-
-    $w.nb compute_size
-
-    MxPause "Warning - you have changed the \"Perfusion subtraction\" setting, which may have changed the prewhitening option."
-}
-
-#}}}
-#{{{ feat5:updateprestats
-
-proc feat5:updateprestats { w } {
-    global fmri
-
-    if { $fmri(st) < 3 || $fmri(st) > 4 } {
-	pack forget $w.st_file
-    } else {
-	pack $w.st_file -in $fmri(stf) -side left -padx 5
-    }
-
-    if { $fmri(regunwarp_yn) } {
-	pack forget $fmri(unwarpf).label 
-	pack $fmri(unwarpf).lf -in $fmri(unwarpf) -side left
-    } else {
-	pack forget $fmri(unwarpf).lf 
-	pack $fmri(unwarpf).label -in $fmri(unwarpf) -side left -before $fmri(unwarpf).yn
-    }
-    $w.nb compute_size
-}
-
-#}}}
-#{{{ feat5:updatestats
-
-proc feat5:updatestats { w process } {
-    global fmri
-
-    if { $process } {
-	if { [ info exists fmri(w_model) ] && [ winfo exists $fmri(w_model) ] } {
-	    destroy $fmri(w_model)
-	}
-	feat5:setup_model_vars_simple $w
-	if { [ feat5:setup_model_preview $w ] } {
-	    return 1
-	}
-    }
-    if { $fmri(infeat) } {
-	pack forget $w.prewhiten $w.wizard $w.model $w.mixed $w.motionevs
-	if { $fmri(level) == 1 } {
-	    pack $w.prewhiten $w.motionevs $w.wizard $w.model -in $fmri(statsf) -anchor w -side top -padx 5 -pady 3
-	} else {
-	    pack $w.mixed $w.wizard $w.model -in $fmri(statsf) -anchor w -side top -padx 5 -pady 3
-	}
-    } else {
-	glm:updatelevel $w
-    }
-}
-
-#}}}
-#{{{ feat5:updatepoststats
-
-proc feat5:updatepoststats { w } {
-    global fmri
-
-    pack forget $w.modelcon $w.z_thresh $w.prob_thresh $w.conmask $w.render $w.bgimage $w.zmin $w.zmax
-
-    if { ! $fmri(stats_yn) } {
-	pack $w.modelcon -in $fmri(poststatsf) -before $fmri(poststatsf).threshmask -side top -anchor w -padx 5 -pady 5
-    }
-
-    if { $fmri(thresh) } {
-	if { $fmri(thresh) == 1 } {
-            $w.prob_thresh configure -label "Uncorrected voxel P threshold"
-	} elseif { $fmri(thresh) == 2 } {
-	    $w.prob_thresh configure -label "Corrected voxel P threshold"
-	} else {
-	    $w.prob_thresh configure -label "Cluster P threshold"
-             pack $w.z_thresh -in $fmri(lfthresh) -side left -anchor w -pady 2
-	}
-        pack $w.prob_thresh -in $fmri(lfthresh) -side left
-
-
-	pack $w.conmask -in $fmri(poststatsf) -after $w.thresh -side top -anchor w -pady 5 -padx 5
-	pack $w.render  -in $fmri(poststatsf) -after $w.conmask -side top -anchor w -pady 5
-
-	pack $fmri(lfrenderingtop) -in $fmri(lfrendering) -anchor w -padx 3 -pady 3
-
-	if { $fmri(level) > 1 } {
-	    pack $w.bgimage -in $fmri(lfrendering) -before $fmri(lfrenderingtop) -anchor w -padx 3 -pady 3
-	}
-	
-	if { $fmri(zdisplay) } {
-	    pack $w.zmin $w.zmax -in $fmri(lfrenderingtop) -after $w.zmaxmenu -side left -anchor n -padx 3 -pady 5
-	}
-    }
-
-    $w.nb compute_size
-}
-
-#}}}
-#{{{ feat5:updatereg
-
-proc feat5:updatereg_hr_init { w } {
-    global fmri
-
-    if { $fmri(reginitial_highres_yn) == 1 } {
-	set fmri(reghighres_yn) 1
-    }
-
-    feat5:updatereg $w
-}
-
-proc feat5:updatereg_hr { w } {
-    global fmri
-
-    if { $fmri(reghighres_yn) == 0 } {
-	set fmri(reginitial_highres_yn) 0
-    }
-
-    feat5:updatereg $w
-}
-
-proc feat5:updatereg { w } {
-    global fmri
-
-    if { $fmri(regreduce_dof) > 0 } {
-	set fmri(reginitial_highres_dof) 12
-	set fmri(reghighres_dof) 12
-	set fmri(regstandard_dof) 12
-
-	set thedof 7
-	if { $fmri(regreduce_dof) == 2 } {
-	    set thedof 3
-	}
-
-	if { $fmri(reginitial_highres_yn) } {
-	    set fmri(reginitial_highres_dof) $thedof
-	} elseif { $fmri(reghighres_yn) } {
-	    set fmri(reghighres_dof) $thedof
-	} elseif { $fmri(regstandard_yn) } {
-	    set fmri(regstandard_dof) $thedof
-	}
-    }
-
-    if { $fmri(reginitial_highres_yn) } {
-	pack forget $fmri(regf).initial_highres.label 
-	pack $fmri(regf).initial_highres.lf -in $fmri(regf).initial_highres -side left
-    } else {
-	pack forget $fmri(regf).initial_highres.lf 
-	pack $fmri(regf).initial_highres.label -in $fmri(regf).initial_highres -side left
-    }
-
-    if { $fmri(reghighres_yn) } {
-	pack forget $fmri(regf).highres.label 
-	pack $fmri(regf).highres.lf -in $fmri(regf).highres -side left
-    } else {
-	pack forget $fmri(regf).highres.lf 
-	pack $fmri(regf).highres.label -in $fmri(regf).highres -side left
-    }
-
-    if { $fmri(regstandard_yn) } {
-	pack forget $fmri(regf).standard.label 
-	pack $fmri(regf).standard.lf -in $fmri(regf).standard -side left
-    } else {
-	pack forget $fmri(regf).standard.lf 
-	pack $fmri(regf).standard.label -in $fmri(regf).standard -side left
-    }
-    feat5:updateselect $w
-}
-
-#}}}
-#{{{ feat5:updateimageinfo
-
-proc feat5:updateimageinfo { w i full } {
-    global FSLDIR feat_files fmri
-
-    set thefile [ remove_ext $feat_files($i) ]
-
-    set changed_stuff 0
-
-    if { [ imtest $thefile ] } {
-	set feat_files($i) $thefile
-	set npts [ exec sh -c "${FSLDIR}/bin/avwnvols $thefile 2> /dev/null" ]
-
-	if { $npts > 0 } {
-	    set fmri(npts) $npts
-	}
-
-	if { $full } {
-
-	    # set BET and FLIRT DOF according to FOV
-	    set xfov [ expr abs([ exec sh -c "$FSLDIR/bin/avwval $thefile pixdim1" ] * [ exec sh -c "$FSLDIR/bin/avwval $thefile dim1" ]) ]
-	    set yfov [ expr abs([ exec sh -c "$FSLDIR/bin/avwval $thefile pixdim2" ] * [ exec sh -c "$FSLDIR/bin/avwval $thefile dim2" ]) ]
-	    set zfov [ expr abs([ exec sh -c "$FSLDIR/bin/avwval $thefile pixdim3" ] * [ exec sh -c "$FSLDIR/bin/avwval $thefile dim3" ]) ]
-	    
-	    set BETMINFOV 30
-	    if { $xfov < $BETMINFOV || $yfov < $BETMINFOV || $zfov < $BETMINFOV } {
-		set fmri(bet_yn) 0
-		set changed_stuff 1
-	    }
-
-	    set fmri(regreduce_dof) 0
-
-	    set REGMINFOV 120
-	    if { $xfov < $REGMINFOV || $yfov < $REGMINFOV || $zfov < $REGMINFOV } {
-		set fmri(regreduce_dof) 1
-		feat5:updatereg $w
-		set changed_stuff 1
-	    }
-
-	    set REGTRANSMINFOV 60
-	    if { $xfov < $REGTRANSMINFOV || $yfov < $REGTRANSMINFOV || $zfov < $REGTRANSMINFOV } {
-		set fmri(regreduce_dof) 2
-		feat5:updatereg $w
-		set changed_stuff 1
-	    }
-
-	    if { $changed_stuff } {
-		MxPause "Warning - have auto-set BET preprocessing option and/or registration DoF on the basis of image fields-of-view; check settings."
-	    }
-	}
-    }
-
-    if { $fmri(level) > 1 && $fmri(analysis) != 4 } {
-	set fmri(npts) $fmri(multiple)
-    }
-}
-
-#}}}
+### general procs
 #{{{ feat5:write
 
 proc feat5:write { w feat_model write_image_filenames exitoncheckfail filename } {
     global fmri FSLDIR feat_files unwarp_files unwarp_files_mag initial_highres_files highres_files
-    if { $fmri(level) == 1 && $fmri(analysis) > 0 && $fmri(con_mode) == "orig" && [ feat5:setup_model_update_contrasts_mode $w 0] == -1 } {
+    if { ! $fmri(inmelodic) && $fmri(level) == 1 && $fmri(analysis) > 0 && $fmri(con_mode) == "orig" && [ feat5:setup_model_update_contrasts_mode $w 0] == -1 } {
 	return -1
     }
 
@@ -1031,6 +94,9 @@ proc feat5:write { w feat_model write_image_filenames exitoncheckfail filename }
 # FEAT version number
 set fmri(version) $fmri(version)
 
+# Are we in MELODIC?
+set fmri(inmelodic) $fmri(inmelodic)
+
 # Analysis level
 # 1 : First-level analysis
 # 2 : Higher-level analysis
@@ -1045,9 +111,6 @@ set fmri(level) $fmri(level)
 # 6 :             Stats + Post-stats
 # 4 :                     Post-stats
 set fmri(analysis) $fmri(analysis)
-
-# Delay before starting (hours)
-set fmri(delay) $fmri(delay)
 
 # Use relative filenames
 set fmri(relative_yn) $fmri(relative_yn)
@@ -1386,7 +449,8 @@ set highres_files($i) \"$highres_files($i)\""
 }
 
 #}}}
-    #{{{ EVs
+    if { ! $fmri(inmelodic) } {
+	#{{{ EVs
 
 	for { set i 1 } { $i <= $fmri(evs_orig) } { incr i 1 } {
 
@@ -1575,7 +639,7 @@ set fmri(groupmem.$j) $fmri(groupmem.$j)"
 	}
 
 #}}}
-    #{{{ contrasts & F-tests
+	#{{{ contrasts & F-tests
 
 puts $channel "
 # Contrast & F-tests mode
@@ -1645,6 +709,38 @@ puts $channel "
 set fmri(conmask1_1) $fmri(conmask1_1)"
 
 #}}}
+    } else {
+	#{{{ MELODIC
+
+puts $channel "
+# Resampling resolution
+set fmri(regstandard_res) $fmri(regstandard_res)
+
+# Variance-normalise timecourses
+set fmri(varnorm) $fmri(varnorm)
+
+# Automatic dimensionality estimation
+set fmri(dim_yn) $fmri(dim_yn)
+
+# Output components
+set fmri(dim) $fmri(dim)
+
+# 1 : Single-session ICA
+# 2 : Multi-session temporal concatenation
+# 3 : Multi-session tensor ICA
+set fmri(icaopt) $fmri(icaopt)
+
+# Threshold IC maps
+set fmri(thresh_yn) $fmri(thresh_yn)
+
+# Mixture model threshold
+set fmri(mmthresh) $fmri(mmthresh)
+
+# Output full stats folder
+set fmri(ostats) $fmri(ostats)"
+
+#}}}
+    }
     #{{{ non-GUI options
 
     puts $channel "
@@ -1653,9 +749,6 @@ set fmri(conmask1_1) $fmri(conmask1_1)"
 
 # Alternative example_func image (not derived from input 4D dataset)
 set fmri(alternative_example_func) \"$fmri(alternative_example_func)\"
-
-# Delete GLM residuals?
-set fmri(cleanup_residuals_yn) $fmri(cleanup_residuals_yn)
 
 # Initial structural space registration initialisation transform
 set fmri(init_initial_highres) \"$fmri(init_initial_highres)\"
@@ -1691,56 +784,1045 @@ proc feat5:load { w full filename } {
     global fmri feat_files unwarp_files unwarp_files_mag initial_highres_files highres_files
 
     set FEATVERSION $fmri(version)
+    set INMELODIC [ exec sh -c "grep 'fmri(inmelodic)' $filename | tail -n 1 | awk '{ print \$3 }'" ]
 
-    set version [ exec sh -c "grep 'fmri(version)' $filename | awk '{ print \$3 }'" ]
+    if { $INMELODIC != 1 } {
 
-    if { $version > 4.99 } {
+	set version [ exec sh -c "grep 'fmri(version)' $filename | awk '{ print \$3 }'" ]
+    
+	if { $version > 4.99 } {
 
-	if { $w != -1 } {
-	    set level    $fmri(level)
-	    set analysis $fmri(analysis)
-	    set multiple $fmri(multiple)
-	    set reg_yn   $fmri(reg_yn)
-	    for { set i 1 } { $i <= $multiple } { incr i 1 } {
-		if { [ info exists feat_files($i) ] } {
-		    set lfeat_files($i) $feat_files($i)
+	    if { $w != -1 } {
+		set level    $fmri(level)
+		set analysis $fmri(analysis)
+		set multiple $fmri(multiple)
+		set reg_yn   $fmri(reg_yn)
+		for { set i 1 } { $i <= $multiple } { incr i 1 } {
+		    if { [ info exists feat_files($i) ] } {
+			set lfeat_files($i) $feat_files($i)
+		    }
 		}
 	    }
-	}
 
-	source ${filename}
+	    source ${filename}
 
-	if { $w != -1 && $fmri(analysis) != 4 && $fmri(analysis) != 0 } {
-	    feat5:updateimageinfo $w 1 0
-	}
+	    if { $w != -1 && $fmri(analysis) != 4 && $fmri(analysis) != 0 } {
+		feat5:updateimageinfo $w 1 0
+	    }
+	    
+	    if { ! $full } {
+		if { $level != $fmri(level) } {
+		    feat5:updatelevel $w 
+		    set fmri(level) $level
+		}
 
-	if { ! $full } {
-	    if { $level != $fmri(level) } {
-		feat5:updatelevel $w 
-		set fmri(level) $level
+		set fmri(npts) [ expr $fmri(npts) - $fmri(ndelete) ]
+		set fmri(ndelete) 0
+		set fmri(reg_yn)   $reg_yn
+		set fmri(analysis) $analysis
+		set fmri(multiple) $multiple
+		for { set i 1 } { $i <= $multiple } { incr i 1 } {
+		    set feat_files($i) $lfeat_files($i)
+		}
 	    }
 
-	    set fmri(npts) [ expr $fmri(npts) - $fmri(ndelete) ]
-	    set fmri(ndelete) 0
-	    set fmri(reg_yn)   $reg_yn
-	    set fmri(analysis) $analysis
-	    set fmri(multiple) $multiple
-	    for { set i 1 } { $i <= $multiple } { incr i 1 } {
-		set feat_files($i) $lfeat_files($i)
+	    if { $w != -1 } {
+		feat5:updateanalysis $w
+		feat5:updatehelp $w
+		feat5:updateprestats $w
 	    }
-	}
 
-	if { $w != -1 } {
-	    feat5:updateanalysis $w
-	    feat5:updatehelp $w
-	    feat5:updateprestats $w
+	} else {
+	    MxPause "FEAT setup file is too old to load - sorry!"
 	}
-
     } else {
-	MxPause "FEAT setup file is too old to load - sorry!"
+	source ${filename}
     }
     
     set fmri(version) $FEATVERSION
+}
+
+#}}}
+
+### GUI procs
+#{{{ feat5:setupdefaults
+
+proc feat5:setupdefaults { } {
+    global fmri FSLDIR HOME
+
+    set fmri(version) 5.80
+
+    set fmri(inmelodic) 0
+
+    # load defaults (mandatory!)
+    if { [ file exists ${FSLDIR}/etc/fslconf/feat.tcl ] } {
+	source ${FSLDIR}/etc/fslconf/feat.tcl
+    } else {
+	MxPause "error: FEAT default settings file ${FSLDIR}/etc/fslconf/feat.tcl doesn't exist!"
+	exit 1
+    }
+
+    # load user-specific defaults if they exist 
+    if { [ file exists ${HOME}/.fslconf/feat.tcl ] } {
+	source ${HOME}/.fslconf/feat.tcl
+    }
+
+    set fmri(design_help) "This is a graphical representation of the design matrix and parameter
+contrasts.
+
+The bar on the left is a representation of time, which starts at the
+top and points downwards. The white marks show the position of every
+10th volume in time. The red bar shows the period of the longest
+temporal cycle which was passed by the highpass filtering.
+
+The main top part shows the design matrix; time is represented on the
+vertical axis and each column is a different (real) explanatory
+variable (e.g., stimulus type). Both the red lines and the black-white
+images represent the same thing - the variation of the waveform in
+time.
+
+Below this is shown the requested contrasts; each row is a different
+contrast vector and each column refers to the weighting of the
+relevant explanatory variable. Thus each row will result in a Z
+statistic image.
+
+If F-tests have been specified, these appear to the right of the
+contrasts; each column is a different F-test, with the inclusion of
+particular contrasts depicted by filled squares instead of empty
+ones."
+
+    set fmri(infeat) 1
+
+    set fmri(filtering_yn) 1
+    set fmri(sh_yn) 0
+    set fmri(st_file) ""
+
+    set fmri(stats_yn) 1
+    set fmri(wizard_type) 1
+
+    set fmri(poststats_yn) 1
+
+    set fmri(threshmask) ""
+
+    set fmri(reg_yn) 1
+    set fmri(reginitial_highres_nonlinear_yn) 0
+    set fmri(reghighres_nonlinear_yn) 0
+    set fmri(regstandard_nonlinear_yn) 0
+
+    set fmri(ncopeinputs) 0
+    set fmri(inputtype) 1
+    set fmri(multiple) 1
+    set fmri(outputdir) ""
+    set fmri(relative_yn) 0
+    set fmri(constcol) 0
+    set fmri(con_mode) orig
+    set fmri(con_mode_old) orig
+    set fmri(evs_orig) 1
+    set fmri(evs_real) 1
+    set fmri(ncon_real) 1
+    set fmri(ncon_orig) 1
+    set fmri(nftests_real) 0
+    set fmri(nftests_orig) 0
+
+    set fmri(feat_filename) [ exec sh -c "${FSLDIR}/bin/tmpnam /tmp/feat" ].fsf
+
+    set fmri(regstandard_res) 0
+}
+
+#}}}
+#{{{ feat5:scrollform_resize
+
+proc feat5:scrollform_resize { w0 viewport } {
+
+    set MAXWIDTH  950
+    set MAXHEIGHT 600
+
+    set fwidth  [ winfo width $viewport.f ]
+    if { $fwidth > $MAXWIDTH } {
+	set fwidth $MAXWIDTH
+	pack $w0.xsbar -fill x -in $w0
+    } else {
+	pack forget $w0.f.xsbar
+    }
+
+    set fheight [ winfo height $viewport.f ]
+    if { $fheight > $MAXHEIGHT } {
+	set fheight $MAXHEIGHT
+	pack $w0.f.ysbar -side right -fill y -in $w0.f
+    } else {
+	pack forget $w0.f.ysbar
+    }
+
+    $viewport configure -width $fwidth -height $fheight -scrollregion [ $viewport bbox all ]
+}
+
+#}}}
+#{{{ feat5:multiple_select
+
+proc feat5:multiple_select { w which_files windowtitle } {
+    global FSLDIR fmri VARS PWD feat_files unwarp_files unwarp_files_mag initial_highres_files highres_files
+
+    #{{{ setup window
+
+    set count 0
+    set w0 ".dialog[incr count]"
+    while { [ winfo exists $w0 ] } {
+        set w0 ".dialog[incr count]"
+    }
+
+    toplevel $w0
+
+    wm iconname $w0 "Select"
+    wm iconbitmap $w0 @${FSLDIR}/tcl/fmrib.xbm
+
+    wm title $w0 $windowtitle
+
+    frame $w0.f
+    pack $w0.f -expand yes -fill both -in $w0 -side top
+
+    canvas $w0.f.viewport -yscrollcommand "$w0.f.ysbar set"
+    scrollbar $w0.f.ysbar -command "$w0.f.viewport yview" -orient vertical
+    frame $w0.f.viewport.f
+    $w0.f.viewport create window 0 0 -anchor nw -window $w0.f.viewport.f
+    bind $w0.f.viewport.f <Configure> "feat5:scrollform_resize $w0 $w0.f.viewport"
+    pack $w0.f.viewport -side left -fill both -expand true -in $w0.f
+
+#}}}
+    #{{{ setup file selections
+
+set pastevar feat_files
+
+for { set i 1 } { $i <= $fmri(multiple) } { incr i 1 } {
+    if { $which_files < 1 } {
+	if { ( $fmri(level) == 1 && $fmri(analysis) != 4 && $fmri(analysis) != 0 ) || $fmri(inputtype) == 2 } {
+            FileEntry $w0.filename$i -textvariable feat_files($i) -filetypes IMAGE 
+	} else {
+            FileEntry $w0.filename$i -textvariable feat_files($i) -filetypes *.feat -dirasfile design.fsf
+	}
+    } elseif { $which_files == 1 } {
+        FileEntry $w0.filename$i -textvariable unwarp_files($i) -filetypes IMAGE 
+	set pastevar unwarp_files
+    } elseif { $which_files == 2 } {
+         FileEntry $w0.filename$i -textvariable unwarp_files_mag($i) -filetypes IMAGE 
+	set pastevar unwarp_files_mag
+    } elseif { $which_files == 3 } {
+         FileEntry $w0.filename$i -textvariable initial_highres_files($i) -filetypes IMAGE 
+	set pastevar initial_highres_files
+    } elseif { $which_files == 4 } {
+        FileEntry $w0.filename$i -textvariable highres_files($i) -filetypes IMAGE 
+	set pastevar highres_files
+    }
+    $w0.filename$i configure  -label " $i:   " -title "Select input data" -width 60 -filedialog directory
+    pack $w0.filename$i -in $w0.f.viewport.f -side top -expand yes -fill both -padx 3 -pady 3
+}
+
+#}}}
+    #{{{ setup buttons
+
+frame $w0.btns
+frame $w0.btns.b -relief raised -borderwidth 1
+
+button $w0.pastebutton -command "feat5:multiple_paste \"Input data\" 1 $fmri(multiple) $pastevar x" -text "Paste"
+
+button $w0.cancel -command "feat5:multiple_check $w $which_files 1 1 d; destroy $w0" -text "OK"
+
+pack $w0.btns.b -side bottom -fill x -padx 3 -pady 5
+pack $w0.pastebutton $w0.cancel -in $w0.btns.b -side left -expand yes -padx 3 -pady 3 -fill y
+pack $w0.btns -expand yes -fill x
+
+#}}}
+}
+
+#}}}
+#{{{ feat5:multiple_check
+
+proc feat5:multiple_check { w which_files load updateimageinfo dummy } {
+    global FSLDIR fmri feat_files unwarp_files unwarp_files_mag initial_highres_files highres_files
+    if { $which_files < 0 } {
+	set load 0
+	featquery_whichstats $w
+    }
+
+    if { $which_files > 0 } {
+
+	if { !$fmri(reg_yn) } {
+	    return 0
+	}
+
+	set fmri(regstandard) [ remove_ext $fmri(regstandard) ]
+	if { [ exec sh -c "${FSLDIR}/bin/fslnvols $fmri(regstandard) 2> /dev/null" ] < 1 } {
+	    MxPause "Warning: standard image not valid"
+	    return 1
+	}
+    }
+
+    if { $fmri(multiple) < 2 } {
+	set nmultiple 1
+    } else {
+	set nmultiple $fmri(multiple)
+    }
+
+    set AllOK 1
+
+    for { set i 1 } { $i <= $nmultiple } { incr i 1 } {
+
+	if { $which_files == 0 } {
+
+	    if { ! [ info exists feat_files($i) ] } {
+		set feat_files($i) ""
+	    }
+
+	    if { ! [ file exists $feat_files($i) ] && ! [ imtest $feat_files($i) ] } {
+		set AllOK 0
+	    } else {
+		if { $fmri(level) == 1 && $fmri(analysis) != 4 && $fmri(analysis) != 0 } {
+		    set feat_files($i) [ remove_ext $feat_files($i) ]
+		    if {  $i == 1 && $updateimageinfo } {
+			feat5:updateimageinfo $w $i 1
+		    }
+		} else {
+
+		    if { $fmri(inputtype) == 1 } {
+			if { ! [ file exists $feat_files($i)/design.fsf ] } {
+			    set AllOK 0
+			} else {
+			    if { $load && $i == 1 && $fmri(level)==1 } {
+				feat5:load $w 0 $feat_files(1)/design.fsf
+				if { $fmri(level)==2 && $fmri(mixed_yn)==1 } {
+				    MxPause "Error: re-running just Post-stats is not possible on existing higher-level FEAT directories that were generated using FLAME 1+2.
+
+To change thresholding, either fully re-run FLAME 1+2 analysis with different Post-stats settings, or fully re-run using FLAME 1, after which it is possible to re-run purely Post-stats."
+				    set AllOK 0
+				} else {
+				    MxPause "Warning: have just loaded in design information from the design.fsf
+in the first FEAT directory in the list."
+				}
+			    }
+			}
+		    }
+		}
+	    }
+
+	    if { $fmri(level) == 2 && $AllOK } {
+		feat5:updateselect $w
+	    }
+
+	} elseif { $which_files == 1 } {
+
+	    if { ! [ info exists unwarp_files($i) ] } {
+		set unwarp_files($i) ""
+	    }
+
+	    set unwarp_files($i) [ remove_ext $unwarp_files($i) ]
+	    if { [ exec sh -c "${FSLDIR}/bin/fslnvols $unwarp_files($i) 2> /dev/null" ] < 1 } {
+		set AllOK 0
+	    }
+
+	} elseif { $which_files == 2 } {
+
+	    if { ! [ info exists unwarp_files_mag($i) ] } {
+		set unwarp_files_mag($i) ""
+	    }
+	    
+	    set unwarp_files_mag($i) [ remove_ext $unwarp_files_mag($i) ]
+	    if { [ exec sh -c "${FSLDIR}/bin/fslnvols $unwarp_files_mag($i) 2> /dev/null" ] < 1 } { 
+		set AllOK 0
+	    }
+
+	} elseif { $which_files == 3 } {
+
+	    if { ! [ info exists initial_highres_files($i) ] } {
+		set initial_highres_files($i) ""
+	    }
+
+	    set initial_highres_files($i) [ remove_ext $initial_highres_files($i) ]
+	    if { [ exec sh -c "${FSLDIR}/bin/fslnvols $initial_highres_files($i) 2> /dev/null" ] < 1 } {
+		set AllOK 0
+	    }
+
+	} elseif { $which_files == 4 } {
+
+	    if { ! [ info exists highres_files($i) ] } {
+		set highres_files($i) ""
+	    }
+
+	    set highres_files($i) [ remove_ext $highres_files($i) ]
+	    if { [ exec sh -c "${FSLDIR}/bin/fslnvols $highres_files($i) 2> /dev/null" ] < 1 } {
+		set AllOK 0
+	    }
+
+	}
+    }
+    if { ! $AllOK } {
+	MxPause "Warning: you haven't filled in all the relevant selections with valid
+filenames - this could include image data, FEAT directories,
+unwarp input files and high-resolution images."
+	return 1
+    }
+    return 0
+}
+
+#}}}
+#{{{ feat5:multiple_paste
+
+proc feat5:multiple_paste { windowtitle xdim ydim var1name var2 } {
+    global FSLDIR
+    upvar $var1name var1
+
+    #{{{ setup window
+
+set count 0
+set w0 ".dialog[incr count]"
+while { [ winfo exists $w0 ] } {
+    set w0 ".dialog[incr count]"
+}
+
+toplevel $w0
+
+wm iconname $w0 "Paste"
+wm iconbitmap $w0 @${FSLDIR}/tcl/fmrib.xbm
+
+wm title $w0 "$windowtitle - ${ydim}x$xdim Paste Window"
+
+#}}}
+    #{{{ setup main panel
+
+scrollbar $w0.xsbar -command "$w0.text xview" -orient horizontal
+scrollbar $w0.ysbar -command "$w0.text yview" -orient vertical
+
+text $w0.text -xscrollcommand "$w0.xsbar set" -yscrollcommand "$w0.ysbar set" \
+  -width 60 -height 20 -wrap none 
+
+pack $w0.xsbar -side bottom -fill x
+pack $w0.ysbar -side right  -fill y
+
+pack $w0.text -side left -expand yes -fill both
+
+#}}}
+    #{{{ setup buttons
+
+frame $w0.buttons
+
+button $w0.buttons.clear -command "$w0.text delete 0.0 end" -text "Clear"
+
+button $w0.buttons.cancel -command "feat5:multiple_paste_process $w0 $xdim $ydim $var1name $var2" -text "OK"
+
+pack $w0.buttons -before $w0.xsbar -side bottom
+
+pack $w0.buttons.clear $w0.buttons.cancel -in $w0.buttons -side left -padx 3 -pady 3
+
+#}}}
+    #{{{ fill paste window
+
+    for { set y 1 } { $y <= $ydim } { incr y 1 } {
+	for { set x 1 } { $x <= $xdim } { incr x 1 } {
+	    if { $var2 == "x" } {
+		$w0.text insert end "$var1(${y})"
+	    } else {
+		$w0.text insert end "$var1(${var2}${y}.${x})\t"
+	    }
+	}
+	$w0.text insert end "\n"
+    }
+
+#}}}
+}
+
+proc feat5:multiple_paste_process { w0 xdim ydim var1name var2 } {
+    upvar $var1name var1
+
+    set alltext [ concat [ $w0.text get 0.0 end ] ]
+
+    if { [ llength $alltext ] < [ expr $xdim * $ydim ] } {
+	MxPause "Not enough entries!"
+	return 1
+    }
+
+    set i 0
+    for { set y 1 } { $y <= $ydim } { incr y 1 } {
+	for { set x 1 } { $x <= $xdim } { incr x 1 } {
+	    if { $var2 == "x" } {
+		set var1(${y}) [ lindex $alltext $i ]
+	    } else {
+		set var1(${var2}${y}.${x}) [ lindex $alltext $i ]
+	    }
+	    incr i 1
+	}
+    }
+
+    destroy $w0
+}
+
+#}}}
+#{{{ feat5:apply
+
+proc feat5:apply { w } {
+    global fmri feat_files unwarp_files unwarp_files_mag initial_highres_files highres_files FSLDIR HOME
+
+    #{{{ update variables
+
+# not needed with the new non-tix widgets
+
+#foreach v { tr ndelete paradigm_hp brain_thresh smooth uncorrected voxel prob_thresh z_thresh zmin zmax } {
+#    $w.$v update
+#}
+
+#}}}
+    #{{{ write model
+
+if { $fmri(level) > 1 || $fmri(stats_yn) || $fmri(poststats_yn) } {
+    set createthemodel 1
+} else {
+    set createthemodel 0
+}
+
+if { [ feat5:write $w $createthemodel 1 1 $fmri(feat_filename) ] } {
+    return 1
+}
+
+#}}}
+    #{{{ if level>1 test for existing registration
+
+if { $fmri(level) > 1 && $fmri(analysis) != 4 } {
+
+    set problem 0
+
+    for { set i 1 } { $i <= $fmri(multiple) } { incr i 1 } {
+
+	set featdirname $feat_files($i)
+	if { $fmri(inputtype) == 2 } {
+	    set featdirname [ file dirname [ file dirname $featdirname ] ]
+	}
+
+	if { ! [ file exists $featdirname/reg/example_func2standard.mat ] && 
+	     ! [ file exists $featdirname/example_func2standard.mat ] && 
+	     ! [ file exists $featdirname/design.lev ] } {
+	    set problem 1
+	}
+    }
+
+    if { $problem } {
+	MxPause "Registration has not been run for all of the FEAT directories that you have selected for group analysis.
+
+Please turn on and setup registration."
+	return 1
+    }
+
+}
+
+#}}}
+
+    set FSFROOT [ file rootname $fmri(feat_filename) ]
+
+    catch { exec sh -c "$FSLDIR/bin/feat $FSFROOT" & } junk
+
+    set fmri(feat_filename) [ exec sh -c "${FSLDIR}/bin/tmpnam /tmp/feat" ].fsf
+
+    update idletasks
+}
+
+#}}}
+#{{{ feat5:updateanalysis and updatelevel
+
+proc feat5:updatelevel { w } {
+    global fmri
+   
+    if { $fmri(inmelodic) } {
+	return 0
+    }
+
+    if { $fmri(level) == 1 } {
+        $w.mode.analysis.menu entryconfigure 0 -state normal
+        $w.mode.analysis.menu entryconfigure 7 -state normal
+        $w.mode.analysis.menu entryconfigure 1 -state normal
+        $w.mode.analysis.menu entryconfigure 3 -state normal
+        $w.mode.analysis.menu entryconfigure 2 -state normal
+        $w.mode.analysis.menu entryconfigure 5 -state normal
+	set fmri(analysis) 7
+	set fmri(reg_yn) 1
+	set fmri(r_count) 30
+	set fmri(a_count) 30
+    } else {
+	set fmri(analysis) 6
+	set fmri(reg_yn) 0
+        $w.mode.analysis.menu entryconfigure 0 -state disabled
+        $w.mode.analysis.menu entryconfigure 7 -state disabled
+        $w.mode.analysis.menu entryconfigure 1 -state disabled
+        $w.mode.analysis.menu entryconfigure 3 -state disabled
+        $w.mode.analysis.menu entryconfigure 2 -state disabled
+        $w.mode.analysis.menu entryconfigure 5 -state disabled
+    }
+
+    feat5:setup_model_vars_simple $w
+    set fmri(filmsetup) 0
+    feat5:updateanalysis $w
+    #Im case model is already open, update to resize altered optionmenus
+    #if {[info exists fmri(evsf)]} { $fmri(evsf).evsnb compute_size; $fmri(notebook) compute_size }
+}
+
+proc feat5:updateanalysis { w } {
+    global fmri
+
+    set fmri(filtering_yn) [ expr   $fmri(analysis)       % 2 == 1 ]
+    set fmri(stats_yn)     [ expr ( $fmri(analysis) / 2 ) % 2 == 1 ]
+    set fmri(poststats_yn) [ expr ( $fmri(analysis) / 4 ) % 2 == 1 ]
+
+    #{{{ update notebook view
+
+if { !$fmri(filtering_yn) } {
+    $w.nb itemconfigure filtering -state disabled
+}  else {
+    $w.nb itemconfigure filtering -state normal
+}
+
+if { !$fmri(stats_yn) } {
+    $w.nb itemconfigure stats -state disabled
+}  else {
+    $w.nb itemconfigure stats -state normal
+}
+
+if { !$fmri(poststats_yn) } {
+    $w.nb itemconfigure poststats -state disabled
+} else {
+    $w.nb itemconfigure poststats -state normal
+    if { !$fmri(stats_yn) } {
+	set fmri(ndelete) 0
+    }
+}
+
+if { $fmri(level)==1 } {
+    $w.nb itemconfigure reg -state normal
+}  else {
+    $w.nb itemconfigure reg -state disabled
+}
+
+#}}}
+    #{{{ update misc and data
+
+pack forget $fmri(miscf).newdir_yn
+if { $fmri(analysis) == 0 || $fmri(analysis) == 4 } {
+    pack $fmri(miscf).newdir_yn -in $fmri(miscf) -anchor w -side top -padx 3 -pady 1
+}
+
+pack forget $fmri(contrastest) $fmri(miscf).sscleanup
+if { $fmri(inmelodic) == 0 } {
+    if { $fmri(level) == 1 } {
+	pack $fmri(contrastest) -in $fmri(miscf) -anchor w -side top -padx 3 -pady 1
+    } else {
+	pack $fmri(miscf).sscleanup -in $fmri(miscf) -anchor w -side top -padx 5 -pady 1
+    }
+}
+
+if { $fmri(level)==2 && $fmri(analysis)==4 } {
+    set fmri(inputtype) 1
+}
+
+pack forget $fmri(dataf).inputtype $fmri(dataf).datamain $fmri(dataf).outputdir  
+if { $fmri(analysis) != 0 && $fmri(analysis) != 4 } {
+    pack $fmri(dataf).outputdir -in $fmri(dataf) -anchor w -side top -pady 10
+    if { $fmri(level) == 1  } {
+	pack $fmri(dataf).datamain  -in $fmri(dataf) -anchor w -side top -pady 3
+    } else {
+	pack $fmri(dataf).inputtype -in $fmri(dataf) -before $fmri(dataf).multiple -anchor w -side top -pady 3
+    }
+}
+
+#}}}
+
+    feat5:updatestats $w 0
+    feat5:updatepoststats $w
+    feat5:updatereg $w
+    $w.nb raise data
+}
+
+#}}}
+#{{{ feat5:updateselect
+
+proc feat5:updateselect { w } {
+    global fmri feat_files
+
+    set fmri(anal_min) 1
+    if { ( $fmri(level)==2 && $fmri(analysis)!=4 ) || ( $fmri(inmelodic) && $fmri(icaopt)>1 ) } {
+        set fmri(anal_min) 2
+	if { $fmri(multiple) < 2 } {
+	    set fmri(multiple) 2
+	}
+    }
+    $fmri(dataf).multiple.number configure  -range " $fmri(anal_min) 10000 1 " -validate focusout -vcmd "validNum %W %V %P %s $fmri(anal_min) 10000"
+    if { $fmri(level) == 1 && $fmri(analysis) != 4 && $fmri(analysis) != 0 } {
+	$fmri(dataf).multiple.setup configure -text "Select 4D data"
+    } else {
+	if { $fmri(level) == 1 || $fmri(inputtype) == 1 } {
+	    if { $fmri(multiple) == 1 } {
+		$fmri(dataf).multiple.setup configure -text "Select FEAT directory"
+	    } else {
+		$fmri(dataf).multiple.setup configure -text "Select FEAT directories"
+	    }
+	} else {
+		$fmri(dataf).multiple.setup configure -text "Select cope images"
+	}
+    }
+
+    pack forget $fmri(unwarpff).unwarpmultiple $fmri(unwarpff).unwarpsingle $fmri(unwarpff).unwarpmagmultiple $fmri(unwarpff).unwarpmagsingle \
+	    $fmri(initial_highresf).initial_highresmultiple $fmri(initial_highresf).initial_highressingle \
+	    $fmri(highresf).highresmultiple $fmri(highresf).highressingle
+
+    if { ! $fmri(relative_yn) } {
+	if { $fmri(multiple) < 2 } {
+	    pack $fmri(unwarpff).unwarpsingle $fmri(unwarpff).unwarpmagsingle -in $fmri(unwarpff) -before $fmri(unwarpff).opts1 -anchor w -side top -pady 2 -padx 3
+	    pack $fmri(initial_highresf).initial_highressingle -in $fmri(initial_highresf) -before $fmri(initial_highresf).opts -anchor w -side top -pady 2 -padx 3
+	    pack $fmri(highresf).highressingle -in $fmri(highresf) -before $fmri(highresf).opts -anchor w -side top -pady 2 -padx 3
+	} else {
+	    pack $fmri(unwarpff).unwarpmultiple $fmri(unwarpff).unwarpmagmultiple -in $fmri(unwarpff) -before $fmri(unwarpff).opts1 -anchor w -side top -pady 2 -padx 3
+	    pack $fmri(initial_highresf).initial_highresmultiple -in $fmri(initial_highresf) -before $fmri(initial_highresf).opts -anchor w -side top -pady 2 -padx 3
+	    pack $fmri(highresf).highresmultiple -in $fmri(highresf) -before $fmri(highresf).opts -anchor w -side top -pady 2 -padx 3
+	}
+    }
+
+    if { [ winfo exists $w.copeinputs ] } {
+	destroy $w.copeinputs
+    }
+    if { $fmri(level) == 2 &&
+	 $fmri(inputtype) == 1 &&
+	 $fmri(analysis) != 4 &&
+	 [ info exists feat_files(1) ] &&
+	 [ file exists $feat_files(1) ] } {
+	#{{{ input cope select
+
+frame $w.copeinputs
+pack $w.copeinputs -in $fmri(dataf) -before $fmri(dataf).outputdir -side top -anchor w -padx 4 -pady 4
+
+set w0 $w.copeinputs
+frame $w0.f
+pack $w0.f -expand yes -fill both -in $w0 -side top
+canvas $w0.f.viewport -xscrollcommand "$w0.xsbar set" -borderwidth 0
+scrollbar $w0.xsbar -command "$w0.f.viewport xview" -orient horizontal
+frame $w0.f.viewport.f
+$w0.f.viewport create window 0 0 -anchor nw -window $w0.f.viewport.f
+bind $w0.f.viewport.f <Configure> "feat5:scrollform_resize $w0 $w0.f.viewport"
+pack $w0.f.viewport -side left -fill both -expand true -in $w0.f
+set v $w0.f.viewport.f
+
+set statslist [ lsort -dictionary [ imglob -oneperimage $feat_files(1)/stats/cope*.* ] ]
+set fmri(ncopeinputs) [ llength $statslist ]
+    
+if { $fmri(ncopeinputs) < 1 } {
+    MxPause "Warning: the first selected FEAT directory contains no stats/cope images"
+    return 1
+}
+
+label $v.0 -text "Use lower-level copes: "
+grid $v.0 -in $v -column 0 -row 0
+
+for { set nci 1 } { $nci <=  $fmri(ncopeinputs) } { incr nci 1 } {   
+    if { ! [ info exists fmri(copeinput.$nci) ] } {
+	set fmri(copeinput.$nci) 1
+    }
+    checkbutton $v.$nci -variable fmri(copeinput.$nci) -text "$nci "
+    grid $v.$nci -in $v -column $nci -row 0
+}
+balloonhelp_for $w.copeinputs "The higher-level FEAT analysis will be run separately for each
+lower-level contrast. You can tell FEAT to ignore certain lower-level
+contrasts by turning off the appropriate button."
+
+#}}}
+    }
+    if { [ winfo exists $w.nb ] } {
+	$w.nb compute_size
+    }
+}
+
+#}}}
+#{{{ feat5:updatehelp
+
+proc feat5:updatehelp { w } {
+    global fmri 
+
+    balloonhelp_control $fmri(help_yn)
+}
+
+#}}}
+#{{{ feat5:updateperfusion
+
+proc feat5:updateperfusion { w } {
+    global fmri
+
+    set fmri(templp_yn) 0
+
+    if { ! $fmri(perfsub_yn) } {
+        set fmri(prewhiten_yn) 1
+        pack forget $fmri(temp).tcmenu
+    } else {
+        set fmri(prewhiten_yn) 0
+        pack $fmri(temp).tcmenu -in $fmri(temp) -after $fmri(temp).ps_yn -side top -side left -padx 5
+    }
+
+    if { [ winfo exists $w.nb ] } {
+	$w.nb compute_size
+    }
+
+    MxPause "Warning - you have changed the \"Perfusion subtraction\" setting, which may have changed the prewhitening option."
+}
+
+#}}}
+#{{{ feat5:updateprestats
+
+proc feat5:updateprestats { w } {
+    global fmri
+
+    if { $fmri(st) < 3 || $fmri(st) > 4 } {
+	pack forget $fmri(stf).st_file
+    } else {
+	pack $fmri(stf).st_file -in $fmri(stf) -side left -padx 5
+    }
+
+    if { $fmri(regunwarp_yn) } {
+	pack forget $fmri(unwarpf).label 
+	pack $fmri(unwarpf).lf -in $fmri(unwarpf) -side left
+    } else {
+	pack forget $fmri(unwarpf).lf 
+	pack $fmri(unwarpf).label -in $fmri(unwarpf) -side left -before $fmri(unwarpf).yn
+    }
+    if { [ winfo exists $w.nb ] } {
+	$w.nb compute_size
+    }
+}
+
+#}}}
+#{{{ feat5:updatestats
+
+proc feat5:updatestats { w process } {
+    global fmri
+
+    if { $fmri(inmelodic) } {
+	return 0
+    }
+
+    if { $process } {
+	if { [ info exists fmri(w_model) ] && [ winfo exists $fmri(w_model) ] } {
+	    destroy $fmri(w_model)
+	}
+	feat5:setup_model_vars_simple $w
+	if { [ feat5:setup_model_preview $w ] } {
+	    return 1
+	}
+    }
+    if { $fmri(infeat) } {
+	pack forget $w.prewhiten $w.wizard $w.model $w.mixed $w.motionevs
+	if { $fmri(level) == 1 } {
+	    pack $w.prewhiten $w.motionevs $w.wizard $w.model -in $fmri(statsf) -anchor w -side top -padx 5 -pady 3
+	} else {
+	    pack $w.mixed $w.wizard $w.model -in $fmri(statsf) -anchor w -side top -padx 5 -pady 3
+	}
+    } else {
+	glm:updatelevel $w
+    }
+}
+
+#}}}
+#{{{ feat5:updatepoststats
+
+proc feat5:updatepoststats { w } {
+    global fmri
+
+    if { $fmri(inmelodic) } {
+	return 0
+    }
+
+    pack forget $w.modelcon $w.z_thresh $w.prob_thresh $w.conmask $w.render $w.bgimage $w.zmin $w.zmax
+
+    if { ! $fmri(stats_yn) } {
+	pack $w.modelcon -in $fmri(poststatsf) -before $fmri(poststatsf).threshmask -side top -anchor w -padx 5 -pady 5
+    }
+
+    if { $fmri(thresh) } {
+	if { $fmri(thresh) == 1 } {
+            $w.prob_thresh configure -label "Uncorrected voxel P threshold"
+	} elseif { $fmri(thresh) == 2 } {
+	    $w.prob_thresh configure -label "Corrected voxel P threshold"
+	} else {
+	    $w.prob_thresh configure -label "Cluster P threshold"
+             pack $w.z_thresh -in $fmri(lfthresh) -side left -anchor w -pady 2
+	}
+        pack $w.prob_thresh -in $fmri(lfthresh) -side left
+
+
+	pack $w.conmask -in $fmri(poststatsf) -after $w.thresh -side top -anchor w -pady 5 -padx 5
+	pack $w.render  -in $fmri(poststatsf) -after $w.conmask -side top -anchor w -pady 5
+
+	pack $fmri(lfrenderingtop) -in $fmri(lfrendering) -anchor w -padx 3 -pady 3
+
+	if { $fmri(level) > 1 } {
+	    pack $w.bgimage -in $fmri(lfrendering) -before $fmri(lfrenderingtop) -anchor w -padx 3 -pady 3
+	}
+	
+	if { $fmri(zdisplay) } {
+	    pack $w.zmin $w.zmax -in $fmri(lfrenderingtop) -after $w.zmaxmenu -side left -anchor n -padx 3 -pady 5
+	}
+    }
+
+    $w.nb compute_size
+}
+
+#}}}
+#{{{ feat5:updatereg
+
+proc feat5:updatereg_hr_init { w } {
+    global fmri
+
+    if { $fmri(reginitial_highres_yn) == 1 } {
+	set fmri(reghighres_yn) 1
+    }
+
+    feat5:updatereg $w
+}
+
+proc feat5:updatereg_hr { w } {
+    global fmri
+
+    if { $fmri(reghighres_yn) == 0 } {
+	set fmri(reginitial_highres_yn) 0
+    }
+
+    feat5:updatereg $w
+}
+
+proc feat5:updatereg { w } {
+    global fmri
+
+    if { $fmri(inmelodic) && $fmri(icaopt)>1 } {
+	set fmri(regstandard_yn) 1
+    }
+
+    if { $fmri(regreduce_dof) > 0 } {
+	set fmri(reginitial_highres_dof) 12
+	set fmri(reghighres_dof) 12
+	set fmri(regstandard_dof) 12
+
+	set thedof 7
+	if { $fmri(regreduce_dof) == 2 } {
+	    set thedof 3
+	}
+
+	if { $fmri(reginitial_highres_yn) } {
+	    set fmri(reginitial_highres_dof) $thedof
+	} elseif { $fmri(reghighres_yn) } {
+	    set fmri(reghighres_dof) $thedof
+	} elseif { $fmri(regstandard_yn) } {
+	    set fmri(regstandard_dof) $thedof
+	}
+    }
+
+    if { $fmri(reginitial_highres_yn) } {
+	pack forget $fmri(regf).initial_highres.label 
+	pack $fmri(regf).initial_highres.lf -in $fmri(regf).initial_highres -side left
+    } else {
+	pack forget $fmri(regf).initial_highres.lf 
+	pack $fmri(regf).initial_highres.label -in $fmri(regf).initial_highres -side left
+    }
+
+    if { $fmri(reghighres_yn) } {
+	pack forget $fmri(regf).highres.label 
+	pack $fmri(regf).highres.lf -in $fmri(regf).highres -side left
+    } else {
+	pack forget $fmri(regf).highres.lf 
+	pack $fmri(regf).highres.label -in $fmri(regf).highres -side left
+    }
+
+    if { $fmri(regstandard_yn) } {
+	pack forget $fmri(regf).standard.label 
+	pack $fmri(regf).standard.lf -in $fmri(regf).standard -side left
+    } else {
+	pack forget $fmri(regf).standard.lf 
+	pack $fmri(regf).standard.label -in $fmri(regf).standard -side left
+    }
+    feat5:updateselect $w
+}
+
+#}}}
+#{{{ feat5:updateimageinfo
+
+proc feat5:updateimageinfo { w i full } {
+    global FSLDIR feat_files fmri
+
+    set thefile [ remove_ext $feat_files($i) ]
+
+    set changed_stuff 0
+
+    if { [ imtest $thefile ] } {
+	set feat_files($i) $thefile
+	set npts [ exec sh -c "${FSLDIR}/bin/fslnvols $thefile 2> /dev/null" ]
+
+	if { $npts > 0 } {
+	    set fmri(npts) $npts
+	}
+
+	if { $full } {
+
+	    # set BET and FLIRT DOF according to FOV
+	    set xfov [ expr abs([ exec sh -c "$FSLDIR/bin/fslval $thefile pixdim1" ] * [ exec sh -c "$FSLDIR/bin/fslval $thefile dim1" ]) ]
+	    set yfov [ expr abs([ exec sh -c "$FSLDIR/bin/fslval $thefile pixdim2" ] * [ exec sh -c "$FSLDIR/bin/fslval $thefile dim2" ]) ]
+	    set zfov [ expr abs([ exec sh -c "$FSLDIR/bin/fslval $thefile pixdim3" ] * [ exec sh -c "$FSLDIR/bin/fslval $thefile dim3" ]) ]
+	    
+	    set BETMINFOV 30
+	    if { $xfov < $BETMINFOV || $yfov < $BETMINFOV || $zfov < $BETMINFOV } {
+		set fmri(bet_yn) 0
+		set changed_stuff 1
+	    }
+
+	    set fmri(regreduce_dof) 0
+
+	    set REGMINFOV 120
+	    if { $xfov < $REGMINFOV || $yfov < $REGMINFOV || $zfov < $REGMINFOV } {
+		set fmri(regreduce_dof) 1
+		feat5:updatereg $w
+		set changed_stuff 1
+	    }
+
+	    set REGTRANSMINFOV 60
+	    if { $xfov < $REGTRANSMINFOV || $yfov < $REGTRANSMINFOV || $zfov < $REGTRANSMINFOV } {
+		set fmri(regreduce_dof) 2
+		feat5:updatereg $w
+		set changed_stuff 1
+	    }
+
+	    if { $changed_stuff } {
+		MxPause "Warning - have auto-set BET preprocessing option and/or registration DoF on the basis of image fields-of-view; check settings."
+	    }
+	}
+    }
+
+    if { $fmri(level) > 1 && $fmri(analysis) != 4 } {
+	set fmri(npts) $fmri(multiple)
+    }
+}
+
+#}}}
+#{{{ feat5:estnoise
+
+proc feat5:estnoise { } {
+
+    global fmri feat_files FSLDIR
+
+    set smooth [ expr $fmri(smooth) / 2.355 ]
+
+    set hp_sigma_vol -1
+    if { $fmri(temphp_yn) } {
+	set hp_sigma_sec [ expr $fmri(paradigm_hp) / 2.0 ]
+	set hp_sigma_vol [ expr $hp_sigma_sec / $fmri(tr) ]
+    }
+
+    set lp_sigma_vol -1
+    if { $fmri(templp_yn) } {
+	set lp_sigma_sec 2.8
+	set lp_sigma_vol [ expr $lp_sigma_sec / $fmri(tr) ]
+    }
+
+    if { [ info exists feat_files(1) ] && [ imtest $feat_files(1) ] } {
+	set noiseestout [ exec sh -c "${FSLDIR}/bin/estnoise $feat_files(1) $smooth $hp_sigma_vol $lp_sigma_vol 2> /dev/null" ]
+	set fmri(noise)   [ lindex $noiseestout 0 ]
+	set fmri(noisear) [ lindex $noiseestout 1 ]
+    }
 }
 
 #}}}
@@ -1875,47 +1957,6 @@ proc feat5:update_wizard { w } {
 }
 
 #}}}
-
-#}}}
-#{{{ feat5:relative (DELETE)
-
-proc feat5:relative { input_1 input_2 output_1 } {
-
-    # find beginning of different substring
-    for { set start 1 } { $start < [ string length $input_1 ] && $start < [ string length $output_1 ] } { incr start 1 } {
-	if { [ string range $input_1  $start $start ] != [ string range $output_1 $start $start ] } {
-	    break
-	}
-    }
-
-    # find end of different substring
-    for { set end 1 } { $end < [ string length $input_1 ] && $end < [ string length $output_1 ] } { incr end 1 } {
-	if { [ string range $input_1 [ expr [ string length $input_1 ] - $end - 1 ] [ expr [ string length $input_1 ] - $end - 1 ] ] != \
-		[ string range $output_1 [ expr [ string length $output_1 ] - $end - 1 ] [ expr [ string length $output_1 ] - $end - 1 ] ] } {
-	    break
-	}
-    }
-
-    # set substrings_1a  [ string range $input_1  0 [ expr $start - 1 ] ]
-    set substrings_1bi [ string range $input_1  $start [ expr [ string length $input_1  ] - $end - 1 ] ]
-    set substrings_1bo [ string range $output_1 $start [ expr [ string length $output_1 ] - $end - 1 ] ]
-    # set substrings_1c  [ string range $input_1  [ expr [ string length $input_1 ] - $end ] [ expr [ string length $input_1 ] - 1 ] ]
-    
-    regsub $substrings_1bi $input_2 $substrings_1bo output_2
-
-    return $output_2
-}
-
-proc feat5:relativetest { } {
-
-feat5:relative /data/heidi/ac/ac_left.hdr /data/heidi/ac/ac_right.hdr /data/heidi/ac/ac_struct_brain.hdr
-feat5:relative /data/heidi/ac/ac_left.hdr /data/heidi/at/at_left.hdr /data/heidi/ac/ac_struct_brain.hdr
-feat5:relative /data/heidi/ac/ac_left.hdr /data/heidi/at/at_right.hdr /data/heidi/ac/ac_struct_brain.hdr
-feat5:relative /data/heidi/ac/fmri.hdr /data/heidi/at/fmri.hdr /data/heidi/ac/struct_brain.hdr
-feat5:relative /data/heidi/fmri/ac.hdr /data/heidi/fmri/at.hdr /data/heidi/struct/ac.hdr
-feat5:relative /grot/s1_fmri.hdr /grot/s2_fmri.hdr /grot/s1_struct.hdr
-
-}
 
 #}}}
 #{{{ feat5:setup_model
@@ -3671,31 +3712,2635 @@ proc feat5:setup_level2orth { w w1 } {
 #}}}
 
 #}}}
-#{{{ feat5:estnoise
+#{{{ feat5:misc_gui
 
-proc feat5:estnoise { } {
+proc feat5:misc_gui { w } {
 
-    global fmri feat_files FSLDIR
+    global fmri
+    set f $fmri(miscf)
 
-    set smooth [ expr $fmri(smooth) / 2.355 ]
+    #{{{ balloon help
+
+checkbutton $f.help -variable fmri(help_yn) -text "Balloon help" -command "feat5:updatehelp $w"  -justify right
+
+balloonhelp_for $f.help "And don't expect this message to appear whilst you've turned this
+option off!"
+feat5:updatehelp $w
+
+#}}}
+    #{{{ featwatcher
+
+checkbutton $f.featwatcher -variable fmri(featwatcher_yn) -text "Progress watcher" -justify right
+balloonhelp_for $f.featwatcher "Start a web browser to watch the analysis progress?"
+
+#}}}
+    #{{{ brain threshold
+
+LabelSpinBox $f.brain_thresh -label "Brain/background threshold, % " -textvariable fmri(brain_thresh) -range {0 100 1 } -width 3 
+balloonhelp_for $f.brain_thresh "This is automatically calculated, as a % of the maximum input image
+intensity. It is used in intensity normalisation, brain mask
+generation and various other places in the analysis."
+
+#}}}
+    #{{{ design efficiency
+
+TitleFrame  $f.contrastest -text "Design efficiency" -relief groove 
+set fmri(contrastest) $f.contrastest
+set cf [ $f.contrastest getframe ]
+
+LabelSpinBox $cf.noise -label "Noise level % " -textvariable fmri(noise) -range {0.0001 1000 .25 } -width 5 
+grid $cf.noise -in $cf -column 0 -row 0 -padx  3 -pady 3
+
+LabelSpinBox $cf.noisear -label "Temporal smoothness "  -textvariable fmri(noisear) -range {-0.99 0.99 .1 } -width 5 
+grid $cf.noisear -in $cf -column 1 -row 0 -padx 3 -pady 3
+
+LabelSpinBox $cf.critical_z  -label "Z threshold " -textvariable fmri(critical_z) -range {0.0001 100 1 } -width 5 
+grid $cf.critical_z -in $cf -column 1 -row 1 -padx 3 -pady 3
+balloonhelp_for $cf.critical_z "This is the Z value used to determine what level of activation would
+be statistically significant, to be used only in the design
+efficiency calculation. Increasing this will result in higher
+estimates of required effect."
+
+button $cf.estnoise -text "Estimate from data" -command "feat5:estnoise"
+grid $cf.estnoise -in $cf -column 0 -row 1 -padx 3 -pady 3
+
+balloonhelp_for $cf "The \"Noise level %\" and \"Temporal smoothness\" together
+characterise the noise in the data, to be used only in the design
+efficiency estimation.
+
+The \"Noise level %\" is the standard deviation (over time) for a
+typical voxel, expressed as a percentage of the baseline signal level.
+
+The \"Temporal smoothness\" is the smoothness coefficient in a simple
+AR(1) autocorrelation model (much simpler than that actually used in
+the FILM timeseries analysis but good enough for the efficiency
+calculation here).
+
+If you want to get a rough estimate of this noise level and temporal
+smoothness from your actual input data, press the \"Estimate from
+data\" button (after you have told FEAT where your input data
+is). This takes about 30-60 seconds to estimate. This applies just the
+spatial and temporal filtering (i.e., no motion correction) that you
+have specified in the \"Pre-stats\" section, and gives a reasonable
+approximation of the noise characteristics that will remain in the
+fully preprocessed data, once FEAT has run."
+
+#}}}
+    #{{{ new directory if re-thresholding
+
+optionMenu2 $f.newdir_yn fmri(newdir_yn) 0 "Overwrite original post-stats results" 1 "Copy original FEAT directory for new Post-stats / Registration"
+
+balloonhelp_for $f.newdir_yn "If you are just re-running post-stats or registration, you can either
+choose to overwrite the original post-stats and registration results
+or create a complete copy of the original FEAT directory, with the new
+results in it."
+
+#}}}
+    #{{{ cleanup first-level standard-space data
+
+checkbutton $f.sscleanup -variable fmri(sscleanup_yn) -text "Cleanup first-level standard-space images" -justify right
+
+balloonhelp_for $f.sscleanup "When you run a higher-level analysis, the first thing that happens is
+that first-level images are transformed into standard-space (in
+<firstlevel>.feat/reg_standard subdirectories) for feeding into the
+higher-level analysis. This takes up quite a lot of disk space, so if
+you want to save disk space, turn this option on and these these
+upsampled images will get deleted once they have been fed into the
+higher-level analysis. However, generating them can take quite a lot
+of time, so if you want to run several higher-level analyses, all
+using the same first-level FEAT directories, then leave this option
+turned off."
+
+#}}}
+
+    pack $f.help $f.featwatcher $f.brain_thresh $f.contrastest -in $f -anchor w -side top -padx 5 -pady 1
+}
+
+#}}}
+#{{{ feat5:data_gui
+
+proc feat5:data_gui { w } {
+
+    global FSLDIR fmri
+    set f $fmri(dataf)
+
+    #{{{ input type for higher-level
+
+optionMenu2 $f.inputtype fmri(inputtype) -command "feat5:updateselect $w" 1 "Inputs are lower-level FEAT directories" 2 "Inputs are 3D cope images from FEAT directories"
+balloonhelp_for $f.inputtype "Select the kind of input you want to feed into the higher-level FEAT
+analysis.
+
+If you choose to select \"FEAT directories\", then the higher-level design
+will get applied across the selected FEAT directories; each
+lower-level FEAT directory forms a \"time-point\" in the higher-level
+model. For example, each lower-level FEAT directory represents a
+single session in a multiple-session higher-level analysis or a single
+subject in a multiple-subject analysis. If the lower-level FEAT
+directories contain more than one contrast (cope), then the
+higher-level analysis is run separately for each one; in this case,
+the higher-level \".gfeat\" directory will end up contain more than
+one \".feat\" directory, one for each lower-level contrast. This
+option requires all lower-level FEAT directories to include the same
+set of contrasts.
+
+If you choose to select \"3D cope images from FEAT directories\", then
+you explicitly control which cope corresponds to which \"time-point\"
+to be fed into the higher-level analysis. For example, if you have only
+one lower-level FEAT directory, containing multiple contrasts (copes),
+and you want to carry out a higher-level analysis across these
+contrasts, then this is the correct option. With this option (as with
+the previous one), the chosen copes will automatically get transformed
+into standard space if necesary."
+
+#}}}
+    
+    #{{{ multiple analyses
+
+frame $f.multiple
+set fmri(anal_min) 1
+LabelSpinBox $f.multiple.number -label "Number of inputs " -textvariable fmri(multiple) -range " $fmri(anal_min) 10000 1 "  -width 3 -command "$f.multiple.number.spin.e validate; feat5:updateselect $w" -modifycmd "feat5:updateselect $w"
+button $f.multiple.setup -text "Select 4D data" -command "feat5:multiple_select $w 0 \"Select input data\" "
+pack $f.multiple.number $f.multiple.setup -in $f.multiple -side left -padx 5
+
+if { ! $fmri(inmelodic) } {
+    balloonhelp_for $f.multiple "Set the filename of the 4D input image (e.g. /home/sibelius/func.hdr).
+You can setup FEAT to process many input images, one after another, as
+long as they all require exactly the same analysis. Each one will
+generate its own FEAT directory, the name of which is based on the
+input data's filename.
+Alternatively, if you are running either just \"Post-stats\" or
+\"Registration only\", or running \"Higher-level analysis\", the
+selection of 4D data changes to the selection of FEAT directories.
+Note that in this case you should select the FEAT directories before
+setting up anything else in FEAT (such as changing the
+thresholds). This is because quite a lot of FEAT settings are loaded
+from the first selected FEAT directory, possibly over-writing any
+settings which you wish to change!"
+} else {
+    balloonhelp_for $f.multiple "Set the filename of the 4D input image.
+
+For standard single-session ICA analyses, you can setup multiple input
+images and MELODIC will be run separately on each.
+
+For multiple-session ICA analysis (whether concatenating data or using
+tensor-ICA) you must setup more than one input to be combined together
+in the final analysis."
+}
+
+#}}}
+
+    #{{{ output directory
+
+FileEntry $f.outputdir -textvariable fmri(outputdir) -label " Output directory  " -title "Name the output directory" -width 35 -filedialog directory -filetypes { }
+
+balloonhelp_for $f.outputdir "If this is left blank, the output directory name is derived from
+the input data name.
+
+If, however, you wish to explicitly choose the output directory name,
+for example, so that you can include in the name a hint about the
+particular analysis that was carried out, you can set this here.
+
+This output directory naming behaviour is modified if you are setting
+up multiple analyses, where you are selecting multiple input data sets
+and will end up with multiple output directories. In this case,
+whatever you enter here will be used and appended to what would have
+been the default output directory name if you had entered nothing."
+
+#}}}
+
+    frame $f.datamain
+    #{{{ npts & ndelete
+
+frame $f.datamain.nptsndelete
+
+#{{{ npts
+
+set fmri(npts) 0
+
+if { ! $fmri(inmelodic) } {
+
+    LabelSpinBox $f.datamain.nptsndelete.npts -label "Total volumes " -textvariable fmri(npts) -range {0 2000000 1 }
+    balloonhelp_for $f.datamain.nptsndelete.npts "The number of FMRI volumes in the time series, including any initial
+volumes that you wish to delete. This will get set automatically once
+valid input data has been selected.
+
+Alternatively you can set this number by hand before selecting data so
+that you can setup and view a model without having any data, for
+experimental planning purposes etc."
+
+} else {
+
+    frame $f.datamain.nptsndelete.npts
+    label $f.datamain.nptsndelete.npts.npts1 -text "Total volumes "
+    label $f.datamain.nptsndelete.npts.npts2 -textvariable fmri(npts)
+    balloonhelp_for $f.datamain.nptsndelete.npts "The number of FMRI volumes in the time series, including any initial
+volumes that you wish to delete. This will get set automatically once
+valid input data has been selected."
+    pack $f.datamain.nptsndelete.npts.npts1 $f.datamain.nptsndelete.npts.npts2 -in $f.datamain.nptsndelete.npts -side left
+
+}
+
+#}}}
+#{{{ ndelete
+
+LabelSpinBox $f.datamain.nptsndelete.ndelete -label "       Delete volumes " -textvariable fmri(ndelete) -range {0 200000 1 } -width 3 
+
+if { ! $fmri(inmelodic) } {
+    balloonhelp_for $f.datamain.nptsndelete.ndelete "The number of initial FMRI volumes to delete before any further
+processing. Typically your experiment would have begun after these
+initial scans (sometimes called \"dummy scans\"). These should be the
+volumes that are not wanted because steady-state imaging has not yet
+been reached - typically two or three volumes. These volumes are
+deleted as soon as the analysis is started.
+
+Note that \"Delete volumes\" should not be used to correct for the
+time lag between stimulation and the measured response - this is
+corrected for in the design matrix by convolving the input stimulation
+waveform with a blurring-and-delaying haemodynamic response function.
+
+Most importantly, remember when setting up the design matrix, that the
+timings in the design matrix start at t=0 seconds, and this
+corresponds to the start of the first image taken after the deleted
+scans. In other words, the design matrix starts AFTER the \"deleted
+scans\" have been deleted."
+} else {
+    balloonhelp_for $f.datamain.nptsndelete.ndelete "The number of initial FMRI volumes to delete before any further
+processing. Typically your experiment would have begun after these
+initial scans (sometimes called \"dummy scans\"). These should be the
+volumes that are not wanted because steady-state imaging has not yet
+been reached - typically two or three volumes. These volumes are
+deleted as soon as the analysis is started."
+}
+
+#}}}
+
+pack $f.datamain.nptsndelete.npts $f.datamain.nptsndelete.ndelete -in $f.datamain.nptsndelete -side left
+
+#}}}
+    #{{{ TR & highpass
+
+frame $f.datamain.trparadigm_hp
+
+#{{{ TR
+
+LabelSpinBox $f.datamain.trparadigm_hp.tr -label "TR (s) " -textvariable fmri(tr) -range {0.0001 200000 0.25 } 
+balloonhelp_for $f.datamain.trparadigm_hp.tr "The time (in seconds) between scanning successive FMRI volumes."
+
+#}}}
+#{{{ High pass
+
+LabelSpinBox $f.datamain.trparadigm_hp.paradigm_hp -label "     High pass filter cutoff (s) " -textvariable fmri(paradigm_hp) -range {1.0 200000 5 } -width 5 
+balloonhelp_for $f.datamain.trparadigm_hp.paradigm_hp "The high pass frequency cutoff point (seconds), that is, the longest
+temporal period that you will allow.
+
+A sensible setting in the case of an rArA or rArBrArB type block
+design is the (r+A) or (r+A+r+B) total cycle time.
+
+For event-related designs the rule is not so simple, but in general
+the cutoff can typically be reduced at least to 50s.
+
+This value is setup here rather than in Pre-stats because in FEAT it
+also affects the generation of the model; the same high pass filtering
+is applied to the model as to the data, to get the best possible match
+between the model and data."
+
+#}}}
+
+pack $f.datamain.trparadigm_hp.tr $f.datamain.trparadigm_hp.paradigm_hp -in $f.datamain.trparadigm_hp -side left
+
+#}}}
+
+    pack $f.datamain.nptsndelete $f.datamain.trparadigm_hp -in $f.datamain -side top -padx 5 -pady 3 -anchor w
+    
+    pack $f.multiple $f.datamain -in $fmri(dataf) -anchor w -side top
+
+    #{{{ FSL logo
+
+set graphpic [ image create photo -file ${FSLDIR}/tcl/fsl-logo-tiny.ppm ]
+button $f.logo -image $graphpic -command "FmribWebHelp file: ${FSLDIR}/doc/index.html" -borderwidth 0
+pack $f.logo -in $fmri(dataf) -anchor e -side bottom -padx 5 -pady 5
+
+#}}}
+}
+
+#}}}
+#{{{ feat5:prestats_gui
+
+proc feat5:prestats_gui { w } {
+
+    global fmri
+    set f $fmri(filteringf)
+
+    #{{{ motion correction
+
+frame $f.mc
+label $f.mc.label -text "Motion correction: "
+optionMenu2 $f.mc.menu fmri(mc) 0 "None" 1 "MCFLIRT"
+
+pack $f.mc.label $f.mc.menu -side top -side left
+balloonhelp_for $f.mc "You will normally want to apply motion correction; this attempts to
+remove the effect of subject head motion during the
+experiment. MCFLIRT uses FLIRT (FMRIB's Linear Registration Tool)
+tuned to the problem of FMRI motion correction, applying rigid-body
+transformations.
+
+Note that there is no \"spin history\" (aka \"correction for movement\")
+option with MCFLIRT. This is because this is still a poorly understood
+correction method which is under further investigation."
+
+#}}}
+    #{{{ B0 unwarping
+
+frame $f.unwarpf
+set fmri(unwarpf) $f.unwarpf
+
+label $fmri(unwarpf).label -text "B0 unwarping"
+
+checkbutton $fmri(unwarpf).yn -variable fmri(regunwarp_yn) -command "feat5:updateprestats $w"
+
+TitleFrame  $fmri(unwarpf).lf -text "B0 unwarping" -relief groove 
+set fmri(unwarpff) [ $fmri(unwarpf).lf getframe ]
+
+set unwarp_files(1) "~"
+set unwarp_files_mag(1) "~"
+
+FileEntry $fmri(unwarpff).unwarpsingle -textvariable unwarp_files(1) -label  "Fieldmap       " -title "Select the B0 fieldmap image" -width 35 -filedialog directory  -filetypes IMAGE -command "feat5:multiple_check $w 1 1 0"
+
+button $fmri(unwarpff).unwarpmultiple -text "Select the B0 fieldmap images" \
+	-command "feat5:multiple_select $w 1 \"Select the B0 fieldmap images\" "
+
+FileEntry $fmri(unwarpff).unwarpmagsingle -textvariable unwarp_files_mag(1) -label "Fieldmap mag" -title "Select the B0 fieldmap magnitude image" -width 35 -filedialog directory  -filetypes IMAGE -command "feat5:multiple_check $w 2 1 0"
+
+button $fmri(unwarpff).unwarpmagmultiple -text "Select the B0 fieldmap magnitude images" \
+	-command "feat5:multiple_select $w 2 \"Select the B0 fieldmap magnitude images\" "
+
+frame $fmri(unwarpff).opts1
+LabelSpinBox $fmri(unwarpff).opts1.dwell -label "EPI echo spacing (ms) " -textvariable fmri(dwell) -range { 0.000001 200000 0.1 } -width 5 
+LabelSpinBox $fmri(unwarpff).opts1.te -label "  EPI TE (ms) " -textvariable fmri(te) -range {0.000001 200000 1 } -width 5 
+
+
+frame $fmri(unwarpff).opts2
+LabelSpinBox  $fmri(unwarpff).opts2.signallossthresh -label "  % Signal loss threshold " -textvariable fmri(signallossthresh) -range {0 100 1 } -width 3
+
+
+
+label $fmri(unwarpff).opts2.label -text "Unwarp direction "
+optionMenu2 $fmri(unwarpff).opts2.unwarp_dir fmri(unwarp_dir) x "x" x- "-x" y "y" y- "-y" z "z" z- "-z"
+set fmri(unwarp_dir) y-
+
+pack $fmri(unwarpff).opts1.dwell $fmri(unwarpff).opts1.te -in $fmri(unwarpff).opts1 -side left -anchor w
+pack $fmri(unwarpff).opts2.label $fmri(unwarpff).opts2.unwarp_dir $fmri(unwarpff).opts2.signallossthresh -in $fmri(unwarpff).opts2 -side left -anchor w
+
+pack $fmri(unwarpff).unwarpsingle $fmri(unwarpff).opts1 $fmri(unwarpff).opts2 -in $fmri(unwarpff) -anchor w -side top -pady 2 -padx 3
+
+pack $fmri(unwarpf).label $fmri(unwarpf).yn -in $fmri(unwarpf) -side left
+balloonhelp_for $fmri(unwarpf) "B0 unwarping is carried out using FUGUE. Here you need to enter the B0 fieldmap images which usually require site/scanner/sequence specific processing.  See the PRELUDE/FUGUE documentation for more information on creating these images.  The two images that are required are (1) a fieldmap image which must have units of rad/s, and (2) a registered magnitude image (this is usually a standard magnitude-only reconstructed image from the fieldmap sequence data).
+
+Next you need to enter the \"EPI echo spacing\" in milliseconds (this is also called the dwell time and is the time between echoes in successive k-space lines) and \"EPI TE\" (echo time) also in milliseconds. These two values relate to your FMRI EPI data, not the fieldmap data.
+
+You also need to specify the \"Unwarp direction\", which is the phase-encoding direction of your FMRI EPI data. The sign of this direction will depend on both the sign of the phase encode blips in the EPI sequence and on the sign of the fieldmap.  As it can be difficult to predict this sign when using a particular site/scanner/sequence for the first time, it is usual to try both positive and negative values in turn and see which gives better undistortion (the wrong sign will increase the amount of distortion rather than decrease it).
+
+Finally, you need to specify a \"% Signal loss threshold\". This determines where the signal loss in the EPI is too great for registration to get a good match between the EPI data and other images. Areas where the % signal loss in the EPI exceeds this threshold will get masked out of the registration process between the EPI and the fieldmap and structural images.
+
+If you are running both motion correction and B0 unwarping, the motion correction resampling does not get applied at the same time as the motion estimation; instead the motion correction gets applied simultaneously with the application of the B0 unwarping, in order to minimise interpolation-related image blurring.
+
+Once this has run, you should definitely check the unwarping section of the Pre-stats report page. In particular you should check that it looks like the unwarping has occurred in the correct direction (and change the unwarp direction and/or sign if it is not)."
+
+#}}}
+    #{{{ slice timing correction
+
+frame $f.st
+set fmri(stf) $f.st
+
+FileEntry $fmri(stf).st_file -textvariable fmri(st_file) -label "" -title "Select a slice order/timings file" -width 20 -filedialog directory -filetypes * 
+
+label $fmri(stf).label -text "Slice timing correction: "
+optionMenu2 $fmri(stf).menu fmri(st) -command "feat5:updateprestats $w" 0 "None" 1 "Regular up (0, 1, 2 ... n-1)" 2 "Regular down (n-1, n-2 ... 0)" 5 "Interleaved (0, 2, 4 ... 1, 3, 5 ... )" 3 "Use slice order file" 4 "Use slice timings file"
+
+pack $fmri(stf).label $fmri(stf).menu -in $fmri(stf) -side top -side left
+balloonhelp_for $fmri(stf) "Slice timing correction corrects each voxel's time-series for the fact
+that later processing assumes that all slices were acquired exactly
+half-way through the relevant volume's acquisition time (TR), whereas
+in fact each slice is taken at slightly different times.
+
+Slice timing correction works by using (Hanning-windowed) sinc
+interpolation to shift each time-series by an appropriate fraction of
+a TR relative to the middle of the TR period. It is necessary to know
+in what order the slices were acquired and set the appropriate option
+here.
+
+If slices were acquired from the bottom of the brain to the top select 
+\"Regular up\".  If slices were acquired from the top of the brain
+to the bottom select \"Regular down\".
+
+If the slices were acquired with interleaved order (0, 2, 4 ... 1, 3,
+5 ...) then choose the \"Interleaved\" option.
+
+If slices were not acquired in regular order you will need to  use a
+slice order file or a slice timings file. If a slice order file is to
+be used, create a text file with a single number on each line, where
+the first line states which slice was acquired first, the second line
+states which slice was acquired second, etc. The first slice is
+numbered 1 not 0.
+
+If a slice timings file is to be used, put one value (ie for each
+slice) on each line of a text file. The units are in TRs, with 0.5
+corresponding to no shift. Therefore a sensible range of values will
+be between 0 and 1."
+
+#}}}
+    #{{{ spin history
+
+#frame $w.sh
+#
+#label $w.sh.label -text "Adjustment for movement"
+#
+#checkbutton $w.sh.yn -variable fmri(sh_yn)
+#
+#pack $w.sh.label $w.sh.yn -in $w.sh -padx 5 -side left
+#
+#$w.bhelp bind $w.sh -msg "blah"
+
+#}}}
+    #{{{ BET brain extraction
+
+frame $f.bet
+
+label $f.bet.label -text "BET brain extraction"
+checkbutton $f.bet.yn -variable fmri(bet_yn)
+pack $f.bet.label $f.bet.yn -in $f.bet -side left
+balloonhelp_for $f.bet "This controls the brain extraction applied to the FMRI data (not to
+the structural or standard images used in the registration). It uses
+BET brain extraction to create a brain mask from the first volume in
+the FMRI data. This is normally better than simple intensity-based
+thresholding for getting rid of unwanted voxels in FMRI data. Note
+that here, BET is setup to run in a quite liberal way so that there is
+very little danger of removing valid brain voxels.
+
+If the field-of-view of the image (in any direction) is less than 30mm
+then BET is turned off by default.
+
+Note that, with respect to any structural images used in the
+registration, you need to have already run BET on those."
+
+#}}}
+    #{{{ spatial filtering
+
+LabelSpinBox  $f.smooth -label "Spatial smoothing FWHM (mm) " -textvariable fmri(smooth) -range {0.0 10000 1 } -width 3
+balloonhelp_for $f.smooth "This determines the extent of the spatial smoothing, carried out on
+each volume of the FMRI data set separately. This is intended to
+reduce noise without reducing valid activation; this is successful as
+long as the underlying activation area is larger than the extent of
+the smoothing. Thus if you are looking for very small activation areas
+then you should maybe reduce smoothing from the default of 5mm, and if
+you are looking for larger areas, you can increase it, maybe to 10 or
+even 15mm.
+
+To turn off spatial smoothing simply set FWHM to 0."
+
+#}}}
+    #{{{ intensity normalization
+
+frame $f.norm
+
+label $f.norm.label -text "Intensity normalization"
+checkbutton $f.norm.yn -variable fmri(norm_yn)
+pack $f.norm.label $f.norm.yn -in $f.norm -side left
+balloonhelp_for $f.norm "This forces every FMRI volume to have the same mean intensity. For
+each volume it calculates the mean intensity and then scales the
+intensity across the whole volume so that the global mean becomes a
+preset constant. This step is normally discouraged - hence is turned
+off by default. When this step is not carried out, the whole 4D data
+set is still normalised by a single scaling factor (\"grand mean
+scaling\") - each volume is scaled by the same amount. This is so that
+higher-level analyses are valid."
+
+#}}}
+    #{{{ temporal filtering
+
+frame $f.temp
+set fmri(temp) $f.temp
+
+label $fmri(temp).label -text "Temporal filtering    "
+
+label $fmri(temp).pslabel -text "Perfusion subtraction"
+checkbutton $fmri(temp).ps_yn -variable fmri(perfsub_yn) -command "feat5:updateperfusion $w"
+
+optionMenu2 $fmri(temp).tcmenu fmri(tagfirst) 1 "First timepoint is tag" 0 "First timepoint is control"
+
+label $fmri(temp).hplabel -text "Highpass"
+checkbutton $fmri(temp).hp_yn -variable fmri(temphp_yn)
+
+label $fmri(temp).lplabel -text "Lowpass"
+checkbutton $fmri(temp).lp_yn -variable fmri(templp_yn)
+
+pack $fmri(temp).label $fmri(temp).pslabel $fmri(temp).ps_yn $fmri(temp).hplabel $fmri(temp).hp_yn $fmri(temp).lplabel $fmri(temp).lp_yn -in $fmri(temp) -side top -side left
+if { ! $fmri(inmelodic) } {
+    balloonhelp_for $fmri(temp) "\"Perfusion subtraction\" is a pre-processing step for perfusion FMRI
+(as opposed to normal BOLD FMRI) data. It subtracts even from odd
+timepoints in order to convert tag-control alternating timepoints into
+a perfusion-only signal. If you are setting up a full perfusion model
+(where you model the full alternating tag/control timeseries in the
+design matrix) then you should NOT use this option. The subtraction
+results in a temporal shift of the sampled signal to half a TR
+earlier; hence you should ideally shift your model forwards in time by
+half a TR, for example by reducing custom timings by half a TR or by
+increasing the model shape phase by half a TR. When you select this
+option, FILM prewhitening is turned off (because it is not
+well-matched to the autocorrelation resulting from the subtraction
+filter) and instead the varcope and degrees-of-freedom are corrected
+after running FILM in OLS mode. See the \"Perfusion\" section of the
+manual for more information.
+
+
+\"Highpass\" temporal filtering uses a local fit of a straight line
+(Gaussian-weighted within the line to give a smooth response) to
+remove low frequency artefacts. This is preferable to sharp rolloff
+FIR-based filtering as it does not introduce autocorrelations into the
+data.
+
+\"Lowpass\" temporal filtering reduces high frequency noise by Gaussian
+smoothing (sigma=2.8s), but also reduces the strength of the signal of
+interest, particularly for single-event experiments. It is not
+generally considered to be helpful, so is turned off by default.
+
+By default, the temporal filtering that is applied to the data will also be
+applied to the model."
+} else {
+    balloonhelp_for $fmri(temp) "\"Perfusion subtraction\" is a pre-processing step for perfusion FMRI
+(as opposed to normal BOLD FMRI) data. It subtracts even from odd
+timepoints in order to convert tag-control alternating timepoints into
+a perfusion-only signal. The subtraction results in a temporal shift
+of the sampled signal to half a TR earlier.
+
+
+\"Highpass\" temporal filtering uses a local fit of a straight line
+(Gaussian-weighted within the line to give a smooth response) to
+remove low frequency artefacts. This is preferable to sharp rolloff
+FIR-based filtering as it does not introduce autocorrelations into the
+data.
+
+\"Lowpass\" temporal filtering reduces high frequency noise by Gaussian
+smoothing (sigma=2.8s), but also reduces the strength of the signal of
+interest, particularly for single-event experiments. It is not
+generally considered to be helpful, so is turned off by default."
+}
+
+#}}}
+    #{{{ melodic
+
+if { ! $fmri(inmelodic) } {
+    frame $f.melodic
+    label $f.melodic.label -text "MELODIC ICA data exploration"
+    checkbutton $f.melodic.yn -variable fmri(melodic_yn)
+    pack $f.melodic.label $f.melodic.yn -in $f.melodic -side top -side left
+    balloonhelp_for $f.melodic "This runs MELODIC, the ICA (Independent Component Analysis) tool in
+FSL. We recommend that you run this, in order to gain insight into
+unexpected artefacts or activation in your data.
+
+You can even use this MELODIC output to \"de-noise\" your data; see
+the FEAT manual for information on how to do this."
+}
+
+#}}}
+
+    feat5:updateprestats $w
+
+    pack $f.mc $fmri(unwarpf) $fmri(stf) $f.bet $f.smooth $f.norm $fmri(temp) -in $f -anchor w -pady 1 -padx 5
+    if { ! $fmri(inmelodic) } {
+	pack $f.melodic -in $f -anchor w -pady 1 -padx 5
+    }
+}
+
+#}}}
+#{{{ feat5:reg_gui
+
+proc feat5:reg_gui { w } {
+
+    global fmri
+    set f $fmri(regf)
+    set fmri(regreduce_dof) 0
+
+    #{{{ high res
+
+frame $f.initial_highres
+
+checkbutton $f.initial_highres.yn -variable fmri(reginitial_highres_yn) -command "feat5:updatereg_hr_init $w"
+
+label $f.initial_highres.label -text "Initial structural image"
+
+TitleFrame $f.initial_highres.lf -text "Initial structural image" -relief groove 
+set fmri(initial_highresf) [ $f.initial_highres.lf getframe ]
+
+FileEntry $fmri(initial_highresf).initial_highressingle -textvariable initial_highres_files(1) -label "" -title "Select initial structural image" -width 45 -filedialog directory  -filetypes IMAGE -command "feat5:multiple_check $w 3 1 0"
+
+button $fmri(initial_highresf).initial_highresmultiple -text "Select initial structural images" \
+	-command "feat5:multiple_select $w 3 \"Select initial structural images\" "
+
+frame $fmri(initial_highresf).opts
+
+label $fmri(initial_highresf).opts.label -text "  Linear "
+optionMenu2 $fmri(initial_highresf).opts.search fmri(reginitial_highres_search) 0 "No search" 90 "Normal search" 180 "Full search"
+optionMenu2 $fmri(initial_highresf).opts.dof fmri(reginitial_highres_dof) 3 "3 DOF (translation-only)" 6 "6 DOF" 7 "7 DOF" 9 "9 DOF" 12 "12 DOF"
+
+label $fmri(initial_highresf).opts.nonlinear_label -text "     Nonlinear"
+checkbutton $fmri(initial_highresf).opts.nonlinear_yn -variable fmri(reginitial_highres_nonlinear_yn)
+
+#pack $fmri(initial_highresf).opts.search $fmri(initial_highresf).opts.dof $fmri(initial_highresf).opts.nonlinear_label \
+#	$fmri(initial_highresf).opts.nonlinear_yn -in $fmri(initial_highresf).opts -side left
+pack  $fmri(initial_highresf).opts.label $fmri(initial_highresf).opts.search $fmri(initial_highresf).opts.dof -in $fmri(initial_highresf).opts -side left
+
+pack $fmri(initial_highresf).initial_highressingle $fmri(initial_highresf).opts -in $fmri(initial_highresf) -anchor w -side top -pady 2 -padx 3
+pack $f.initial_highres.yn $f.initial_highres.label -in $f.initial_highres -side left
+balloonhelp_for $f.initial_highres "This is the initial high resolution structural image which the low
+resolution functional data will be registered to, and this in turn
+will be registered to the main highres image. It only makes sense to
+have this initial highres image if a main highres image is also
+specified and used in the registration. 
+
+One example of an initial highres structural image might be a
+medium-quality structural scan taken during a day's scanning, if a
+higher-quality image has been previously taken for the subject. A
+second example might be a full-brain image with the same MR sequence
+as the functional data, useful if the actual functional data is only
+partial-brain. It is strongly recommended that this image have
+non-brain structures already removed, for example by using BET.
+
+If the field-of-view of the functional data (in any direction) is less
+than 120mm, then the registration of the functional data will by
+default have a reduced degree-of-freedom, for registration stability.
+
+If you are attempting to register partial field-of-view functional
+data to a whole-brain image then \"3 DOF\" is recommended - in this
+case only translations are allowed.
+
+If the orientation of any image is different from any other image it
+may be necessary to change the search to \"Full search\"."
+
+#}}}
+    #{{{ high res2
+
+frame $f.highres
+
+checkbutton $f.highres.yn -variable fmri(reghighres_yn) -command "feat5:updatereg_hr $w"
+
+label $f.highres.label -text "Main structural image"
+
+TitleFrame $f.highres.lf -text "Main structural image" -relief groove 
+set fmri(highresf) [ $f.highres.lf getframe ]
+
+FileEntry $fmri(highresf).highressingle -textvariable highres_files(1) -label "" -title "Select main structural image" -width 45 -filedialog directory  -filetypes IMAGE -command "feat5:multiple_check $w 4 1 0"
+
+button $fmri(highresf).highresmultiple -text "Select main structural images" \
+	-command "feat5:multiple_select $w 4 \"Select main structural images\" "
+
+frame $fmri(highresf).opts
+
+label $fmri(highresf).opts.label -text "  Linear "
+optionMenu2 $fmri(highresf).opts.search fmri(reghighres_search) 0 "No search" 90 "Normal search" 180 "Full search"
+optionMenu2 $fmri(highresf).opts.dof fmri(reghighres_dof) 3 "3 DOF (translation-only)" 6 "6 DOF" 7 "7 DOF" 9 "9 DOF" 12 "12 DOF"
+
+label $fmri(highresf).opts.nonlinear_label -text "     Nonlinear"
+checkbutton $fmri(highresf).opts.nonlinear_yn -variable fmri(reghighres_nonlinear_yn)
+
+#pack $fmri(highresf).opts.search $fmri(highresf).opts.dof $fmri(highresf).opts.nonlinear_label \
+#	$fmri(highresf).opts.nonlinear_yn -in $fmri(highresf).opts -side left
+pack $fmri(highresf).opts.label $fmri(highresf).opts.search $fmri(highresf).opts.dof -in $fmri(highresf).opts -side left
+
+pack $fmri(highresf).highressingle $fmri(highresf).opts -in $fmri(highresf) -anchor w -side top -pady 2 -padx 3
+pack $f.highres.yn $f.highres.label -in $f.highres -side left
+balloonhelp_for $f.highres "This is the main high resolution structural image which the low resolution
+functional data will be registered to (optionally via the \"initial
+structural image\"), and this in turn will be registered to the
+standard brain. It is strongly recommended that this image have
+non-brain structures already removed, for example by using BET.
+
+If the field-of-view of the functional data (in any direction) is less
+than 120mm, then the registration of the functional data will by
+default have a reduced degree-of-freedom, for registration stability.
+
+If you are attempting to register partial field-of-view functional
+data to a whole-brain image then \"3 DOF\" is recommended - in this
+case only translations are allowed.
+
+If the orientation of any image is different from any other image it
+may be necessary to change the search to \"Full search\"."
+
+#}}}
+    #{{{ standard
+
+frame $f.standard
+
+checkbutton $f.standard.yn -variable fmri(regstandard_yn) -command "feat5:updatereg $w"
+
+label $f.standard.label -text "Standard space"
+
+TitleFrame $f.standard.lf -text "Standard space" -relief groove 
+set fmri(standardf) [ $f.standard.lf getframe ]
+
+FileEntry $fmri(standardf).standardentry -textvariable fmri(regstandard) -label "" -title "Select the standard image" -width 45 -filedialog directory  -filetypes IMAGE 
+
+frame $fmri(standardf).opts
+
+label $fmri(standardf).opts.label -text "  Linear "
+optionMenu2 $fmri(standardf).opts.search fmri(regstandard_search) 0 "No search" 90 "Normal search" 180 "Full search"
+optionMenu2 $fmri(standardf).opts.dof fmri(regstandard_dof) 3 "3 DOF (translation-only)" 6 "6 DOF" 7 "7 DOF" 9 "9 DOF" 12 "12 DOF"
+
+label $fmri(standardf).opts.nonlinear_label -text "     Nonlinear"
+checkbutton $fmri(standardf).opts.nonlinear_yn -variable fmri(regstandard_nonlinear_yn)
+
+if { $fmri(inmelodic) } {
+    LabelSpinBox  $fmri(standardf).res -label "  Resampling resolution (mm) " -textvariable fmri(regstandard_res) -range {0.0 50 1 } -width 3
+    balloonhelp_for $fmri(standardf).res "If this is set to 0, resampling of your data into standard-space
+(e.g., for multi-subject analysis) will be applied at the resolution
+of the chosen standard space reference image.
+
+If it is not set to 0, the resampling will be applied at the chosen
+resolution. For example, for multi-subject Tensor ICA, you probably
+need to set this to 3 or 4 so that the combined multi-subject data is
+not too large for the processing to complete."
+}
+
+#pack $fmri(standardf).opts.search $fmri(standardf).opts.dof $fmri(standardf).opts.nonlinear_label \
+#	$fmri(standardf).opts.nonlinear_yn -in $fmri(standardf).opts -side left
+pack $fmri(standardf).opts.label $fmri(standardf).opts.search $fmri(standardf).opts.dof -in $fmri(standardf).opts -side left
+
+pack $fmri(standardf).standardentry $fmri(standardf).opts -in $fmri(standardf) -anchor w -side top -pady 2 -padx 3
+if { $fmri(inmelodic) } {
+    pack $fmri(standardf).res -in $fmri(standardf) -anchor w -side top -pady 2 -padx 3
+}
+
+pack $f.standard.yn $f.standard.label -in $f.standard -side left
+balloonhelp_for $f.standard "This is the standard (reference) image;
+it should be an image already in MNI152/Talairach/etc. space,
+ideally with the non-brain structures already removed.
+
+If the field-of-view of the functional data (in any direction) is less
+than 120mm, then the registration of the functional data will by
+default have a reduced degree-of-freedom, for registration stability.
+
+If you are attempting to register partial field-of-view functional
+data to a whole-brain image then \"3 DOF\" is recommended - in this
+case only translations are allowed.
+
+If the orientation of any image is different from any other image it
+may be necessary to change the search to \"Full search\"."
+
+#}}}
+
+    pack $f.initial_highres $f.highres $f.standard -in $f -side top -anchor w -pady 0
+}
+
+#}}}
+
+### analysis procedures
+#{{{ feat5:getconname
+
+proc feat5:getconname { featdir contrastnumber } {
+    source ${featdir}/design.fsf
+    if { [ info exists fmri(conname_real.$contrastnumber) ] } {
+	return $fmri(conname_real.$contrastnumber)
+    } else {
+	return ""
+    }
+}
+
+#}}}
+#{{{ feat5:connectivity
+
+proc feat5:connectivity { image } {
+
+    global FSLDIR
+
+    set CONNECTIVITY "26"
+
+#    maybe actually USE this test? but needs careful thought.......
+#
+#    set CONNECTIVITY "6"
+#
+#    if { [ expr abs([ exec sh -c "$FSLDIR/bin/fslval $image pixdim3" ]) ] < 3.1 } {
+#	set CONNECTIVITY "26"
+#    }
+
+    return $CONNECTIVITY
+}
+
+#}}}
+#{{{ feat5:flirt
+
+proc feat5:flirt { in ref dof search interp existing_mats report init in_weighting } {
+
+    global FSLDIR logout comout
+
+    set out ${in}2$ref
+
+    if { $existing_mats } {
+
+	fsl:exec "${FSLDIR}/bin/flirt -ref $ref -in $in -out $out -applyxfm -init ${out}.mat -interp $interp"
+
+    } else {
+
+	if { $dof == 3 } {
+	    set dof "6 -schedule ${FSLDIR}/etc/flirtsch/sch3Dtrans_3dof"
+	}
+
+	fsl:exec "${FSLDIR}/bin/flirt -ref $ref -in $in -out $out -omat ${out}.mat -cost corratio -dof $dof -searchrx -$search $search -searchry -$search $search -searchrz -$search $search -interp $interp $init $in_weighting"
+
+    }
+
+    fsl:exec "${FSLDIR}/bin/convert_xfm -inverse -omat ${ref}2${in}.mat ${out}.mat"
+
+    fsl:exec "${FSLDIR}/bin/slicer $out $ref -s 2 -x 0.35 sla.png -x 0.45 slb.png -x 0.55 slc.png -x 0.65 sld.png -y 0.35 sle.png -y 0.45 slf.png -y 0.55 slg.png -y 0.65 slh.png -z 0.35 sli.png -z 0.45 slj.png -z 0.55 slk.png -z 0.65 sll.png ; ${FSLDIR}/bin/pngappend sla.png + slb.png + slc.png + sld.png + sle.png + slf.png + slg.png + slh.png + sli.png + slj.png + slk.png + sll.png ${out}1.png ; ${FSLDIR}/bin/slicer $ref $out -s 2 -x 0.35 sla.png -x 0.45 slb.png -x 0.55 slc.png -x 0.65 sld.png -y 0.35 sle.png -y 0.45 slf.png -y 0.55 slg.png -y 0.65 slh.png -z 0.35 sli.png -z 0.45 slj.png -z 0.55 slk.png -z 0.65 sll.png ; ${FSLDIR}/bin/pngappend sla.png + slb.png + slc.png + sld.png + sle.png + slf.png + slg.png + slh.png + sli.png + slj.png + slk.png + sll.png ${out}2.png ; ${FSLDIR}/bin/pngappend ${out}1.png - ${out}2.png ${out}.png; /bin/rm -f sl?.png"
+ 
+    if { $report != "" } {
+	fsl:echo $report "<p>Registration of $in to $ref"
+	if { $in == "example_func_orig_distorted" } {
+	    fsl:echo $report " (for comparison with unwarped example_func vs highres, shown above)"
+	}
+	fsl:echo $report "<br><a href=\"reg/${out}.png\"><IMG BORDER=0 SRC=\"reg/${out}.png\" WIDTH=2000></a>"
+    }
+}
+
+#}}}
+#{{{ feat5:find_std
+
+proc feat5:find_std { featdir image } {
+    global FSLDIR
+
+    if {  [ file exists ${featdir}/design.lev ] } {
+	if { [ imtest ${featdir}/$image ] } {
+	    return ${featdir}/$image
+	} else {
+	    return 0
+	}
+    } else {
+	if { [ imtest ${featdir}/reg_standard/$image ] } {
+	    return ${featdir}/reg_standard/$image
+	} elseif { $image == "standard" && [ imtest ${featdir}/reg/standard ] } {
+	    return ${featdir}/reg/standard
+	} else {
+	    return 0
+	}
+    }
+}
+
+#}}}
+#{{{ feat5:report_insert
+
+proc feat5:report_insert { pagename sectionlabel insertstring } {
+    global report
+
+    feat5:report_insert_start $pagename $sectionlabel
+    fsl:echo $pagename "$insertstring"
+    feat5:report_insert_stop $pagename $sectionlabel
+}
+
+proc feat5:report_insert_start { pagename sectionlabel } {
+    global report
+
+    catch { exec sh -c "mv ${pagename} tmp${pagename}" } errmsg
+    set iptr [ open tmp${pagename} r ]
+    set report [ open ${pagename} w ]
+    set foundit 0
+
+    while { ! $foundit && [ gets $iptr line ] >= 0 } {
+	if { [ regexp "<!--${sectionlabel}start-->" $line ] } {
+	    set foundit 1
+	}
+	fsl:echo $pagename $line
+    }
+
+    close $iptr
+}
+
+proc feat5:report_insert_stop { pagename sectionlabel } {
+    global report
+
+    set iptr [ open tmp${pagename} r ]
+    set foundit 0
+
+    while { [ gets $iptr line ] >= 0 } {
+	if { [ regexp "<!--${sectionlabel}stop-->" $line ] } {
+	    set foundit 1
+	}
+	if { $foundit } {
+	    fsl:echo $pagename $line
+	}
+    }
+    
+    close $iptr
+    exec sh -c "rm -f tmp${pagename}"
+}
+
+#}}}
+#{{{ stringstrip
+
+proc stringstrip { in ext } {
+
+    set lengthin [ string length $in ]
+    set lengthext [ string length $ext ]
+
+    if { $lengthin > $lengthext } {
+
+	if { [ string compare [ string range $in [ expr $lengthin - $lengthext ] $lengthin ] $ext ] == 0 } {
+	    return [ string range $in 0 [ expr $lengthin - $lengthext - 1 ] ]
+	} else { 
+	    return $in
+	}
+
+    } else {
+	return $in
+    }
+}
+
+proc feat5:strip { in } {
+    set in [ stringstrip $in .ica ]
+    set in [ stringstrip $in .gica ]
+    set in [ stringstrip $in .feat ]
+    set in [ stringstrip $in .gfeat ]
+    set in [ remove_ext $in ]
+    return $in
+}
+
+#}}}
+#{{{ feat5:proc_prestats
+
+proc feat5:proc_prestats { session } {
+
+    #{{{ basic setups
+
+    global FSLDIR FSLSLASH PWD HOME HOSTNAME OSFLAVOUR logout fmri feat_files unwarp_files unwarp_files_mag initial_highres_files highres_files FD report ps rs comout gui_ext FSLPARALLEL
+
+    if { $session == 0 } {
+	set session 1
+    }
+
+    set funcdata [ remove_ext $feat_files($session) ]
+
+    cd $fmri(outputdir)
+    set FD [ pwd ]
+
+    set logout ${FD}/.logB
+    fsl:echo $logout "</pre><hr>Prestats<br><pre>"
+
+    if { $fmri(filtering_yn) } {
+	fsl:echo report_prestats.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+<TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"report.html\"></OBJECT>
+<h2>Pre-stats</h2>
+<!--prestatspsstart-->
+<!--prestatspsstop-->
+<!--prestatsrsstart-->
+<!--prestatsrsstop-->" -o
+
+    set ps "<hr><p><b>Analysis methods</b><br>FMRI data processing was carried out using FEAT (FMRI Expert Analysis Tool) Version $fmri(version), part of FSL (FMRIB's Software Library, www.fmrib.ox.ac.uk/fsl)."
+    set rs "<p><b>References</b><br>"
+    }
+
+#}}}
+
+    #{{{ check npts, delete images, make example_func
+
+# check npts
+set total_volumes [ exec sh -c "${FSLDIR}/bin/fslnvols $funcdata 2> /dev/null" ]
+fsl:echo $logout "Total original volumes = $total_volumes"
+if { $total_volumes != $fmri(npts) } {
+    fsl:echo $logout "Error - $funcdata has a different number of time points to that in FEAT setup"
+    return 1
+}
+
+# delete images
+if { $fmri(filtering_yn) && $fmri(ndelete) > 0 } {
+    fsl:echo $logout "Deleting $fmri(ndelete) volume(s) - BE WARNED for future analysis!"
+    set total_volumes [ expr $total_volumes - $fmri(ndelete) ]
+    fsl:exec "${FSLDIR}/bin/fslroi $funcdata prefiltered_func_data $fmri(ndelete) $total_volumes"
+    set funcdata prefiltered_func_data
+}
+
+# choose halfway image and copy to example_func (unless alternative example_func setup)
+set target_vol_number [ expr $total_volumes / 2 ]
+if { [ imtest $fmri(alternative_example_func) ] } {
+    fsl:exec "${FSLDIR}/bin/fslmaths $fmri(alternative_example_func) example_func"
+} else {
+    fsl:exec "${FSLDIR}/bin/fslroi $funcdata example_func $target_vol_number 1"
+} 
+
+#}}}
+    
+    if { $fmri(filtering_yn) } {
+
+	set ps "$ps The following pre-statistics processing was applied"
+
+	#{{{ motion correction
+
+#mc: 0=none 1=MCFLIRT
+
+if { $fmri(mc) != 0 } {
+    set ps "$ps; motion correction using MCFLIRT \[Jenkinson 2002\]"
+    set rs "$rs\[<a href=\"http://www.fmrib.ox.ac.uk/analysis/techrep/#TR02MJ1\">Jenkinson 2002</a>\] M. Jenkinson and P. Bannister and M. Brady and S. Smith. Improved optimisation for the robust and accurate linear registration and motion correction of brain images. NeuroImage 17:2(825-841) 2002.<br>
+    "
+
+    fsl:exec "${FSLDIR}/bin/mcflirt -in $funcdata -out prefiltered_func_data_mcf -mats -plots -refvol $target_vol_number -rmsrel -rmsabs"
+    if { ! $fmri(regunwarp_yn) } {
+	set funcdata prefiltered_func_data_mcf
+    }
+
+    new_file mc
+    fsl:exec "/bin/mkdir mc ; /bin/mv -f prefiltered_func_data_mcf.mat prefiltered_func_data_mcf.par prefiltered_func_data_mcf_abs.rms prefiltered_func_data_mcf_abs_mean.rms prefiltered_func_data_mcf_rel.rms prefiltered_func_data_mcf_rel_mean.rms mc"
+    cd mc
+    
+    #{{{ make plots
+
+fsl:exec "${FSLDIR}/bin/fsl_tsplot -i prefiltered_func_data_mcf.par -t 'MCFLIRT estimated rotations (radians)' --start=1 --finish=3 -a x,y,z -w 640 -h 144 -o rot.png " 
+fsl:exec "${FSLDIR}/bin/fsl_tsplot -i prefiltered_func_data_mcf.par -t 'MCFLIRT estimated translations (mm)' --start=4 --finish=6 -a x,y,z -w 640 -h 144 -o trans.png " 
+fsl:exec "${FSLDIR}/bin/fsl_tsplot -i prefiltered_func_data_mcf_abs.rms,prefiltered_func_data_mcf_rel.rms -t 'MCFLIRT estimated mean displacement (mm)' -w 640 -h 144 -a absolute,relative -o disp.png " 
+
+#}}}
+    #{{{ extract mean displacements
+
+set mcchannel [ open prefiltered_func_data_mcf_abs_mean.rms "r" ]
+gets $mcchannel line
+scan $line "%f" absrms
+set absrms [ expr int($absrms*100.0)/100.0 ]
+close $mcchannel
+
+set mcchannel [ open prefiltered_func_data_mcf_rel_mean.rms "r" ]
+gets $mcchannel line
+scan $line "%f" relrms
+set relrms [ expr int($relrms*100.0)/100.0 ]
+close $mcchannel
+
+#}}}
+    #{{{ web page report
+
+cd $FD
+
+set MC_TOLERANCE 0.5
+
+set mcwarning ""
+if { $relrms > $MC_TOLERANCE } {
+    set mcwarning " - warning - high levels of motion detected"
+}
+
+fsl:echo report_prestats.html "<hr><p><b>MCFLIRT Motion correction</b><br>Mean displacements: absolute=${absrms}mm, relative=${relrms}mm$mcwarning
+<p><IMG BORDER=0 SRC=\"mc/rot.png\">
+<p><IMG BORDER=0 SRC=\"mc/trans.png\">
+<p><IMG BORDER=0 SRC=\"mc/disp.png\">
+"
+
+#}}}
+}
+
+#}}}
+	#{{{ B0 unwarping
+
+if { $fmri(regunwarp_yn) } {
+
+    #{{{ setup stuff
+
+new_file unwarp
+fsl:exec "/bin/mkdir unwarp"
+cd unwarp
+
+set ps "$ps; fieldmap-based EPI unwarping using PRELUDE+FUGUE \[Jenkinson 2003, 2004\]"
+set rs "$rs\[<a href=\"http://www.fmrib.ox.ac.uk/analysis/techrep/#TR01MJ1\">Jenkinson 2003</a>\] M. Jenkinson. A fast, automated, n-dimensional phase unwrapping algorithm. Magnetic Resonance in Medicine 49(1):193-197 2003.<br>
+\[<a href=\"http://www.fmrib.ox.ac.uk/~mark/work/hbm2004.ps\">Jenkinson 2004</a>\] M. Jenkinson. Improving the registration of B0-disorted EPI images using calculated cost function weights. Tenth Int. Conf. on Functional Mapping of the Human Brain 2004.<br>
+"
+
+fsl:echo ${FD}/report_prestats.html "<hr><b>FUGUE fieldmap unwarping</b>"
+
+#<p>Summary: comparison of original (distorted) and unwarped example_func<br>
+#<IMG BORDER=0 SRC=\"unwarp/EF_UD_movie2.gif\" WIDTH=1000>"
+
+#}}}
+    #{{{ do the unwarping calculations
+
+    # FM = space of fieldmap
+    # EF = space of example_func
+    # UD = undistorted (in any space)
+    # D  = distorted (in any space)
+
+    # copy in unwarp input files into reg subdir
+    fsl:exec "${FSLDIR}/bin/fslmaths ../example_func EF_D_example_func"
+    fsl:exec "${FSLDIR}/bin/fslmaths $unwarp_files($session) FM_UD_fmap"
+    fsl:exec "${FSLDIR}/bin/fslmaths $unwarp_files_mag($session) FM_UD_fmap_mag"
+
+    # brain-extract fmap_mag and de-mean fmap
+    if { $fmri(bet_yn) } {
+	fsl:exec "${FSLDIR}/bin/bet2 FM_UD_fmap_mag FM_UD_fmap_mag_brain -m"
+    } else {
+	fsl:exec "${FSLDIR}/bin/fslmaths FM_UD_fmap_mag FM_UD_fmap_mag_brain"
+	fsl:exec "${FSLDIR}/bin/fslmaths FM_UD_fmap_mag -bin FM_UD_fmap_mag_brain_mask -odt short"
+    }
+    fsl:exec "${FSLDIR}/bin/fslmaths FM_UD_fmap -sub [ fsl:exec "${FSLDIR}/bin/fslstats FM_UD_fmap -k FM_UD_fmap_mag_brain_mask -P 50" ] FM_UD_fmap"
+
+    # create report picture of fmap overlaid onto whole-head mag image
+    set fmapmin [ fsl:exec "${FSLDIR}/bin/fslstats FM_UD_fmap -R | awk '{ print \$1 }'" ]
+    fsl:exec "${FSLDIR}/bin/fslmaths FM_UD_fmap -sub $fmapmin -add 10 -mas FM_UD_fmap_mag_brain_mask grot"
+    set fmapminmax [ fsl:exec "${FSLDIR}/bin/fslstats grot -l 1 -p 0.1 -p 95" ]
+    fsl:exec "${FSLDIR}/bin/overlay 0 0 FM_UD_fmap_mag -a grot $fmapminmax grot"
+    fsl:exec "${FSLDIR}/bin/slicer grot -s 3 -x 0.35 sla.png -x 0.45 slb.png -x 0.55 slc.png -x 0.65 sld.png -y 0.35 sle.png -y 0.45 slf.png -y 0.55 slg.png -y 0.65 slh.png -z 0.35 sli.png -z 0.45 slj.png -z 0.55 slk.png -z 0.65 sll.png ; ${FSLDIR}/bin/pngappend sla.png + slb.png + slc.png + sld.png + sle.png + slf.png + slg.png + slh.png + sli.png + slj.png + slk.png + sll.png fmap+mag.png"
+    fsl:echo ${FD}/report_prestats.html "<p>Brain-masked B0 fieldmap in colour, overlaid on top of fieldmap magnitude image<br>
+<a href=\"unwarp/fmap+mag.png\"><IMG BORDER=0 SRC=\"unwarp/fmap+mag.png\" WIDTH=1200></a>"
+
+    # get a sigloss estimate and make a siglossed mag for forward warp
+    set epi_te [ expr $fmri(te) / 1000.0 ]
+    fsl:exec "${FSLDIR}/bin/sigloss -i FM_UD_fmap --te=$epi_te -m FM_UD_fmap_mag_brain_mask -s FM_UD_fmap_sigloss"
+    set siglossthresh [ expr 1.0 - ( $fmri(signallossthresh) / 100.0 ) ]
+    fsl:exec "${FSLDIR}/bin/fslmaths FM_UD_fmap_sigloss -mul FM_UD_fmap_mag_brain FM_UD_fmap_mag_brain_siglossed -odt float"
+
+    # make a warped version of FM_UD_fmap_mag to match with the EPI
+    set dwell [ expr $fmri(dwell) / 1000.0 ]
+    fsl:exec "${FSLDIR}/bin/fugue -i FM_UD_fmap_mag_brain_siglossed --loadfmap=FM_UD_fmap --mask=FM_UD_fmap_mag_brain_mask --dwell=$dwell -w FM_D_fmap_mag_brain_siglossed --nokspace --unwarpdir=$fmri(unwarp_dir)"
+    fsl:exec "${FSLDIR}/bin/fugue -i FM_UD_fmap_sigloss             --loadfmap=FM_UD_fmap --mask=FM_UD_fmap_mag_brain_mask --dwell=$dwell -w FM_D_fmap_sigloss             --nokspace --unwarpdir=$fmri(unwarp_dir)"
+    fsl:exec "${FSLDIR}/bin/fslmaths FM_D_fmap_sigloss -thr $siglossthresh FM_D_fmap_sigloss"
+    fsl:exec "${FSLDIR}/bin/flirt -in EF_D_example_func -ref FM_D_fmap_mag_brain_siglossed -omat EF_2_FM.mat -o grot -dof 6 -refweight FM_D_fmap_sigloss"
+    fsl:exec "${FSLDIR}/bin/convert_xfm -omat FM_2_EF.mat -inverse EF_2_FM.mat"
+
+    # put fmap stuff into space of EF_D_example_func
+    fsl:exec "${FSLDIR}/bin/flirt -in FM_UD_fmap                -ref EF_D_example_func -init FM_2_EF.mat -applyxfm -out EF_UD_fmap"
+    fsl:exec "${FSLDIR}/bin/flirt -in FM_UD_fmap_mag_brain      -ref EF_D_example_func -init FM_2_EF.mat -applyxfm -out EF_UD_fmap_mag_brain"
+    fsl:exec "${FSLDIR}/bin/flirt -in FM_UD_fmap_mag_brain_mask -ref EF_D_example_func -init FM_2_EF.mat -applyxfm -out EF_UD_fmap_mag_brain_mask"
+    fsl:exec "${FSLDIR}/bin/flirt -in FM_UD_fmap_sigloss        -ref EF_D_example_func -init FM_2_EF.mat -applyxfm -out EF_UD_fmap_sigloss"
+    fsl:exec "${FSLDIR}/bin/fslmaths FM_UD_fmap_mag_brain_mask -thr 0.5 -bin FM_UD_fmap_mag_brain_mask -odt float"
+    fsl:exec "${FSLDIR}/bin/fslmaths EF_UD_fmap_sigloss -thr $siglossthresh EF_UD_fmap_sigloss -odt float"
+
+    # create report pic for sigloss
+    fsl:exec "${FSLDIR}/bin/overlay 1 0 FM_UD_fmap_mag_brain -a EF_UD_fmap_sigloss 0 1 grot"
+    fsl:exec "${FSLDIR}/bin/slicer grot -s 3 -x 0.35 sla.png -x 0.45 slb.png -x 0.55 slc.png -x 0.65 sld.png -y 0.35 sle.png -y 0.45 slf.png -y 0.55 slg.png -y 0.65 slh.png -z 0.35 sli.png -z 0.45 slj.png -z 0.55 slk.png -z 0.65 sll.png ; ${FSLDIR}/bin/pngappend sla.png + slb.png + slc.png + sld.png + sle.png + slf.png + slg.png + slh.png + sli.png + slj.png + slk.png + sll.png EF_UD_sigloss+mag.png"
+    fsl:echo ${FD}/report_prestats.html "<p>Thresholded signal loss weighting image<br>
+<a href=\"unwarp/EF_UD_sigloss+mag.png\"><IMG BORDER=0 SRC=\"unwarp/EF_UD_sigloss+mag.png\" WIDTH=1200></a>"
+
+    # apply warp to EF_D_example_func and save unwarp-shiftmap then convert to unwarp-warpfield
+    fsl:exec "${FSLDIR}/bin/fugue --loadfmap=EF_UD_fmap --dwell=$dwell --mask=EF_UD_fmap_mag_brain_mask -i EF_D_example_func -u EF_UD_example_func --unwarpdir=$fmri(unwarp_dir) --saveshift=EF_UD_shift"
+    fsl:exec "${FSLDIR}/bin/convertwarp -s EF_UD_shift -o EF_UD_warp -r EF_D_example_func --shiftdir=$fmri(unwarp_dir)"
+
+    # create report pic for shift extent
+    set shiftminmax [ fsl:exec "${FSLDIR}/bin/fslstats EF_UD_shift -R -P 1 -P 99" ]
+    set shiftminR [ format %.1f [ lindex $shiftminmax 0 ] ]
+    set shiftmaxR [ format %.1f [ lindex $shiftminmax 1 ] ]
+    set shiftminr [ expr [ lindex $shiftminmax 2 ] * -1.0 ]
+    set shiftmaxr [ lindex $shiftminmax 3 ]
+    fsl:exec "${FSLDIR}/bin/fslmaths EF_UD_shift -mul -1 grot"
+    fsl:exec "${FSLDIR}/bin/overlay 1 0 FM_UD_fmap_mag_brain -a EF_UD_shift 0 $shiftmaxr grot 0 $shiftminr grot"
+    fsl:exec "${FSLDIR}/bin/slicer grot -s 3 -x 0.35 sla.png -x 0.45 slb.png -x 0.55 slc.png -x 0.65 sld.png -y 0.35 sle.png -y 0.45 slf.png -y 0.55 slg.png -y 0.65 slh.png -z 0.35 sli.png -z 0.45 slj.png -z 0.55 slk.png -z 0.65 sll.png ; ${FSLDIR}/bin/pngappend sla.png + slb.png + slc.png + sld.png + sle.png + slf.png + slg.png + slh.png + sli.png + slj.png + slk.png + sll.png EF_UD_shift+mag.png"
+    fsl:exec "/bin/cp ${FSLDIR}/etc/luts/ramp.gif .ramp.gif"
+    fsl:exec "/bin/cp ${FSLDIR}/etc/luts/ramp2.gif .ramp2.gif"
+    fsl:echo ${FD}/report_prestats.html "<p>Unwarping shift map, in voxels &nbsp;&nbsp;&nbsp; ${shiftminR} <IMG BORDER=0 SRC=\"unwarp/.ramp2.gif\"> 0 <IMG BORDER=0 SRC=\"unwarp/.ramp.gif\"> ${shiftmaxR}<br>
+<a href=\"unwarp/EF_UD_shift+mag.png\"><IMG BORDER=0 SRC=\"unwarp/EF_UD_shift+mag.png\" WIDTH=1200></a>"
+
+    # create report pics in EF space
+    fsl:exec "${FSLDIR}/bin/slicer EF_D_example_func    -s 3 -x 0.35 sla.png -x 0.45 slb.png -x 0.55 slc.png -x 0.65 sld.png -y 0.35 sle.png -y 0.45 slf.png -y 0.55 slg.png -y 0.65 slh.png -z 0.35 sli.png -z 0.45 slj.png -z 0.55 slk.png -z 0.65 sll.png ; ${FSLDIR}/bin/pngappend sla.png + slb.png + slc.png + sld.png + sle.png + slf.png + slg.png + slh.png + sli.png + slj.png + slk.png + sll.png EF_D_example_func.gif"
+    fsl:exec "${FSLDIR}/bin/slicer EF_UD_example_func    -s 3 -x 0.35 sla.png -x 0.45 slb.png -x 0.55 slc.png -x 0.65 sld.png -y 0.35 sle.png -y 0.45 slf.png -y 0.55 slg.png -y 0.65 slh.png -z 0.35 sli.png -z 0.45 slj.png -z 0.55 slk.png -z 0.65 sll.png ; ${FSLDIR}/bin/pngappend sla.png + slb.png + slc.png + sld.png + sle.png + slf.png + slg.png + slh.png + sli.png + slj.png + slk.png + sll.png EF_UD_example_func.gif"
+    fsl:exec "${FSLDIR}/bin/slicer EF_UD_fmap_mag_brain    -s 3 -x 0.35 sla.png -x 0.45 slb.png -x 0.55 slc.png -x 0.65 sld.png -y 0.35 sle.png -y 0.45 slf.png -y 0.55 slg.png -y 0.65 slh.png -z 0.35 sli.png -z 0.45 slj.png -z 0.55 slk.png -z 0.65 sll.png ; ${FSLDIR}/bin/pngappend sla.png + slb.png + slc.png + sld.png + sle.png + slf.png + slg.png + slh.png + sli.png + slj.png + slk.png + sll.png EF_UD_fmap_mag_brain.gif"
+    fsl:exec "${FSLDIR}/bin/whirlgif -o EF_UD_movie2.gif -time 50 -loop 0 EF_D_example_func.gif EF_UD_example_func.gif"
+
+    fsl:exec "${FSLDIR}/bin/whirlgif -o EF_UD_movie3.gif -time 50 -loop 0 EF_D_example_func.gif EF_UD_example_func.gif EF_UD_fmap_mag_brain.gif; /bin/rm -f sla* slb* slc* sld* sle* slf* slg* slh* sli* slj* slk* sll* grot*"
+    fsl:echo ${FD}/report_prestats.html "<p>Original distorted example_func (example_func_orig_distorted)<br>
+<a href=\"unwarp/EF_D_example_func.gif\"><IMG BORDER=0 SRC=\"unwarp/EF_D_example_func.gif\" WIDTH=1200></a>
+<p>Undistorted example_func (example_func)<br>
+<a href=\"unwarp/EF_UD_example_func.gif\"><IMG BORDER=0 SRC=\"unwarp/EF_UD_example_func.gif\" WIDTH=1200></a>
+<p>Non-distorted fieldmap magnitude brain-extracted image in space of example_func (unwarp/EF_UD_fmap_mag_brain)<br>
+<a href=\"unwarp/EF_UD_fmap_mag_brain.gif\"><IMG BORDER=0 SRC=\"unwarp/EF_UD_fmap_mag_brain.gif\" WIDTH=1200></a>
+<p>Movie of all 3 images<br>
+<a href=\"unwarp/EF_UD_movie3.gif\"><IMG BORDER=0 SRC=\"unwarp/EF_UD_movie3.gif\" WIDTH=1200></a>"
+
+#}}}
+    #{{{ apply warping and motion correction to example_func and 4D data
+
+cd $FD
+
+immv example_func example_func_orig_distorted
+fsl:exec "${FSLDIR}/bin/applywarp -i example_func_orig_distorted -o example_func -w unwarp/EF_UD_warp -r example_func_orig_distorted --abs --mask=unwarp/EF_UD_fmap_mag_brain_mask"
+
+# now either apply unwarping one vol at a time (including applying individual mcflirt transforms at same time),
+# or if mcflirt transforms don't exist, just apply warp to 4D $funcdata
+if { [ file exists mc/prefiltered_func_data_mcf.mat/MAT_0000 ] } {
+    for { set i 0 } { $i < $total_volumes } { incr i 1 } {
+	set pad [format %04d $i]
+	fsl:exec "${FSLDIR}/bin/fslroi $funcdata grot$pad $i 1"
+	fsl:exec "${FSLDIR}/bin/applywarp -i grot$pad -o grot$pad --premat=mc/prefiltered_func_data_mcf.mat/MAT_$pad -w unwarp/EF_UD_warp -r example_func --abs --mask=unwarp/EF_UD_fmap_mag_brain_mask"
+    }
+    fsl:exec "${FSLDIR}/bin/fslmerge -t prefiltered_func_data_unwarp [ imglob -oneperimage grot* ]"
+    fsl:exec "/bin/rm -f grot*"
+} else {
+    fsl:exec "${FSLDIR}/bin/applywarp -i $funcdata -o prefiltered_func_data_unwarp -w unwarp/EF_UD_warp -r example_func --abs --mask=unwarp/EF_UD_fmap_mag_brain_mask"
+}
+
+set funcdata prefiltered_func_data_unwarp
+
+#}}}
+}
+
+#}}}
+	#{{{ slice timing correction
+
+if { $fmri(st) > 0 } {
+
+    set ps "$ps; slice-timing correction using Fourier-space time-series phase-shifting"
+
+    set st_opts ""
+    
+    switch $fmri(st) {
+	2 {
+	    set st_opts "--down"
+	}
+	3 {
+	    set st_opts "--ocustom=$fmri(st_file)"
+	}
+	4 {
+	    set st_opts "--tcustom=$fmri(st_file)"
+	}
+	5 {
+	    set st_opts "--odd"
+	}
+    }
+
+    fsl:exec "${FSLDIR}/bin/slicetimer -i $funcdata --out=prefiltered_func_data_st -r $fmri(tr) $st_opts"
+    set funcdata prefiltered_func_data_st
+}
+
+#}}}
+	#{{{ BET
+
+if { $fmri(bet_yn) } {
+    set ps "$ps; non-brain removal using BET \[Smith 2002\]"
+    set rs "$rs\[<a href=\"http://www.fmrib.ox.ac.uk/analysis/techrep/#TR00SMS2\">Smith 2002</a>\] S. Smith. Fast Robust Automated Brain Extraction. Human Brain Mapping 17:3(143-155) 2002.<br>
+    "
+
+    fsl:exec "${FSLDIR}/bin/bet $funcdata prefiltered_func_data_bet -F"
+    set funcdata prefiltered_func_data_bet
+}
+
+#}}}
+	#{{{ filtering
+
+#{{{ create mask
+
+if { $fmri(brain_thresh) > 0 } {
+    fsl:exec "${FSLDIR}/bin/fslmaths $funcdata -thrp $fmri(brain_thresh) -Tmin -bin mask -odt char"
+    fsl:exec "${FSLDIR}/bin/fslmaths $funcdata -mas mask $funcdata"
+} else {
+    fsl:exec "${FSLDIR}/bin/fslmaths example_func -mul 0 -add 1 mask -odt char"
+}
+
+#}}}
+#{{{ Spatial filtering
+
+if { $fmri(smooth) > 0.01 } {
+    set smoothcommand "-kernel gauss [ expr $fmri(smooth) / 2.355 ] -fmean"
+    fsl:exec "${FSLDIR}/bin/fslmaths mask $smoothcommand mask_weight -odt float"
+    fsl:exec "${FSLDIR}/bin/fslmaths $funcdata $smoothcommand -div mask_weight -mas mask filtered_func_data -odt float"
+    imrm mask_weight
+    set funcdata filtered_func_data
+    set ps "$ps; spatial smoothing using a Gaussian kernel of FWHM $fmri(smooth)mm"
+}
+
+#}}}
+#{{{ intensity normalization
+
+set normmean 10000
+
+if { $fmri(norm_yn)} {
+    set thecommand "-inm"
+    set ps "$ps; multiplicative mean intensity normalization of the volume at each timepoint"
+} else {
+    set thecommand "-ing"
+    set ps "$ps; grand-mean intensity normalisation of the entire 4D dataset by a single multiplicative factor"
+}
+
+fsl:exec "${FSLDIR}/bin/fslmaths $funcdata $thecommand $normmean filtered_func_data -odt float"
+
+#}}}
+#{{{ Perfusion subtraction
+
+if { $fmri(perfsub_yn) } {
+
+    set ps "$ps; control-tag perfusion subtraction with half-TR sinc interpolation and no decimation"
+
+    set perfinvert ""
+    if { ! $fmri(tagfirst) } {
+	set perfinvert "-c"
+    }
+
+    fsl:exec "${FSLDIR}/bin/perfusion_subtract filtered_func_data filtered_func_data $perfinvert"
+}
+
+#}}}
+#{{{ Temporal filtering
+
+if { $fmri(temphp_yn) || $fmri(templp_yn) } {
 
     set hp_sigma_vol -1
     if { $fmri(temphp_yn) } {
 	set hp_sigma_sec [ expr $fmri(paradigm_hp) / 2.0 ]
 	set hp_sigma_vol [ expr $hp_sigma_sec / $fmri(tr) ]
+	set ps "$ps; highpass temporal filtering (Gaussian-weighted least-squares straight line fitting, with sigma=${hp_sigma_sec}s)"
     }
 
     set lp_sigma_vol -1
     if { $fmri(templp_yn) } {
 	set lp_sigma_sec 2.8
 	set lp_sigma_vol [ expr $lp_sigma_sec / $fmri(tr) ]
+	set ps "$ps; Gaussian lowpass temporal filtering HWHM ${lp_sigma_sec}s"
     }
 
-    if { [ info exists feat_files(1) ] && [ imtest $feat_files(1) ] } {
-	set noiseestout [ exec sh -c "${FSLDIR}/bin/estnoise $feat_files(1) $smooth $hp_sigma_vol $lp_sigma_vol 2> /dev/null" ]
-	set fmri(noise)   [ lindex $noiseestout 0 ]
-	set fmri(noisear) [ lindex $noiseestout 1 ]
+    fsl:exec "${FSLDIR}/bin/fslmaths filtered_func_data -bptf $hp_sigma_vol $lp_sigma_vol filtered_func_data -odt float"
+}
+
+#}}}
+
+set ps "$ps."
+
+set absbrainthresh [ expr $fmri(brain_thresh) * $normmean / 100.0 ]
+
+#}}}
+	#{{{ set TR in header of filtered_func_data if not already correct
+
+set IMTR [ exec sh -c "$FSLDIR/bin/fslval filtered_func_data pixdim4" ]
+
+if { [ expr abs($IMTR - $fmri(tr)) ] > 0.01 } {
+    fsl:exec "${FSLDIR}/bin/fslhd -x filtered_func_data | sed 's/  dt = .*/  dt = '$fmri(tr)'/g' | ${FSLDIR}/bin/fslcreatehd - filtered_func_data"
+}
+
+#}}}
+	#{{{ MELODIC
+
+if { $fmri(melodic_yn) } {
+    set ps "$ps ICA-based exploratory data analysis was carried out using MELODIC \[Beckmann 2004\], in order to investigate the possible presence of unexpected artefacts or activation."
+    set rs "$rs\[<a href=\"http://www.fmrib.ox.ac.uk/analysis/techrep/#TR02CB1\">Beckmann 2004</a>\] C.F. Beckmann and S.M. Smith. Probabilistic Independent Component Analysis for Functional Magnetic Resonance Imaging. IEEE Trans. on Medical Imaging 23:2(137-152) 2004.<br>
+    "
+
+    fsl:echo report_prestats.html "<hr><a href=\"filtered_func_data.ica/report/00index.html\">MELODIC data exploration report</a>"
+
+    fsl:exec "${FSLDIR}/bin/melodic -i filtered_func_data -o filtered_func_data.ica -v --nobet --bgthreshold=1 --tr=$fmri(tr) -d 0 --mmthresh=\"0.5\" --report"
+}
+
+#}}}
+
+    } else {
+	#{{{ prepare data if no prestats
+
+fsl:exec "${FSLDIR}/bin/fslmaths $funcdata filtered_func_data"
+
+fsl:exec "${FSLDIR}/bin/fslmaths filtered_func_data -Tmin -bin mask -odt char"
+
+set absbrainthresh [ fsl:exec "${FSLDIR}/bin/fslstats filtered_func_data -k mask -R | awk '{ print \$1 }' -" ]
+
+#}}}
     }
+
+    #{{{ misc ending bits
+
+fsl:exec "${FSLDIR}/bin/fslmaths filtered_func_data -Tmean mean_func"
+
+if { $fmri(brain_thresh) == 0 } {
+    set absbrainthresh [ fsl:exec "$FSLDIR/bin/fslstats filtered_func_data -R | awk '{ print \$1 }' -" ]
+} 
+
+fsl:echo absbrainthresh.txt $absbrainthresh
+
+fsl:exec "/bin/rm -rf prefiltered_func_data*" 
+
+#}}}
+
+    #{{{ finish up
+
+if { $fmri(filtering_yn) } {
+    feat5:report_insert report_prestats.html prestatsps $ps
+    feat5:report_insert report_prestats.html prestatsrs $rs
+    fsl:echo report_prestats.html "</BODY></HTML>"
+}
+
+return 0
+
+#}}}
+}
+
+#}}}
+#{{{ feat5:proc_film
+
+proc feat5:proc_film { } {
+
+    #{{{ basic setups
+
+    global FSLDIR FSLSLASH PWD HOME HOSTNAME OSFLAVOUR logout fmri feat_files unwarp_files unwarp_files_mag initial_highres_files highres_files FD report ps rs comout gui_ext FSLPARALLEL
+
+    cd $fmri(outputdir)
+
+    set logout .logC
+    fsl:echo $logout "</pre><hr>Stats<br><pre>"
+
+    fsl:echo report_stats.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+<TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"report.html\"></OBJECT>
+<h2>Stats</h2>
+<!--statspsstart-->
+<!--statspsstop-->
+<!--statsrsstart-->
+<!--statsrsstop-->" -o
+
+    if { [ file exists design.png ] } {
+	fsl:echo report_stats.html "<hr><p><b>Design matrix</b><br><a href=\"design.mat\"><IMG BORDER=0 SRC=\"design.png\"></a>"
+	if { [ file exists design_cov.png ] } {
+	    fsl:echo report_stats.html "<p><b>Covariance matrix & design efficiency</b><br><IMG BORDER=0 SRC=\"design_cov.png\">"
+	}
+    }
+
+    set ps "<hr><p><b>Analysis methods</b><br>FMRI data processing was carried out using FEAT (FMRI Expert Analysis Tool) Version $fmri(version), part of FSL (FMRIB's Software Library, www.fmrib.ox.ac.uk/fsl)."
+    set rs "<p><b>References</b><br>"
+
+#}}}
+
+    # copy input timing files into FEAT directory for future reference
+    for { set evs 1 } { $evs <= $fmri(evs_orig) } { incr evs 1 } {
+	if { $fmri(shape${evs}) == 2 || $fmri(shape${evs}) == 3 } {
+	    new_file custom_timing_files
+	    fsl:exec "mkdir custom_timing_files ; /bin/cp $fmri(custom${evs}) custom_timing_files/ev${evs}.txt"
+	}
+    }
+
+    if { $fmri(motionevs) > 0 && [ file exists mc/prefiltered_func_data_mcf.par ] } {
+	catch { fsl:exec "$FSLDIR/bin/feat_model design mc/prefiltered_func_data_mcf.par" } ErrMsg
+    }
+
+    set absbrainthresh [ exec sh -c "cat absbrainthresh.txt" ]
+
+    set film_text " with local autocorrelation correction"
+    set film_opts "-sa -ms 5 -sp $FSLDIR/bin/susan_smooth"
+    if { [ info exists fmri(susan_bt) ] && [ info exists fmri(tukey_num) ] } { set film_opts "-sa -ms $fmri(susan_ms) -epith $fmri(susan_bt) -v -tukey $fmri(tukey_num) -sp $FSLDIR/bin/susan_smooth" }
+    if { ! $fmri(prewhiten_yn) } {
+	set film_opts "-noest"
+	set film_text ""
+    }
+
+    new_file stats
+    fsl:exec "$FSLDIR/bin/film_gls -rn stats $film_opts filtered_func_data design.mat $absbrainthresh"
+
+    if { ! [ imtest stats/pe1 ] } {
+	fsl:echo report.log "Error: FILM did not complete - it probably ran out of memory"
+	fsl:echo "" "Error: FILM did not complete - it probably ran out of memory"
+	return 1
+    }
+
+    set ps "$ps Time-series statistical analysis was carried out using FILM $film_text \[Woolrich 2001\]."
+    set rs "$rs\[<a href=\"http://www.fmrib.ox.ac.uk/analysis/techrep/#TR01MW1\">Woolrich 2001</a>\] M.W. Woolrich, B.D. Ripley, J.M. Brady and S.M. Smith. Temporal Autocorrelation in Univariate Linear Modelling of FMRI Data. NeuroImage 14:6(1370-1386) 2001.<br>
+"
+
+    # correct stats for reduced DOF and altered whitened DM if perfusion subtraction was run
+    if { $fmri(perfsub_yn) } {
+	set THEDOF [ expr ( $fmri(npts) / 2 ) - $fmri(evs_real) ]
+	if { $THEDOF < 1 } {
+	    set THEDOF 1
+	}
+	fsl:exec "echo $THEDOF > stats/dof"
+	fsl:exec "${FSLDIR}/bin/fslmaths stats/corrections -mul 2 stats/corrections"
+    }
+
+    # spatial smoothnes estimation
+    fsl:exec "$FSLDIR/bin/smoothest -d [ exec sh -c "cat stats/dof" ] -m mask -r stats/res4d > stats/smoothness"
+
+    #{{{ finish up
+
+feat5:report_insert report_stats.html statsps $ps
+feat5:report_insert report_stats.html statsrs $rs
+
+fsl:echo report_stats.html "</BODY></HTML>"
+
+return 0
+
+#}}}
+}
+
+#}}}
+#{{{ feat5:proc_poststats
+
+proc feat5:proc_poststats { rerunning stdspace } {
+
+    #{{{ basic setups
+
+global FSLDIR FSLSLASH PWD HOME HOSTNAME OSFLAVOUR logout fmri feat_files unwarp_files unwarp_files_mag initial_highres_files highres_files report ps rs comout gui_ext FSLPARALLEL
+
+cd $fmri(outputdir)
+set FD [ pwd ]
+
+set logout .logD
+
+if { ! $rerunning } {
+    fsl:echo $logout "</pre><hr>Post-stats<br><pre>"
+
+    fsl:echo report_poststats.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+<TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"report.html\"></OBJECT>
+<h2>Post-stats</h2>
+<!--poststatspsstart-->
+<!--poststatspsstop-->
+<!--poststatsrsstart-->
+<!--poststatsrsstop-->
+<!--poststatspicsstart-->
+<!--poststatspicsstop-->
+<!--poststatstsplotstart-->
+<!--poststatstsplotstop-->
+" -o
+
+    set ps "<hr><p><b>Analysis methods</b><br>FMRI data processing was carried out using FEAT (FMRI Expert Analysis Tool) Version $fmri(version), part of FSL (FMRIB's Software Library, www.fmrib.ox.ac.uk/fsl)."
+    set rs "<p><b>References</b><br>"
+
+    if { $fmri(level) == 1 } {
+	set FTESTS ""
+	if { [ file exists design.fts ] } {
+	    set FTESTS "-f design.fts"
+	}
+	fsl:exec "$FSLDIR/bin/contrast_mgr $FTESTS stats design.con"
+    }
+}
+
+#}}}
+
+    if { $fmri(thresh) == 0 } {
+	return 0
+    }
+
+    set maskcomments "<p>"
+    
+    #{{{ setup raw stats list
+
+cd ${FD}/stats
+set rawstatslist [ remove_ext [ lsort -dictionary [ imglob -oneperimage zstat*.* ] ] [ lsort -dictionary [ imglob -oneperimage zfstat*.* ] ] ]
+cd ${FD}
+
+#}}}
+    #{{{ setup standard-space/non-standard-space thingies
+
+set STDOPT   ""
+set STDEXT   ""
+set SLICER   "-A"
+set VOXorMM  ""
+
+if { $stdspace != 0 } {
+    set STDOPT   "-std"
+    set STDEXT   "_std"
+    set SLICER   "-S 2"
+    set VOXorMM  "--mm"
+}
+
+#}}}
+    #{{{ brain-mask Z stats and find smoothness
+
+foreach rawstats $rawstatslist {
+
+    if { ! $rerunning } {
+	fsl:exec "$FSLDIR/bin/fslmaths stats/$rawstats -mas mask thresh_$rawstats"
+
+	if { $fmri(threshmask) != "" && [ imtest $fmri(threshmask) ] } {
+	    fsl:exec "$FSLDIR/bin/fslmaths thresh_$rawstats -mas $fmri(threshmask) thresh_$rawstats"
+	    set maskcomments "<p>Z-stat images were masked with $fmri(threshmask) before thresholding.<br>"
+	}
+    }
+
+    if { [ file exists stats/smoothness ] } {
+	set fmri(DLH$rawstats)     [ exec sh -c " grep DLH    stats/smoothness | awk '{ print \$2 }'" ]
+	set fmri(RESELS$rawstats)  [ exec sh -c " grep RESELS stats/smoothness | awk '{ print \$2 }'" ]
+    } else {
+	fsl:exec "$FSLDIR/bin/smoothest -m mask -z stats/$rawstats > stats/${rawstats}.smoothness"
+	set fmri(DLH$rawstats)     [ exec sh -c " grep DLH    stats/${rawstats}.smoothness | awk '{ print \$2 }'" ]
+	set fmri(RESELS$rawstats)  [ exec sh -c " grep RESELS stats/${rawstats}.smoothness | awk '{ print \$2 }'" ]
+    }
+
+    if { ! $rerunning } {
+	set fmri(VOLUME$rawstats) [ exec sh -c " ${FSLDIR}/bin/fslstats thresh_$rawstats -V | awk '{ print \$1 }'" ]
+	fsl:exec "echo $fmri(VOLUME$rawstats) > thresh_${rawstats}.vol"
+    } else {
+	if { ! [ info exists fmri(VOLUME$rawstats) ] } {
+	    if { [ file exists thresh_${rawstats}.vol ] } {
+		set fmri(VOLUME$rawstats) [ exec sh -c "cat thresh_${rawstats}.vol" ]
+	    } else {
+		set fmri(VOLUME$rawstats) [ exec sh -c "${FSLDIR}/bin/fslstats mask -V | awk '{ print \$1 }'" ]
+	    }
+	}
+    }
+
+    fsl:echo $logout "$rawstats: DLH=$fmri(DLH$rawstats) VOLUME=$fmri(VOLUME$rawstats) RESELS=$fmri(RESELS$rawstats)"
+
+}
+
+#}}}
+    #{{{ thresholding and contrast masking
+
+if { ! $rerunning } {
+
+    set firsttime 1
+    foreach rawstats $rawstatslist {
+	set i [ string trimleft $rawstats "abcdefghijklmnopqrstuvwxyz_" ]
+
+	if { $firsttime == 1 } {
+	    set ps "$ps Z (Gaussianised T/F) statistic images were thresholded"
+	}
+
+	if { $fmri(thresh) < 3 } {
+	    #{{{ voxel-based thresholding
+
+if { $firsttime == 1 } {
+    if { $fmri(thresh) == 1 } {
+	set ps "$ps at P=$fmri(prob_thresh) (uncorrected)."
+	set zthresh [ fsl:exec "${FSLDIR}/bin/ptoz $fmri(prob_thresh)" ]
+    } else {
+	set ps "$ps using GRF-theory-based maximum height thresholding with a (corrected) significance threshold of P=$fmri(prob_thresh) \[Worsley 2001]."
+	set rs "$rs\[Worsley 2001\] K.J. Worsley. Statistical analysis of activation images. Ch 14, in Functional MRI: An Introduction to Methods,
+eds. P. Jezzard, P.M. Matthews and S.M. Smith. OUP, 2001.<br>
+"
+    }
+}
+
+if { $fmri(thresh) == 2 } {
+    set zthresh [ fsl:exec "${FSLDIR}/bin/ptoz $fmri(prob_thresh) -g [ expr int ( $fmri(VOLUME$rawstats) / $fmri(RESELS$rawstats) ) ]" ]
+}
+
+fsl:exec "$FSLDIR/bin/fslmaths thresh_$rawstats -thr $zthresh thresh_$rawstats"
+
+#}}}
+	} else {
+	    #{{{ cluster thresholding
+
+if { $firsttime == 1 } {
+    set ps "$ps using clusters determined by Z>$fmri(z_thresh) and a (corrected) cluster significance threshold of P=$fmri(prob_thresh) \[Worsley 2001]."
+    set rs "$rs\[Worsley 2001\] K.J. Worsley. Statistical analysis of activation images. Ch 14, in Functional MRI: An Introduction to Methods,
+eds. P. Jezzard, P.M. Matthews and S.M. Smith. OUP, 2001.<br>
+"
+}
+
+set COPE ""
+if { [ string first "zfstat" $rawstats ] < 0 && [ imtest stats/cope${i} ] } {
+    set COPE "-c stats/cope$i"
+}
+
+fsl:exec "$FSLDIR/bin/cluster -i thresh_$rawstats $COPE -t $fmri(z_thresh) -p $fmri(prob_thresh) -d $fmri(DLH$rawstats) --volume=$fmri(VOLUME$rawstats) --othresh=thresh_$rawstats -o cluster_mask_$rawstats --connectivity=[ feat5:connectivity thresh_$rawstats ] $VOXorMM --olmax=lmax_${rawstats}${STDEXT}.txt > cluster_${rawstats}${STDEXT}.txt"
+
+fsl:exec "$FSLDIR/bin/cluster2html . cluster_$rawstats $STDOPT"
+
+#}}}
+	}
+
+	set firsttime 0
+    }
+
+    #{{{ contrast masking
+
+if { $fmri(conmask1_1) } {
+
+    fsl:exec "mkdir conmask"
+
+    foreach rawstats $rawstatslist {
+
+	set i [ string trimleft $rawstats "abcdefghijklmnopqrstuvwxyz_" ]
+
+	# check for being F-test
+	set I $i
+	if { [ string first "zstat" $rawstats ] == -1 } {
+	    incr I $fmri(ncon_real)
+	}
+
+	set theinput thresh_$rawstats
+
+	for { set C 1 } { $C <= [ expr $fmri(ncon_real) + $fmri(nftests_real) ] } { incr C } {
+	    if { $C != $I } {
+
+		set F ""
+		set c $C
+		if { $C > $fmri(ncon_real) } {
+		    set F f
+		    set c [ expr $C - $fmri(ncon_real) ]
+		}
+
+		if { $fmri(conmask${I}_$C) } {
+		    
+		    set themask thresh_z${F}stat$c
+		    if { $fmri(conmask_zerothresh_yn) } {
+			set themask stats/z${F}stat$c
+		    }
+
+		    fsl:echo $logout "Masking $theinput with $themask"
+
+		    set maskcomments "$maskcomments
+After all thresholding, $rawstats was masked with $themask.<br>"
+
+		    if { [ imtest $themask ] } {
+			fsl:exec "${FSLDIR}/bin/fslmaths $theinput -mas $themask conmask/thresh_$rawstats"
+		    } else {
+			fsl:exec "${FSLDIR}/bin/fslmaths $theinput -mul 0 conmask/thresh_$rawstats"
+		    }
+
+		    set theinput conmask/thresh_$rawstats
+		}
+		
+	    }
+	}
+    }
+
+    fsl:exec "/bin/mv -f conmask/* . ; rmdir conmask"
+
+    #{{{ redo clustering
+
+if { $fmri(thresh) == 3 } {
+    foreach rawstats $rawstatslist {
+	set i [ string trimleft $rawstats "abcdefghijklmnopqrstuvwxyz_" ]
+	set COPE ""
+	if { [ string first "zfstat" $rawstats ] < 0 && [ imtest stats/cope${i} ] } {
+	    set COPE "-c stats/cope$i"
+	}
+
+	# we're not going to re-test cluster size so pthresh is set to 1000
+
+	fsl:exec "$FSLDIR/bin/cluster -i thresh_$rawstats $COPE -t $fmri(z_thresh) -d $fmri(DLH$rawstats) --volume=$fmri(VOLUME$rawstats) --othresh=thresh_$rawstats -o cluster_mask_$rawstats --connectivity=[ feat5:connectivity thresh_$rawstats ] $VOXorMM --olmax=lmax_${rawstats}${STDEXT}.txt > cluster_${rawstats}${STDEXT}.txt"
+
+	fsl:exec "$FSLDIR/bin/cluster2html . cluster_$rawstats $STDOPT"
+    }
+}
+
+#}}}
+}
+
+#}}}
+}
+
+#}}}
+    #{{{ re-run cluster for StdSpace
+
+if { $rerunning && [ file exists reg/example_func2standard.mat ] && $fmri(thresh) == 3 } {
+
+    set z_thresh    $fmri(z_thresh)
+    set prob_thresh $fmri(prob_thresh)
+
+    if { $fmri(analysis) == 0 } {
+	set z_thresh    [ exec sh -c " grep 'set fmri(z_thresh)'    design.fsf | awk '{ print \$3 }'" ]
+	set prob_thresh [ exec sh -c " grep 'set fmri(prob_thresh)' design.fsf | awk '{ print \$3 }'" ]
+    }
+
+    foreach rawstats $rawstatslist {
+
+	set i [ string trimleft $rawstats "abcdefghijklmnopqrstuvwxyz_" ]
+
+	set COPE ""
+	if { [ string first "zfstat" $rawstats ] < 0 && [ imtest stats/cope${i} ] } {
+	    set COPE "-c stats/cope$i"
+	}
+
+	fsl:exec "$FSLDIR/bin/cluster -i thresh_$rawstats ${COPE} -t $z_thresh -d $fmri(DLH$rawstats) --volume=$fmri(VOLUME$rawstats) -x reg/example_func2standard.mat --stdvol=reg/standard --mm --connectivity=[ feat5:connectivity thresh_$rawstats ] --olmax=lmax_${rawstats}_std.txt > cluster_${rawstats}_std.txt"
+	fsl:exec "$FSLDIR/bin/cluster2html . cluster_${rawstats} -std"
+    }
+}
+
+#}}}
+    #{{{ rendering
+
+if { ! $rerunning } {
+
+    #{{{ Find group Z min and max
+
+if { $fmri(zdisplay) == 0 } {
+
+    set fmri(zmin) 100000
+    set fmri(zmax) -100000
+
+    foreach rawstats $rawstatslist {
+    
+	set zminmax [ fsl:exec "${FSLDIR}/bin/fslstats thresh_$rawstats -l 0.0001 -R" ]
+	set zmin [ lindex $zminmax 0 ]
+	set zmax [ lindex $zminmax 1 ]
+
+	# test for non-empty thresh_zstats image
+	if { $zmax > 0.0001 } {
+	    if { $fmri(zmin) > $zmin } {
+		set fmri(zmin) $zmin
+	    }
+	    if { $fmri(zmax) < $zmax } {
+		set fmri(zmax) $zmax
+	    }
+	}
+    }
+
+    if { $fmri(zmin) > 99999 } {
+	set fmri(zmin) 2.3
+	set fmri(zmax) 8
+    }
+}
+
+fsl:echo $logout "Rendering using zmin=$fmri(zmin) zmax=$fmri(zmax)"
+
+#}}}
+
+    set underlying example_func
+    #    if { ! [ imtest $underlying ] } {
+    #	set underlying mean_highres
+    #    }
+
+    set firsttime 1
+    foreach rawstats $rawstatslist {
+	
+	set i [ string trimleft $rawstats "abcdefghijklmnopqrstuvwxyz_" ]
+	
+	if { [ string first "zstat" $rawstats ] < 0 || $fmri(conpic_real.$i) == 1 } {
+	    #{{{ Rendering
+
+set conname "$rawstats"
+if { [ string first "zfstat" $rawstats ] < 0 } {
+    set conname "$conname &nbsp;&nbsp;-&nbsp;&nbsp; C${i}"
+    if { $fmri(conname_real.$i) != "" } {
+	set conname "$conname ($fmri(conname_real.$i))"
+    }
+} else {
+    set conname "$conname &nbsp;&nbsp;-&nbsp;&nbsp; F${i}"
+
+    set start 1
+    for { set c 1 } { $c <= $fmri(ncon_real) } { incr c 1 } {
+	if { $fmri(ftest_real${i}.${c}) == 1 } {
+	    if { $start == 1 } {
+		set conname "$conname ("
+		set start 0
+	    } else {
+		set conname "$conname & "
+	    }
+	    set conname "${conname}C$c"
+	}
+    }
+    set conname "$conname)"
+}
+
+fsl:exec "$FSLDIR/bin/overlay $fmri(rendertype) 0 $underlying -a thresh_$rawstats $fmri(zmin) $fmri(zmax) rendered_thresh_$rawstats"
+fsl:exec "${FSLDIR}/bin/slicer rendered_thresh_$rawstats $SLICER 750 rendered_thresh_${rawstats}.png"
+
+if { $firsttime == 1 } {
+    fsl:exec "/bin/cp ${FSLDIR}/etc/luts/ramp.gif .ramp.gif"
+    feat5:report_insert report_poststats.html poststatsps $ps
+    feat5:report_insert report_poststats.html poststatsrs $rs
+    feat5:report_insert_start report_poststats.html poststatspics
+    fsl:echo report_poststats.html "
+<hr><b>Thresholded activation images</b>
+&nbsp; &nbsp; &nbsp; &nbsp; 
+[ expr int($fmri(zmin)*10)/10.0 ]
+<IMG BORDER=0 SRC=\".ramp.gif\">
+[ expr int($fmri(zmax)*10)/10.0 ]
+$maskcomments
+"
+    set firsttime 0
+}
+
+if { $fmri(thresh) == 3 } {
+    fsl:echo report_poststats.html "<p>$conname<br>
+    <a href=\"cluster_${rawstats}${STDEXT}.html\"><IMG BORDER=0 SRC=\"rendered_thresh_${rawstats}.png\"></a>
+    "
+} else {
+    fsl:echo report_poststats.html "<p>$conname<br>
+    <IMG BORDER=0 SRC=\"rendered_thresh_${rawstats}.png\">
+    "
+}
+
+#}}}
+	}
+    }
+
+    feat5:report_insert_stop report_poststats.html poststatspics
+}
+
+#}}}
+    #{{{ time series plots and report output for each contrast
+
+if { ! $rerunning } {
+    set fmrifile filtered_func_data
+    if { ! [ imtest $fmrifile ] } {
+	set fmrifile [ string trimright [ file root ${FD} ] + ]
+    }
+
+    new_file tsplot
+    fsl:exec "mkdir tsplot ; ${FSLDIR}/bin/tsplot . -f $fmrifile -o tsplot"
+
+    catch { exec sh -c "cat tsplot/tsplot_index" } errmsg
+    regsub -all "tsplot" $errmsg "tsplot/tsplot" errmsg
+
+    feat5:report_insert report_poststats.html poststatstsplot "<hr><b>Time series plots</b><p>
+$errmsg"
+}
+
+#}}}
+    #{{{ finish up
+
+if { ! $rerunning } {
+    feat5:report_insert report_poststats.html poststatsps $ps
+    feat5:report_insert report_poststats.html poststatsrs $rs
+    fsl:echo report_poststats.html "</BODY></HTML>"
+} else {
+    feat5:report_insert .logA refresh ""
+}
+
+return 0
+
+#}}}
+}
+
+#}}}
+#{{{ feat5:proc_reg
+
+proc feat5:proc_reg { session } {
+
+    #{{{ basic setups
+
+global FSLDIR FSLSLASH PWD HOME HOSTNAME OSFLAVOUR logout fmri feat_files unwarp_files unwarp_files_mag initial_highres_files highres_files report ps rs comout gui_ext FSLPARALLEL
+
+cd $fmri(outputdir)
+set FD [ pwd ]
+
+set logout ${FD}/.logE
+fsl:echo $logout "</pre><hr>Registration<br><pre>"
+
+fsl:echo report_reg.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+<TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"report.html\"></OBJECT>
+<h2>Registration</h2>
+<hr><p><b>Analysis methods</b><br>
+FMRI data processing was carried out using FEAT (FMRI Expert Analysis Tool) Version $fmri(version), part of FSL (FMRIB's Software Library, www.fmrib.ox.ac.uk/fsl). Registration to high resolution structural and/or standard space images was carried out using FLIRT \[Jenkinson 2001, 2002\].
+<p><b>References</b><br>
+\[<a href=\"http://www.fmrib.ox.ac.uk/analysis/techrep/#TR00MJ2\">Jenkinson 2001</a>\] M. Jenkinson and S.M. Smith. A Global Optimisation Method for Robust Affine Registration of Brain Images. Medical Image Analysis 5:2(143-156) 2001.<br>
+\[<a href=\"http://www.fmrib.ox.ac.uk/analysis/techrep/#TR02MJ1\">Jenkinson 2002</a>\] M. Jenkinson, P. Bannister, M. Brady and S. Smith. Improved Optimisation for the Robust and Accurate Linear Registration and Motion Correction of Brain Images. NeuroImage 17:2(825-841) 2002.<br>
+<hr>
+<!--regsummarystart-->
+<!--regsummarystop-->
+" -o
+
+#}}}
+
+    #{{{ setup varables
+
+set existing_mats 0
+
+new_file reg
+fsl:exec "/bin/mkdir reg"
+cd reg
+
+imcp ../example_func example_func
+
+# test for weighting image from fieldmap unwarping to use with example_func
+set ef_weighting_flag ""
+if { [ imtest ../unwarp/EF_UD_fmap_sigloss ] } {
+    set ef_weighting_flag "-inweight ../unwarp/EF_UD_fmap_sigloss"
+}
+
+# test for pre-unwarping example_func image (in order to create unwarping evaluation images)
+set doefd 0
+if { [ imtest ../example_func_orig_distorted ] } {
+    set doefd 1
+    imcp ../example_func_orig_distorted example_func_orig_distorted 
+}
+
+#}}}
+    #{{{ setup initial transforms
+
+set init_initial_highres ""
+if { [ file exists $fmri(init_initial_highres) ] } {
+    set init_initial_highres "-init $fmri(init_initial_highres)"
+}
+
+set init_highres ""
+if { [ file exists $fmri(init_highres) ] } {
+    set init_highres "-init $fmri(init_highres)"
+}
+
+set init_standard ""
+if { [ file exists $fmri(init_standard) ] } {
+    set init_standard "-init $fmri(init_standard)"
+}
+
+#}}}
+    #{{{ setup flirt files
+
+if { $fmri(reginitial_highres_yn) } {
+    if { [ info exists initial_highres_files($session) ] } {
+	fsl:exec "${FSLDIR}/bin/fslmaths [ remove_ext $initial_highres_files($session) ] initial_highres"
+    } else { 
+	if { ! [ imtest initial_highres ] } {
+	    fsl:echo $logout "Warning - registration to initial_highres turned on but
+no initial_highres image specified in setup file or in
+FEAT directory! Will not register to initial_highres."
+	    set fmri(reginitial_highres_yn) 0
+	}
+    }
+}
+
+if { $fmri(reghighres_yn) } {
+    if { [ info exists highres_files($session) ] } {
+	fsl:exec "${FSLDIR}/bin/fslmaths [ remove_ext $highres_files($session) ] highres"
+    } else { 
+	if { ! [ imtest highres ] } {
+	    fsl:echo $logout "Warning - registration to highres turned on but
+no highres image specified in setup file or in
+FEAT directory! Will not register to highres."
+	    set fmri(reghighres_yn) 0
+	}
+    }
+}
+
+if { $fmri(regstandard_yn) } {
+    imcp [ remove_ext $fmri(regstandard) ] standard
+}
+
+#}}}
+    #{{{ -> highres
+
+if { $fmri(reghighres_yn) } {
+
+    if { $fmri(reginitial_highres_yn) } {
+
+	feat5:flirt example_func initial_highres $fmri(reginitial_highres_dof) $fmri(reginitial_highres_search) trilinear $existing_mats ${FD}/report_reg.html $init_initial_highres $ef_weighting_flag
+	if { $doefd} {
+	    feat5:flirt example_func_orig_distorted initial_highres $fmri(reginitial_highres_dof) $fmri(reginitial_highres_search) trilinear $existing_mats "" $init_initial_highres ""
+	}
+
+	feat5:flirt initial_highres highres $fmri(reghighres_dof) $fmri(reghighres_search) trilinear $existing_mats ${FD}/report_reg.html $init_highres ""
+
+	fsl:exec "${FSLDIR}/bin/convert_xfm -omat example_func2highres.mat -concat initial_highres2highres.mat example_func2initial_highres.mat"
+
+        feat5:flirt example_func highres 0 0 trilinear 1 ${FD}/report_reg.html "" ""
+	if { $doefd } {
+	    feat5:flirt example_func_orig_distorted highres 0 0 trilinear 1 ${FD}/report_reg.html "" ""
+	}
+
+    } else {
+
+	feat5:flirt example_func highres $fmri(reghighres_dof) $fmri(reghighres_search) trilinear $existing_mats ${FD}/report_reg.html $init_highres $ef_weighting_flag
+	if { $doefd} {
+	    feat5:flirt example_func_orig_distorted highres $fmri(reghighres_dof) $fmri(reghighres_search) trilinear $existing_mats ${FD}/report_reg.html $init_highres ""
+	}
+
+    }
+}
+
+#}}}
+    #{{{ -> standard
+
+if { $fmri(regstandard_yn) } {
+
+    if { $fmri(reghighres_yn) } {
+
+	feat5:flirt highres standard $fmri(regstandard_dof) $fmri(regstandard_search) trilinear $existing_mats ${FD}/report_reg.html $init_standard ""
+
+	fsl:exec "${FSLDIR}/bin/convert_xfm -omat example_func2standard.mat -concat highres2standard.mat example_func2highres.mat"
+
+        feat5:flirt example_func standard 0 0 trilinear 1 ${FD}/report_reg.html "" ""
+	if { $doefd} {
+	    feat5:flirt example_func_orig_distorted standard 0 0 trilinear 1 "" "" ""
+	}
+
+    } else {
+
+	feat5:flirt example_func standard $fmri(regstandard_dof) $fmri(regstandard_search) trilinear $existing_mats ${FD}/report_reg.html $init_standard $ef_weighting_flag
+	if { $doefd} {
+	    feat5:flirt example_func_orig_distorted standard $fmri(regstandard_dof) $fmri(regstandard_search) trilinear $existing_mats "" $init_standard ""
+	}
+
+    }
+
+    # prepare unwarping evaluation short summary image (example_func vs highres)
+    if { $doefd && [ imtest example_func2highres ] } {
+	fsl:echo .coord "51 57 40"
+	set h [ fsl:exec "${FSLDIR}/bin/img2imgcoord -src standard -dest highres -xfm standard2highres.mat .coord | tail -n 1" ]
+	fsl:exec "${FSLDIR}/bin/slicer example_func2highres highres -s 3 -x -[ expr round([ lindex $h 0 ]) ] sla.png -y -[ expr round([ lindex $h 1 ]) ] slb.png -z -[ expr round([ lindex $h 2 ]) ] slc.png"
+	fsl:exec "${FSLDIR}/bin/slicer highres example_func2highres -s 3 -x -[ expr round([ lindex $h 0 ]) ] sld.png -y -[ expr round([ lindex $h 1 ]) ] sle.png -z -[ expr round([ lindex $h 2 ]) ] slf.png"
+	fsl:exec "${FSLDIR}/bin/pngappend sla.png + sld.png + slb.png + sle.png + slc.png + slf.png example_func2highres3sl.png"
+    }
+
+}
+
+#}}}
+    #{{{ put biblio stuff & unwarp pic & reg link etc. into original report
+
+cd $FD
+
+if { [ file exists reg/example_func2highres3sl.png ] } {
+    feat5:report_insert report_prestats.html unwarphr "<p>Unwarped example_func vs. highres for evaluation of unwarping<br>
+<a href=\"reg/index.html\"><IMG BORDER=0 SRC=\"reg/example_func2highres3sl.png\" WIDTH=1000></a><br>"
+}
+
+if { [ file exists ${FD}/reg/example_func2standard1.png ] } {
+    feat5:report_insert report_reg.html regsummary "<p>Summary registration, FMRI to standard space<br><IMG BORDER=0 SRC=\"reg/example_func2standard1.png\" WIDTH=\"100%\">"
+}
+
+#}}}
+
+    #{{{ finish up
+
+fsl:echo report_reg.html "</BODY></HTML>"
+
+feat5:report_insert .logA refresh ""
+
+return 0
+
+#}}}
+}
+
+#}}}
+#{{{ feat5:proc_gfeat_setup
+
+proc feat5:proc_gfeatprep { } {
+
+    #{{{ setup
+
+global FSLDIR FSLSLASH PWD HOME HOSTNAME OSFLAVOUR logout fmri feat_files unwarp_files unwarp_files_mag initial_highres_files highres_files FD report ps rs comout gui_ext FSLPARALLEL
+
+cd $fmri(outputdir)
+set FD [ pwd ]
+
+set logout ${FD}/.logB
+fsl:echo $logout "</pre><hr>Higher-level input files preparation<br><pre>"
+
+#}}}
+    #{{{ fix feat_files and run featregapply
+
+for { set session 1 } { $session <= $fmri(multiple) } { incr session 1 } {
+    if { $fmri(inputtype) == 2 } {
+	set copes($session) $feat_files($session)
+	set feat_files($session) [ file dirname [ file dirname $feat_files($session) ] ]
+    }
+    fsl:exec "${FSLDIR}/bin/featregapply $feat_files($session)"
+}
+
+#}}}
+    #{{{ setup background image
+
+if { [ file exists $feat_files(1)/design.lev ] } {
+    set fmri(bgimage) 3
+}
+
+set bg_list ""
+
+switch $fmri(bgimage) {
+    1 {
+	for { set session 1 } { $session <= $fmri(multiple) } { incr session 1 } {
+	    set find_std [ feat5:find_std $feat_files($session) reg/highres ]
+	    if { $find_std != 0 } {
+		set bg_list "$bg_list $find_std"
+	    }
+	}
+    }
+    2 {
+	for { set session 1 } { $session <= $fmri(multiple) } { incr session 1 } {
+	    set find_std [ feat5:find_std $feat_files($session) reg/highres ]
+	    if { $find_std != 0 } {
+		set bg_list "$bg_list $find_std"
+		set session $fmri(multiple)
+	    }
+	}
+    }
+    3 {
+	for { set session 1 } { $session <= $fmri(multiple) } { incr session 1 } {
+	    set find_std [ feat5:find_std $feat_files($session) example_func ]
+	    if { $find_std != 0 } {
+		set bg_list "$bg_list $find_std"
+	    }
+	}
+    }
+    4 {
+	for { set session 1 } { $session <= $fmri(multiple) } { incr session 1 } {
+	    set find_std [ feat5:find_std $feat_files($session) example_func ]
+	    if { $find_std != 0 } {
+		set bg_list "$bg_list $find_std"
+		set session $fmri(multiple)
+	    }
+	}
+    }
+}
+
+if { [ string length $bg_list ] == 0 } {
+    fsl:exec "${FSLDIR}/bin/fslmaths [ feat5:find_std $feat_files(1) standard ] bg_image"
+} else {
+    fsl:exec "${FSLDIR}/bin/fslmerge -t bg_image $bg_list"
+    if { [ llength $bg_list ] > 1 } {
+	fsl:exec "${FSLDIR}/bin/fslmaths bg_image -inm 1000 -Tmean bg_image -odt float"
+    }
+}
+
+#}}}
+    #{{{ setup mask image and inputreg report
+
+set mask_list ""
+
+for { set session 1 } { $session <= $fmri(multiple) } { incr session 1 } {
+    set mask_list "$mask_list [ feat5:find_std $feat_files($session) mask ]"
+}
+
+fsl:exec "${FSLDIR}/bin/fslmerge -t mask $mask_list"
+
+# make input reg report if at second level
+if { ! [ file exists $feat_files(1)/design.lev ] } {
+    #{{{ create reg images
+
+fsl:exec "mkdir inputreg"
+
+cd inputreg
+
+fsl:exec "${FSLDIR}/bin/fslmaths ../mask -mul $fmri(multiple) -Tmean masksum -odt short"
+fsl:exec "${FSLDIR}/bin/fslmaths masksum -thr $fmri(multiple) -add masksum masksum"
+fsl:exec "$FSLDIR/bin/overlay 0 0 -c ../bg_image -a masksum 0.9 [ expr 2 * $fmri(multiple) ] masksum_overlay"
+fsl:exec "${FSLDIR}/bin/slicer masksum_overlay -S 2 750 masksum_overlay.png"
+#imrm masksum_overlay
+
+fsl:exec "${FSLDIR}/bin/fslmaths masksum -mul 0 maskunique"
+for { set session 1 } { $session <= $fmri(multiple) } { incr session 1 } {
+    fsl:exec "${FSLDIR}/bin/fslmaths [ feat5:find_std $feat_files($session) mask ] -mul -1 -add 1 -mul $session -add maskunique maskunique"
+}
+fsl:exec "${FSLDIR}/bin/fslmaths masksum -thr [ expr $fmri(multiple) - 1 ] -uthr [ expr $fmri(multiple) - 1 ] -bin -mul maskunique maskunique"
+fsl:exec "$FSLDIR/bin/overlay 0 0 ../bg_image -a maskunique 0.9 $fmri(multiple) maskunique_overlay"
+fsl:exec "${FSLDIR}/bin/slicer maskunique_overlay -S 2 750 maskunique_overlay.png"
+#imrm maskunique_overlay
+
+cd $FD
+
+#}}}
+    #{{{ create reg webpage
+
+fsl:exec "/bin/cp ${FSLDIR}/etc/luts/ramp.gif .ramp.gif"
+
+fsl:echo report_reg.html "<hr><p><b>Summaries of functional-to-standard registrations for all inputs</b>
+"
+
+for { set i 1 } { $i <= $fmri(multiple) } { incr i 1 } {
+    # use new format web reports if they exist, otherwise assume old format web report
+    if { [ file exists $feat_files($i)/report_reg.html ] } {
+	fsl:echo report_reg.html "<p>${i} <A HREF=\"$feat_files($i)/report_reg.html\">$feat_files($i)<br>
+<IMG BORDER=0 SRC=\"$feat_files($i)/reg/example_func2standard1.png\" width=\"100%\"></A>
+"
+    } else {
+	fsl:echo report_reg.html "<p>${i} <A HREF=\"$feat_files($i)/reg/index.html\">$feat_files($i)<br>
+<IMG BORDER=0 SRC=\"$feat_files($i)/reg/example_func2standard1.gif\" width=\"100%\"></A>
+"
+    }
+}
+
+fsl:echo report_reg.html "<hr><p><b>Sum of all input masks after transformation to standard space
+&nbsp; &nbsp; &nbsp; &nbsp; 1 <IMG BORDER=0 SRC=\".ramp.gif\"> $fmri(multiple)</b>
+<br><IMG BORDER=0 SRC=\"inputreg/masksum_overlay.png\">
+<hr><p><b>Unique missing-mask voxels
+&nbsp; &nbsp; &nbsp; &nbsp; 1 <IMG BORDER=0 SRC=\".ramp.gif\"> $fmri(multiple)</b>
+<br>This shows voxels where only one mask is missing, to enable easy identification of single gross registration problems.
+For detail, view image ${FD}/inputreg/maskunique
+<br><IMG BORDER=0 SRC=\"inputreg/maskunique_overlay.png\">
+</BODY></HTML>
+"
+
+#}}}
+}
+
+fsl:exec "${FSLDIR}/bin/fslmaths mask -Tmin mask"
+
+#}}}
+    #{{{ setup mean_func image
+
+set mean_list ""
+
+for { set session 1 } { $session <= $fmri(multiple) } { incr session 1 } {
+    set find_std [ feat5:find_std $feat_files($session) mean_func ]
+    if { $find_std != 0 } {
+	set mean_list "$mean_list $find_std"
+    }
+}
+
+if { [ string length $mean_list ] == 0 } {
+    fsl:exec "${FSLDIR}/bin/fslmaths mask -bin -mul 10000 mean_func -odt float"
+} else {
+    fsl:exec "${FSLDIR}/bin/fslmerge -t mean_func $mean_list"
+    fsl:exec "${FSLDIR}/bin/fslmaths mean_func -Tmean mean_func"
+}
+
+#}}}
+
+    if { $fmri(inputtype) == 1 } {
+	#{{{ create 4D inputs for "FEAT directories" option
+
+for { set nci 1 } { $nci <=  $fmri(ncopeinputs) } { incr nci 1 } {   
+
+    if { $fmri(copeinput.$nci) } {
+
+	set cope_list ""
+	set mean_lcon 0
+	for { set session 1 } { $session <= $fmri(multiple) } { incr session 1 } {
+	    set find_std [ feat5:find_std $feat_files($session) stats/cope$nci ]
+	    if { $find_std != 0 } {
+		set cope_list "$cope_list $find_std"
+	    } else {
+		fsl:echo $logout "Error - not all input FEAT directories have the same set of contrasts! (currently looking in $feat_files($session) for cope${nci})"
+	        exit 1
+            }
+	    if { [ file exists $feat_files($session)/design.con ] } {
+		set awknum [ expr 1 + $nci ]
+		set mean_lcon_incr [ exec sh -c "grep PPheights $feat_files($session)/design.con | awk '{ print \$$awknum }'" ]
+		if { [ file exists $feat_files($session)/design.lcon ] } {
+		    set mean_lcon_incr [ expr $mean_lcon_incr * [ exec sh -c "cat $feat_files($session)/design.lcon" ] ]
+		}
+		if { [ string length $mean_lcon_incr ] == 0 } {
+		    fsl:echo $logout "Error - not all input FEAT directories have valid and compatible design.con contrast files."
+		    exit 1
+		}
+		set mean_lcon [ expr $mean_lcon + $mean_lcon_incr ]
+	    } else {
+		fsl:echo $logout "Error - not all input FEAT directories have valid and compatible design.con contrast files."
+		return 1
+	    }
+        }
+
+	fsl:exec "${FSLDIR}/bin/fslmerge -t cope$nci $cope_list"
+	fsl:exec "${FSLDIR}/bin/fslmaths cope$nci -mas mask cope$nci"
+
+	set mean_lcon [ expr $mean_lcon / $fmri(multiple) ]
+	if { $mean_lcon < 0.01 } {
+	    set mean_lcon 1
+	}
+	fsl:exec "echo -n '$mean_lcon ' >> design.lcon"
+
+	set varcope_list ""
+	for { set session 1 } { $session <= $fmri(multiple) } { incr session 1 } {
+	    set varcope_list "$varcope_list [ feat5:find_std $feat_files($session) stats/varcope$nci ]"
+	}
+	fsl:exec "${FSLDIR}/bin/fslmerge -t varcope$nci $varcope_list"
+	fsl:exec "${FSLDIR}/bin/fslmaths varcope$nci -mas mask varcope$nci"
+	
+	#{{{ setup t_dof
+
+	set tdof_list ""
+	for { set session 1 } { $session <= $fmri(multiple) } { incr session 1 } {
+	    if { $fmri(mixed_yn) != 3 || [ file exists $feat_files($session)/design.lev ] } {
+		set find_std [ feat5:find_std $feat_files($session) stats/tdof_t$nci ]
+		if { $find_std != 0 } {
+		    set tdof_list "$tdof_list $find_std"
+		}
+	    } else {
+		set THEDOF [ exec sh -c "cat $feat_files($session)/stats/dof" ]
+		fsl:exec "${FSLDIR}/bin/fslmaths $feat_files($session)/reg_standard/stats/cope$nci -mul 0 -add $THEDOF $feat_files($session)/reg_standard/stats/FEtdof_t$nci"
+		set tdof_list "$tdof_list $feat_files($session)/reg_standard/stats/FEtdof_t$nci"
+	    }
+	}
+	if { $tdof_list != "" } {
+	    fsl:exec "${FSLDIR}/bin/fslmerge -t tdof_t$nci $tdof_list"
+	    fsl:exec "${FSLDIR}/bin/fslmaths tdof_t$nci -mas mask tdof_t$nci"
+	}
+
+#}}}
+
+    } else {
+	fsl:exec "echo -n '1 ' >> design.lcon"
+    }
+}
+
+#}}}
+    } elseif { $fmri(inputtype) == 2 } {
+	#{{{ create 4D inputs for "3D cope input" option
+
+set cope_list ""
+set varcope_list ""
+set tdof_list ""
+set mean_lcon 0
+
+for { set session 1 } { $session <= $fmri(multiple) } { incr session 1 } {
+    set copename [ file tail $copes($session) ]
+    set copenumber [ remove_ext [ string trimleft $copename "cope" ] ]
+
+    set cope_list "$cope_list [ feat5:find_std $feat_files($session) stats/$copename ]"
+    set varcope_list "$varcope_list [ feat5:find_std $feat_files($session) stats/var$copename ]"
+
+    if { [ file exists $feat_files($session)/design.con ] } {
+	set awknum [ expr 1 + $copenumber ]
+	set mean_lcon_incr [ exec sh -c "grep PPheights $feat_files($session)/design.con | awk '{ print \$$awknum }'" ]
+	if { [ file exists $feat_files($session)/design.lcon ] } {
+	    set mean_lcon_incr [ expr $mean_lcon_incr * [ exec sh -c "cat $feat_files($session)/design.lcon" ] ]
+	}
+	set mean_lcon [ expr $mean_lcon + $mean_lcon_incr ]
+    }
+
+    if { $fmri(mixed_yn) != 3 || [ file exists $feat_files(1)/design.lev ] } {
+	set find_std [ feat5:find_std $feat_files($session) stats/tdof_t$copenumber ]
+	if { $find_std != 0 } {
+	    set tdof_list "$tdof_list $find_std"
+	}
+    } else {
+	set THEDOF [ exec sh -c "cat $feat_files($session)/stats/dof" ]
+	fsl:exec "${FSLDIR}/bin/fslmaths $feat_files($session)/reg_standard/stats/$copename -mul 0 -add $THEDOF $feat_files($session)/reg_standard/stats/FEtdof_t${copenumber}"
+	set tdof_list "$tdof_list $feat_files($session)/reg_standard/stats/FEtdof_t${copenumber}"
+    }
+}
+
+fsl:exec "${FSLDIR}/bin/fslmerge -t cope1 $cope_list"
+fsl:exec "${FSLDIR}/bin/fslmaths cope1 -mas mask cope1"
+
+set mean_lcon [ expr $mean_lcon / $fmri(multiple) ]
+if { $mean_lcon < 0.01 } {
+    set mean_lcon 1
+}
+fsl:exec "echo $mean_lcon > design.lcon"
+
+fsl:exec "${FSLDIR}/bin/fslmerge -t varcope1 $varcope_list"
+fsl:exec "${FSLDIR}/bin/fslmaths varcope1 -mas mask varcope1"
+
+if { $tdof_list != "" } {
+    fsl:exec "${FSLDIR}/bin/fslmerge -t tdof_t1 $tdof_list"
+    fsl:exec "${FSLDIR}/bin/fslmaths tdof_t1 -mas mask tdof_t1"
+}
+
+#}}}
+    }
+
+    #{{{ featregapply cleanup
+
+if { $fmri(sscleanup_yn) } {
+    for { set session 1 } { $session <= $fmri(multiple) } { incr session 1 } {
+	fsl:exec "${FSLDIR}/bin/featregapply $feat_files($session) -c"
+    }
+}
+
+#}}}
+
+    return 0
+}
+
+#}}}
+#{{{ feat5:proc_flame1,2,3
+
+proc feat5:proc_flame1 { session } {
+    #{{{ basic setups
+
+global FSLDIR FSLSLASH PWD HOME HOSTNAME OSFLAVOUR logout fmri feat_files unwarp_files unwarp_files_mag initial_highres_files highres_files FD report ps rs comout gui_ext FSLPARALLEL
+
+cd $fmri(outputdir)
+set FD [ pwd ]
+
+set logout ${FD}/.logB
+fsl:echo $logout "</pre><hr>Higher-level stats<br><pre>"
+
+fsl:echo report_stats.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+<TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"report.html\"></OBJECT>
+<h2>Stats</h2>
+<!--statspsstart-->
+<!--statspsstop-->
+<!--statsrsstart-->
+<!--statsrsstop-->" -o
+
+if { [ file exists design.png ] } {
+    fsl:echo report_stats.html "<hr><p><b>Design matrix</b><br><a href=\"design.mat\"><IMG BORDER=0 SRC=\"design.png\"></a>"
+    if { [ file exists design_cov.png ] } {
+	fsl:echo report_stats.html "<p><b>Covariance matrix & design efficiency</b><br><IMG BORDER=0 SRC=\"design_cov.png\">"
+    }
+}
+
+set ps "<hr><p><b>Analysis methods</b><br>FMRI data processing was carried out using FEAT (FMRI Expert Analysis Tool) Version $fmri(version), part of FSL (FMRIB's Software Library, www.fmrib.ox.ac.uk/fsl)."
+set rs ""
+
+#}}}
+    #{{{ FLAME1
+
+fsl:exec "cat ../design.lcon | awk '{ print \$$session }' > design.lcon"
+
+imcp ../bg_image example_func
+imcp ../mean_func mean_func
+imcp ../mask mask
+
+set funcdata [ feat5:strip [ file tail $FD ] ]
+immv ../$funcdata filtered_func_data
+immv ../var$funcdata var_filtered_func_data
+
+set DOFS ""
+set thetdof ../tdof_t[ string trimleft $funcdata "cope" ]
+if { [ imtest $thetdof ] } {
+    immv $thetdof tdof_filtered_func_data
+    if { [ exec sh -c "${FSLDIR}/bin/fslnvols tdof_filtered_func_data 2> /dev/null" ] == $fmri(npts) } {
+	set DOFS "--dvc=tdof_filtered_func_data"
+    }
+}
+
+set FTESTS ""
+if { [ file exists design.fts ] } {
+    set FTESTS "--fc=design.fts"
+}
+
+set FLAME ""
+
+set ps "$ps Higher-level analysis was carried out using"
+
+if { $fmri(mixed_yn) == 3 } {
+    set FLAME "--fe"
+    set ps "$ps a fixed effects model, by forcing the random effects variance to zero in FLAME (FMRIB's Local Analysis of Mixed Effects) \[Beckmann 2003, Woolrich 2004\]."
+} else {
+
+    if { $fmri(mixed_yn) == 0 } {
+	set FLAME "--jols"
+	set ps "$ps OLS (ordinary least squares) simple mixed effects."
+    } else {
+
+	if { $fmri(mixed_yn) == 1 } {
+	    if { $fmri(thresh) == 3 } {
+		set zlt [ expr $fmri(z_thresh) - 0.05 ]
+		set zut [ expr $fmri(z_thresh) + 0.35 ]
+	    } else {
+		set zlt 2
+		set zut 20
+	    }
+	    set stageoneonly ""
+	} else {
+	    set zlt 100000
+	    set zut 100000
+	    set stageoneonly "stage 1 only (i.e., without the final MCMC-based stage) "
+	}
+
+	set FLAME "--ols --nj=10000 --bi=500 --se=1 --fm --zlt=$zlt --zut=$zut"
+
+	set ps "$ps FLAME (FMRIB's Local Analysis of Mixed Effects) ${stageoneonly}\[Beckmann 2003, Woolrich 2004\]."
+    }
+}
+
+if { $fmri(mixed_yn) != 0 } {
+    set rs "<p><b>References</b><br>
+\[<a href=\"http://www.fmrib.ox.ac.uk/analysis/techrep/#TR01CB1\">Beckmann 2003</a>\] C. Beckmann, M. Jenkinson and S.M. Smith. General multi-level linear modelling for group analysis in FMRI. NeuroImage 20(1052-1063) 2003.<br>
+\[<a href=\"http://www.fmrib.ox.ac.uk/analysis/techrep/#TR03MW1\">Woolrich 2004</a>\] M.W. Woolrich, T.E.J Behrens, C.F. Beckmann, M. Jenkinson and S.M. Smith. Multi-level linear modelling for FMRI group analysis using Bayesian inference. NeuroImage 21:4(1732-1747) 2004<br>
+"
+}
+
+set NumPoints [ exec sh -c "grep NumPoints design.mat | awk '{ print \$2 }'" ]
+set NumWaves  [ exec sh -c "grep NumWaves  design.mat | awk '{ print \$2 }'" ]
+
+fsl:exec "/bin/rm .flame ; touch .flame ; chmod a+x .flame" -n
+
+if { $NumPoints < 30 && $fmri(mixed_yn) != 1 } {
+    fsl:echo .flame "$FSLDIR/bin/flame --cope=filtered_func_data --vc=var_filtered_func_data $DOFS --mask=mask --ld=stats --dm=design.mat --cs=design.grp --tc=design.con $FTESTS $FLAME"
+} else {
+
+    set DIMX [ exec sh -c "$FSLDIR/bin/fslval example_func dim1" ]
+    set DIMY [ exec sh -c "$FSLDIR/bin/fslval example_func dim2" ]
+    set DIMZ [ exec sh -c "$FSLDIR/bin/fslval example_func dim3" ]
+    for { set slice 0 } { $slice < $DIMZ } { incr slice 1 } {
+	fsl:exec "$FSLDIR/bin/fslroi mask tmpmask$slice 0 $DIMX 0 $DIMY $slice 1"
+	fsl:exec "$FSLDIR/bin/fslroi filtered_func_data tmpcope$slice 0 $DIMX 0 $DIMY $slice 1"
+	fsl:exec "$FSLDIR/bin/fslroi var_filtered_func_data tmpvarcope$slice 0 $DIMX 0 $DIMY $slice 1"
+	set DOFS ""
+	if { [ imtest tdof_filtered_func_data ] } {
+	    fsl:exec "$FSLDIR/bin/fslroi tdof_filtered_func_data tmptdof$slice 0 $DIMX 0 $DIMY $slice 1"
+	    set DOFS "--dvc=tmptdof$slice"
+	}
+	fsl:echo .flame "$FSLDIR/bin/flame --cope=tmpcope$slice --vc=tmpvarcope$slice $DOFS --mask=tmpmask$slice --ld=stats$slice --dm=design.mat --cs=design.grp --tc=design.con $FTESTS $FLAME"
+    }
+}
+
+fsl:echo dof "[ expr $NumPoints - $NumWaves ]"
+new_file stats
+
+#}}}
+    #{{{ finish up
+
+feat5:report_insert report_stats.html statsps $ps
+feat5:report_insert report_stats.html statsrs $rs
+
+fsl:echo report_stats.html "</BODY></HTML>"
+
+return 0
+
+#}}}
+}
+
+proc feat5:proc_flame2 { } {
+    #{{{ basic setups
+
+global FSLDIR FSLSLASH PWD HOME HOSTNAME OSFLAVOUR logout fmri feat_files unwarp_files unwarp_files_mag initial_highres_files highres_files FD report ps rs comout gui_ext FSLPARALLEL
+
+cd $fmri(outputdir)
+set FD [ pwd ]
+
+set logout ${FD}/.logB
+
+#}}}
+    fsl:exec "sh ./.flame"
+    return 0
+}
+
+proc feat5:proc_flame3 { } {
+    #{{{ basic setups
+
+global FSLDIR FSLSLASH PWD HOME HOSTNAME OSFLAVOUR logout fmri feat_files unwarp_files unwarp_files_mag initial_highres_files highres_files FD report ps rs comout gui_ext FSLPARALLEL
+
+cd $fmri(outputdir)
+set FD [ pwd ]
+
+set logout ${FD}/.logB
+
+#}}}
+    #{{{ FLAME3
+
+if { [ file exists stats0 ] } {
+    foreach f [ imglob -oneperimage stats0/* ] {
+	set froot [ file tail $f ]
+	fsl:exec "$FSLDIR/bin/fslmerge -z stats0/$froot [ lsort -dictionary [ imglob -oneperimage stats*/$froot ] ]"
+    }
+    fsl:exec "mv stats0 stats"
+    fsl:exec "/bin/rm -rf stats?* tmp*"
+}
+
+fsl:exec "/bin/rm -f stats/zem* stats/zols* stats/mask* ; /bin/mv dof stats"
+
+if { [ imtest stats/res4d ] } {
+    fsl:exec "$FSLDIR/bin/smoothest -d [ exec sh -c "cat stats/dof" ] -m mask -r stats/res4d > stats/smoothness"
+}
+
+#}}}
+    return 0
 }
 
 #}}}

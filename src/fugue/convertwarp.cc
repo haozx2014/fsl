@@ -2,7 +2,7 @@
 
     Mark Jenkinson, FMRIB Image Analysis Group
 
-    Copyright (C) 2001 University of Oxford  */
+    Copyright (C) 2001-2007 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -79,7 +79,7 @@ using namespace NEWIMAGE;
 
 // COMMAND LINE OPTIONS
 
-string title="convertwarp (Version 1.0)\nCopyright(c) 2001, University of Oxford (Mark Jenkinson)";
+string title="convertwarp (Version 2.0)\nCopyright(c) 2001-2007, University of Oxford (Mark Jenkinson)";
 string examples="convertwarp -m affine_matrix_file -r refvol -o output_warp\nconvertwarp --premat=mat1 --warp1=vol1 --warp2=vol2 --postmat=mat2 -o output_warp\nconvertwarp -s shiftmapvol -o output_warp";
 
 Option<bool> verbose(string("-v,--verbose"), false, 
@@ -100,6 +100,18 @@ Option<bool> relwarpout(string("--relout"), false,
 Option<bool> abswarpout(string("--absout"), false,
 		  string("force output to use absolute warp convention: x' = w(x)"),
 		  false, no_argument);
+Option<bool> jacobianstats(string("--jstats"), false,
+		  string("print out statistics of the Jacobian of the warpfield"),
+		  false, no_argument);
+Option<bool> constrainj(string("--constrainj"), false,
+		  string("constrain the Jacobian of the warpfield to lie within specified min/max limits"),
+		  false, no_argument);
+Option<float> jmin(string("--jmin"), 0.01,
+			string("minimum acceptable Jacobian value for constraint (default 0.01)"),
+			false, requires_argument);
+Option<float> jmax(string("--jmax"), 100.0,
+			string("maximum acceptable Jacobian value for constraint (default 100.0)"),
+			false, requires_argument);
 Option<string> prematname(string("-m,--premat"), string(""),
 			  string("filename of pre-affine transform (not MEDx)"),
 			  false, requires_argument);
@@ -123,9 +135,12 @@ Option<string> refname(string("-r,--ref"), string(""),
 		       false, requires_argument);
 Option<string> outname(string("-o,--out"), string(""),
 		       string("filename for output (warp) image"),
-		       true, requires_argument);
+		       false, requires_argument);
 Option<string> shiftdir(string("-d,--shiftdir"), string("y"),
 		       string("direction to apply shiftmap {x,y,z,x-,y-,z-}"),
+		       false, requires_argument);
+Option<string> jacobianname(string("-j,--jacobian"), string("y"),
+		       string("calculate and save Jacobian of final warp field"),
 		       false, requires_argument);
 
 bool abs_warp = true;
@@ -144,7 +159,24 @@ void update_warp(volume4D<float>& totalwarp,  const volume4D<float>& newwarp,
     warpset = true;
   }
 }
-		 
+
+
+bool getabswarp(volume4D<float>& warpvol) {
+  bool absw = false;
+  if (abswarp.set()) { absw = true; }
+  else if (relwarp.set()) { absw = false; }
+  else {
+    if (verbose.value()) { 
+      cout << "Automatically determining relative/absolute warp conventions" << endl; 
+    }
+    absw = is_abs_convention(warpvol);
+    if (verbose.value()) {
+      if (absw) { cout << "Warp convention = absolute" << endl; } 
+      else { cout << "Warp convention = relative" << endl; }
+    }
+  }
+  return absw;
+}
 
 
 int convert_warp()
@@ -152,13 +184,13 @@ int convert_warp()
   volume<float> refvol;
 
   if (refname.set()) {
-    read_volume(refvol,refname.value());
+    read_rad_volume(refvol,refname.value());
   } else if (warp2name.set()) {
-    read_volume(refvol,warp2name.value());  // only reads first volume
+    read_rad_volume(refvol,warp2name.value());  // only reads first volume
   } else if (warp1name.set()) {
-    read_volume(refvol,warp1name.value());  // only reads first volume
+    read_rad_volume(refvol,warp1name.value());  // only reads first volume
   } else if (shiftmapname.set()) {
-    read_volume(refvol,shiftmapname.value());  // only reads first volume
+    read_rad_volume(refvol,shiftmapname.value());  // only reads first volume
   } else {
     cerr << "Cannot determine size of output warp!" << endl;
     cerr << "Must specify a reference volume (using -r)" << endl;
@@ -167,9 +199,6 @@ int convert_warp()
 
   volume4D<float> nextwarp, finalwarp;
   bool warpset = false;
-
-  if (abswarp.set()) { abs_warp = true; }
-  if (relwarp.set()) { abs_warp = false; }
 
   // Note that internally everything works with absolute warps
 
@@ -185,7 +214,8 @@ int convert_warp()
   }
 
   if (warp1name.set()) {
-    read_volume4D(nextwarp,warp1name.value());
+    read_rad_volume4D(nextwarp,warp1name.value());
+    abs_warp = getabswarp(nextwarp);
     if (!abs_warp) { convertwarp_rel2abs(nextwarp); }
     update_warp(finalwarp,nextwarp,warpset);
   }
@@ -197,7 +227,8 @@ int convert_warp()
   }
 
   if (warp2name.set()) {
-    read_volume4D(nextwarp,warp2name.value());
+    read_rad_volume4D(nextwarp,warp2name.value());
+    abs_warp = getabswarp(nextwarp);
     if (!abs_warp) { convertwarp_rel2abs(nextwarp); }
     update_warp(finalwarp,nextwarp,warpset);
   }
@@ -211,7 +242,7 @@ int convert_warp()
   // apply shiftmap last (if it exists)
   if (shiftmapname.set()) {
     volume<float> shiftmap;
-    read_volume(shiftmap,shiftmapname.value());
+    read_rad_volume(shiftmap,shiftmapname.value());
     shift2warp(shiftmap,nextwarp,shiftdir.value());
     update_warp(finalwarp,nextwarp,warpset);
   }
@@ -222,12 +253,33 @@ int convert_warp()
     update_warp(finalwarp,nextwarp,warpset);
   }
    
+  if (jacobianstats.value() || jacobianname.set()) {
+    ColumnVector jstats;
+    if (jacobianname.set()) {
+      volume4D<float> jvol;
+      jvol=jacobian_check(jstats,finalwarp,0.01,100.0);
+      save_volume4D(jvol,jacobianname.value());
+    }
+    if (jacobianstats.value()) {
+      if (jacobianname.unset()) { jstats=jacobian_quick_check(finalwarp,jmin.value(),jmax.value()); }
+      cout << "Jacobian : min, max = "<<jstats(1)<<", "<<jstats(2)<<endl;
+      cout << "Number of voxels where J < " << jmin.value() << " = "<<MISCMATHS::round(jstats(3)/8.0)<<endl;
+      cout << "Number of voxels where J > " << jmax.value() << " = "<<MISCMATHS::round(jstats(4)/8.0)<<endl;
+    }
+  }
+
+  if (constrainj.value()) {
+    constrain_topology(finalwarp,jmin.value(),jmax.value());
+  }
+
   if (relwarpout.set() || (abswarpout.unset() && !abs_warp)) {
     // convert output to relative
     convertwarp_abs2rel(finalwarp);
   }
 
-  save_volume4D(finalwarp,outname.value());
+  if (outname.set()) {
+    save_volume4D(finalwarp,outname.value());
+  }
   
   return 0;
 }
@@ -252,6 +304,11 @@ int main(int argc, char* argv[])
     options.add(refname);
     options.add(shiftmapname);
     options.add(shiftdir);
+    options.add(jacobianname);
+    options.add(jacobianstats);
+    options.add(constrainj);
+    options.add(jmin);
+    options.add(jmax);
     options.add(abswarp);
     options.add(relwarp);
     options.add(abswarpout);
@@ -261,7 +318,7 @@ int main(int argc, char* argv[])
     
     options.parse_command_line(argc, argv);
 
-    if ( (help.value()) || (!options.check_compulsory_arguments(true)) )
+    if ( (argc<2) || (help.value()) || (!options.check_compulsory_arguments(true)) )
       {
 	options.usage();
 	exit(EXIT_FAILURE);

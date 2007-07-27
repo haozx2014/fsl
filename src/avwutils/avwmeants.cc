@@ -1,8 +1,8 @@
-/*  avwmeants.cc
+/*  fslmeants.cc
 
-    Mark Jenkinson, FMRIB Image Analysis Group
+    Mark Jenkinson and Matthew Webster, FMRIB Image Analysis Group
 
-    Copyright (C) 2001 University of Oxford  */
+    Copyright (C) 2007 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -83,8 +83,8 @@ using namespace Utilities;
 // The two strings below specify the title and example usage that is
 //  printed out as the help or usage message
 
-string title="avwmeants (Version 1.1)\nCopyright(c) 2004, University of Oxford (Mark Jenkinson)\nPrints average timeseries (intensities) to the screen (or saves to a file).\nThe average is taken over all voxels in the mask (or all voxels in the image if no mask is specified).\n";
-string examples="avwmeants -i filtered_func_data -o meants.txt -m my_mask\navwmeants -i filtered_func_data -m my_mask\navwmeants -i filtered_func_data -c 24 19 10";
+string title="fslmeants (Version 1.1)\nCopyright(c) 2004, University of Oxford (Mark Jenkinson)\nPrints average timeseries (intensities) to the screen (or saves to a file).\nThe average is taken over all voxels in the mask (or all voxels in the image if no mask is specified).\n";
+string examples="fslmeants -i filtered_func_data -o meants.txt -m my_mask\nfslmeants -i filtered_func_data -m my_mask\nfslmeants -i filtered_func_data -c 24 19 10";
 
 // Each (global) object below specificies as option and can be accessed
 //  anywhere in this file (since they are global).  The order of the

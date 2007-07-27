@@ -1,4 +1,4 @@
-#!/usr/local/bin/bash
+#!/bin/sh
 # preprocessing for DTI images acquired at FMRIB 
 
 Usage() {
@@ -10,7 +10,7 @@ echo "example: remove_vols data data_rv 4 19 35"
 echo ""
 echo "Note that the first volume is 0 and not 1"
 echo ""
-exit
+exit 1
 }
 
 [ "$1" = "" ] && Usage
@@ -36,7 +36,7 @@ if [ ! -e bvecs ]; then
     exit
 fi
 
-avwsplit $input_file
+fslsplit $input_file
 
 vol=0
 num_vols=`expr $# - 2`
@@ -76,6 +76,6 @@ EOF
 
 rm matlab.out1 -f
 echo "Merging Volumes"
-avwmerge -t $output_file `$FSLDIR/bin/imglob -oneperimage vol*`
+fslmerge -t $output_file `$FSLDIR/bin/imglob -oneperimage vol*`
 rm vol* -f
 rm dodgy_vols -f    

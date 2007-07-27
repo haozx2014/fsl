@@ -12,9 +12,11 @@ set HOSTNAME   [ exec hostname ]
 set OS         [ exec uname ]
 
 set auto_path [ linsert $auto_path 0 $FSLDIR/tcl/ ]
+set MYEXEC    [ info nameofexecutable ]
+set MYSHELL   [ file tail $MYEXEC ]
 
 # test for whether we are in tclsh or wish
-if { [ info exists env(TCLTKSHELL) ] &&  $env(TCLTKSHELL) == "wish" } {
+if { [  string match -nocase *wish* $MYSHELL ] } {
     package require Tk
 #    tk_focusFollowsMouse
 #bind Button <Enter> { focus %W ; tk::ButtonEnter %W }

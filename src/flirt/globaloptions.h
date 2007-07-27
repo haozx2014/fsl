@@ -110,6 +110,8 @@ class globaloptions {
   string initmatfname;
   string refweightfname;
   string testweightfname;
+  bool initmatsqform;
+  bool printinit;
   Matrix initmat;
 
   string schedulefname;
@@ -212,6 +214,8 @@ inline globaloptions::globaloptions()
   refweightfname = "";
   testweightfname = "";
   initmat = Identity(4);
+  initmatsqform = true;
+  printinit = false;
 
   schedulefname = "";
   

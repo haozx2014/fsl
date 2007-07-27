@@ -74,7 +74,7 @@
 if [ _${2} = _ ] ; then
     echo "Usage:  lesions <t1_root> <t2_root> [-f]"
     echo "-f   :  second image is FLAIR not t2"
-    exit
+    exit 1
 fi
 
 nclasses=3
@@ -101,14 +101,14 @@ ${FSLDIR}/bin/flirt -ref ${FSLDIR}/etc/standard/avg152T1_brain -in ${1}_brain -o
 ${FSLDIR}/bin/convert_xfm -inverse -omat std_2_${1}_brain.mat ${1}_brain_2_std.mat
 
 # dilate (6mm) standard space structural segmentation, bring into t1 space and re-binarise
-${FSLDIR}/bin/avwmaths ${FSLDIR}/etc/standard/avg152T1_strucseg -thr 3.5 -bin -dil -dil -dil strucseg_2_${1}_brain
+${FSLDIR}/bin/fslmaths ${FSLDIR}/etc/standard/avg152T1_strucseg -thr 3.5 -bin -dilM -dilM -dilM strucseg_2_${1}_brain
 ${FSLDIR}/bin/flirt -in strucseg_2_${1}_brain -ref ${1}_brain -out strucseg_2_${1}_brain -applyxfm -init std_2_${1}_brain.mat
-${FSLDIR}/bin/avwmaths strucseg_2_${1}_brain -bin strucseg_2_${1}_brain
+${FSLDIR}/bin/fslmaths strucseg_2_${1}_brain -bin strucseg_2_${1}_brain
 
 # produce t1-derived CSF mask and also dilate in-plane: 5 voxels outside central mask, 1 voxel inside mask
-${FSLDIR}/bin/avwmaths ${1}_brain_pve_0 -thr 0.3 -bin ${1}_csf
-${FSLDIR}/bin/avwmaths ${1}_csf -dil2 -dil2 -dil2 -dil2 -dil2 -sub strucseg_2_${1}_brain -thr 0.5 -bin ${1}_grot
-${FSLDIR}/bin/avwmaths ${1}_csf -dil2 -mul strucseg_2_${1}_brain -add ${1}_grot -bin ${1}_csf_dil
+${FSLDIR}/bin/fslmaths ${1}_brain_pve_0 -thr 0.3 -bin ${1}_csf
+${FSLDIR}/bin/fslmaths ${1}_csf -kernel 2D -dilM -dilM -dilM -dilM -dilM -sub strucseg_2_${1}_brain -thr 0.5 -bin ${1}_grot
+${FSLDIR}/bin/fslmaths ${1}_csf -kernel 2D -dilM -mul strucseg_2_${1}_brain -add ${1}_grot -bin ${1}_csf_dil
 
 
 
@@ -120,23 +120,23 @@ ${FSLDIR}/bin/convert_xfm -inverse -omat ${1}_to_${2}.mat ${2}_to_${1}.mat
 
 # transform t1 brain mask into t2 space, dilate slightly and apply to t2 to get t2 brain
 ${FSLDIR}/bin/flirt -in ${1}_brain_mask -out ${2}_brain_mask -ref ${2} -applyxfm -init ${1}_to_${2}.mat
-#${FSLDIR}/bin/avwmaths ${2}_brain_mask -dil ${2}_brain_mask
-${FSLDIR}/bin/avwmaths ${2}_brain_mask ${2}_brain_mask
-${FSLDIR}/bin/avwmaths ${2} -mas ${2}_brain_mask ${2}_brain
+#${FSLDIR}/bin/fslmaths ${2}_brain_mask -dilM ${2}_brain_mask
+${FSLDIR}/bin/fslmaths ${2}_brain_mask ${2}_brain_mask
+${FSLDIR}/bin/fslmaths ${2} -mas ${2}_brain_mask ${2}_brain
 
 # run segmentation on t2; pve_0 should be CSF+lesions; transform into t1 space, remask with t1 brain mask
 ${FSLDIR}/bin/fast1 $t2segopts -c $nclasses -e -ov ${2}_brain
 ${FSLDIR}/bin/flirt -in $t2lesions -ref ${1} -out ${1}_lesion+CSF -applyxfm -init ${2}_to_${1}.mat
-${FSLDIR}/bin/avwmaths ${1}_lesion+CSF -mas ${1}_brain_mask ${1}_lesion+CSF
+${FSLDIR}/bin/fslmaths ${1}_lesion+CSF -mas ${1}_brain_mask ${1}_lesion+CSF
 
 
 
 #### combine to remove CSF from CSF+lesions ############################################
 
 # combine masks and use to mask out CSF from t2-derived lesion+CSF probability; output lesion volume
-${FSLDIR}/bin/avwmaths_32R ${1}_csf     -mul -1 -add 1 -mul ${1}_lesion+CSF -thr 0.3 -bin ${1}_lesions+ucsf
-${FSLDIR}/bin/avwmaths_32R ${1}_csf_dil -mul -1 -add 1 -mul ${1}_lesion+CSF               ${1}_lesions
-echo `${FSLDIR}/bin/avwstats ${1}_lesions -m -v | awk '{print "2 k " ${1} " " $3 " * 1000 / p" }' | dc -` > ${1}_lesions.txt
+${FSLDIR}/bin/fslmaths ${1}_csf     -mul -1 -add 1 -mul ${1}_lesion+CSF -thr 0.3 -bin ${1}_lesions+ucsf -odt float
+${FSLDIR}/bin/fslmaths ${1}_csf_dil -mul -1 -add 1 -mul ${1}_lesion+CSF               ${1}_lesions -odt float
+echo `${FSLDIR}/bin/fslstats ${1}_lesions -m -v | awk '{print "2 k " ${1} " " $3 " * 1000 / p" }' | dc -` > ${1}_lesions.txt
 echo "${1}	`cat ${1}_lesions.txt`"
 
 # create display output

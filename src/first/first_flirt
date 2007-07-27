@@ -74,7 +74,7 @@ Usage() {
     echo ""
     echo "-d : debug (don't delete intermediate files)"
     echo ""
-    exit
+    exit 1
 }
 
 [ "$2" = "" ] && Usage
@@ -88,16 +88,9 @@ ${FSLDIR}/bin/flirt -in $A -out ${B}grot -ref ${FSLDIR}/etc/standard/MNI152_T1_1
 #do subcortical alignment
 ${FSLDIR}/bin/flirt -in ${B}grot -out ${B}grot2 -ref ${FSLDIR}/etc/standard/MNI152_T1_1mm.nii.gz -omat ${B}grot2.mat -nosearch -refweight ${FSLDIR}/etc/standard/avg152_subbr_mask.nii.gz   
 
-${FSLDIR}/bin/convert_xfm -omat ${B}_sub.mat -concat ${B}grot2.mat ${B}grot.mat 
-#do hemisphere/cerebellum alignment
-${FSLDIR}/bin/flirt -in ${B}grot -out ${B}grot2 -ref ${FSLDIR}/etc/standard/MNI152_T1_1mm.nii.gz -omat ${B}grot2.mat -nosearch -refweight /usr/people/brian/scratch/cma_norm_allign/masks/avg152_cort.nii.gz
-
-${FSLDIR}/bin/convert_xfm -omat ${B}_cort.mat -concat ${B}grot2.mat ${B}grot.mat
-
+${FSLDIR}/bin/convert_xfm -omat ${B}.mat -concat ${B}grot2.mat ${B}grot.mat 
 #generate registered images
-${FSLDIR}/bin/flirt -in ${A} -out ${B}_sub -ref ${FSLDIR}/etc/standard/MNI152_T1_1mm.nii.gz -applyxfm -init ${B}_sub.mat
-
-${FSLDIR}/bin/flirt -in ${A} -out ${B}_cort -ref ${FSLDIR}/etc/standard/MNI152_T1_1mm.nii.gz -applyxfm -init ${B}_cort.mat
+${FSLDIR}/bin/flirt -in ${A} -out ${B} -ref ${FSLDIR}/etc/standard/MNI152_T1_1mm.nii.gz -applyxfm -init ${B}.mat
 
 
 if [ _$3 = _ ] ; then

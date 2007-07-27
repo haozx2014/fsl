@@ -22,7 +22,8 @@ if [ -z "$FSLMACHTYPE" ]; then
 fi
 FSLEXTLIB=${FSLDEVDIR}/lib
 FSLEXTINC=${FSLDEVDIR}/include
-export FSLDIR FSLDEVDIR FSLCONFDIR FSLMACHTYPE FSLEXTLIB FSLEXTINC
+FSLEXTBIN=${FSLDEVDIR}/bin
+export FSLDIR FSLDEVDIR FSLCONFDIR FSLMACHTYPE FSLEXTLIB FSLEXTINC FSLEXTBIN
 
 MAKE=none
 if [ X"`make --version 2>&1 | grep -i gnu`"X != XX ] ; then
@@ -36,7 +37,7 @@ if [ ${MAKE} = none ] ; then
 fi
 
 
-MAKEOPTIONS="${MAKEOPTIONS} FSLEXTLIB=${FSLEXTLIB} FSLEXTINC=${FSLEXTINC}"
+MAKEOPTIONS="${MAKEOPTIONS} FSLEXTLIB=${FSLEXTLIB} FSLEXTINC=${FSLEXTINC} FSLEXTBIN=${FSLEXTBIN}"
 
 errorprojs="" ; export errorprojs ;
 
@@ -60,7 +61,14 @@ for projname in $PROJECTS; do
 	  ./fslconfigure ;
 	fi
 	if ${MAKE} ${MAKEOPTIONS} ; then 
-	    ${MAKE} install ;
+	    if ${MAKE} install ; then
+		${MAKE} distclean ;
+	    fi
+	    if [ X"$projname" = "Xtcl" -o X"$projname" = "Xtk" ] ; then
+		cd $FSLESRCDIR/$projname ;
+		${MAKE} install
+	    fi	    
+
 	    echo " "
 	    echo " ------------------------- "
 	    echo "Successfully made $projname";

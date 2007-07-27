@@ -5,7 +5,7 @@
 
     Christian F. Beckmann, FMRIB Image Analysis Group
     
-    Copyright (C) 1999-2004 University of Oxford */
+    Copyright (C) 1999-2007 University of Oxford */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -84,58 +84,47 @@ using namespace NEWIMAGE;
 
 namespace Melodic{
   
-  class MelGMix
-    {
+  class MelGMix{
     public:
-
-      //constructor
-     /*  MelGMix(MelodicOptions &popts, Log &plogger):   */
-/* 	opts(popts), */
-/* 	logger(plogger), */
-/* 	mainhtml() */
-/* 	{ */
-/* 	}   */
  
       MelGMix(MelodicOptions &popts, Log &plogger):
-	opts(popts),
-	logger(plogger)
-	{
-	}
+				opts(popts),
+				logger(plogger){}
 
       ~MelGMix() { 
-	//mainhtml << endl << "<hr></CENTER></BODY></HTML>" << endl;
-	  }
+				//mainhtml << endl << "<hr></CENTER></BODY></HTML>" << endl;
+	  	}
 
       void save();
 
       void setup(const RowVector& dat, volumeinfo inf, const string dirname,
-		 int here, volume<float> themask, 
-		 volume<float> themean, int num_mix = 3, 
-		 float eps = 0.0, bool fixdim = false);
+		 		int here, volume<float> themask, 
+		 		volume<float> themean, int num_mix = 3, 
+		 		float eps = 0.0, bool fixdim = false);
       
       void gmmfit();
       void ggmfit();
 
-      inline void fit(string mtype = string("GGM"))
-	{
-	  mmtype = mtype;
-	  if(mmtype==string("GGM")) 
-	    this->ggmfit(); 
-	  else 
-	    this->gmmfit();
+      inline void fit(string mtype = string("GGM")){
+	  		mmtype = mtype;
+	  		if(mmtype==string("GGM")) 
+	    		this->ggmfit(); 
+	  		else 
+	    		this->gmmfit();
 
-	  //re-insert mean and stdev
+	  		//re-insert mean and stdev
+	  		data = data*datastdev + datamean;
+	  		//threshmaps = threshmaps*datastdev + datamean;
+	  		means = means*datastdev + datamean;
+	  		vars = vars*datastdev*datastdev;
+			}
 
-	  data = data*datastdev + datamean;
-	  //threshmaps = threshmaps*datastdev + datamean;
-	  means = means*datastdev + datamean;
-	  vars = vars*datastdev*datastdev;
-	}
-
-      inline Matrix threshold(string levels)
-	{return this->threshold(data, levels);}
-      inline Matrix threshold(RowVector& levels) 
-	{return this->threshold(data, levels);}
+      inline Matrix threshold(string levels){
+				return this->threshold(data, levels);
+			}
+      inline Matrix threshold(RowVector& levels){ 
+				return this->threshold(data, levels);
+			}
       Matrix threshold(const RowVector& dat, Matrix& levels);
       Matrix threshold(const RowVector& dat, string levels);
 
@@ -177,46 +166,44 @@ namespace Melodic{
       inline void set_offset(float Arg) {offset = Arg;}
 
       inline void flipres(int num){
-	means = -means;
-	data = -data;
-	threshmaps = -threshmaps;
-	if(mmtype=="GGM"){
-	  float tmp;
-	  tmp= means(2);means(2)=means(3);means(3)=tmp;
-	  tmp=vars(2);vars(2)=vars(3);vars(3)=tmp;
-	  tmp=props(2);props(2)=props(3);props(3)=tmp;
-	}
+				means = -means;
+				data = -data;
+				threshmaps = -threshmaps;
+				if(mmtype=="GGM"){
+	  			float tmp;
+	  			tmp= means(2);means(2)=means(3);means(3)=tmp;
+	  			tmp=vars(2);vars(2)=vars(3);vars(3)=tmp;
+	  			tmp=props(2);props(2)=props(3);props(3)=tmp;
+				}
       }      
 
       void create_rep();
 
       inline void add_infstr(string what){
-	threshinfo.push_back(what);
+				threshinfo.push_back(what);
       }
 
       inline string get_infstr(int num){
-	if((threshinfo.size()<(unsigned int)(num-1))||(num<1))
-	  return string("");
-	else
-	  return threshinfo[num-1];
+				if((threshinfo.size()<(unsigned int)(num-1))||(num<1))
+	  			return string("");
+				else
+	  			return threshinfo[num-1];
       }
 
       inline int size_infstr(){
-      return threshinfo.size();
+      	return threshinfo.size();
       }
 
       inline void clear_infstr(){
-	threshinfo.clear();
+				threshinfo.clear();
       }
 
       inline void smooth_probs(float howmuch){
-	volume4D<float> tempVol;
-	tempVol.setmatrix(probmap,Mask);
+				volume4D<float> tempVol;
+				tempVol.setmatrix(probmap,Mask);
         tempVol[0]= smooth(tempVol[0],howmuch);
         probmap = tempVol.matrix(Mask);
       }
-
-
 
       double datamean;
       double datastdev;
@@ -231,9 +218,9 @@ namespace Melodic{
       float gmmevidence();
       void gmmreducemm();
       void add_params(Matrix& mu, Matrix& sig, Matrix& pi, 
-		      float logLH, float MDL, float Evi, bool advance = false);
+		    float logLH, float MDL, float Evi, bool advance = false);
       void get_params(int index, Matrix& mu, Matrix& sig, Matrix& pi, 
-		      float logLH, float MDL, float Evi);
+		    float logLH, float MDL, float Evi);
 
       Matrix Params;
       Matrix threshmaps;
@@ -267,7 +254,7 @@ namespace Melodic{
       volumeinfo bginfo;
       vector<string> threshinfo;
 
-    };
+  };
 }
 
 #endif

@@ -144,10 +144,12 @@ int main(int argc, char *argv[])
   catch(Exception& e) 
     {
       cerr << endl << e.what() << endl;
+      return 1;
     }
   catch(X_OptionError& e) 
     {
       cerr << endl << e.what() << endl;
+      return 1;
     }
 
   return 0;

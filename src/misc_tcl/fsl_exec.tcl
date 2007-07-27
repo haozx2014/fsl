@@ -4,7 +4,7 @@
 #
 #   Stephen Smith, FMRIB Image Analysis Group
 #
-#   Copyright (C) 2000-2006 University of Oxford
+#   Copyright (C) 2000-2007 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -82,26 +82,33 @@ proc fsl:echo { thefilename thestring args } {
     } else {
 	catch { puts $thestring } putserr
     }
+    if { [ file exists .logA ] } {
+	catch { exec sh -c "cat .log? > report_log.html" } putserr
+    }
 }
 
 
 #
-# usage: fsl:exec "the command" [-n] [-b] [-t <job_duration>]
+# usage: fsl:exec "the command" [options]
 # note the double-quotes round "the command"
 # -n                : don't output logging information
-# -b                : background (submit job and return); otherwise wait to return until <command> has finished
-# -t <job_duration> : run on a remote machine, job_duration is in minutes, set 0 for unknown
-# if either -b or -t is set then the command is run via "runfsl", which will batch the job if possible;
-#     otherwise the job will be run locally
-#
+# -b <job_duration> : submit to SGE (if available) and return immediately; otherwise wait to return until <command> has finished
+#                     job_duration is in minutes, set 0 for unknown
+# -f                : "the command" is a filename to be treated as a parallel batch job (one command per line)
+# -h <job-hold-id>  : ID of SGE job that must finish before this job gets run
+# -N <job_name>     : the job will have the name <job_name> on the SGE submission
 proc fsl:exec { thecommand args } {
 
-    global logout comout FSLDIR FD
+    global logout comout FSLDIR FD SGEID
 
     # process args
     set do_logout 1
     set do_runfsl 0
     set do_runfsl_command ""
+    set do_parallel ""
+    set job_holds ""
+    set job_name ""
+    set runtime 300
     for { set argindex 0 } { $argindex < [ llength $args ] } { incr argindex 1 } {
 	set thearg [ lindex $args $argindex ]
 
@@ -109,26 +116,37 @@ proc fsl:exec { thecommand args } {
 	    set do_logout 0
 	}
 
+	if { $thearg == "-f" } {
+	    set do_parallel "-t"
+	}
+
+	if { $thearg == "-h" } {
+	    incr argindex 1
+	    set theid [ lindex $args $argindex ]
+	    if { $theid > 0 } {
+		if { $job_holds == "" } {
+		    set job_holds "-j $theid"
+		}  else {
+		    set job_holds "${job_holds},$theid"
+		}
+	    }
+	}
+
+	if { $thearg == "-N" } {
+	    incr argindex 1
+	    set job_name "-N [ lindex $args $argindex ]"
+	}
+
 	if { $thearg == "-b" } {
 	    set do_runfsl 1
-	    set do_runfsl_command "-b"
-	}
-
-	if { $thearg == "-t" } {
-	    set do_runfsl 1
 	    incr argindex 1
-	    set do_runfsl_command "$do_runfsl_command -t [ lindex $args $argindex ]"
+	    set runtime [ lindex $args $argindex ]
 	}
-    }
-
-    # save command rootname for using in "ps" commands
-    if { [ info exists FD ] } {
-	fsl:echo ${FD}/.fslcurrent [ file tail [ lindex $thecommand 0 ] ] -o
     }
 
     # add runfsl call if required
     if { $do_runfsl } {
-	set thecommand "${FSLDIR}/bin/runfsl $do_runfsl_command $thecommand"
+	set thecommand "${FSLDIR}/bin/fsl_sub -T $runtime $job_name $job_holds $do_parallel $thecommand"
     }
 
     # save just the command to report.com if it has been setup
@@ -144,11 +162,14 @@ proc fsl:exec { thecommand args } {
     # run and log the actual command
     if { $do_logout } {
 	fsl:echo $logout "\n$thecommand"
+	if { [ file exists .logA ] } {
+	    catch { exec sh -c "cat .log? > report_log.html" } putserr
+	}
     }
     if { $do_logout } {
 	if { $logout != "" } {
 	    catch { exec sh -c $thecommand >>& $logout } errmsg
-	    set errmsg [ exec sh -c "tail -1 $logout" ]
+	    set errmsg [ exec sh -c "tail -n 1 $logout" ]
 	} else {
 	    catch { exec sh -c $thecommand } errmsg
 	    catch { puts $errmsg } putserr

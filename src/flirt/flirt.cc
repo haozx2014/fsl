@@ -213,6 +213,27 @@ int FLIRT_read_volume(volume<float>& target, const string& filename)
 }
 
 
+// support function to deal with the radiological swapping
+template <class T>
+Matrix voxel2flirtcoord(const volume<T>& vol) {
+  Matrix v2f(4,4);
+  v2f=vol.sampling_mat();
+  if (vol.left_right_order()==FSL_NEUROLOGICAL) {
+    Matrix swapx(4,4);
+    Identity(swapx);
+    swapx(1,1)=-1;
+    swapx(1,4)=vol.xsize()-1;
+    v2f = v2f * swapx;
+  }
+  return v2f;
+}
+
+template <class T>
+Matrix voxel2flirtcoord(const volume4D<T>& vol) {
+  return voxel2flirtcoord(vol[0]);
+}
+
+
 //------------------------------------------------------------------------//
 
 void setupsinc(const volume<float>& invol)
@@ -257,11 +278,16 @@ int safe_save_volume(const volume<T>& source, const string& filename)
   return 0;
 }
 
-void save_matrix_data(const Matrix& matresult, const volume<float>& initvol, 
-		      const volume<float>& finalvol)
+void save_matrix_data(const Matrix& matresult)
 {
   Matrix outfmat = matresult;
   write_ascii_matrix(outfmat,globaloptions::get().outputmatascii);
+}
+
+void save_matrix_data(const Matrix& matresult, const volume<float>& initvol, 
+		      const volume<float>& finalvol)
+{
+  save_matrix_data(matresult);
 }
 
 float costfn(const Matrix& matresult);
@@ -1391,7 +1417,6 @@ void no_optimise()
        (testvol[0].sform_code()!=NIFTI_XFORM_UNKNOWN) ) {
     if (globaloptions::get().verbose>0) {
       cerr << "WARNING: Both reference and input images have an sform matrix set" << endl;
-      cerr << "  The output image will use the transformed sform from the reference image" << endl;
     }
   }
 
@@ -1400,9 +1425,19 @@ void no_optimise()
   if (!globaloptions::get().forcedatatype)
     globaloptions::get().datatype = dtype;
 
+  // Initialise with user-supplied matrix
   if (globaloptions::get().initmatfname.size()>0) {
     read_matrix(globaloptions::get().initmat,
 		globaloptions::get().initmatfname,testvol[0]);
+  } else {
+    // If not matrix then use s/q form info (unless told to ignore it)
+    if (globaloptions::get().initmatsqform) {
+      if ( (refvol.vox2mm_code()>0) && (testvol.vox2mm_code()>0) ) {
+	globaloptions::get().initmat = voxel2flirtcoord(refvol)
+	  * refvol.vox2mm_mat().i() * testvol.vox2mm_mat()
+	  * voxel2flirtcoord(testvol).i();
+      }
+    }
   }
 
   if (globaloptions::get().verbose>0) {
@@ -1413,7 +1448,7 @@ void no_optimise()
     }
   }
 
-  if (globaloptions::get().verbose>=2) {
+  if ( (globaloptions::get().verbose>0) || (globaloptions::get().printinit)) {
     cout << "Init Matrix = \n" << globaloptions::get().initmat << endl;
   }
   
@@ -1423,31 +1458,36 @@ void no_optimise()
 
   float min_sampling_ref=1.0;
   min_sampling_ref = Min(refvol.xdim(),Min(refvol.ydim(),refvol.zdim()));
-
-  volume4D<float> outputvol;
-  for (int t0=testvol.mint(); t0<=testvol.maxt(); t0++) {
-    int tref=t0-testvol.mint();
-    outputvol.addvolume(refvol);
-    if (globaloptions::get().interpmethod != NearestNeighbour) {
-      testvol[t0] = blur(testvol[t0],min_sampling_ref);
+  
+  if (globaloptions::get().outputfname.size()>0) {
+    volume4D<float> outputvol;
+    for (int t0=testvol.mint(); t0<=testvol.maxt(); t0++) {
+      int tref=t0-testvol.mint();
+      outputvol.addvolume(refvol);
+      if (globaloptions::get().interpmethod != NearestNeighbour) {
+	testvol[t0] = blur(testvol[t0],min_sampling_ref);
+      }
+      
+      if (globaloptions::get().verbose>=2) { 
+	print_volume_info(refvol,"refvol"); 
+	print_volume_info(testvol,"inputvol"); 
+      }
+      
+      final_transform(testvol[t0],outputvol[tref],globaloptions::get().initmat);
     }
-    
-    if (globaloptions::get().verbose>=2) { 
-      print_volume_info(refvol,"refvol"); 
-      print_volume_info(testvol,"inputvol"); 
+    outputvol.setLRorder(refLRorder);
+    int outputdtype = output_dtype(outputvol);
+    save_volume4D_dtype(outputvol,globaloptions::get().outputfname.c_str(),
+			outputdtype,globaloptions::get().vinfo);
+    if (globaloptions::get().verbose>=2) {
+      print_volume_info(outputvol,"Resampled volume");
     }
-    
-    final_transform(testvol[t0],outputvol[tref],globaloptions::get().initmat);
   }
-  outputvol.setLRorder(refLRorder);
-  int outputdtype = output_dtype(outputvol);
-  save_volume4D_dtype(outputvol,globaloptions::get().outputfname.c_str(),
-		      outputdtype,globaloptions::get().vinfo);
 
-  if (globaloptions::get().verbose>=2) {
-    save_matrix_data(globaloptions::get().initmat, testvol[0], outputvol[0]);
-    print_volume_info(outputvol,"Resampled volume");
+  if (globaloptions::get().outputmatascii.size()>0) {
+    save_matrix_data(globaloptions::get().initmat);
   }
+
   exit(0);
 }
 
@@ -2461,7 +2501,6 @@ int main(int argc,char *argv[])
        (testvol.sform_code()!=NIFTI_XFORM_UNKNOWN) ) {
     if (globaloptions::get().verbose>0) {
       cerr << "WARNING: Both reference and input images have an sform matrix set" << endl;
-      cerr << "  The output image will use the sform from the reference image" << endl;
     }
   }
 
@@ -2474,6 +2513,17 @@ int main(int argc,char *argv[])
     }
   }
 
+  // Initialise with s/q form info (disabled if a user-supplied mat is given)
+  if (globaloptions::get().initmatsqform) {
+    if ( (refvol.vox2mm_code()>0) && (testvol.vox2mm_code()>0) ) {
+      globaloptions::get().initmat = voxel2flirtcoord(refvol)
+	* refvol.vox2mm_mat().i() * testvol.vox2mm_mat()
+	* voxel2flirtcoord(testvol).i();
+    }
+  }
+  if ( (globaloptions::get().verbose>0) || (globaloptions::get().printinit)) {
+    cout << "Init Matrix = \n" << globaloptions::get().initmat << endl;
+  }
 
   float min_sampling_ref=1.0, min_sampling_test=1.0, min_sampling=1.0;
   min_sampling_ref = Min(refvol.xdim(),Min(refvol.ydim(),refvol.zdim()));

@@ -79,7 +79,7 @@ Target-selection options - choose ONE of:
  -n            : find best target from all images in FAi
 
 EOF
-    exit
+    exit 1
 }
 
 do_reg(){
@@ -133,11 +133,11 @@ else
 	Usage
     fi
     FSLOUTPUTTYPE=ANALYZE
-    scaling=`$FSLDIR/bin/avwstats++ $TARGET -R | awk '{print "10 k 10000 " $2 " / p"}' | dc -`
-    $FSLDIR/bin/avwmaths++ $TARGET -mul $scaling FAi/target -odt short
+    scaling=`$FSLDIR/bin/fslstats $TARGET -R | awk '{print "10 k 10000 " $2 " / p"}' | dc -`
+    $FSLDIR/bin/fslmaths $TARGET -mul $scaling FAi/target -odt short
     cd FAi
-    $FSLDIR/bin/avwhd -x target | sed "s/sform_code .*/sform_code = \'0\'/g" | sed "s/qform_code .*/qform_code = \'0\'/g" > grot.xml
-    $FSLDIR/bin/avwcreatehd grot.xml target.hdr
+    $FSLDIR/bin/fslhd -x target | sed "s/sform_code .*/sform_code = \'0\'/g" | sed "s/qform_code .*/qform_code = \'0\'/g" > grot.xml
+    $FSLDIR/bin/fslcreatehd grot.xml target.hdr
     /bin/rm grot.xml
     FSLOUTPUTTYPE=NIFTI_GZ
     do_reg target

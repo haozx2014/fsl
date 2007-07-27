@@ -73,12 +73,12 @@
 # e.g.featdir=/home/fs3/steve/data/fmri_test/heatpain+vis_1352/epi3.4_SDfixed_junkscut_FLOBS.feat
 
 if [ $# -ne 2 ] ; then
-	echo "Useage: filmbabescript featdir flobsdir"
-	exit
+	echo "Usage: filmbabescript featdir flobsdir"
+	exit 1
 fi	
 
 if [ $1 = "--help" ] ; then
-	echo "Useage: filmbabescript featdir flobsdir"
+	echo "Usage: filmbabescript featdir flobsdir"
 	exit
 fi	
 

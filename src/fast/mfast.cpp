@@ -71,7 +71,6 @@
 #include <ctime>
 #include <iostream>
 #include <fstream>
-#include <sstream>
 #include <string.h>
 #include "imageio.h"
 #include "imalgorithm.h"
@@ -136,7 +135,7 @@ void usage()
 	cerr << "    -2:\t\t2D segmentation (only for 3D images)\n";
 	cerr << "    -v<n>:\tverbose level (0-5; default 1)\n\n";
 
-	exit(0);
+	exit(1);
 }
 
 void ParameterAnalyze(int argc, char** argv)
