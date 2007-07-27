@@ -99,14 +99,16 @@ namespace FILM {
     ColumnVector dm_fft_real, dm_fft_imag;
     ColumnVector dummy(zeropad);
     ColumnVector realifft(zeropad);
+    dm_mn.ReSize(numPars);
+    dm_mn=0;
 
     // FFT design matrix
     for(int k = 1; k <= numPars; k++)
       {
 	dummy = 0;
 	dmrow = 0;
-	mn(k) = MISCMATHS::mean(ColumnVector(dm.Column(k))).AsScalar();
-	dmrow.Rows(1,sizeTS) = dm.Column(k) - mn(k);
+	dm_mn(k) = MISCMATHS::mean(ColumnVector(dm.Column(k))).AsScalar();
+	dmrow.Rows(1,sizeTS) = dm.Column(k) - dm_mn(k);
 
 	FFT(dmrow, dummy, dm_fft_real, dm_fft_imag);
 	
@@ -188,7 +190,7 @@ namespace FILM {
 	  FFTI(SP(ac_fft_real, dm_fft_real), SP(ac_fft_real, dm_fft_imag), realifft, dummy);
 
 	  // place result into ret:
-	  dmret.Column(k) = realifft.Rows(1,sizeTS) + mn(k);
+	  dmret.Column(k) = realifft.Rows(1,sizeTS) + dm_mn(k);
 	  //float std = pow(MISCMATHS::var(ColumnVector(dmret.Column(k))),0.5);
 	  //dmret.Column(k) = (dmret.Column(k)/std) + mn(k);
 	}
@@ -430,71 +432,78 @@ namespace FILM {
   void AutoCorrEstimator::spatiallySmooth(const string& usanfname, const Volume& epivol, int masksize, const string& epifname, const string& susanpath, int usanthresh, int lag) {
     Tracer trace("AutoCorrEstimator::spatiallySmooth");
     
-    Log& logger = LogSingleton::getInstance();
-
-    if(lag==0)
-      lag = MISCMATHS::Min(40,int(xdata.getNumVolumes()/4));
-
-    if(usanthresh == 0)
+    if(xdata.getNumSeries()<=1)
       {
-	// Establish epi thresh to use:
-	usanthresh = establishUsanThresh(epivol);
+	cerr << "Warning: Number of voxels = " << xdata.getNumSeries() << ". Spatial smoothing of autocorrelation estimates is not carried out" << endl;
       }
-
-    // Setup external call to susan program:
-    ostringstream osc3;
-    string preSmoothVol = "preSmoothVol";
-    string postSmoothVol = "postSmoothVol";
-
-    osc3 << susanpath << " "
-	 << logger.getDir() << "/" << preSmoothVol << " 1 " 
-	 << logger.getDir() << "/" << postSmoothVol << " " 
-	 << masksize << " 3D 0 1 " << usanfname << " " << usanthresh << " " 
-	 << logger.getDir() << "/" << "usanSize";
-    
-    // Loop through first third of volumes
-    // assume the rest are zero
-    int factor = 10000;
-
-    // Setup volume for reading and writing volumes:
-    Volume vol(acEst.getNumSeries(), xdata.getInfo(), xdata.getPreThresholdPositions());
-   
-    int i = 2;
-    
-    cerr << "Spatially smoothing auto corr estimates" << endl;
-
-    cerr << osc3.str() << endl;
-
-    for(; i <= lag; i++)
+    else
       {
-	// output unsmoothed estimates:
-	vol = acEst.getVolume(i).AsColumn()*factor;
-	vol.unthreshold();
-	vol.writeAsInt(logger.getDir() + "/" + preSmoothVol);
-
-	// call susan:
-	system(osc3.str().c_str());
-
-	// read in smoothed volume:
-	vol.read(logger.getDir() + "/" + postSmoothVol);
-	vol.threshold();
-	acEst.setVolume(static_cast<RowVector>((vol/factor).AsRow()), i);
-	cerr << ".";
+	Log& logger = LogSingleton::getInstance();
+	
+	if(lag==0)
+	  lag = MISCMATHS::Min(40,int(xdata.getNumVolumes()/4));
+	
+	if(usanthresh == 0)
+	  {
+	    // Establish epi thresh to use:
+	    usanthresh = establishUsanThresh(epivol);
+	  }
+	
+	// Setup external call to susan program:
+	ostringstream osc3;
+	string preSmoothVol = "preSmoothVol";
+	string postSmoothVol = "postSmoothVol";
+	
+	osc3 << susanpath << " "
+	     << logger.getDir() << "/" << preSmoothVol << " 1 " 
+	     << logger.getDir() << "/" << postSmoothVol << " " 
+	     << masksize << " 3D 0 1 " << usanfname << " " << usanthresh << " " 
+	     << logger.getDir() << "/" << "usanSize";
+	
+	// Loop through first third of volumes
+	// assume the rest are zero
+	int factor = 10000;
+	
+	// Setup volume for reading and writing volumes:
+	Volume vol(acEst.getNumSeries(), xdata.getInfo(), xdata.getPreThresholdPositions());
+	
+	int i = 2;
+	
+	cerr << "Spatially smoothing auto corr estimates" << endl;
+	
+	cerr << osc3.str() << endl;
+	
+	for(; i <= lag; i++)
+	  {
+	    // output unsmoothed estimates:
+	    vol = acEst.getVolume(i).AsColumn()*factor;
+	    vol.unthreshold();
+	    vol.writeAsInt(logger.getDir() + "/" + preSmoothVol);
+	    
+	    // call susan:
+	    system(osc3.str().c_str());
+	    
+	    // read in smoothed volume:
+	    vol.read(logger.getDir() + "/" + postSmoothVol);
+	    vol.threshold();
+	    acEst.setVolume(static_cast<RowVector>((vol/factor).AsRow()), i);
+	    cerr << ".";
+	  }
+	cerr << endl;
+	
+	// Clear unwanted written files
+	ostringstream osc;
+	osc << "rm -rf " 
+	    << logger.getDir() + "/" + postSmoothVol + "* "
+	    << logger.getDir() + "/" + preSmoothVol + "* "
+	    << logger.getDir() + "/usanSize*";
+	
+	cerr << osc.str() << endl;
+	
+	system(osc.str().c_str());
+	
+	cerr << "Completed" << endl;
       }
-    cerr << endl;
-
-    // Clear unwanted written files
-    ostringstream osc;
-    osc << "rm -rf " 
-    << logger.getDir() + "/" + postSmoothVol + "* "
-    << logger.getDir() + "/" + preSmoothVol + "* "
-    << logger.getDir() + "/usanSize*";
-    
-    cerr << osc.str() << endl;
-
-    system(osc.str().c_str());
-
-    cerr << "Completed" << endl;
   }
 
   void AutoCorrEstimator::calcRaw(int lag) { 
@@ -680,7 +689,8 @@ namespace FILM {
 	values = values.Rows(1,stopat) & zero;
 
 	ColumnVector gm(stopat + 1);
-	for(int j = 1; j <= stopat + 1; gm(j) = j++);
+	for(int j = 1; j <= stopat + 1; ++j)
+	  gm(j) = j;
 	  
 	ColumnVector weights(stopat+1);
 	weights = 1;

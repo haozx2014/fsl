@@ -73,6 +73,6 @@ if [ $# -lt 1 ] ; then
   exit 1 ;
 fi
 
-avwhd $1 | cat -v | grep dim[1-4]
+fslhd $1 | cat -v | grep dim[1-4]
 
 

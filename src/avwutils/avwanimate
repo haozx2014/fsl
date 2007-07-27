@@ -1,6 +1,6 @@
 #!/bin/sh
 
-#   avwanimate - make gif animation from time series (3 views)
+#   fslanimate - make gif animation from time series (3 views)
 # 
 #   Stephen Smith and Mark Jenkinson, FMRIB Image Analysis Group
 #
@@ -70,7 +70,7 @@
 
 num=0; export num;
 if [ $# -lt 2 ] ; then
-  echo "Usage: avwanimate <input> <output> [tmpdir]" ;
+  echo "Usage: fslanimate <input> <output> [tmpdir]" ;
   exit -1;
 fi
 
@@ -79,7 +79,7 @@ im=`basename $im`; export im;
 iout=`basename $2 .gif`; export iout;
 
 delete=true; export delete;
-tmpdir=/tmp/avwanimate_$$; export tmpdir;
+tmpdir=/tmp/fslanimate_$$; export tmpdir;
 if [ $# -eq 3 ] ; then
   tmpdir=$3; export tmpdir;
   delete=false; export delete;
@@ -103,7 +103,7 @@ fi
 
 # check if it is 4D or not
 
-ntime=`$FSLDIR/bin/avwval $imdir/$im dim4`; export ntime;
+ntime=`$FSLDIR/bin/fslval $imdir/$im dim4`; export ntime;
 if [ $ntime -le 1 ] ; then
   $FSLDIR/bin/sliceanimate $imdir/$im ;
   mv $imdir/${im}_sliceanim.gif $imoutdir/${iout}.gif ;
@@ -112,7 +112,7 @@ else
 $FSLDIR/bin/imln $imdir/$im $tmpdir/$im
 cd $tmpdir 
 
-$FSLDIR/bin/avwsplit $im 
+$FSLDIR/bin/fslsplit $im 
 for fnm in `$FSLDIR/bin/imglob vol*` ; do
   num=`$FSLDIR/bin/remove_ext $fnm | sed 's/vol//'`;  export num;
   echo $num; 

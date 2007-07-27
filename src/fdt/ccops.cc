@@ -360,7 +360,7 @@ void add_connexity(SymmetricMatrix& CtCt,const Matrix& coord,const float p=.5){
 int main ( int argc, char **argv ){
   ccopsOptions& opts = ccopsOptions::getInstance();
   int success=opts.parse_command_line(argc,argv);
-  if(!success) return 0;
+  if(!success) return 1;
   string ip=opts.inmatrix.value();
   make_basename(ip);
   

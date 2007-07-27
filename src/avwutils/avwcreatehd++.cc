@@ -1,4 +1,4 @@
-//     avwcpgeom++.cc - Copy certain parts of an AVW header
+//     fslcreatehd.cc - Copy certain parts of an AVW header
 //     Mark Jenkinson, Steve Smith and Matthew Webster, FMRIB Image Analysis Group
 //     Copyright (C) 2001-2005 University of Oxford  
 //     COPYRIGHT  
@@ -12,15 +12,15 @@ using namespace NEWIMAGE;
 void print_usage(const string& progname) 
 {
   cout << endl;
-  cout << "Usage: avwcreatehd <xsize> <ysize> <zsize> <tsize> <xvoxsize> <yvoxsize> <zvoxsize> <tr> <xorigin> <yorigin> <zorigin> <datatype> <headername>" << endl;
-  cout << "       avwcreatehd <nifti_xml_file> <headername>" << endl;
-  cout << "  In the second form, an XML-ish form of nifti header is read (as output by avwhd -x)" << endl;
+  cout << "Usage: fslcreatehd <xsize> <ysize> <zsize> <tsize> <xvoxsize> <yvoxsize> <zvoxsize> <tr> <xorigin> <yorigin> <zorigin> <datatype> <headername>" << endl;
+  cout << "       fslcreatehd <nifti_xml_file> <headername>" << endl;
+  cout << "  In the second form, an XML-ish form of nifti header is read (as output by fslhd -x)" << endl;
   cout << "  Note that stdin is used if '-' is used in place of a filename" << endl;
 
 }
 
 
-int avwcreatehd_main(int argc, char *argv[])
+int fslcreatehd_main(int argc, char *argv[])
 {
   FSLIO* fslio;
   void *buffer=NULL;
@@ -179,7 +179,7 @@ int main(int argc,char *argv[])
     print_usage(string(argv[0]));
     return 1; 
   }
-  return avwcreatehd_main(argc,argv); 
+  return fslcreatehd_main(argc,argv); 
 }
 
 

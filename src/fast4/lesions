@@ -109,9 +109,9 @@ done
 
 
 
-sizex=`avwval $A pixdim1` 
-sizey=`avwval $A pixdim2`
-sizez=`avwval $A pixdim3`
+sizex=`fslval $A pixdim1` 
+sizey=`fslval $A pixdim2`
+sizez=`fslval $A pixdim3`
 
 sizex=`echo sqrt \( $sizex ^ 2 \) | bc -l`
 sizey=`echo sqrt \( $sizey ^ 2 \) | bc -l`
@@ -149,21 +149,21 @@ ${FSLDIR}/bin/flirt -ref ${FSLDIR}/etc/standard/avg152T1_brain -in ${A}_brain -o
 ${FSLDIR}/bin/convert_xfm -inverse -matonly -omat tal_2_${A}_brain.mat ${A}_brain_2_tal.mat
 
 #dilate (6mm) standard space ventricles+deep-grey, bring into t1 space and re-binarise to make "CENTRAL MASK" originally 3 dils
-${FSLDIR}/bin/avwmaths ${FSLDIR}/etc/standard/avg152T1_strucseg -thr 3.5 -bin -dil -dil -dil strucseg_2_${A}_brain
+${FSLDIR}/bin/fslmaths ${FSLDIR}/etc/standard/avg152T1_strucseg -thr 3.5 -bin -dilM -dilM -dilM strucseg_2_${A}_brain
 ${FSLDIR}/bin/flirt -in strucseg_2_${A}_brain -ref ${A}_brain -out strucseg_2_${A}_brain -applyxfm -init tal_2_${A}_brain.mat
-${FSLDIR}/bin/avwmaths strucseg_2_${A}_brain -bin strucseg_2_${A}_brain
+${FSLDIR}/bin/fslmaths strucseg_2_${A}_brain -bin strucseg_2_${A}_brain
 
 ##produce t1-derived CSF mask and also dilate in-plane: 5 voxels outside CENTRAL MASK, 1 voxel inside mask####################
 ${FSLDIR}/bin/flirt -in ${A}_brain_pve_0 -ref ${A}_brain_pve_0 -out ${A}_brain_pve_0_iso -applyisoxfm $min
 echo "Created T1 CSF"
 ##########original 5 dil outside mask 1 in#####################################################################################
-#${FSLDIR}/bin/avwmaths ${A}_brain_pve_0_iso -dil -dil -dil -dil -dil -sub strucseg_2_${A}_brain ${A}_grot
-${FSLDIR}/bin/avwconv -i ${A}_brain_pve_0_iso -o ${A}_grot -s 5.1 --dilate
-${FSLDIR}/bin/avwmaths ${A}_grot -sub strucseg_2_${A}_brain ${A}_grot
+#${FSLDIR}/bin/fslmaths ${A}_brain_pve_0_iso -dilM -dilM -dilM -dilM -dilM -sub strucseg_2_${A}_brain ${A}_grot
+${FSLDIR}/bin/fslmaths ${A}_brain_pve_0_iso -kernel sphere 5.1 -dilF ${A}_grot 
+${FSLDIR}/bin/fslmaths ${A}_grot -sub strucseg_2_${A}_brain ${A}_grot
 #1 dil
-#${FSLDIR}/bin/avwmaths ${A}_brain_pve_0_iso -dil -mul strucseg_2_${A}_brain -add ${A}_grot ${A}_csf_dil
-${FSLDIR}/bin/avwconv -i ${A}_brain_pve_0_iso -o ${A}_csf_dil -s 1.1 --dilate
-${FSLDIR}/bin/avwmaths ${A}_csf_dil -mul strucseg_2_${A}_brain -add ${A}_grot ${A}_csf_dil
+#${FSLDIR}/bin/fslmaths ${A}_brain_pve_0_iso -dilM -mul strucseg_2_${A}_brain -add ${A}_grot ${A}_csf_dil
+${FSLDIR}/bin/fslmaths ${A}_brain_pve_0_iso -kernel sphere 1.1 -dilF ${A}_csf_dil 
+${FSLDIR}/bin/fslmaths ${A}_csf_dil -mul strucseg_2_${A}_brain -add ${A}_grot ${A}_csf_dil
 
 /bin/rm -f ${A}_grot*
 echo "Dilated T1 CSF"
@@ -177,7 +177,7 @@ ${FSLDIR}/bin/convert_xfm -inverse -matonly -omat ${A}_to_${B}.mat ${B}_to_${A}.
 
 # transform t1 brain mask into t2 space and apply to t2 to get t2_brain########################################################
 ${FSLDIR}/bin/flirt -in ${A}_brain_mask -out ${B}_brain_mask -ref $B -applyxfm -init ${A}_to_${B}.mat
-${FSLDIR}/bin/avwmaths $B -mas ${B}_brain_mask ${B}_brain
+${FSLDIR}/bin/fslmaths $B -mas ${B}_brain_mask ${B}_brain
 
 
 # run segmentation on t2; $t2lesions should be CSF+lesions; transform into t1 space, remask with t1 brain mask#################
@@ -188,7 +188,7 @@ ${FSLDIR}/bin/fast3.4 $t2segopts -c $nclasses -e -ov ${B}_brain
 echo "Finished T2 Segmentation"
 
 #${FSLDIR}/bin/flirt -in $t2lesions -ref $A -out ${A}_lesion+CSF -applyxfm -init ${B}_to_${A}.mat
-#${FSLDIR}/bin/avwmaths ${A}_lesion+CSF -mas ${A}_brain_mask ${A}_lesion+CSF
+#${FSLDIR}/bin/fslmaths ${A}_lesion+CSF -mas ${A}_brain_mask ${A}_lesion+CSF
 #${FSLDIR}/bin/flirt -in ${A}_lesion+CSF -ref ${A}_lesion+CSF -out ${A}_lesion+CSF_iso -applyisoxfm $min
 ${FSLDIR}/bin/flirt -in $t2lesions -ref $A -out ${A}_lesion+CSF_iso -applyisoxfm $min -init ${B}_to_${A}.mat
 
@@ -196,7 +196,7 @@ ${FSLDIR}/bin/flirt -in $t2lesions -ref $A -out ${A}_lesion+CSF_iso -applyisoxfm
 #### combine to remove CSF from CSF+lesions ##################################################################################
 echo "Combining T1 and T2"
 # combine masks and use to mask out CSF from t2-derived lesion+CSF probability; output lesion volume##########################
-${FSLDIR}/bin/avwmaths_32R ${A}_csf_dil -mul -1 -add 1 -mul ${A}_lesion+CSF_iso ${A}_continuouslesions_iso
+${FSLDIR}/bin/fslmaths ${A}_csf_dil -mul -1 -add 1 -mul ${A}_lesion+CSF_iso ${A}_continuouslesions_iso -odt float
 #/bin/rm -f ${A}_csf*
 
 
@@ -204,19 +204,19 @@ ${FSLDIR}/bin/avwmaths_32R ${A}_csf_dil -mul -1 -add 1 -mul ${A}_lesion+CSF_iso 
 ###hypointense################################################################################################################
 echo "Finding T1 hypointense lesions"
 
-meanden0=`${FSLDIR}/bin/avwstats ${A}_brain_pve_0 -m`
-${FSLDIR}/bin/avwmaths_32R ${A}_brain_pve_0 -mul ${A}_brain ${A}_multemp
-meannum0=`${FSLDIR}/bin/avwstats ${A}_multemp -m`
+meanden0=`${FSLDIR}/bin/fslstats ${A}_brain_pve_0 -m`
+${FSLDIR}/bin/fslmaths ${A}_brain_pve_0 -mul ${A}_brain ${A}_multemp -odt float
+meannum0=`${FSLDIR}/bin/fslstats ${A}_multemp -m`
 mean0=`echo $meannum0/$meanden0|bc -l`
 
-meanden1=`${FSLDIR}/bin/avwstats ${A}_brain_pve_1 -m`
-${FSLDIR}/bin/avwmaths_32R ${A}_brain_pve_1 -mul ${A}_brain ${A}_multemp
-meannum1=`${FSLDIR}/bin/avwstats ${A}_multemp -m`
+meanden1=`${FSLDIR}/bin/fslstats ${A}_brain_pve_1 -m`
+${FSLDIR}/bin/fslmaths ${A}_brain_pve_1 -mul ${A}_brain ${A}_multemp -odt float
+meannum1=`${FSLDIR}/bin/fslstats ${A}_multemp -m`
 mean1=`echo $meannum1/$meanden1|bc -l`
 
-meanden2=`${FSLDIR}/bin/avwstats ${A}_brain_pve_2 -m`
-${FSLDIR}/bin/avwmaths_32R ${A}_brain_pve_2 -mul ${A}_brain ${A}_multemp
-meannum2=`${FSLDIR}/bin/avwstats ${A}_multemp -m`
+meanden2=`${FSLDIR}/bin/fslstats ${A}_brain_pve_2 -m`
+${FSLDIR}/bin/fslmaths ${A}_brain_pve_2 -mul ${A}_brain ${A}_multemp -odt float
+meannum2=`${FSLDIR}/bin/fslstats ${A}_multemp -m`
 mean2=`echo $meannum2/$meanden2|bc -l`
 
 #denom=`echo $mean0+$mean2|bc`
@@ -236,10 +236,10 @@ echo "Hypointense upper threshold $num2"
 
 
 ${FSLDIR}/bin/flirt -in ${A}_continuouslesions_iso -ref $A -out ${A}_lesions -applyxfm
-${FSLDIR}/bin/avwmaths $A -uthr $num2 -bin ${A}_hypo
-${FSLDIR}/bin/avwmaths ${A}_lesions -mas ${A}_hypo ${A}_hypolesions
+${FSLDIR}/bin/fslmaths $A -uthr $num2 -bin ${A}_hypo
+${FSLDIR}/bin/fslmaths ${A}_lesions -mas ${A}_hypo ${A}_hypolesions
 
-echo `${FSLDIR}/bin/avwstats ${A}_lesions -m -v | awk '{print "2 k " $1 " " $3 " * 1000 / p" }' | dc -` > ${A}_lesions.txt
+echo `${FSLDIR}/bin/fslstats ${A}_lesions -m -v | awk '{print "2 k " $1 " " $3 " * 1000 / p" }' | dc -` > ${A}_lesions.txt
 echo "$A	`cat ${A}_lesions.txt`"
 
 # create display output

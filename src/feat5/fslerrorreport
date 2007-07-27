@@ -159,7 +159,7 @@ if [ X$imgname != X ] ; then
     echo "#### IMAGE INFORMATION" >> $filename
     echo "######################################################################" >> $filename
     echo " " >> $filename
-    $FSLDIR/bin/avwhd $imgname >> $filename
+    $FSLDIR/bin/fslhd $imgname >> $filename
 fi
 
 if [ X$featname != X ] ; then

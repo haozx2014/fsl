@@ -1,17 +1,11 @@
 #!/bin/sh
 
-# fix for cayenne in FMRIB
-if [ _`uname` = _OSF1 ] ; then
-    LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/people/flitney/src/GCC3.2/install/lib;
-    export LD_LIBRARY_PATH;
-fi
-
 fastcom=$0
 #fastcom=$FSLDIR/bin/fast
 
 if [ $# -lt 1 ] ; then
   ${fastcom}_exe ;
-  exit;
+  exit $?;
 fi
 
 # save outputtype for now and set it to write analyze (for fast)
@@ -36,7 +30,7 @@ while [ $# -ge 1 ]; do
 	else
 	    fn=`${FSLDIR}/bin/remove_ext $fn`;
 	    tmpfn=${tmpbase}_`basename $fn`;
-	    ${FSLDIR}/bin/avwmaths $fn $tmpfn;
+	    ${FSLDIR}/bin/fslmaths $fn $tmpfn;
 	    args="$args $tmpfn";
 	    if [ _$outputroot = _ ] ; then
 		outputroot=$fn;
@@ -57,17 +51,18 @@ for fn in `$FSLDIR/bin/imglob -oneperimage ${tmpbase}.fastout/*` ; do
     fn=`$FSLDIR/bin/remove_ext $fn`
     outname=`echo $fn | sed "s/QQQQQ//g"`
     outname=`basename $outname`
-    $FSLDIR/bin/avwmaths $fn ${outputroot}$outname
+    $FSLDIR/bin/fslmaths $fn ${outputroot}$outname
     # now copy other non-analyze info across (if necessary)
     #if [ $FSLOUTPUTTYPE != ANALYZE -a $FSLOUTPUTTYPE != ANALYZE_GZ ] ; then
-        # Unfortunately avwcreatehd doesn't seem to work in general - FIX!
-	#$FSLDIR/bin/avwhd -x $fastinput > ${outputroot}$outname.htxt
-	#$FSLDIR/bin/avwcreatehd ${outputroot}$outname.htxt ${outputroot}$outname
+        # Unfortunately fslcreatehd doesn't seem to work in general - FIX!
+	#$FSLDIR/bin/fslhd -x $fastinput > ${outputroot}$outname.htxt
+	#$FSLDIR/bin/fslcreatehd ${outputroot}$outname.htxt ${outputroot}$outname
 	#rm -f ${outputroot}$outname.htxt
     #fi
 done
 
 if [ X${tmpbase} != X ] ; then
-  rm -rf ${tmpbase}*
+    cd /tmp
+    rm -rf ${tmpbase}*
 fi
 

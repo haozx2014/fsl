@@ -1,8 +1,8 @@
-/*  avwfft.cc
+/*  fslfft.cc
 
-    Mark Jenkinson, FMRIB Image Analysis Group
+    Mark Jenkinson and Matthew Webster, FMRIB Image Analysis Group
 
-    Copyright (C) 2003 University of Oxford  */
+    Copyright (C) 2003-2007 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl

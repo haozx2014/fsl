@@ -94,7 +94,7 @@ if (argc<3)
 {
   printf("Usage: morph_kernel <cube_side_length> <sphere_radius>\n");
   printf("e.g.: morph_kernel 11 5.5 > sphere111111.ker\n");
-  exit(0);
+  exit(1);
 }
 
 w=atoi(argv[1]);

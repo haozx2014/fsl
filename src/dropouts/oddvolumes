@@ -13,7 +13,7 @@ echo " "
 dropouts $fn 0
 
 echo "Ordered list of 10 most unusual volumes"
-nums=`grep Volume $fn.dropouts | awk '{ print $3 " " $1 " " $2 }' | sort -rn | head -10 | awk '{ print $3 }' | sed 's/]//g'`;
+nums=`grep Volume $fn.dropouts | awk '{ print $3 " " $1 " " $2 }' | sort -rn | head -n 10 | awk '{ print $3 }' | sed 's/]//g'`;
 echo $nums
 
 echo " "

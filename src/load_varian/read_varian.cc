@@ -494,6 +494,7 @@ int flags_from_procpar(char *infile,struct flags *proc){
   if(read_procpar(infile,"nv ",tmp)){
     nv=atoi(tmp);
   }
+  proc->fract_ky=0;
   if(fract_ky&&nv){
     if(fract_ky<nv/2){
       proc->fract_ky=fract_ky;

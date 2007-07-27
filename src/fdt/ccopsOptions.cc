@@ -69,8 +69,8 @@
 #define WANT_STREAM
 #define WANT_MATH
 
-#include <iostream.h>
-#include <fstream.h>
+#include <iostream>
+#include <fstream>
 #include <stdlib.h>
 #include <stdio.h>
 #include "ccopsOptions.h"

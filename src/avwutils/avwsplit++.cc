@@ -1,4 +1,4 @@
-//     avwsplit++.cc - split 4D files into 3D files for SPM
+//     fslsplit.cc - split 4D files into 3D files for SPM
 //     David Flitney and Matthew Webster, FMRIB Image Analysis Group
 //     Copyright (C) 2000-2006 University of Oxford  
 /*  Part of FSL - FMRIB's Software Library
@@ -73,8 +73,8 @@ using namespace MISCMATHS;
 void print_usage(const string& progname) 
 {
   cout << endl;
-  cout << "Usage: avwsplit++ <inputfile.hdr>" << endl;
-  cout << "       avwsplit++ <inputfile.hdr> [basename] [-t/x/y/z]" << endl;
+  cout << "Usage: fslsplit <inputfile.hdr>" << endl;
+  cout << "       fslsplit <inputfile.hdr> [basename] [-t/x/y/z]" << endl;
   cout << "       -t : seperate images in time (default behaviour)" << endl;
   cout << "       -x : seperate images in the x direction"  << endl;
   cout << "       -y : seperate images in the y direction"  << endl;

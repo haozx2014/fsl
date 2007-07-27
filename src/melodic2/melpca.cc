@@ -5,7 +5,7 @@
 
     Christian F. Beckmann, FMRIB Image Analysis Group
     
-    Copyright (C) 1999-2004 University of Oxford */
+    Copyright (C) 1999-2007 University of Oxford */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -85,32 +85,30 @@ using namespace NEWIMAGE;
 
 namespace Melodic{
 
-  void MelodicPCA::perf_pca(Matrix& in, Matrix& weights)
-   {    
-     message("Starting PCA  ... ");
+  void MelodicPCA::perf_pca(Matrix& in, Matrix& weights){    
+  	message("Starting PCA  ... ");
 
-     Matrix Corr;
-     Matrix tmpE;
-     RowVector tmpD, AdjEV, PercEV;
+    Matrix Corr;
+    Matrix tmpE;
+    RowVector tmpD, AdjEV, PercEV;
    
-     std_pca(in,weights,Corr,tmpE,tmpD); 
-     if(opts.tsmooth.value()){
-       message(endl << "  temporal smoothing of Eigenvectors " << endl);
-       tmpE=smoothColumns(tmpE);
-     }
+    std_pca(in,weights,Corr,tmpE,tmpD); 
+    if(opts.tsmooth.value()){
+      message(endl << "  temporal smoothing of Eigenvectors " << endl);
+      tmpE=smoothColumns(tmpE);
+    }
    
-     adj_eigspec(tmpD,AdjEV,PercEV);
-     melodat.set_pcaE(tmpE);
-     melodat.set_pcaD(tmpD);
-     melodat.set_EVP(PercEV); 
-     melodat.set_EV((AdjEV));
-     write_ascii_matrix(logger.appendDir("eigenvalues_percent"),PercEV);
+    adj_eigspec(tmpD,AdjEV,PercEV);
+    melodat.set_pcaE(tmpE);
+    melodat.set_pcaD(tmpD);
+    melodat.set_EVP(PercEV); 
+    melodat.set_EV((AdjEV));
+    write_ascii_matrix(logger.appendDir("eigenvalues_percent"),PercEV);
    
-     message("done" << endl);
-   }
+    message("done" << endl);
+  }
   
-  void MelodicPCA::perf_white()
-  {
+  void MelodicPCA::perf_white(){
     int N = melodat.get_pcaE().Ncols();    
     if(opts.pca_dim.value() > N){
       message("dimensionality too large - using -dim " << N << 
@@ -119,17 +117,17 @@ namespace Melodic{
     }
     if(opts.pca_dim.value() < 0){
       if(opts.remove_meanvol.value()){
-	opts.pca_dim.set_T(N-2);
+				opts.pca_dim.set_T(N-2);
       }else{
-   	opts.pca_dim.set_T(N-1);
+   			opts.pca_dim.set_T(N-1);
       }
     }
     if(opts.pca_dim.value() ==0){
       opts.pca_dim.set_T(pcadim());
       if(melodat.get_Data().Nrows()<20){
-	opts.pca_dim.set_T(N-2);
-	message("too few data points for full estimation, using "
-		<< opts.pca_dim.value() << " instead"<< endl);
+				opts.pca_dim.set_T(N-2);
+				message("too few data points for full estimation, using "
+					<< opts.pca_dim.value() << " instead"<< endl);
       }
     }
     if(opts.approach.value()==string("jade") && opts.pca_dim.value() > 30){
@@ -138,27 +136,26 @@ namespace Melodic{
     }
 
     message("Start whitening using  "<< opts.pca_dim.value()<<" dimensions ... " << endl);
-
     Matrix tmpWhite;
     Matrix tmpDeWhite;
 
     float varp = 1.0;
     varp = calc_white(melodat.get_pcaE(),melodat.get_pcaD(), 
-    	      melodat.get_EVP() ,opts.pca_dim.value(),
-    	      tmpWhite,tmpDeWhite);
+    	melodat.get_EVP() ,opts.pca_dim.value(),tmpWhite,tmpDeWhite);
 
     melodat.set_white(tmpWhite);
     melodat.set_dewhite(tmpDeWhite);
     message("  retaining "<< varp*100 <<" percent of the variability " << endl);
     message(" ... done"<< endl << endl);
-   }
+  }
 
   int MelodicPCA::pcadim()
   { 
     message("Estimating the number of sources from the data (PPCA) ..." << endl);
 
     ColumnVector PPCA; RowVector AdjEV, PercEV;   
-    int res = ppca_dim(melodat.get_Data(),melodat.get_RXweight(), PPCA, AdjEV, PercEV, melodat.get_resels(), opts.pca_est.value());
+    int res = ppca_dim(melodat.get_Data(),melodat.get_RXweight(), PPCA, 
+			AdjEV, PercEV, melodat.get_resels(), opts.pca_est.value());
      
     write_ascii_matrix(logger.appendDir("PPCA"),PPCA);			      
     write_ascii_matrix(logger.appendDir("eigenvalues_adjusted"),AdjEV.t());

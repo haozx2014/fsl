@@ -17,53 +17,82 @@
 namespace MISCPLOT{
   
   class miscplot
-    {
+  {
     public:
       
-      //constructor
-      miscplot(){req_xsize=0; req_ysize=0;explabel=string("");bp_colctr=0;
-	null_shift=0.0;minmaxscale=0.0;spacing=0;ymin=0.0;ymax=0.0;
-	bp_whiskerlength = 1.5; bp_notched = TRUE; histogram_bins = 0;scat_ctr=0;
+   		//constructor
+      miscplot(){
+				req_xsize=0; req_ysize=0;explabel=string("");bp_colctr=0;
+				null_shift=0.0;minmaxscale=0.0;spacing=0;ymin=0.0;ymax=0.0;
+				bp_whiskerlength = 1.5; bp_notched = TRUE; 
+				histogram_bins = 0;scat_ctr=0;
       };
 
       //destructor
       ~miscplot() {
-	deletescatter();
+				GDCglobals_reset();
       }    
-      void timeseries(const NEWMAT::Matrix& mat, string filename, string title,
-		      float tr = 0.0, int ysize = 150, int width = 4, int prec = 2, bool sci = false);
+			
+			static void Timeseries(const NEWMAT::Matrix& mat, string filename, 
+				string title, float tr = 0.0, int ysize = 150, int width = 4, 
+				int prec = 2, bool sci = false)
+				{	miscplot plot;
+					plot.timeseries(mat, filename, title, tr, ysize, width, prec, sci);
+				}
+
+      void timeseries(const NEWMAT::Matrix& mat, string filename, 
+				string title, float tr = 0.0, int ysize = 150, int width = 4, 
+				int prec = 2, bool sci = false);
 
       void histogram(const NEWMAT::Matrix& mat, string filename, string title);
 
       void boxplot(string filename, string title);
       void boxplot(const NEWMAT::Matrix& mat, string filename, string title);
-      void boxplot(const NEWMAT::ColumnVector& vec, string filename, string title);
+      void boxplot(const NEWMAT::ColumnVector& vec, string filename, 
+				string title);
 
-      void gmmfit(const NEWMAT::Matrix& mat, Matrix& mu, Matrix& sig, Matrix& pi, 
-                  string filename, string title, bool mtype = false, 
-                  float offset = 0.0, float detailfactor = 0.0); 
+      void gmmfit(const NEWMAT::Matrix& mat, Matrix& mu, Matrix& sig, 
+				Matrix& pi, string filename, string title, bool mtype = false, 
+        float offset = 0.0, float detailfactor = 0.0); 
     
-      inline void ggmfit(const NEWMAT::Matrix& mat, Matrix& mu, Matrix& sig, Matrix& pi, 
-		       string filename, string title, float offset = 0.0, float detailfactor = 0.0)
-	{this->gmmfit(mat, mu, sig, pi, filename, title, true, offset, detailfactor);}
+      inline void ggmfit(const NEWMAT::Matrix& mat, Matrix& mu, 
+				Matrix& sig, Matrix& pi, string filename, string title, 
+				float offset = 0.0, float detailfactor = 0.0){
+					this->gmmfit(mat, mu, sig, pi, filename, title, true, 
+					offset, detailfactor);
+				}
     
-      inline void add_label(string txt){ labels.push_back(txt);}
-      inline void remove_labels(int i) {for (int j=1;j<=i;j++) labels.pop_back();}
-      inline void add_xlabel(string txt){ xlabels.push_back(txt);}
-      inline void remove_xlabel(){ xlabels.pop_back();}
-      inline void add_ylabel(string txt){ ylabels.push_back(txt);}
+      inline void add_label(string txt){ 
+				labels.push_back(txt);}
+      inline void remove_labels(int i) {
+				for (int j=1;j<=i;j++) labels.pop_back();}
+      inline void add_xlabel(string txt){ 
+				xlabels.push_back(txt);}
+      inline void remove_xlabel(){ 
+				xlabels.pop_back();}
+      inline void add_ylabel(string txt){ 
+				ylabels.push_back(txt);}
       void setscatter(Matrix &data, int width=15);
       void deletescatter();
+			void GDCglobals_reset();
       void add_bpdata(const NEWMAT::Matrix& mat);
       void add_bpdata(const NEWMAT::ColumnVector& vec);
-      inline void set_xysize(int xsize, int ysize){ req_xsize=xsize; req_ysize=ysize;}
-      inline void set_nullshift(double val){null_shift=val;};
-      inline void set_minmaxscale(float val){minmaxscale = val;};
-      inline void set_yrange(float val1, float val2){ymin = val1; ymax=val2;};
-      inline void set_spacing(int val){spacing = val;};
-      inline void set_bpnotches(bool val){bp_notched  = val;};
-      inline void set_bpwhiskerlength(float val){bp_whiskerlength = val;};
-      inline void set_histogram_bins(int val){histogram_bins = val;};
+      inline void set_xysize(int xsize, int ysize){ 
+				req_xsize=xsize; req_ysize=ysize;}
+      inline void set_nullshift(double val){
+				null_shift=val;};
+      inline void set_minmaxscale(float val){
+				minmaxscale = val;};
+      inline void set_yrange(float val1, float val2){
+				ymin = val1; ymax=val2;};
+      inline void set_spacing(int val){
+				spacing = val;};
+      inline void set_bpnotches(bool val){
+				bp_notched  = val;};
+      inline void set_bpwhiskerlength(float val){
+				bp_whiskerlength = val;};
+      inline void set_histogram_bins(int val){
+				histogram_bins = val;};
 
     private:
       
@@ -98,6 +127,6 @@ namespace MISCPLOT{
 
       gdImagePtr outim;
       void add_legend(void* ptr, unsigned long cmap[], bool inside=false);
-    };
+  };
 }
 #endif

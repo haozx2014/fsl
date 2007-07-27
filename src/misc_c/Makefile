@@ -8,15 +8,12 @@ USRLDFLAGS = -L${LIB_PROB} -L${LIB_ZLIB}
 IOLIBS = -lfslio -lniftiio -lznz
 LIBS = -lss_8UI $(IOLIBS) -lprob -lm -lz
 
-XFILES = whirlgif freqtest gifmerge hist2prob morph_kernel ptoz runavw sphere tmpnam ztop
+XFILES = whirlgif freqtest hist2prob morph_kernel ptoz runavw sphere tmpnam ztop
 
 all: $(XFILES)
 
 freqtest: freqtest.c
 	$(CC) $(CFLAGS) -DFDT="short" -o freqtest freqtest.c $(LDFLAGS) -lss_16SI $(IOLIBS) -lm -lz
-
-gifmerge: gifmerge.c
-	$(CC) -o gifmerge gifmerge.c
 
 hist2prob: hist2prob.c
 	$(CC) $(CFLAGS) -o hist2prob hist2prob.c -L${LIB_ZLIB} -lm -lz

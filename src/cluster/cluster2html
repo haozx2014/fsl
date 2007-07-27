@@ -71,7 +71,7 @@
 Usage() {
     echo "Usage: cluster2html <featdir> <inroot> [-std]"
     echo "<inroot> should not contain the _std extension"
-    exit
+    exit 1
 }
 
 [ "$1" = "" -o "$2" = "" ] && Usage

@@ -72,7 +72,7 @@ Usage() {
     echo ""
     echo "Usage:   first_bcorr <segmentation_image> <t1_image> <threshold> <output_basename> [-d]"
     echo ""
-    exit
+    exit 1
 }
 
 [ "$2" = "" ] && Usage

@@ -86,7 +86,7 @@ AFNI Editor window (suppose you choose <b>grot</b>; your file will get
 saved as <b>grot+orig.BRIK</b>).  To convert your mask from afni to
 analyse format run <b>afni2avw grot+orig</b> from the command line.
 To remove the background brain image and binarise your mask run
-<br><b>avwmaths grot+orig -thr &lt;val&gt; -bin grot+orig</b> from the
+<br><b>fslmaths grot+orig -thr &lt;val&gt; -bin grot+orig</b> from the
 command line, where the threshold value used is just below the value
 you filled the mask with.
 

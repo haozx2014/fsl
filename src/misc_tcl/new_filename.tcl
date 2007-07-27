@@ -4,7 +4,7 @@
 #
 #   Stephen Smith, FMRIB Image Analysis Group
 #
-#   Copyright (C) 1999-2000 University of Oxford
+#   Copyright (C) 1999-2007 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -82,3 +82,31 @@ proc new_filename { name } {
 
     return $name
 }
+
+# these are intended to replace new_filename; instead of adding a "+"
+# until we get a new name, we move old files out of the way using as
+# many "-" symbols as necessary, meaning that the new name WILL be
+# called the exact name requested
+
+proc new_image { name } {
+
+    set name [ remove_ext $name ]
+
+    if { [ imtest $name ] } {
+	new_image ${name}-
+	immv $name ${name}-
+    }
+
+    return 0
+}
+
+proc new_file { name } {
+
+    if { [ file exists $name ] } {
+	new_file ${name}-
+        catch { exec sh -c "/bin/mv $name ${name}-" } errmsg
+    }
+
+    return 0
+}
+

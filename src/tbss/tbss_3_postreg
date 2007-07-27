@@ -78,7 +78,7 @@ Choose ONE of:
  -T   : use FMRIB58_FA and its skeleton instead of study-derived mean and skeleton
 
 EOF
-    exit
+    exit 1
 }
 
 [ "$1" = "" ] && Usage
@@ -142,7 +142,7 @@ mkdir -p ../stats
 $FSLDIR/bin/flirt -in $FSLDIR/etc/standard/avg152T1_brain -ref $FSLDIR/etc/standard/avg152T1 -out ../stats/MNI152 -applyisoxfm 1
 
 # is target already in MNI152 space?
-if [ `$FSLDIR/bin/avwval $best dim1` = 182 -a `$FSLDIR/bin/avwval $best dim2` = 218 -a `$FSLDIR/bin/avwval $best dim3` = 182 ] ; then
+if [ `$FSLDIR/bin/fslval $best dim1` = 182 -a `$FSLDIR/bin/fslval $best dim2` = 218 -a `$FSLDIR/bin/fslval $best dim3` = 182 ] ; then
 
     echo "transforming all FA images into MNI152 space"
     for f in `$FSLDIR/bin/remove_ext *FAi.hdr` ; do
@@ -152,7 +152,7 @@ if [ `$FSLDIR/bin/avwval $best dim1` = 182 -a `$FSLDIR/bin/avwval $best dim2` = 
 
 else
 
-    $FSLDIR/bin/avwmaths++ $best ../stats/target
+    $FSLDIR/bin/fslmaths $best ../stats/target
     cd ../stats
 
     echo "affine-registering target to MNI152 space"
@@ -168,24 +168,24 @@ else
 fi
 
 echo "merging all upsampled FA images into single 4D image"
-${FSLDIR}/bin/avwmerge -t ../stats/all_FA `$FSLDIR/bin/imglob -oneperimage *_nonlinear_hr.*`
+${FSLDIR}/bin/fslmerge -t ../stats/all_FA `$FSLDIR/bin/imglob -oneperimage *_nonlinear_hr.*`
 cd ../stats
-$FSLDIR/bin/avwcpgeom MNI152 all_FA -d
+$FSLDIR/bin/fslcpgeom MNI152 all_FA -d
 
 # create mean FA
 echo "creating valid mask and mean FA"
-$FSLDIR/bin/avwmaths++ all_FA -max 0 -Tmin -bin mean_FA_mask -odt char
-$FSLDIR/bin/avwmaths++ all_FA -mas mean_FA_mask all_FA
-$FSLDIR/bin/avwmaths++ all_FA -Tmean mean_FA
+$FSLDIR/bin/fslmaths all_FA -max 0 -Tmin -bin mean_FA_mask -odt char
+$FSLDIR/bin/fslmaths all_FA -mas mean_FA_mask all_FA
+$FSLDIR/bin/fslmaths all_FA -Tmean mean_FA
 
 # create skeleton
 if [ $SKELETON = 0 ] ; then
     echo "skeletonising mean FA"
     $FSLDIR/bin/tbss_skeleton -i mean_FA -o mean_FA_skeleton
 else
-    $FSLDIR/bin/avwmaths++ $FSLDIR/etc/standard/FMRIB58_FA_1mm -mas mean_FA_mask mean_FA
-    $FSLDIR/bin/avwmaths++ mean_FA -bin mean_FA_mask
-    $FSLDIR/bin/avwmaths++ all_FA -mas mean_FA_mask all_FA
+    $FSLDIR/bin/fslmaths $FSLDIR/etc/standard/FMRIB58_FA_1mm -mas mean_FA_mask mean_FA
+    $FSLDIR/bin/fslmaths mean_FA -bin mean_FA_mask
+    $FSLDIR/bin/fslmaths all_FA -mas mean_FA_mask all_FA
     $FSLDIR/bin/imcp $FSLDIR/etc/standard/FMRIB58_FA-skeleton_1mm mean_FA_skeleton
 fi
 

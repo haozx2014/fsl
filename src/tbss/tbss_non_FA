@@ -94,10 +94,10 @@ for f in `$FSLDIR/bin/remove_ext *FAi.hdr` ; do
 done
 
 echo "merging all upsampled $ALTIM images into single 4D image"
-${FSLDIR}/bin/avwmerge -t ../stats/all_$ALTIM `$FSLDIR/bin/imglob -oneperimage *_nonlinear_hr_${ALTIM}.*`
+${FSLDIR}/bin/fslmerge -t ../stats/all_$ALTIM `$FSLDIR/bin/imglob -oneperimage *_nonlinear_hr_${ALTIM}.*`
 cd ../stats
-$FSLDIR/bin/avwcpgeom MNI152 all_$ALTIM -d
-$FSLDIR/bin/avwmaths++ all_$ALTIM -mas mean_FA_mask all_$ALTIM
+$FSLDIR/bin/fslcpgeom MNI152 all_$ALTIM -d
+$FSLDIR/bin/fslmaths all_$ALTIM -mas mean_FA_mask all_$ALTIM
 
 echo "projecting all_$ALTIM onto mean FA skeleton"
 thresh=`cat thresh.txt`

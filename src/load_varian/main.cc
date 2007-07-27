@@ -458,10 +458,13 @@ void usage(int argc,char** argv,struct flags *flgs)
 void zero_all_flags(struct flags *flgs)
 {
   int i;
+  flgs->dim=0;
   flgs->ft=0;
   flgs->ms=0;
   flgs->epi=0;
+  flgs->epik=0;
   flgs->out=0;
+  flgs->seg=0;
   flgs->sint=0;
   flgs->bl=0;
   flgs->ref=0;
@@ -536,6 +539,9 @@ void zero_all_flags(struct flags *flgs)
   flgs->multicoil=0;
   flgs->kpsf=0;
   flgs->fdf=0;
+  flgs->fract_ky=0;
+  flgs->cusfilt=0;
+  flgs->etl=0;
   buo_limit1=buo_limit2=0;
   for(i=0;i<3;i++)flgs->resamp[i]=0;
   strcpy(flgs->petable,"");

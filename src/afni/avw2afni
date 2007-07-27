@@ -2,7 +2,7 @@
 
 Usage() {
 	echo "Usage: avw2afni <input_fileroot>"
-	exit
+	exit 1
 }
 
 [ "$1" = "" ] && Usage

@@ -1,4 +1,4 @@
-//     avwroi++.cc  extract cuboid ROI and/or timeseries from image
+//     fslroi.cc  extract cuboid ROI and/or timeseries from image
 //     Stephen Smith and Matthew Webster, FMRIB Image Analysis Group
 //     Copyright (C) 1999-2005 University of Oxford  
 //     COPYRIGHT  
@@ -10,9 +10,9 @@ using namespace NEWIMAGE;
 
 void print_usage(const string& progname) {
   cout << endl;
-  cout << "Usage: avwroi <input> <output> <xmin> <xsize> <ymin> <ysize> <zmin> <zsize>" << endl;
-  cout << "       avwroi <input> <output> <tmin> <tsize>\n" << endl;
-  cout << "       avwroi <input> <output> <xmin> <xsize> <ymin> <ysize> <zmin> <zsize> <tmin> <tsize>" << endl;
+  cout << "Usage: fslroi <input> <output> <xmin> <xsize> <ymin> <ysize> <zmin> <zsize>" << endl;
+  cout << "       fslroi <input> <output> <tmin> <tsize>\n" << endl;
+  cout << "       fslroi <input> <output> <xmin> <xsize> <ymin> <ysize> <zmin> <zsize> <tmin> <tsize>" << endl;
   cout << "Note: counting (in both time and space) starts with 0 not 1!" << endl;
 }
 

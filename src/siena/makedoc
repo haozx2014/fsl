@@ -6,3 +6,4 @@
 
 sh ./siena  > doc/siena_usage  2>&1
 sh ./sienax > doc/sienax_usage 2>&1
+exit 0

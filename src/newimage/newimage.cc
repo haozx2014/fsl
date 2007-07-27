@@ -2556,9 +2556,9 @@ namespace NEWIMAGE {
     //   hence sampling mats
 
     Matrix nmat;
-    nmat = this->sform_mat() * this->sampling_mat().i() * this->swapmat(dim1,dim2,dim3) * swapvol.sampling_mat();
+    nmat = this->sform_mat() * this->sampling_mat().i() * this->swapmat(dim1,dim2,dim3).i() * swapvol.sampling_mat();
     swapvol.set_sform(this->sform_code(), nmat);
-    nmat = this->qform_mat() * this->sampling_mat().i() * this->swapmat(dim1,dim2,dim3) * swapvol.sampling_mat();
+    nmat = this->qform_mat() * this->sampling_mat().i() * this->swapmat(dim1,dim2,dim3).i() * swapvol.sampling_mat();
     swapvol.set_qform(this->qform_code(), nmat);
     
     int nx, ny, nz, mx, my, mz;
@@ -3328,6 +3328,15 @@ namespace NEWIMAGE {
     vols.erase(vols.begin() + t);
     if (!activeROI) setdefaultlimits();
     set_whole_cache_validity(false);
+  }
+
+  template <class T>
+  void volume4D<T>::clear()
+  {
+    // inefficient but safe - should replace with a better method someday
+    for (int t=tsize()-1; t>=0; t--) {
+      this->deletevolume(t);
+    }
   }
 
 

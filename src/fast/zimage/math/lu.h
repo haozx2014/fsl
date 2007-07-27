@@ -13,7 +13,7 @@
 
 bool LUdcmp(ZMatrix<double>& A);
 bool LUdcmp(ZMatrix<double>& A, ZVector<int>& indx);
-bool LUdcmp(ZMatrix<float>& A);
+bool LUdcmp(ZMatrix<float>& A, void* foo);
 bool LUdcmp(ZMatrix<float>& A, ZVector<int>& indx);
 void LUbksb (const ZMatrix<double>& A, const ZVector<int>& indx, ZVector<double>& B );
 void LUbksb (const ZMatrix<float>& A, const ZVector<int>& indx, ZVector<float>& B );

@@ -666,7 +666,7 @@ int main(int argc, char *argv[]) {
   options.add(help);
   
   if (argc < 3) {
-    if (argc == 1) {options.usage(); exit(0);};
+    if (argc == 1) {options.usage(); exit(EXIT_FAILURE);};
     if (argc>1)
       {
 	string s = argv[1];

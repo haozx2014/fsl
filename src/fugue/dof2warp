@@ -15,19 +15,19 @@ warp=$4
 
 D=${FSLDIR}/bin/DR
 
-idx=`${FSLDIR}/bin/avwval $i dim1`
-idy=`${FSLDIR}/bin/avwval $i dim2`
-idz=`${FSLDIR}/bin/avwval $i dim3`
-ivx=`${FSLDIR}/bin/avwval $i pixdim1 | sed "s/-//g"`
-ivy=`${FSLDIR}/bin/avwval $i pixdim2 | sed "s/-//g"`
-ivz=`${FSLDIR}/bin/avwval $i pixdim3 | sed "s/-//g"`
+idx=`${FSLDIR}/bin/fslval $i dim1`
+idy=`${FSLDIR}/bin/fslval $i dim2`
+idz=`${FSLDIR}/bin/fslval $i dim3`
+ivx=`${FSLDIR}/bin/fslval $i pixdim1 | sed "s/-//g"`
+ivy=`${FSLDIR}/bin/fslval $i pixdim2 | sed "s/-//g"`
+ivz=`${FSLDIR}/bin/fslval $i pixdim3 | sed "s/-//g"`
 
-rdx=`${FSLDIR}/bin/avwval $r dim1`
-rdy=`${FSLDIR}/bin/avwval $r dim2`
-rdz=`${FSLDIR}/bin/avwval $r dim3`
-rvx=`${FSLDIR}/bin/avwval $r pixdim1 | sed "s/-//g"`
-rvy=`${FSLDIR}/bin/avwval $r pixdim2 | sed "s/-//g"`
-rvz=`${FSLDIR}/bin/avwval $r pixdim3 | sed "s/-//g"`
+rdx=`${FSLDIR}/bin/fslval $r dim1`
+rdy=`${FSLDIR}/bin/fslval $r dim2`
+rdz=`${FSLDIR}/bin/fslval $r dim3`
+rvx=`${FSLDIR}/bin/fslval $r pixdim1 | sed "s/-//g"`
+rvy=`${FSLDIR}/bin/fslval $r pixdim2 | sed "s/-//g"`
+rvz=`${FSLDIR}/bin/fslval $r pixdim3 | sed "s/-//g"`
 
 ${D}/dof2gipl ${r}.hdr $dof ${warp}tmpX.hdr ${warp}tmpY.hdr ${warp}tmpZ.hdr
 
@@ -37,11 +37,11 @@ shiftz=`echo "3 k $idz 1 - $ivz *  $rdz 1 - $rvz *  - 2 /    p" | dc -`
 
 #echo $shiftx $shifty $shiftz
 
-${FSLDIR}/bin/avwmaths++ ${warp}tmpX         -add $shiftx ${warp}tmpXX
-${FSLDIR}/bin/avwmaths++ ${warp}tmpY -mul -1 -add $shifty ${warp}tmpYY
-${FSLDIR}/bin/avwmaths++ ${warp}tmpZ         -add $shiftz ${warp}tmpZZ
+${FSLDIR}/bin/fslmaths ${warp}tmpX         -add $shiftx ${warp}tmpXX
+${FSLDIR}/bin/fslmaths ${warp}tmpY -mul -1 -add $shifty ${warp}tmpYY
+${FSLDIR}/bin/fslmaths ${warp}tmpZ         -add $shiftz ${warp}tmpZZ
 
-avwmerge -t $warp ${warp}tmpXX ${warp}tmpYY ${warp}tmpZZ
+fslmerge -t $warp ${warp}tmpXX ${warp}tmpYY ${warp}tmpZZ
 
 if [ _$5 != _ ] ; then
     applywarp -i $i -o $5 -r $r -w $warp --rel

@@ -720,7 +720,7 @@ int read_volume(volume<T>& target, const string& filename)
 
 // read a volume and force it to be in radiological format
 template <class T>
-int read_rad_volume(volume<float>& target, string& filename)
+int read_rad_volume(volume<T>& target, const string& filename)
 {
   int retval=0;
   retval = read_volume(target,filename);
@@ -730,7 +730,7 @@ int read_rad_volume(volume<float>& target, string& filename)
  	 
 // read a volume and force it to be in radiological format
 template <class T>
-int read_rad_volume(volume<float>& target, string& filename, volumeinfo& vinfo)
+int read_rad_volume(volume<T>& target, const string& filename, volumeinfo& vinfo)
 {
   int retval=0;
   retval = read_volume(target,filename,vinfo);
@@ -741,7 +741,7 @@ int read_rad_volume(volume<float>& target, string& filename, volumeinfo& vinfo)
  	 
 // read a volume and force it to be in radiological format
 template <class T>
-int read_rad_volume4D(volume4D<float>& target, string& filename)
+int read_rad_volume4D(volume4D<T>& target, const string& filename)
 {
   int retval=0;
   retval = read_volume4D(target,filename);
@@ -751,7 +751,7 @@ int read_rad_volume4D(volume4D<float>& target, string& filename)
  	 
 // read a volume and force it to be in radiological format
 template <class T>
-int read_rad_volume4D(volume4D<float>& target, string& filename, volumeinfo& vinfo)
+int read_rad_volume4D(volume4D<T>& target, const string& filename, volumeinfo& vinfo)
 {
   int retval=0;
   retval = read_volume4D(target,filename,vinfo);

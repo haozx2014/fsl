@@ -1,5 +1,5 @@
 //     
-//     avwmaths++.cc Image processing routines, some basic, some not so basic...
+//     fslmaths.cc Image processing routines, some basic, some not so basic...
 //     Steve Smith, David Flitney, Stuart Clare and Matthew Webster, FMRIB Image Analysis Group
 //     Copyright (C) 2000-2007 University of Oxford  
 //     
@@ -84,7 +84,7 @@ using namespace NEWIMAGE;
 
 void print_usage(const string& progname) 
 {
-  cout << "Usage: avwmaths [-dt <datatype>] <first_input> [operations and inputs] <output> [-odt <datatype>]" << endl;
+  cout << "Usage: fslmaths [-dt <datatype>] <first_input> [operations and inputs] <output> [-odt <datatype>]" << endl;
 
   cout << "\nDatatype information:" << endl;
   cout << " -dt sets the native (math operations) datatype (default float for all except double images)" << endl;
@@ -144,6 +144,8 @@ void print_usage(const string& progname)
   cout << " -fmean   : Mean filtering, kernel weighted (conventionally used with gauss kernel)" << endl;
   cout << " -fmeanu  : Mean filtering, kernel weighted, un-normalised (gives edge effects)" << endl;
   cout << " -s <sigma> : create a gauss kernel of sigma mm and perform mean filtering" << endl;
+  cout << " -subsamp2  : downsamples image by a factor of 2 (keeping new voxels centred on old)" << endl;
+  cout << " -subsamp2offc  : downsamples image by a factor of 2 (non-centred)" << endl;
 
   cout << "\nDimensionality reduction operations:" << endl;
   cout << "  (the \"T\" can be replaced by X, Y or Z to collapse across a different dimension)" << endl;
@@ -161,9 +163,9 @@ void print_usage(const string& progname)
   cout << " -bptf  <hp_sigma> <lp_sigma> : (-t in ip.c) Bandpass temporal filtering; nonlinear highpass and Gaussian linear lowpass (with sigmas in volumes, not seconds); set either sigma<0 to skip that filter" << endl;
   cout << " -roc <AROC-thresh> <outfile> [4Dnoiseonly] <truth> : take (normally binary) truth and test current image in ROC analysis against truth. <AROC-thresh> is usually 0.05 and is limit of Area-under-ROC measure FP axis. <outfile> is a text file of the ROC curve (triplets of values: FP TP threshold). If the truth image contains negative voxels these get excluded from all calculations. If <AROC-thresh> is positive then the [4Dnoiseonly] option needs to be set, and the FP rate is determined from this noise-only data, and is set to be the fraction of timepoints where any FP (anywhere) is seen, as found in the noise-only 4d-dataset. This is then controlling the FWE rate. If <AROC-thresh> is negative the FP rate is calculated from the zero-value parts of the <truth> image, this time averaging voxelwise FP rate over all timepoints. In both cases the TP rate is the average fraction of truth=positive voxels correctly found." << endl;
 
-  cout << "\ne.g. avwmaths input_volume -add input_volume2 output_volume" << endl;
-  cout << "     avwmaths input_volume -add 2.5 output_volume" << endl;
-  cout << "     avwmaths input_volume -add 2.5 -mul input_volume2 output_volume\n" << endl;
+  cout << "\ne.g. fslmaths input_volume -add input_volume2 output_volume" << endl;
+  cout << "     fslmaths input_volume -add 2.5 output_volume" << endl;
+  cout << "     fslmaths input_volume -add 2.5 -mul input_volume2 output_volume\n" << endl;
 }
 
 bool isNumber( const string& x , float input2)
@@ -309,6 +311,18 @@ int fmrib_main(int argc, char *argv[], short output_dt)
       separable=true;
       input_volume=generic_convolve(input_volume,kernel,separable,true); 
       i++;
+    }
+    /***************************************************************/
+    else if (string(argv[i])=="-subsamp2"){
+      temp_volume.clear();
+      temp_volume = subsample_by_2(input_volume,true);
+      input_volume = temp_volume;
+    }
+    /***************************************************************/
+    else if (string(argv[i])=="-subsamp2offc"){
+      temp_volume.clear();
+      temp_volume = subsample_by_2(input_volume,false);
+      input_volume = temp_volume;
     }
     /***************************************************************/
     else if (string(argv[i])=="-add"){

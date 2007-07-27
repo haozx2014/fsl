@@ -77,7 +77,7 @@ volname=`${FSLDIR}/bin/remove_ext $1`;
 bnm=`basename $volname`;
 shift
 
-nn=`$FSLDIR/bin/avwval $volname dim3`;
+nn=`$FSLDIR/bin/fslval $volname dim3`;
 n=0;
 
 tmpnam=`basename ${volname}`_TMP

@@ -73,7 +73,7 @@ Usage() {
     echo "Usage: tbss_fill <stats_image> <threshold> <mean_FA> <output> [-n]"
     echo "  -n : include negative stat values (below -threshold)"
     echo ""
-    exit
+    exit 1
 }
 
 do_tbss_fill() {
@@ -81,17 +81,17 @@ do_tbss_fill() {
     OUT=$2
 
     # threshold the input then smooth with Gaussian of sigma=3mm
-    $FSLDIR/bin/avwmaths++ $IN -thr $THRESH -kernel sphere 3 -fmean $OUT -odt float
+    $FSLDIR/bin/fslmaths $IN -thr $THRESH -kernel sphere 3 -fmean $OUT -odt float
 
     # renorm so that the max is same as input's max
-    $FSLDIR/bin/avwmaths++ $OUT -div `${FSLDIR}/bin/avwstats++ $OUT -p 100` -mul `${FSLDIR}/bin/avwstats++ $IN -p 100` $OUT
+    $FSLDIR/bin/fslmaths $OUT -div `${FSLDIR}/bin/fslstats $OUT -p 100` -mul `${FSLDIR}/bin/fslstats $IN -p 100` $OUT
 
     # average with thresholded input (to enhance appearance of skeleton within final output)
     # then multiply by mean-FA (to ensure we stay within real tracts)
-    $FSLDIR/bin/avwmaths++ $IN -thr $THRESH -add $OUT -div 2 -mul $MEANFA -div `${FSLDIR}/bin/avwstats++ $MEANFA -p 100` $OUT -odt float
+    $FSLDIR/bin/fslmaths $IN -thr $THRESH -add $OUT -div 2 -mul $MEANFA -div `${FSLDIR}/bin/fslstats $MEANFA -p 100` $OUT -odt float
 
     # final thresholding at 1/50 of max value
-    $FSLDIR/bin/avwmaths++ $OUT -thr `${FSLDIR}/bin/avwstats++ $OUT -R | awk '{print "10 k " $2 " 50 / p"}' | dc -` $OUT
+    $FSLDIR/bin/fslmaths $OUT -thr `${FSLDIR}/bin/fslstats $OUT -R | awk '{print "10 k " $2 " 50 / p"}' | dc -` $OUT
 }
 
 [ "$4" = "" ] && Usage
@@ -109,9 +109,9 @@ fi
 do_tbss_fill $STATS $OUTPUT
 
 if [ "$5" != "" ] ; then
-    $FSLDIR/bin/avwmaths++ $STATS -mul -1 ${OUTPUT}neg
+    $FSLDIR/bin/fslmaths $STATS -mul -1 ${OUTPUT}neg
     do_tbss_fill ${OUTPUT}neg ${OUTPUT}negout
-    $FSLDIR/bin/avwmaths++ $OUTPUT -sub ${OUTPUT}negout $OUTPUT
+    $FSLDIR/bin/fslmaths $OUTPUT -sub ${OUTPUT}negout $OUTPUT
     /bin/rm ${OUTPUT}neg*
 fi
 

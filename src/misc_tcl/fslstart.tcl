@@ -12,9 +12,11 @@ set HOSTNAME   [ exec hostname ]
 set OS         [ exec uname ]
 
 set auto_path [ linsert $auto_path 0 $FSLDIR/tcl/ ]
+set MYEXEC    [ info nameofexecutable ]
+set MYSHELL   [ file tail $MYEXEC ]
 
 # test for whether we are in tclsh or wish
-if { [ info exists env(TCLTKSHELL) ] &&  $env(TCLTKSHELL) == "fslwish" } {
+if { [  string match -nocase *wish* $MYSHELL ] } {
     package require Tk
 #    tk_focusFollowsMouse
 #bind Button <Enter> { focus %W ; tk::ButtonEnter %W }
@@ -45,7 +47,7 @@ if { [ info exists env(TCLTKSHELL) ] &&  $env(TCLTKSHELL) == "fslwish" } {
     option add *Entry.validate focusout 
     option add *SpinBox.vcmd2  {validNum %W %V %P %s [lindex [[string range %W 0 end-2] cget -range] 0] [lindex [[string range %W 0 end-2] cget -range] 1]} 
     option add *SpinBox.invcmd2 { set [%W cget -textvariable] $tempSpin; %W config -validate %v }
-    lappend auto_path $FSLDIR/tcl/bwidget
+    lappend auto_path $FSLDIR/tcl/BWidget
     package require BWidget
     package require BWFileEntry
     package require BWLabelComboBox 

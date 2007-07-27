@@ -26,17 +26,6 @@ if [ $strict = false ] ; then
      ( cd ${FSLCONFDIR} ; ln -s generic ${FSLMACHTYPE} ; buildmessages="WARNING: Did not find specific configuration for ${FSLMACHTYPE} - trying generic version instead";  echo "$buildmessages" ; )
   fi
 
-  # Make freeware if it exists
-  if [ -d ${FSLDIR}/src/freeware ] ; then
-      ( cd ${FSLDIR}/src/freeware ; make FSLDIR=${FSLDIR} FSLCONFDIR=${FSLCONFDIR} )
-  fi
-
-  # Make the extras if they are installed in the same fsl tree
-  if [ -d ${FSLDIR}/extras ] ; then
-      ( cd ${FSLDIR}/extras ; ./build ) ;
-      MAKEOPTIONS="${MAKEOPTIONS} FSLEXTLIB=${FSLDIR}/extras/lib FSLEXTINC=${FSLDIR}/extras/include" ;
-  fi
-
 fi
 
 
@@ -58,7 +47,10 @@ errorinstall="" ; export errorinstall ;
 
 for projname in $PROJECTS; do
 
-    if [ -d $FSLDIR/src/$projname ] ; then
+    if [ X"${projname}" = "Xextras" -a -d ${FSLDIR}/extras ] ; then
+      ( cd ${FSLDIR}/extras ; ./build ) ;
+      MAKEOPTIONS="${MAKEOPTIONS} FSLEXTLIB=${FSLDIR}/extras/lib FSLEXTINC=${FSLDIR}/extras/include" ;
+    elif [ -d $FSLDIR/src/$projname ] ; then
 
 	  echo " " ;
 	  echo " " ;
@@ -91,7 +83,6 @@ for projname in $PROJECTS; do
 	    echo " "
 	    errorprojs="$errorprojs $projname" ; export errorprojs ;
 	  fi
-
     fi
 done
 

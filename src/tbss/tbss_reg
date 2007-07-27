@@ -74,7 +74,7 @@ Usage() {
     echo "-a : apply transformation to input (as well as estimating it)"
     echo "tbss_reg MUST be run with both files in current directory and no pathnames specified"
     echo ""
-    exit
+    exit 1
 }
 
 [ "$2" = "" ] && Usage
@@ -100,11 +100,11 @@ mkdir -p $T
 ${D}/dof2gipl ${INPUT}.hdr ${INPUT}_to_${REFERENCE}_affine.dof ${T}/grotAx.hdr ${T}/grotAy.hdr ${T}/grotAz.hdr
 ${D}/dof2gipl ${INPUT}.hdr ${INPUT}_to_${REFERENCE}_nonlinear.dof ${T}/grotNx.hdr ${T}/grotNy.hdr ${T}/grotNz.hdr
 cd $T
-$FSLDIR/bin/avwmaths grotNx -sub grotAx -sqr grotSx
-$FSLDIR/bin/avwmaths grotNy -sub grotAy -sqr grotSy
-$FSLDIR/bin/avwmaths grotNz -sub grotAz -sqr grotSz
-$FSLDIR/bin/avwmaths grotSx -add grotSy -add grotSz -mas ../$REFERENCE grotSS
-$FSLDIR/bin/avwstats++ grotSS -M -P 50 > ../${I2R}_nonlinear.msf
+$FSLDIR/bin/fslmaths grotNx -sub grotAx -sqr grotSx
+$FSLDIR/bin/fslmaths grotNy -sub grotAy -sqr grotSy
+$FSLDIR/bin/fslmaths grotNz -sub grotAz -sqr grotSz
+$FSLDIR/bin/fslmaths grotSx -add grotSy -add grotSz -mas ../$REFERENCE grotSS
+$FSLDIR/bin/fslstats grotSS -M -P 50 > ../${I2R}_nonlinear.msf
 cd ..
 /bin/rm -rf $T
 

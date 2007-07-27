@@ -16,7 +16,7 @@ LIBS = -lutils -lnewimage -lmiscplot -lmiscpic -lmiscmaths -lprob -lnewmat -lss_
 
 XFILES = feat_model tsplot prewhiten
 
-RUNTCLS = Feat Renderhighres Featquery Featwatcher Glm
+RUNTCLS = Feat Renderhighres Featquery Glm
 
 SCRIPTS = easythresh feat mccutup renderhighres featregapply featquery fslerrorreport updatefeatreg estnoise perfusion_subtract
 

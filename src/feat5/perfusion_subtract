@@ -73,7 +73,7 @@ Usage() {
     echo "Usage: perfusion_subtract <4D_input> <4D_output> [-c]"
     echo "-c : first timepoint is control instead of tag (default is tag first)"
     echo ""
-    exit
+    exit 1
 }
 
 [ "$2" = "" ] && Usage
@@ -94,36 +94,36 @@ done
 tmpbase=`$FSLDIR/bin/tmpnam`
 mkdir ${tmpbase}_asl_subtract
 
-${FSLDIR}/bin/avwmaths $IN -Tmean ${tmpbase}_asl_subtract/mean
-${FSLDIR}/bin/avwsplit $IN ${tmpbase}_asl_subtract/vol
+${FSLDIR}/bin/fslmaths $IN -Tmean ${tmpbase}_asl_subtract/mean
+${FSLDIR}/bin/fslsplit $IN ${tmpbase}_asl_subtract/vol
 
 OLDPWD=`pwd`
 cd ${tmpbase}_asl_subtract
 
-${FSLDIR}/bin/avwmerge -t even `${FSLDIR}/bin/imglob -oneperimage vol*[02468].*`
-${FSLDIR}/bin/avwmerge -t odd  `${FSLDIR}/bin/imglob -oneperimage vol*[13579].*`
+${FSLDIR}/bin/fslmerge -t even `${FSLDIR}/bin/imglob -oneperimage vol*[02468].*`
+${FSLDIR}/bin/fslmerge -t odd  `${FSLDIR}/bin/imglob -oneperimage vol*[13579].*`
 
-if [ `${FSLDIR}/bin/avwnvols even` != `${FSLDIR}/bin/avwnvols odd` ] ; then
+if [ `${FSLDIR}/bin/fslnvols even` != `${FSLDIR}/bin/fslnvols odd` ] ; then
     echo "Warning - odd number of timepoints in input data - will ignore last timepoint"
-    ${FSLDIR}/bin/avwroi even even 0 `${FSLDIR}/bin/avwnvols odd`
+    ${FSLDIR}/bin/fslroi even even 0 `${FSLDIR}/bin/fslnvols odd`
 fi
 
 ${FSLDIR}/bin/slicetimer -i odd  -o odd_earlier  --tglobal=0.75
 ${FSLDIR}/bin/slicetimer -i odd  -o odd_later    --tglobal=0.25
 ${FSLDIR}/bin/slicetimer -i even -o even_earlier --tglobal=0.75
 ${FSLDIR}/bin/slicetimer -i even -o even_later   --tglobal=1.25
-${FSLDIR}/bin/avwmaths odd_later   -sub even_earlier even_to_odd
-${FSLDIR}/bin/avwmaths odd_earlier -sub even_later   odd_to_even
-${FSLDIR}/bin/avwsplit even_to_odd e_
-${FSLDIR}/bin/avwsplit odd_to_even o_
+${FSLDIR}/bin/fslmaths odd_later   -sub even_earlier even_to_odd
+${FSLDIR}/bin/fslmaths odd_earlier -sub even_later   odd_to_even
+${FSLDIR}/bin/fslsplit even_to_odd e_
+${FSLDIR}/bin/fslsplit odd_to_even o_
 
 la=`${FSLDIR}/bin/imglob -oneperimage [eo]_*`
 lb=`ls -1 $la | sort -t _ -k 2`
-${FSLDIR}/bin/avwmerge -t output $lb
+${FSLDIR}/bin/fslmerge -t output $lb
 
 cd $OLDPWD
 
-${FSLDIR}/bin/avwmaths ${tmpbase}_asl_subtract/output $invert -add ${tmpbase}_asl_subtract/mean $OUT
+${FSLDIR}/bin/fslmaths ${tmpbase}_asl_subtract/output $invert -add ${tmpbase}_asl_subtract/mean $OUT
 
 /bin/rm -rf ${tmpbase}*
 

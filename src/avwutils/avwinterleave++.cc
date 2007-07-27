@@ -1,4 +1,4 @@
-//     avwinterleave++.cc - combine two interleaved frames
+//     fslinterleave.cc - combine two interleaved frames
 //     Steve Smith and Matthew Webster, FMRIB Image Analysis Group
 //     Copyright (C) 2001-2005 University of Oxford  
 //     COPYRIGHT  
@@ -11,7 +11,7 @@ using namespace NEWIMAGE;
 void print_usage(const string& progname) 
 {
   cout << endl;
-  cout << "Usage: avwinterleave <in1> <in2> <out> [-i]" << endl;
+  cout << "Usage: fslinterleave <in1> <in2> <out> [-i]" << endl;
   cout << "-i : reverse slice order" << endl;
 }
 

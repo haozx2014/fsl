@@ -9,6 +9,7 @@ RANLIB = ranlib
 
 RM = /bin/rm
 CP = /bin/cp
+MV = /bin/mv
 CHMOD = /bin/chmod
 MKDIR = /bin/mkdir
 TCLSH = ${FSLDIR}/bin/fsltclsh

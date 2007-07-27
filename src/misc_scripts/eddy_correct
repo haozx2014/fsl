@@ -68,7 +68,7 @@ Usage() {
     echo ""
     echo "Usage: eddy_correct <4dinput> <4doutput> <reference_no>"
     echo ""
-    exit
+    exit 1
 }
 
 [ "$3" = "" ] && Usage
@@ -79,7 +79,7 @@ ref=${3}
 
 if [ `${FSLDIR}/bin/imtest $input` -eq 0 ];then
     echo "Input does not exist or is not in a supported format"
-    exit
+    exit 1
 fi
 
 avwroi $input $output $ref 1

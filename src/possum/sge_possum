@@ -84,22 +84,22 @@ Usage() {
     echo "CARDIFF:  MAXnumproc=300; ntime={all.q}"
     echo ""
     echo "Subject directory needs to contain:"
-    echo "1.brain"
-    echo "2.MRpar" 
-    echo "3.motion "
-    echo "4.slcprof"
-    echo "5.pulse,pulse.info"
+    echo "1. brain"
+    echo "2. MRpar" 
+    echo "3. motion "
+    echo "4. slcprof"
+    echo "5. pulse,pulse.info"
     echo "Optional:"
-    echo "6.RFtrans,RFrec"
-    echo "7.T2"
-    echo "8.T2timecourse"
-    echo "9.b0"
-    echo "10.b0extra"
-    echo "11.b0timecourse"
+    echo "6. RFtrans,RFrec"
+    echo "7. T2"
+    echo "8. T2timecourse"
+    echo "9. b0"
+    echo "10. b0extra"
+    echo "11. b0timecourse"
     echo ""
-    echo "The description of how to obtain the files is in possum_docs"
+    echo "The description of how to obtain the files is in possum/docs"
     echo ""
-    exit
+    exit 1
 }
 
 make_absolute(){
@@ -117,9 +117,6 @@ make_absolute(){
 
 
 [ "$1" = "" ] && Usage
-
-#POSSUMDIR=~ivana/fsldev/${FSLMACHTYPE}/bin
-echo $POSSUMDIR
 
 subjdir=`make_absolute $1`
 subjdir=`echo $subjdir | sed 's/\/$/$/g'`
@@ -212,13 +209,13 @@ echo Queuing parallel processing stage
 command="$command --nproc=${nproc}"
 possumid=`qsub -l arch=lx24-amd64 -M $mailto -V -t 1-$nproc -q $ntime \
     -o ${subjdir}/logs -e ${subjdir}/logs \
-    ${POSSUMDIR}/sge_possum_single_proc.sh ${subjdir} "$command" | \
+    ${FSLDIR}/bin/sge_possum_single_proc.sh ${subjdir} "$command" | \
     awk '{print $3}' | awk -F. '{print $1}'`
 
 echo Queuing post processing stage
 mergeid=`qsub -l arch=lx24-amd64 -M $mailto -hold_jid $possumid -V -q $ntime \
     -o ${subjdir}/logs -e ${subjdir}/logs \
-    ${POSSUMDIR}/sge_possum_postproc.sh $subjdir $nproc | \
+    ${FSLDIR}/bin/sge_possum_postproc.sh $subjdir $nproc | \
     awk '{print $3}'`
 
 echo You will get an email at the end of the post-processing stage.

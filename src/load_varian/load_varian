@@ -45,7 +45,7 @@ if [ $? -eq 0 ]; then
     if [ "X$OUTNAME" != "X" ] ; then 
 	/bin/mv ${OUTNAME}.hdr ${OUTNAME}tmp.hdr
 	/bin/mv ${OUTNAME}.img ${OUTNAME}tmp.img
-	${FSLDIR}/bin/avwchfiletype $FSLOUTPUTTYPE ${OUTNAME}tmp ${OUTNAME}
+	${FSLDIR}/bin/fslchfiletype $FSLOUTPUTTYPE ${OUTNAME}tmp ${OUTNAME}
 	/bin/rm ${OUTNAME}tmp.hdr
 	/bin/rm ${OUTNAME}tmp.img
 
@@ -53,8 +53,8 @@ if [ $? -eq 0 ]; then
 	    ${FSLDIR}/bin/bet ${OUTNAME} ${OUTNAME}_tmp_brain >& /dev/null
 	    ${FSLDIR}/bin/fast -i 50 -l 200 -oba 200 -t1 -c 3 -ob -od ${OUTNAME}_tmp ${OUTNAME}_tmp_brain >& /dev/null
 	    ${FSLDIR}/bin/immv ${OUTNAME} ${OUTNAME}_uncor
-	    ${FSLDIR}/bin/avwmaths ${OUTNAME}_tmp_abias -mul ${OUTNAME}_uncor -uthr 32700 ${OUTNAME}_tmp
-	    ${FSLDIR}/bin/avwmaths ${OUTNAME}_uncor -sub ${OUTNAME}_uncor -add ${OUTNAME}_tmp ${OUTNAME}
+	    ${FSLDIR}/bin/fslmaths ${OUTNAME}_tmp_abias -mul ${OUTNAME}_uncor -uthr 32700 ${OUTNAME}_tmp
+	    ${FSLDIR}/bin/fslmaths ${OUTNAME}_uncor -sub ${OUTNAME}_uncor -add ${OUTNAME}_tmp ${OUTNAME}
 	    #/bin/rm ${OUTNAME}_tmp*
 	fi
     fi

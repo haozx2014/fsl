@@ -73,5 +73,5 @@ if [ $# -lt 1 ] ; then
   exit 1 ;
 fi
 
-${FSLDIR}/bin/avwhd $1 | cat -v | egrep 'data_type|datatype|dim[1-4]|l.*m[ai][xn]|origin[123]|file_type'
+${FSLDIR}/bin/fslhd $1 | cat -v | egrep 'data_type|datatype|dim[1-4]|l.*m[ai][xn]|origin[123]|file_type'
 

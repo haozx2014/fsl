@@ -75,7 +75,7 @@ Usage() {
     echo "<background>: either highres or standard"
     echo "<autothresh>: either 0 or 1 (colour-code using existing post-threshold range? If 0 then minZ and maxZ are used)"
     echo ""
-    exit
+    exit 1
 }
 
 [ "$4" = "" ] && Usage
@@ -89,12 +89,12 @@ autothresh=$4
 
 if [ `${FSLDIR}/bin/imtest reg/$space` != 1 ] ; then
     echo "Can't use $space for output space - doesn't exist in the FEAT registration output"
-    exit
+    exit 1
 fi
 
 if [ `${FSLDIR}/bin/imtest reg/$background` != 1 ] ; then
     echo "Can't use $background for background image - doesn't exist in the FEAT registration output"
-    exit
+    exit 1
 fi
 
 /bin/rm -rf hr
@@ -112,8 +112,8 @@ for f in `cd .. ; ${FSLDIR}/bin/imglob -oneperimage thresh_*.*` ; do
     ${FSLDIR}/bin/flirt -in ../$f -out $f -ref ../reg/$space -applyxfm -init ../reg/example_func2${space}.mat -interp sinc -sincwidth 7 -sincwindow hanning
 
     if [ $autothresh = 1 ] ; then
-	minZ=`${FSLDIR}/bin/avwstats++ ../$f -l 0.01 -R | awk '{print $1}'`
-	maxZ=`${FSLDIR}/bin/avwstats++ ../$f         -R | awk '{print $2}'`
+	minZ=`${FSLDIR}/bin/fslstats ../$f -l 0.01 -R | awk '{print $1}'`
+	maxZ=`${FSLDIR}/bin/fslstats ../$f         -R | awk '{print $2}'`
     else
 	minZ=$5
 	maxZ=$6

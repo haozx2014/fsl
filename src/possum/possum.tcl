@@ -71,7 +71,7 @@ source [ file dirname [ info script ] ]/fslstart.tcl
 set VARS(history) {}
 
 proc possum { w } {
-    global entries FSLDIR PWD HOME
+    global entries guivars FSLDIR PWD HOME
     # ---- Set up Frames ----
     toplevel $w
     wm title $w "Possum"
@@ -104,7 +104,7 @@ proc possum { w } {
    
     frame $w.objim
     label $w.objim.label -image "" -text " "
-    button $w.objim.preview -text "Preview image" -command "possum:previewimage $w $objectlf"
+    button $w.objim.preview -text "Preview image" -command "possum:previewimage $w"
     pack $w.objim.preview $w.objim.label -in $w.objim -pady 10
     pack $w.objim -in  $objectlf -anchor w -padx 3 -pady 3
 
@@ -165,8 +165,8 @@ proc possum { w } {
     label $w.n.lab -text "Number of Voxels: " -width 22 -anchor w -justify left 
     LabelSpinBox $w.n.x -label " X "  -width 6 \
          -textvariable entries($w,outsize_nx) -range { 1   10000  1 } \
-	-command "$w.n.x.spin.e validate; possum:updateFOV $w;possum:updatecomptime $w;possum:updateechosp $w" \
-	-modifycmd "possum:updateFOV $w; possum:updatecomptime $w;possum:updateechosp $w"
+	-command "$w.n.x.spin.e validate; possum:updateFOV $w; possum:updatecomptime $w; possum:updateechosp $w" \
+	-modifycmd "possum:updateFOV $w; possum:updatecomptime $w; possum:updateechosp $w"
     LabelSpinBox $w.n.y -label " Y "  -width 6 \
 	 -textvariable entries($w,outsize_ny) -range { 1   10000 1 } \
 	-command "$w.n.y.spin.e validate; possum:updateFOV $w;possum:updatecomptime $w;possum:updateechosp $w" \
@@ -312,10 +312,11 @@ proc possum { w } {
 
     
     # -------- B0ield -------------
-    set b0fieldlf [$w.nb getframe b0field]
+    set guivars($w,lfb0field) [$w.nb getframe b0field]
     set entries($w,b0f) "${FSLDIR}/data/possum/b0_ppm_z_dz.nii.gz"
     set entries($w,b0inh_yn) 0
-    set entries($w,b0strength) 0
+    set entries($w,b0strength) 1
+    possum:updateb0field $w
     FileEntry $w.b0f \
 	-textvariable entries($w,b0f) \
 	-filetypes IMAGE \
@@ -326,7 +327,7 @@ proc possum { w } {
 
     frame $w.b0im
     label $w.b0im.label -image "" -text " "
-    button $w.b0im.preview -text "Preview image" -command "possum:previewb0 $w $b0fieldlf"
+    button $w.b0im.preview -text "Preview image" -command "possum:previewb0 $w"
 
     frame $w.b0u
     radiobutton $w.b0u.ppm -text "ppm" -variable entries($w,b0units) -value ppm -anchor w
@@ -336,10 +337,10 @@ proc possum { w } {
     pack $w.b0u.unit $w.b0u.ppm $w.b0u.tesla -anchor w -side left
     
     LabelFrame $w.b0fil -text ""
-    optionMenu2 $w.b0fil.menu entries($w,b0strength)  -command "possum:updateb0field $w ; possum:updateb0fieldinh $w $b0fieldlf" 0 "1.5 T" 1 "3 T"
+    optionMenu2 $w.b0fil.menu entries($w,b0strength)  -command "possum:updateb0field $w ; possum:updateb0fieldinh $w" 0 "1.5 T" 1 "3 T"
     pack $w.b0fil.menu
     
-    pack $w.b0fil -in $b0fieldlf -side top -anchor w -padx 3 -pady 3
+    pack $w.b0fil -in $guivars($w,lfb0field) -side top -anchor w -padx 3 -pady 3
  
 
     set entries($w,mrpar) "${FSLDIR}/data/possum/MRpar_1.5T"
@@ -349,15 +350,15 @@ proc possum { w } {
 	-title "Select" \
 	-width 40 \
 	-filedialog directory
-    pack $w.mrpar -in $b0fieldlf -anchor w -padx 3 -pady 3
+    pack $w.mrpar -in $guivars($w,lfb0field) -anchor w -padx 3 -pady 3
     
     LabelFrame $w.b0fi -text "B0 field inhomogeneities"
-    optionMenu2 $w.b0fi.menu entries($w,b0inh_yn)  -command "possum:updateb0fieldinh $w $b0fieldlf" 0 "None" 1 "Custom file"
+    optionMenu2 $w.b0fi.menu entries($w,b0inh_yn)  -command "possum:updateb0fieldinh $w" 0 "None" 1 "Custom file"
     pack $w.b0fi.menu
-    pack $w.b0fi -in $b0fieldlf -side top -anchor w -padx 3 -pady 3
+    pack $w.b0fi -in $guivars($w,lfb0field) -side top -anchor w -padx 3 -pady 3
 
     # --------Motion-------------
-    set motionlf [$w.nb getframe motion]
+    set guivars($w,lfmotion) [$w.nb getframe motion]
     set entries($w,motion_yn) 0
     set entries($w,mot) "${FSLDIR}/data/possum/zeromotion"
     FileEntry $w.mot \
@@ -367,12 +368,12 @@ proc possum { w } {
 	-width 40 \
 	-filedialog directory
     LabelFrame $w.moti -text ""
-    optionMenu2 $w.moti.menu entries($w,motion_yn)  -command "possum:updatemotion $w $motionlf" 0 "None" 1 "Custom file"
+    optionMenu2 $w.moti.menu entries($w,motion_yn)  -command "possum:updatemotion $w" 0 "None" 1 "Custom file"
     pack $w.moti.menu
-    pack $w.moti -in $motionlf -side top -anchor w -padx 3 -pady 3
+    pack $w.moti -in $guivars($w,lfmotion) -side top -anchor w -padx 3 -pady 3
 
     # --------Activation-------------
-    set activationlf [$w.nb getframe activation]
+    set guivars($w,lfactivation) [$w.nb getframe activation]
     set entries($w,activ_yn) 0
     set entries($w,act1) "$FSLDIR/data/possum/activation3D.nii.gz"
     set entries($w,act2) "$FSLDIR/data/possum/activation3Dtimecourse"
@@ -392,25 +393,36 @@ proc possum { w } {
 
     frame $w.activim
     label $w.activim.label -image "" -text " "
-    button $w.activim.preview -text "Preview image" -command "possum:previewactiv $w $activationlf"
+    button $w.activim.preview -text "Preview image" -command "possum:previewactiv $w"
     
     LabelFrame $w.activ -text ""
-    optionMenu2 $w.activ.menu entries($w,activ_yn)  -command "possum:updateactivation $w $activationlf" 0 "None" 1 "Custom file"
+    optionMenu2 $w.activ.menu entries($w,activ_yn)  -command "possum:updateactivation $w" 0 "None" 1 "Custom file"
     pack $w.activ.menu
-    pack $w.activ -in $activationlf -side top -anchor w -padx 3 -pady 3
+    pack $w.activ -in $guivars($w,lfactivation) -side top -anchor w -padx 3 -pady 3
 
     # ------ Noise--------------------
-    set noiself [$w.nb getframe noise]
+    set guivars($w,lfnoise) [$w.nb getframe noise]
     set entries($w,noise_yn) 0
-    set entries($w,snr) 0
-    frame $w.snr
-    LabelSpinBox $w.snr.v -label "SNR (relative to median image intensity): " -width 8 \
-	 -textvariable entries($w,snr) -range { 0.0   100.0  0.001 }
-    pack $w.snr.v -in $w.snr -side left -anchor w -padx 3 -pady 3 
+    set entries($w,noisesnr) 10
+    set entries($w,noisesigma) 0
+    frame $w.noiseval
+    frame $w.noiseval1
+    frame $w.noiseval2
+    LabelSpinBox $w.noiseval1.snr -label "" -width 8 \
+       -textvariable entries($w,noisesnr) -range { 0.0   1000000.0  0.5 } -disabledbackground gray
+    LabelSpinBox $w.noiseval2.sigma -label "" -width 8 \
+       -textvariable entries($w,noisesigma) -range { 0.0   100000000.0  0.1 } -disabledbackground gray
+    radiobutton $w.noiseval1.unitssnr -text "SNR (relative to median object intensity): " -variable entries($w,noiseunits) -value snr -anchor w -command "$w.noiseval2.sigma configure -state disabled ; $w.noiseval1.snr configure -state normal " -width 35
+    radiobutton $w.noiseval2.unitssigma -text "Absolute intensity (std dev): " -variable entries($w,noiseunits) -value sigma -anchor w -command "$w.noiseval2.sigma configure -state normal ; $w.noiseval1.snr configure -state disabled " -width 35
+    pack $w.noiseval1.unitssnr $w.noiseval1.snr -in $w.noiseval1 -side left -anchor w -padx 3 -pady 3 
+    pack $w.noiseval2.unitssigma $w.noiseval2.sigma -in $w.noiseval2 -side left -anchor w -padx 3 -pady 3 
+    pack $w.noiseval1 $w.noiseval2 -in $w.noiseval
+    $w.noiseval1.unitssnr select
+    $w.noiseval2.sigma configure -state disabled
     LabelFrame $w.noise -text ""
-    optionMenu2 $w.noise.menu entries($w,noise_yn)  -command "possum:updatenoise $w $noiself" 0 "None" 1 "Thermal (white) noise "
+    optionMenu2 $w.noise.menu entries($w,noise_yn)  -command "possum:updatenoise $w" 0 "None" 1 "Thermal (white) noise "
     pack $w.noise.menu
-    pack $w.noise -in $noiself -side top -anchor w -padx 3 -pady 3
+    pack $w.noise -in $guivars($w,lfnoise) -side top -anchor w -padx 3 -pady 3
 
     #------Output---------------------
     set outputlf [$w.nb getframe output]
@@ -448,14 +460,17 @@ proc possum { w } {
     # ---- Button Frame ----
     frame $w.btns
     frame $w.btns.b -relief raised -borderwidth 1
-    button $w.go     -command "Possum:apply $w" \
+    button $w.btns.go     -command "Possum:apply $w" \
 	    -text "Go" -width 5
-    button $w.cancel    -command "destroy $w" \
+    button $w.btns.cancel    -command "destroy $w" \
 	    -text "Exit" -width 5
-    button $w.help -command "FmribWebHelp file: ${FSLDIR}/doc/flirt/overview.html" \
+    button $w.btns.save -command "feat_file:setup_dialog $w a a a [namespace current] *.fsf {Save Possum setup} {possum:write $w} {}" -text "Save"
+
+    button $w.btns.load -command "feat_file:setup_dialog $w a a a [namespace current] *.fsf {Load Possum setup} {possum:load $w} {}" -text "Load"
+    button $w.btns.help -command "FmribWebHelp file: ${FSLDIR}/doc/possum/index.html" \
             -text "Help" -width 5
     pack $w.btns.b -side bottom -fill x
-    pack $w.go $w.cancel $w.help -in $w.btns.b \
+    pack $w.btns.go $w.btns.save $w.btns.load $w.btns.cancel $w.btns.help -in $w.btns.b \
 	    -side left -expand yes -padx 3 -pady 10 -fill y
     pack $w.f $w.btns -expand yes -fill both
 }
@@ -474,6 +489,14 @@ proc Possum:pulsecheck { w } {
 
 proc Possum:apply { w } {
     global entries FSLDIR
+
+    # start by saving the fsf file (with all variables as they are now)
+    if { ! [ file isdirectory $entries($w,out) ] } { 
+	catch { exec sh -c "mkdir $entries($w,out)" } oval
+    }
+    possum:write $w $entries($w,out)/possum.fsf
+
+    # now do some logic to figure out the parameters to pass on
     if { $entries($w,b0inh_yn) == 0 } { 
 	set b0file "" 
     } else {
@@ -496,7 +519,7 @@ proc Possum:apply { w } {
     puts "Done"
 }
 
-proc possum:previewimage { w lfobject } {
+proc possum:previewimage { w } {
     global entries FSLDIR
     set convertcom "${FSLDIR}/bin/pngappend"
     set filenm $entries($w,obvol)
@@ -552,12 +575,12 @@ proc possum:updateb0field { w } {
     }
 }
 
-proc possum:updateb0fieldinh { w lfb0field } {
-    global entries FSLDIR
+proc possum:updateb0fieldinh { w } {
+    global entries guivars FSLDIR
     if { $entries($w,b0inh_yn)} {
-	pack $w.b0f -in  $lfb0field -side top -anchor w -padx 3 -pady 3
+	pack $w.b0f -in $guivars($w,lfb0field) -side top -anchor w -padx 3 -pady 3
         pack $w.b0im.preview $w.b0im.label -in $w.b0im -pady 10
-        pack $w.b0u $w.b0im -in  $lfb0field -anchor w -padx 3 -pady 3
+        pack $w.b0u $w.b0im -in $guivars($w,lfb0field) -anchor w -padx 3 -pady 3
     } else {
 	pack forget $w.b0f
         pack forget $w.b0u
@@ -565,7 +588,7 @@ proc possum:updateb0fieldinh { w lfb0field } {
     }
 }
 
-proc possum:previewb0 { w lfb0field } {
+proc possum:previewb0 { w } {
     global entries FSLDIR
     set convertcom "${FSLDIR}/bin/pngappend"
     set filenm $entries($w,b0f)
@@ -589,7 +612,7 @@ proc possum:previewb0 { w lfb0field } {
     $w.nb compute_size
 }
 
-proc possum:previewactiv { w lfactivation } {
+proc possum:previewactiv { w } {
     global entries FSLDIR
     set convertcom "${FSLDIR}/bin/pngappend"
     set filenm $entries($w,act1)
@@ -634,11 +657,11 @@ proc possum:previewslices { w } {
     wm iconbitmap $w1 @${FSLDIR}/tcl/fmrib.xbm
 
     frame $w1.sprev
-    label $w1.sprev.label -image "" -text "Generating preview ... please wait"
+    label $w1.sprev.label -image "" -text "\n    Generating preview ... please wait    \n\n"
     pack $w1.sprev.label -in $w1.sprev
     pack $w1.sprev -in $w1
-    # for some reason it won't pop this up until the rest has finished, so use puts instead!
-    puts "Generating preview ... please wait"
+    # force this message to popup now
+    update
 
     set convertcom "${FSLDIR}/bin/pngappend"
     set filenm $entries($w,obvol)
@@ -650,18 +673,25 @@ proc possum:previewslices { w } {
 	if { $entries($w,plus) == "-" } {
 	    set slcselect "-$entries($w,slcselect)"
 	}
-	catch { exec sh -c "${FSLDIR}/bin/avwroi $filenm ${tmpnam}_sw 0 1" } oval
-	catch { exec sh -c "${FSLDIR}/bin/avwswapdim ${tmpnam}_sw $entries($w,readgrad) $entries($w,phencode) $slcselect ${tmpnam}_sw" } oval
-	catch { exec sh -c "${FSLDIR}/bin/avwval ${tmpnam}_sw pixdim1" } dx	
-	catch { exec sh -c "${FSLDIR}/bin/avwval ${tmpnam}_sw pixdim2" } dy	
-	catch { exec sh -c "${FSLDIR}/bin/avwval ${tmpnam}_sw pixdim3" } dz	
-	catch { exec sh -c "${FSLDIR}/bin/avwstats++ ${tmpnam}_sw -r | awk '{ print \$2 }'" } imax
+	catch { exec sh -c "${FSLDIR}/bin/fslroi $filenm ${tmpnam}_sw 0 1" } oval
+	catch { exec sh -c "${FSLDIR}/bin/fslswapdim ${tmpnam}_sw $entries($w,readgrad) $entries($w,phencode) $slcselect ${tmpnam}_sw" } oval
+	catch { exec sh -c "${FSLDIR}/bin/fslval ${tmpnam}_sw dim1" } in_nx
+	catch { exec sh -c "${FSLDIR}/bin/fslval ${tmpnam}_sw dim2" } in_ny
+	catch { exec sh -c "${FSLDIR}/bin/fslval ${tmpnam}_sw pixdim1" } dx	
+	catch { exec sh -c "${FSLDIR}/bin/fslval ${tmpnam}_sw pixdim2" } dy	
+	catch { exec sh -c "${FSLDIR}/bin/fslval ${tmpnam}_sw pixdim3" } dz	
+	catch { exec sh -c "${FSLDIR}/bin/fslstats ${tmpnam}_sw -r | awk '{ print \$2 }'" } imax
 	set imax [ expr $imax*6 ]
 	set zstart [ expr round($entries($w,zstart)/$dz) ]
 	set xsize [ expr  round($entries($w,outsize_nx)*$entries($w,outsize_dx)/$dx) ]
 	set ysize [ expr  round($entries($w,outsize_ny)*$entries($w,outsize_dy)/$dy) ]
 	set zsize [ expr  round($entries($w,outsize_nz)*($entries($w,outsize_dz)+$entries($w,gap))/$dz) ]
-	catch { exec sh -c "${FSLDIR}/bin/avwmaths++ ${tmpnam}_sw -roi 0 $xsize 0 $ysize $zstart $zsize 0 1 -mul 5 -add ${tmpnam}_sw ${tmpnam}_sw" } oval	
+	set xstart [ expr round(($in_nx-$xsize)/2.0) ]
+	if { $xstart < 0 } { set xstart 0 }
+	set ystart [ expr round(($in_ny-$ysize)/2.0) ]
+	if { $ystart < 0 } { set ystart 0 }
+	# puts "roi $xstart $xsize $ystart $ysize $zstart $zsize"
+	catch { exec sh -c "${FSLDIR}/bin/fslmaths ${tmpnam}_sw -roi $xstart $xsize $ystart $ysize $zstart $zsize 0 1 -mul 5 -add ${tmpnam}_sw ${tmpnam}_sw" } oval	
 	catch { exec sh -c "${FSLDIR}/bin/slicer ${tmpnam}_sw -i 0 $imax -a ${tmpnam}.png" } oval
 	catch { exec sh -c "$convertcom ${tmpnam}.png ${tmpnam}.gif" } oval
 	if { [ file exists ${tmpnam}.gif ] } {
@@ -682,25 +712,25 @@ proc possum:previewslices { w } {
 
     button $w1.cancel -command "destroy $w1" -text "Dismiss"
     pack $w1.sprev $w1.cancel -in $w1
-
+    update
 }
 
-proc possum:updatemotion { w lfmotion } {
-    global entries FSLDIR
+proc possum:updatemotion { w } {
+    global entries guivars FSLDIR
     if { $entries($w,motion_yn) == 1 } {
-	pack $w.mot -in  $lfmotion -side top -anchor w -padx 3 -pady 3
+	pack $w.mot -in  $guivars($w,lfmotion) -side top -anchor w -padx 3 -pady 3
     } else {
 	pack forget $w.mot
     }
 }
 
-proc possum:updateactivation { w lfactivation } {
-    global entries FSLDIR
+proc possum:updateactivation { w } {
+    global entries guivars FSLDIR
     if { $entries($w,activ_yn) == 1 } {
-	pack $w.act2 -in  $lfactivation -side top -anchor w -padx 3 -pady 3
-	pack $w.act1 -in  $lfactivation -side top -anchor w -padx 3 -pady 3
+	pack $w.act2 -in  $guivars($w,lfactivation) -side top -anchor w -padx 3 -pady 3
+	pack $w.act1 -in  $guivars($w,lfactivation) -side top -anchor w -padx 3 -pady 3
         pack $w.activim.preview $w.activim.label -in $w.activim -pady 10
-        pack $w.activim -in  $lfactivation -anchor w -padx 3 -pady 3
+        pack $w.activim -in  $guivars($w,lfactivation) -anchor w -padx 3 -pady 3
     } else {
         pack forget $w.activim
 	pack forget $w.act1
@@ -708,12 +738,12 @@ proc possum:updateactivation { w lfactivation } {
     }
 }
 
-proc possum:updatenoise { w lfnoise } {
-    global entries FSLDIR
+proc possum:updatenoise { w } {
+    global entries guivars FSLDIR
     if { $entries($w,noise_yn) == 1 } {
-	pack $w.snr -in  $lfnoise -side top -anchor w -padx 3 -pady 3
+	pack $w.noiseval -in $guivars($w,lfnoise) -side top -anchor w -padx 3 -pady 3
     } else {
-	pack forget $w.snr
+	pack forget $w.noiseval
     }
 }
 
@@ -729,6 +759,7 @@ proc possum:twosigfigs { num } {
 proc possum:updatecomptime { w } {
     global entries
     set tottime [ expr $entries($w,outsize_nx) * $entries($w,outsize_ny) * $entries($w,outsize_nz) * $entries($w,outsize_dx) * $entries($w,outsize_dy) * $entries($w,outsize_dz) * $entries($w,outsize_nx) * $entries($w,outsize_ny) * $entries($w,outsize_nz) * $entries($w,numvol) * 1000 * 0.000000001 * 3 * 0.00028 * 0.02 *4 / $entries($w,numproc) ]
+    if { $tottime < 0.008333 } { set tottime 0.008333 }
     if { $tottime > 48 } {
 	set entries($w,comptime) [ possum:twosigfigs [ expr $tottime / 24 ] ]
 	set entries($w,comptime) "$entries($w,comptime) days"
@@ -880,6 +911,77 @@ proc possum:pulsecheck { obvol mrpar te tr trslc outsize_nx outsize_ny outsize_n
     return 0
 }
 
+
+proc possum:write { w filename } {
+
+    global entries FSLDIR
+
+    set channel [ open ${filename} "w" ]
+    puts $channel "set entries(\$w,act1) \"$entries($w,act1)\""
+    puts $channel "set entries(\$w,act2) \"$entries($w,act2)\""
+    puts $channel "set entries(\$w,activ_yn) \"$entries($w,activ_yn)\""
+    puts $channel "set entries(\$w,autotrslc) \"$entries($w,autotrslc)\""
+    puts $channel "set entries(\$w,b0f) \"$entries($w,b0f)\""
+    puts $channel "set entries(\$w,b0fieldstrength) \"$entries($w,b0fieldstrength)\""
+    puts $channel "set entries(\$w,b0inh_yn) \"$entries($w,b0inh_yn)\""
+    puts $channel "set entries(\$w,b0strength) \"$entries($w,b0strength)\""
+    puts $channel "set entries(\$w,b0units) \"$entries($w,b0units)\""
+    puts $channel "set entries(\$w,bw) \"$entries($w,bw)\""
+    puts $channel "set entries(\$w,comptime) \"$entries($w,comptime)\""
+    puts $channel "set entries(\$w,echosp) \"$entries($w,echosp)\""
+    puts $channel "set entries(\$w,fov_x) \"$entries($w,fov_x)\""
+    puts $channel "set entries(\$w,fov_y) \"$entries($w,fov_y)\""
+    puts $channel "set entries(\$w,fov_z) \"$entries($w,fov_z)\""
+    puts $channel "set entries(\$w,gap) \"$entries($w,gap)\""
+    puts $channel "set entries(\$w,maxG) \"$entries($w,maxG)\""
+    puts $channel "set entries(\$w,mot) \"$entries($w,mot)\""
+    puts $channel "set entries(\$w,motion_yn) \"$entries($w,motion_yn)\""
+    puts $channel "set entries(\$w,mrpar) \"$entries($w,mrpar)\""
+    puts $channel "set entries(\$w,noise_yn) \"$entries($w,noise_yn)\""
+    puts $channel "set entries(\$w,noisesigma) \"$entries($w,noisesigma)\""
+    puts $channel "set entries(\$w,noisesnr) \"$entries($w,noisesnr)\""
+    puts $channel "set entries(\$w,noiseunits) \"$entries($w,noiseunits)\""
+    puts $channel "set entries(\$w,numproc) \"$entries($w,numproc)\""
+    puts $channel "set entries(\$w,numvol) \"$entries($w,numvol)\""
+    puts $channel "set entries(\$w,obvol) \"$entries($w,obvol)\""
+    puts $channel "set entries(\$w,out) \"$entries($w,out)\""
+    puts $channel "set entries(\$w,outsize_dx) \"$entries($w,outsize_dx)\""
+    puts $channel "set entries(\$w,outsize_dy) \"$entries($w,outsize_dy)\""
+    puts $channel "set entries(\$w,outsize_dz) \"$entries($w,outsize_dz)\""
+    puts $channel "set entries(\$w,outsize_nx) \"$entries($w,outsize_nx)\""
+    puts $channel "set entries(\$w,outsize_ny) \"$entries($w,outsize_ny)\""
+    puts $channel "set entries(\$w,outsize_nz) \"$entries($w,outsize_nz)\""
+    puts $channel "set entries(\$w,phencode) \"$entries($w,phencode)\""
+    puts $channel "set entries(\$w,plus) \"$entries($w,plus)\""
+    puts $channel "set entries(\$w,readgrad) \"$entries($w,readgrad)\""
+    puts $channel "set entries(\$w,riseT) \"$entries($w,riseT)\""
+    puts $channel "set entries(\$w,slcprof) \"$entries($w,slcprof)\""
+    puts $channel "set entries(\$w,slcselect) \"$entries($w,slcselect)\""
+    puts $channel "set entries(\$w,te) \"$entries($w,te)\""
+    puts $channel "set entries(\$w,tr) \"$entries($w,tr)\""
+    puts $channel "set entries(\$w,trslc) \"$entries($w,trslc)\""
+    puts $channel "set entries(\$w,zstart) \"$entries($w,zstart)\""
+    close $channel
+
+}
+
+proc possum:load { w filename } {
+    global entries FSLDIR
+    source ${filename}
+    possum:updateFOV $w
+    possum:updateVSIZE $w
+    possum:updateTRSLC $w
+    possum:updateb0field $w
+    possum:updateb0fieldinh $w
+    possum:updatemotion $w
+    possum:updateactivation $w
+    possum:updatenoise $w
+    possum:updatecomptime $w 
+    possum:updateechosp $w
+}
+
+
+
 proc possum:proc { obvol mrpar te tr trslc outsize_nx outsize_ny outsize_nz outsize_dx outsize_dy outsize_dz fov_x fov_y fov_z numvol zstart gap bw readdir phasedir slcdir plus maxG riseT b0f b0fieldstrength b0units mot act1 act2 out numproc slcprof} {
     global entries FSLDIR
     set dx [ expr $outsize_dx * 0.001 ]
@@ -892,7 +994,9 @@ proc possum:proc { obvol mrpar te tr trslc outsize_nx outsize_ny outsize_nz outs
        puts "The output directory not specified."
      exit
     } else { 
-       catch { exec sh -c "mkdir $out" } oval
+	if { ! [ file isdirectory $out ] } { 
+	    catch { exec sh -c "mkdir $out" } oval
+	}
     }
     if { $obvol == "" } {
        puts "The input object not specified."
@@ -920,7 +1024,7 @@ proc possum:proc { obvol mrpar te tr trslc outsize_nx outsize_ny outsize_nz outs
     }
     catch { exec sh -c "${FSLDIR}/bin/imcp $b0f $out/b0z_dz" } oval
     if { $b0units == "ppm" } {
-	catch { exec sh -c "${FSLDIR}/bin/avwmaths++ $out/b0z_dz -mul $b0fieldstrength -div 1000000 $out/b0z_dz" } oval
+	catch { exec sh -c "${FSLDIR}/bin/fslmaths $out/b0z_dz -mul $b0fieldstrength -div 1000000 $out/b0z_dz" } oval
     }
     catch { exec sh -c "${FSLDIR}/bin/imcp $act1 $out/T2" } oval
     catch { exec sh -c "cp $act2 $out/T2timecourse" } oval

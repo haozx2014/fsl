@@ -5,7 +5,7 @@
 
     Christian F. Beckmann, FMRIB Image Analysis Group
     
-    Copyright (C) 1999-2004 University of Oxford */
+    Copyright (C) 1999-2007 University of Oxford */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -87,19 +87,19 @@ namespace Melodic{
   
   class MelodicReport;
 
-  class MelodicPCA
-    {
+  class MelodicPCA{
     public:
-      MelodicPCA(MelodicData &pmelodat, MelodicOptions &popts, Log &plogger, MelodicReport &preport):  
-	melodat(pmelodat),
-	opts(popts),
-	logger(plogger),
-	report(preport)
-	{		
-	} 
+      MelodicPCA(MelodicData &pmelodat, MelodicOptions &popts, Log &plogger, 
+				MelodicReport &preport):  
+					melodat(pmelodat),
+					opts(popts),
+					logger(plogger),
+					report(preport){} 
       
-      void perf_pca(Matrix& in, Matrix& weights);
-      inline void perf_pca(){perf_pca(melodat.get_Data(),melodat.get_RXweight());}
+    	void perf_pca(Matrix& in, Matrix& weights);
+      inline void perf_pca(){
+				perf_pca(melodat.get_Data(),melodat.get_RXweight());
+			}
       void perf_white();
 
     private:
@@ -109,7 +109,7 @@ namespace Melodic{
       MelodicReport &report;
 
       int pcadim();
-    };   
+  };   
 }
 
 #endif

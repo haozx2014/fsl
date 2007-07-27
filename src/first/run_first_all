@@ -74,7 +74,7 @@ Usage() {
     echo ""
     echo "e.g.:  run_first_all im1 60 2.94 output_name "
     echo ""
-    exit
+    exit 1
 }
 
 [ "$4" = "" ] && Usage

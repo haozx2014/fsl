@@ -147,8 +147,8 @@ int applywarp()
   volumeinfo vinfo;
   volume4D<float> warpvol;
 
-  read_volume4D(invol,inname.value(),vinfo);
-  read_volume4D(warpvol,warpname.value());
+  read_rad_volume4D(invol,inname.value(),vinfo);
+  read_rad_volume4D(warpvol,warpname.value());
   if (warpvol.tsize()<3) {
     cerr << "Warp volume does not have the correct dimensions (min. 3 volumes)"
 	 << endl;
@@ -159,24 +159,12 @@ int applywarp()
   else if (relwarp.set()) { abs_warp = false; }
   else {
     if (verbose.value()) { 
-      cout << "Automatically determining relative/absolute warp conventions" 
-	   << endl; 
+      cout << "Automatically determining relative/absolute warp conventions" << endl; 
     }
-    // try to determine this automatically
-    float stddev0 = warpvol[0].stddev()+warpvol[1].stddev()+warpvol[2].stddev();
-    convertwarp_abs2rel(warpvol);
-    float stddev1 = warpvol[0].stddev()+warpvol[1].stddev()+warpvol[2].stddev();
-    // restore to the original form
-    convertwarp_rel2abs(warpvol);
-    // assume that relative warp always has less stddev
-    if (stddev0>stddev1) {
-      // the initial one (greater stddev) was absolute
-      if (verbose.value()) {cout << "Warp convention = absolute" << endl;}
-      abs_warp=true;
-    } else {
-      // the initial one was relative
-      if (verbose.value()) {cout << "Warp convention = relative" << endl;}
-      abs_warp=false;
+    abs_warp = is_abs_convention(warpvol);
+    if (verbose.value()) {
+      if (abs_warp) { cout << "Warp convention = absolute" << endl; } 
+      else { cout << "Warp convention = relative" << endl; }
     }
   }
 
@@ -186,10 +174,10 @@ int applywarp()
   }
 
 
-  if (maskname.set()) { read_volume(mask,maskname.value()); }
+  if (maskname.set()) { read_rad_volume(mask,maskname.value()); }
 
   if (refname.set()) {
-    read_volume(refvol,refname.value());
+    read_rad_volume(refvol,refname.value());
   } else {
     refvol = warpvol[0];
   }

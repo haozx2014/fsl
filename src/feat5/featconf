@@ -9,9 +9,6 @@ set fmri(help_yn) 1
 # Run Featwatcher
 set fmri(featwatcher_yn) 1
 
-# Delay before starting (hours)
-set fmri(delay) 0
-
 # Brain/background threshold, %
 set fmri(brain_thresh) 10
 
@@ -239,9 +236,6 @@ set fmri(regstandard_dof) 12
 
 # Alternative example_func image (not derived from input 4D dataset)
 set fmri(alternative_example_func) ""
-
-# Delete GLM residuals?
-set fmri(cleanup_residuals_yn) 1
 
 # Initial structural space registration initialisation transform
 set fmri(init_initial_highres) ""

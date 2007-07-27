@@ -1,4 +1,4 @@
-/*  avwconv.cc
+/*  fslconv.cc
 
     Mark Jenkinson, FMRIB Image Analysis Group
 
@@ -80,8 +80,8 @@ using namespace NEWIMAGE;
 using namespace Utilities;
 
 
-string title="avwconv (Version 1.0)\nCopyright(c) 2003, University of Oxford (Mark Jenkinson)";
-string examples="avwconv [options] -i <input image> -k <kernel image> -o <output image>";
+string title="fslconv (Version 1.0)\nCopyright(c) 2003, University of Oxford (Mark Jenkinson)";
+string examples="fslconv [options] -i <input image> -k <kernel image> -o <output image>";
 
 
 Option<bool> verbose(string("-v,--verbose"), false, 

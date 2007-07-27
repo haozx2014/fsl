@@ -1,8 +1,8 @@
-/*  avcheck.cc - Utility to check validity of avw header file 
+/*  fslcheck.cc - Utility to check validity of avw header file 
     
-    Peter Bannister, FMRIB Image Analysis Group
+    Peter Bannister and Matthew Webster, FMRIB Image Analysis Group
     
-    Copyright (C) 1999-2001 University of Oxford  */
+    Copyright (C) 1999-2007 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -87,8 +87,8 @@ using namespace NEWMAT;
 using namespace NEWIMAGE;
 using namespace Utilities;
 
-string title="avwcheck (Version 1.0)\nChecks Header file info for voxel dimensions\nCopyright(c) 2001, University of Oxford (Peter R Bannister)";
-string examples="avwcheck -i <header_file>\n";
+string title="fslcheck (Version 1.0)\nChecks Header file info for voxel dimensions\nCopyright(c) 2001, University of Oxford (Peter R Bannister)";
+string examples="fslcheck -i <header_file>\n";
 
 Option<bool> help(string("-h,--help"), false,
 		  string("display this message"),
@@ -194,7 +194,7 @@ int main (int argc,char** argv)
 
   int retval=call_fmrib_main(dtype(inputname.value()), argc, argv);
   if (retval!=0) {
-    cerr << "Failed to correctly read file, please check the .hdr using avwhd" << endl;
+    cerr << "Failed to correctly read file, please check the .hdr using fslhd" << endl;
   } else return retval;
 }
 

@@ -1,8 +1,8 @@
 /*  avwslice.cc
 
-    Tim Behrens, FMRIB Image Analysis Group
+    Tim Behrens and Matthew Webster, FMRIB Image Analysis Group
 
-    Copyright (C) 2000-2001 University of Oxford  */
+    Copyright (C) 2000-2007 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -117,9 +117,9 @@ int main(int argc,char *argv[])
   Tracer tr("main");
   
   if(argc<2){
-    cout <<"Usage: avwslice <volume>"<<endl;
+    cout <<"Usage: fslslice <volume>"<<endl;
     cout<<endl;
-    cout <<"Usage: avwslice <volume> <output basename>"<<endl;
+    cout <<"Usage: fslslice <volume> <output basename>"<<endl;
     cout<<endl; 
     return -1;
   }

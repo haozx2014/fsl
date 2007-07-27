@@ -5,7 +5,7 @@
 
     Christian F. Beckmann, FMRIB Image Analysis Group
     
-    Copyright (C) 1999-2002 University of Oxford */
+    Copyright (C) 1999-2007 University of Oxford */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -83,38 +83,36 @@ using namespace NEWIMAGE;
 
 namespace Melodic{
   
-  class MelodicData
-    {
+  class MelodicData{
     public:
 
       //constructor
       MelodicData(MelodicOptions &popts, Log &plogger):  
-	opts(popts),
-	logger(plogger)
-	{	
-	  after_mm = false;
-	  Resels = 0;
-	}  
+				opts(popts),logger(plogger)
+			{	
+	  		after_mm = false;
+	  		Resels = 0;
+			}  
  
       void save();
 
       Matrix process_file(string fname, int numfiles);
 
       inline void save4D(Matrix what, string fname){
-	 volume4D<float> tempVol;
-	 tempVol.setmatrix(what,Mask);
-	 save_volume4D(tempVol,logger.appendDir(fname),tempInfo);
-	 message("  " << logger.appendDir(fname) << endl);
+	 			volume4D<float> tempVol;
+	 			tempVol.setmatrix(what,Mask);
+	 			save_volume4D(tempVol,logger.appendDir(fname),tempInfo);
+	 			message("  " << logger.appendDir(fname) << endl);
       }
       
       inline void saveascii(Matrix what, string fname){
-	 write_ascii_matrix(logger.appendDir(fname),what);   
-	 message("  " << logger.appendDir(fname) << endl);   
+	 			write_ascii_matrix(logger.appendDir(fname),what);   
+	 			message("  " << logger.appendDir(fname) << endl);   
       }
  
       inline void savebinary(Matrix what, string fname){
-         write_binary_matrix(what,logger.appendDir(fname));  
-	 message("  " << logger.appendDir(fname) << endl);    
+      	write_binary_matrix(what,logger.appendDir(fname));  
+	 			message("  " << logger.appendDir(fname) << endl);    
       }
 
       int  remove_components();
@@ -138,20 +136,20 @@ namespace Melodic{
       inline Matrix& get_Smodes(int what) {return Smodes.at(what);}
       inline void add_Smodes(Matrix& Arg) {Smodes.push_back(Arg);}      
       inline void save_Smodes(){
-	Matrix tmp = Smodes.at(0); 
-	for(unsigned int ctr = 1; ctr < Smodes.size(); ctr++)
-	  tmp |= Smodes.at(ctr);
-	saveascii(tmp,opts.outputfname.value() + "_Smodes");
+				Matrix tmp = Smodes.at(0); 
+				for(unsigned int ctr = 1; ctr < Smodes.size(); ctr++)
+	  			tmp |= Smodes.at(ctr);
+				  saveascii(tmp,opts.outputfname.value() + "_Smodes");
       }
 
       inline vector<Matrix>& get_Tmodes() {return Tmodes;}
       inline Matrix& get_Tmodes(int what) {return Tmodes.at(what);}
       inline void add_Tmodes(Matrix& Arg) {Tmodes.push_back(Arg);}
       inline void save_Tmodes(){
-	Matrix tmp = Tmodes.at(0); 
-	for(unsigned int ctr = 1; ctr < Tmodes.size(); ctr++)
-	  tmp |= Tmodes.at(ctr);
-	saveascii(tmp,opts.outputfname.value() + "_Tmodes");
+				Matrix tmp = Tmodes.at(0); 
+				for(unsigned int ctr = 1; ctr < Tmodes.size(); ctr++)
+	  			tmp |= Tmodes.at(ctr);
+				saveascii(tmp,opts.outputfname.value() + "_Tmodes");
       }
 
       void set_TSmode();
@@ -170,7 +168,15 @@ namespace Melodic{
   
       inline Matrix& get_mix() {return mixMatrix;}
 
-      inline void set_mix(Matrix& Arg) {mixMatrix = Arg;}
+      inline void set_mix(Matrix& Arg) {
+				mixMatrix = Arg;
+				if (Tmodes.size() < 1)
+	  			for (int ctr = 1; ctr <= Arg.Ncols(); ctr++){
+	    			Matrix tmp = Arg.Column(ctr);
+	    			add_Tmodes(tmp);
+	  			}
+      }
+
       Matrix expand_mix(); 
       Matrix expand_dimred(const Matrix& Mat); 
       Matrix reduce_dimred(const Matrix& Mat); 
@@ -219,24 +225,25 @@ namespace Melodic{
       inline void set_after_mm(bool val) {after_mm = val;}
 
       inline void flipres(int num){
-	IC.Row(num) = -IC.Row(num);
-	mixMatrix.Column(num) = -mixMatrix.Column(num);
-	mixFFT=calc_FFT(mixMatrix);
-	unmixMatrix = pinv(mixMatrix);
+				IC.Row(num) = -IC.Row(num);
+				mixMatrix.Column(num) = -mixMatrix.Column(num);
+				mixFFT=calc_FFT(mixMatrix);
+				unmixMatrix = pinv(mixMatrix);
 
         if(ICstats.Storage()>0&&ICstats.Ncols()>3){
-	  double tmp;
-	  tmp = ICstats(num,3);
-	  ICstats(num,3) = -1.0*ICstats(num,4);
-	  ICstats(num,4) = -1.0*tmp;
-	}
+	  			double tmp;
+	  			tmp = ICstats(num,3);
+	  			ICstats(num,3) = -1.0*ICstats(num,4);
+	  			ICstats(num,4) = -1.0*tmp;
+				}
       }
       
       void sort();
 
       volumeinfo tempInfo;
-
       vector<Matrix> DWM, WM;
+			basicGLM glmT, glmS;
+			Matrix Tdes, Tcon, TconF, Sdes, Scon, SconF;			
 
     private:
       MelodicOptions &opts;     
@@ -256,7 +263,6 @@ namespace Melodic{
       Matrix mixFFT;
       Matrix IC;
       Matrix ICstats;
-
       vector<Matrix> Tmodes;
       vector<Matrix> Smodes;
 
@@ -284,7 +290,7 @@ namespace Melodic{
       unsigned long standardise(volume<float>& mask, 
 				volume4D<float>& R);
       float est_resels(volume4D<float> R, volume<float> mask);
-    };
+  };
 }
 
 #endif

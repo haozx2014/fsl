@@ -100,13 +100,13 @@ float  *hist_data,low_thresh,high_thresh,incr,tmpf;
   if (argc<5)
   {
     printf("Usage: hist2prob <image> <size> <low_thresh> <high_thresh>\n");
-    exit(0);
+    exit(1);
   }
 
   if ((ifp=fopen(argv[1],"rb")) == NULL)
   {
     printf("File %s isn't readable\n",argv[1]);
-    exit(0);
+    exit(-1);
   }
   image_size=atoi(argv[2]);
   low_thresh=atof(argv[3]);

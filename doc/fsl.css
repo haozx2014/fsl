@@ -1,2 +1,13 @@
-BODY            { background-image: url("images/fsl-bg.jpg") ; font-family: 'Arial'  }
+
+BODY	{ background-image: url("images/fsl-bg.jpg") ; font-family: 'Arial'  }
+%BODY	{ background: #ccffcc ; font-family: 'Arial'  }
+
+OBJECT	{ width: 100% ; height: 170px }
+
+A:link {text-decoration: none}
+A:visited {text-decoration: none}
+A:active {text-decoration: none}
+A:hover {text-decoration: underline; color: red;}
+
+UL { margin-top: 0px; }
 

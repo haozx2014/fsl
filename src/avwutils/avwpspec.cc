@@ -1,4 +1,4 @@
-/*  avwswapdim.cc
+/*  fslpspec.cc
 
     Christian F. Beckmann, FMRIB Image Analysis Group
 

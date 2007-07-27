@@ -1,6 +1,10 @@
 #!/bin/sh
 
-#   Copyright (C) 2004 University of Oxford
+#   possumX - run possum on a single processor
+#
+#   Ivana Drobnjak and Mark Jenkinson, FMRIB Image Analysis Group
+#
+#   Copyright (C) 2003-2007 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -71,20 +75,20 @@ Usage() {
     echo "For running on a single machine"
     echo ""
     echo "Subject directory needs to contain:"
-    echo "1.brain"
-    echo "2.MRpar" 
-    echo "3.motion "
-    echo "4.slcprof"
-    echo "5.pulse,pulse.info"
+    echo "1. brain"
+    echo "2. MRpar" 
+    echo "3. motion "
+    echo "4. slcprof"
+    echo "5. pulse,pulse.info"
     echo "optional"
-    echo "6.RFtrans,RFrec"
-    echo "7.T2"
-    echo "8.T2timecourse"
-    echo "9.b0"
-    echo "10.b0extra"
-    echo "11.b0timecourse"
+    echo "6. RFtrans,RFrec"
+    echo "7. T2"
+    echo "8. T2timecourse"
+    echo "9. b0"
+    echo "10. b0extra"
+    echo "11. b0timecourse"
     echo ""
-    echo "The description of how to obtain the files is possum_docs"
+    echo "The description of how to obtain the files is possum/docs"
     exit
 }
 
@@ -101,16 +105,21 @@ make_absolute(){
     echo ${dir_all}
 }
 
+run(){
+ echo "$1" >> $2/possum.com
+ echo "$1" >> $2/possum.log
+ date >> $2/possum.log
+ $1 >> $2/possum.log 2>&1
+ date >> $2/possum.log
+}
 
 [ "$1" = "" ] && Usage
 
-#POSSUMDIR=~ivana/fsldev/${FSLMACHTYPE}/bin
 
 subjdir=`make_absolute $1`
 subjdir=`echo $subjdir | sed 's/\/$/$/g'`
 
 echo subjectdir is $subjdir
-echo POSSUMDIR is $POSSUMDIR
 
 #check that all required files exist
 
@@ -193,12 +202,15 @@ if [ -e ${subjdir}/kcoord.on ]; then
         command="$command -k"
 fi
 
+# prepare logging files
+touch $subjdir/possum.com
+touch $subjdir/possum.log
+
 echo Processing stage 
-echo "${POSSUMDIR}/possum ${command} -o ${subjdir}/signal"  > $subjdir/script
-time ${POSSUMDIR}/possum ${command} -o ${subjdir}/signal > $subjdir/log
+run "${FSLDIR}/bin/possum ${command} -o ${subjdir}/signal" $subjdir
  
 echo Post processing stage
-${POSSUMDIR}/signal2image -i ${subjdir}/signal -o ${subjdir}/image -p ${subjdir}/pulse -a 
+run "${FSLDIR}/bin/signal2image -i ${subjdir}/signal -o ${subjdir}/image -p ${subjdir}/pulse -a" $subjdir
 
 echo Done
 

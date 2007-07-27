@@ -809,6 +809,8 @@ void make_constraints(const volume<float>& phasemap, const volume<int>& label,
 	      } else { 
 		// insert this new value
 		constraint newcon;
+	        newcon.C=0;
+		newcon.K=0;
 		newcon.N = 1;
 		newcon.P = pp1-pp2;
 		conmap[pair<int,int>(v1,v2)] = newcon;

@@ -73,7 +73,7 @@ if ( "$1" == "" ) then
 	echo "-S         : output every second axial slice rather than just 9 ortho slices"
 	echo "-o         : filelist is pairs ( <underlying> <red-outline> ) of images"
 	echo "-p <image> : use <image> as red-outline image on top of all images in <filelist>"
-	exit
+	exit 1
 endif
 
 if ( $?FSLDIR == 0 ) then

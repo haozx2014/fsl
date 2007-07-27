@@ -70,7 +70,7 @@
 #include <vector>
 #include <fstream>
 #include <iomanip>   // setprecision(),...
-#include <strstream>
+//#include <strstream>
 
 #include "imalgorithm.h"
 #include "classification.h"

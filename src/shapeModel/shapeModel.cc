@@ -408,9 +408,9 @@ namespace shapemodel {
 							}
 							shapes.at(sh)->setICondEigs(eigstemp);
 						}
-						cout<<"iconds loaded"<<endl;
+					//	cout<<"iconds loaded"<<endl;
 					}else if ((!strcmp(temp.substr(0,5).c_str(),"bCond"))&&(type==1)){
-					cout<<"found bconds "<<temp<<endl;
+					//cout<<"found bconds "<<temp<<endl;
 						int sh;
 						sh = atoi(temp.substr(9,1).c_str());
 						if (!strcmp(temp.substr(0,9).c_str(),"bCondPrec")){
@@ -435,7 +435,7 @@ namespace shapemodel {
 							shapes.at(sh)->setBCondPrec(prectemp);
 							//cout<<"setting icondprec"<<endl;
 						}else if (!strcmp(temp.substr(0,9).c_str(),"bCondEigs")){
-							cout<<"enter bcondeigs"<<endl;
+							//cout<<"enter bcondeigs"<<endl;
 							string temp2;
 							vector<float> eigstemp;
 							fV>>tempInt>>tempInt>>temp2;
@@ -907,7 +907,7 @@ namespace shapemodel {
 					precimat = shapes.at(i)->getBCondPrec();
 					fshape<<"bCondPrec"<<i<<" "<<precimat.at(0).size()<<" "<<precimat.size()<<" float"<<endl;
 					for (unsigned int j=0;j<precimat.size();j++){
-					cout<<"bcond "<<j<<" "<<precimat.at(j).size()<<endl;
+					//cout<<"bcond "<<j<<" "<<precimat.at(j).size()<<endl;
 						for (unsigned int k=0; k<precimat.at(j).size();k++){
 				//		if ((k==0)|(k==(precimat.at(j).size()-1))){
 				//		cout<<precimat.at(j).at(k)<<" "<<endl;
@@ -1181,13 +1181,13 @@ namespace shapemodel {
 		//	fshape<<"FIELD FieldData "<<2*getNumberOfModes()+6+3*getNumberOfShapes()<<endl; 
 			//start with shape model only
 	//		fshape<<"FIELD FieldData "<<getNumberOfModes()<<endl;
-	if (type!=6){
+	if ((type!=6)&&(type!=7)){
 			fshape<<"FIELD FieldData "<<2*getNumberOfModes()+6+7<<endl;
 		}else{
 					fshape<<"FIELD FieldData "<<2*getNumberOfModes()+6+7+7+8<<endl;
 
 		}
-		cout<<"nummodes "<<getNumberOfModes()<<endl;
+	//	cout<<"nummodes "<<getNumberOfModes()<<endl;
 			//	for (int i=0; i<getNumberOfModes(); i++)
 			//for (int i=0; i<numModes; i++)  
 			for (int i=0; i<getNumberOfModes(); i++)
@@ -1435,14 +1435,15 @@ namespace shapemodel {
 #endif
 			}
 			//fshape<<endl;	
-			if (type==6){
+			if ((type==6)|(type==7)){
+		//		cout<<"load aff model stuff"<<endl;
 			//write out affine modes
 			//write translations
 			//get all relevant data
 			
 			
 			fshape<<"transVec 3 3 float"<<endl;
-			cout<<"first trvec"<<shapes.at(0)->getAfftxVecs().at(0)<<endl;
+		//	cout<<"first trvec"<<shapes.at(0)->getAfftxVecs().at(0)<<endl;
 				fshape.write(reinterpret_cast<char *>(&(shapes.at(0)->getAfftxVecs().at(0))),sizeof(float));
 				fshape.write(reinterpret_cast<char *>(&shapes.at(0)->getAfftxVecs().at(1)),sizeof(shapes.at(0)->getAfftxVecs().at(1)));
 				fshape.write(reinterpret_cast<char *>(&shapes.at(0)->getAfftxVecs().at(2)),sizeof(shapes.at(0)->getAfftxVecs().at(2)));
@@ -1492,19 +1493,23 @@ namespace shapemodel {
 				temp=shapes.at(0)->getAffrzMean();
 				fshape.write(reinterpret_cast<char *>(&temp),sizeof(shapes.at(0)->getAffrzMean()));
 					//write scale
+					if (type==7){
 					fshape<<"scMeanVar 1 2 float"<<endl;
 					temp=shapes.at(0)->getAffscMean();
 					fshape.write(reinterpret_cast<char *>(&temp),sizeof(shapes.at(0)->getAffscMean()));
 					temp=shapes.at(0)->getAffscEig();
 					fshape.write(reinterpret_cast<char *>(&temp),sizeof(shapes.at(0)->getAffscEig()));
-					
+					}
 					
 					
 					///deal with intensity predicttions at the moment
-		
-					for (int i=0; i<7; i++)  
+					int numAff=7;
+					if (type==6){
+						numAff=6;
+					}
+					for (int i=0; i<numAff; i++)  
 						//	for (int i=0; i<numModes; i++)
-					{			cout<<"write aff icond "<<i<<endl;	
+					{		//	cout<<"write aff icond "<<i<<endl;	
 						//there is	an assumption here that all shapes need the same number of ipp
 						fshape<<"AffImode"<<i<<" "<<shapes.at(0)->getIPP()<<" "<<ptTot<<" float"<<endl;
 						for (int j=0;j<getNumberOfShapes();j++){
@@ -1529,7 +1534,7 @@ namespace shapemodel {
 					//////////////////////////////enter Intensity conditionals
 					for (int i=0; i<1;i++){//shapes
 					vector< vector<float> > precimat = shapes.at(i)->getICondPrecAff();
-					cout<<"write aff icondMat "<<i<<endl;	
+					//cout<<"write aff icondMat "<<i<<endl;	
 					fshape<<"iAffCondPrec"<<i<<" "<<precimat.at(0).size()<<" "<<precimat.size()<<" float"<<endl;
 					for (unsigned int j=0;j<precimat.size();j++){
 						for (unsigned int k=0; k<precimat.at(j).size();k++){
@@ -1543,7 +1548,7 @@ namespace shapemodel {
 						//fshape<<endl;
 					}
 					
-					cout<<"write aff icondEig"<<i<<endl;	
+					//cout<<"write aff icondEig"<<i<<endl;	
 					fshape<<"iAffCondEigs"<<i<<" "<<1<<" "<<shapes.at(i)->getICondEigsAff().size()<<" float"<<endl;
 					for (unsigned int j=0;j<shapes.at(i)->getICondEigsAff().size();j++){
 						float val;
@@ -2029,10 +2034,10 @@ int shapeModel::load_bmv_binary(string s, int type){
 		//vector< vector<float> > vimodes; 
 		vector<float> imean_all; 
 		vector<float> verrs;//only use a single set
-				cout<<"numFiedl "<<numField<<endl;
+			//	cout<<"numFiedl "<<numField<<endl;
 		for (int i=0;i<numField;i++){
 			f>>temp;
-					cout<<temp<<endl;
+				//	cout<<temp<<endl;
 			if (!strcmp(temp.substr(0,4).c_str(),"mode")){
 			  //			cout<<"found "<<temp<<endl;
 				string temp2;
@@ -2246,44 +2251,45 @@ int shapeModel::load_bmv_binary(string s, int type){
 			}else if (!strcmp(temp.c_str(),"transVec")){
 				f>>tempInt2>>tempInt2>>temp;
 				getline(f,temp);
-				cout<<tempInt2<<" "<<temp<<endl;
+			//	cout<<tempInt2<<" "<<temp<<endl;
 				vector<float> tx;
 				vector<float> ty;
 				vector<float> tz;
 				f.read(reinterpret_cast<char*>(&tempFloat),sizeof(float));
 				tx.push_back(tempFloat);
-				cout<<"transVec "<<tempFloat<<endl;
+				//cout<<"transVec "<<tempFloat<<endl;
 				f.read(reinterpret_cast<char*>(&tempFloat),sizeof(float));
 				tx.push_back(tempFloat);
-								cout<<"transVec "<<tempFloat<<endl;
+								//cout<<"transVec "<<tempFloat<<endl;
 
 				f.read(reinterpret_cast<char*>(&tempFloat),sizeof(float));
 				tx.push_back(tempFloat);
-								cout<<"transVec "<<tempFloat<<endl;
+								//cout<<"transVec "<<tempFloat<<endl;
 
 				f.read(reinterpret_cast<char*>(&tempFloat),sizeof(float));
 				ty.push_back(tempFloat);
-								cout<<"transVec "<<tempFloat<<endl;
+								//cout<<"transVec "<<tempFloat<<endl;
 
 				f.read(reinterpret_cast<char*>(&tempFloat),sizeof(float));
 				ty.push_back(tempFloat);
-								cout<<"transVec "<<tempFloat<<endl;
+								//cout<<"transVec "<<tempFloat<<endl;
 
 				f.read(reinterpret_cast<char*>(&tempFloat),sizeof(float));
 				ty.push_back(tempFloat);
-								cout<<"transVec "<<tempFloat<<endl;
+								
+								//cout<<"transVec "<<tempFloat<<endl;
 
 				f.read(reinterpret_cast<char*>(&tempFloat),sizeof(float));
 				tz.push_back(tempFloat);
-								cout<<"transVec "<<tempFloat<<endl;
+								//cout<<"transVec "<<tempFloat<<endl;
 
 				f.read(reinterpret_cast<char*>(&tempFloat),sizeof(float));
 				tz.push_back(tempFloat);
-								cout<<"transVec "<<tempFloat<<endl;
+								//cout<<"transVec "<<tempFloat<<endl;
 
 				f.read(reinterpret_cast<char*>(&tempFloat),sizeof(float));
 				tz.push_back(tempFloat);
-								cout<<"transVec "<<tempFloat<<endl;
+								//cout<<"transVec "<<tempFloat<<endl;
 
 				shapes.at(0)->setAffModeVectorsTr(tx,ty,tz);
 			}else if (!strcmp(temp.c_str(),"transEigs")){
@@ -2296,7 +2302,7 @@ int shapeModel::load_bmv_binary(string s, int type){
 				float tz;
 				f.read(reinterpret_cast<char*>(&tz),sizeof(float));
 				shapes.at(0)->setAffEigsTr(tx,ty,tz);
-								cout<<"tE "<<tx<<" "<<ty<<" "<<tz<<endl;
+								//cout<<"tE "<<tx<<" "<<ty<<" "<<tz<<endl;
 
 			}else if (!strcmp(temp.c_str(),"transMean")){
 				f>>tempInt2>>tempInt2>>temp;
@@ -2308,10 +2314,10 @@ int shapeModel::load_bmv_binary(string s, int type){
 				float tz;
 				f.read(reinterpret_cast<char*>(&tz),sizeof(float));
 				shapes.at(0)->setAffMeanTr(tx,ty,tz);
-								cout<<"tM "<<tx<<" "<<ty<<" "<<tz<<endl;
+								//cout<<"tM "<<tx<<" "<<ty<<" "<<tz<<endl;
 
 			}else if (!strcmp(temp.c_str(),"RotationVecs")){
-				cout<<"tmep "<<temp<<endl;
+				//cout<<"tmep "<<temp<<endl;
 				f>>tempInt2>>tempInt2>>temp;
 				getline(f,temp);
 				vector<float> rx;
@@ -2338,7 +2344,7 @@ int shapeModel::load_bmv_binary(string s, int type){
 								shapes.at(0)->setAffModeVectorsRot(rx,ry,rz);
 
 			}else if (!strcmp(temp.c_str(),"RotationEigs")){
-			cout<<"tmep "<<temp<<endl;
+			//cout<<"tmep "<<temp<<endl;
 				f>>tempInt2>>tempInt2>>temp;
 				getline(f,temp);
 				float tx;
@@ -2348,10 +2354,10 @@ int shapeModel::load_bmv_binary(string s, int type){
 				float tz;
 				f.read(reinterpret_cast<char*>(&tz),sizeof(float));
 								shapes.at(0)->setAffEigsRot(tx,ty,tz);
-				cout<<"rotE "<<tx<<" "<<ty<<" "<<tz<<endl;
+				//cout<<"rotE "<<tx<<" "<<ty<<" "<<tz<<endl;
 
 			}else if (!strcmp(temp.c_str(),"RotationMean")){
-			cout<<"tmep "<<temp<<endl;
+			//cout<<"tmep "<<temp<<endl;
 				f>>tempInt2>>tempInt2>>temp;
 				getline(f,temp);
 				float tx;
@@ -2361,10 +2367,10 @@ int shapeModel::load_bmv_binary(string s, int type){
 				float tz;
 				f.read(reinterpret_cast<char*>(&tz),sizeof(float));
 				shapes.at(0)->setAffMeanRot(tx,ty,tz);
-				cout<<"rotM "<<tx<<" "<<ty<<" "<<tz<<endl;
+				//cout<<"rotM "<<tx<<" "<<ty<<" "<<tz<<endl;
 
 			}else if (!strcmp(temp.c_str(),"scMeanVar")){
-			cout<<"tmep "<<temp<<endl;
+			//cout<<"tmep "<<temp<<endl;
 				f>>tempInt2>>tempInt2>>temp;
 				getline(f,temp);
 				float tmean;
@@ -2373,9 +2379,9 @@ int shapeModel::load_bmv_binary(string s, int type){
 				f.read(reinterpret_cast<char*>(&tvar),sizeof(float));
 				shapes.at(0)->setAffEigsSc(tvar);
 				shapes.at(0)->setAffMeanSc(tmean);
-				cout<<"sc "<<tvar<<" "<<tmean<<endl;
+				//cout<<"sc "<<tvar<<" "<<tmean<<endl;
 			}else if (!strcmp(temp.substr(0,8).c_str(),"AffImode")){
-			  		cout<<"found "<<temp<<endl;
+			  	//	cout<<"found "<<temp<<endl;
 				string temp2;
 				int ipp;
 				f>>ipp>>tempInt>>temp2;
@@ -2396,11 +2402,11 @@ int shapeModel::load_bmv_binary(string s, int type){
 					
 				}
 			}else if (!strcmp(temp.substr(0,8).c_str(),"iAffCond")){
-				cout<<"iAffconds found"<<endl;
+				//cout<<"iAffconds found"<<endl;
 				int sh;
 				sh = atoi(temp.substr(9,1).c_str());
 				if (!strcmp(temp.substr(0,12).c_str(),"iAffCondPrec")){
-					cout<<"found AffCOndI"<<endl;
+					//cout<<"found AffCOndI"<<endl;
 					string temp2;
 					int tempInt2;
 					f>>tempInt2>>tempInt>>temp2;
@@ -2420,7 +2426,7 @@ int shapeModel::load_bmv_binary(string s, int type){
 					}
 					shapes.at(sh)->setICondPrecAff(prectemp);
 				}else if (!strcmp(temp.substr(0,12).c_str(),"iAffCondEigs")){
-				cout<<"found AffCOndIEiug"<<endl;
+				//cout<<"found AffCOndIEiug"<<endl;
 					//cout<<"enter icondeigs"<<endl;
 					string temp2;
 					vector<float> eigstemp;
@@ -2649,6 +2655,126 @@ int shapeModel::load_bmv_binary(string s, int type){
 	}
 	
 	
+	Mesh shapeModel::getDeformedMeshAff6( vector<float> var, int shape, int numModes){
+		//this function assumes that the first 7 modes are the affine parameters
+		///they should be used in the specific order
+		//must have at least 7 modes
+		
+
+		//get shape mesh shapes.at(shape);
+		Mesh m = getShapeMesh(shape);//shapes.at(shape)->getMesh();
+//cout<<"vars size "<<var.size()<<endl;
+		//get the translation vectors
+		vector< float > tr1=shapes.at(0)->getAfftxVecs();
+		vector< float > tr2=shapes.at(0)->getAfftyVecs();
+		vector< float > tr3=shapes.at(0)->getAfftzVecs();
+		float Etr1=shapes.at(0)->getAfftxEig();
+		float Etr2=shapes.at(0)->getAfftyEig();
+		float Etr3=shapes.at(0)->getAfftzEig();
+		//cout<<"got translation paarametersw "<<endl;
+		//cout<<var.at(0)<<" "<<var.at(1)<<" "<<var.at(2)<<" "<<var.at(3)<<" "<<var.at(4)<<" "<<var.at(5)<<" "<<var.at(6)<<" "<<" "<<endl;
+	//	cout<<Etr1<<" "<<Etr2<<" "<<Etr3<<" "<< shapes.at(0)->getAffrxEig()<<" "<< shapes.at(0)->getAffryEig()<<" "<< shapes.at(0)->getAffrzEig()<<endl;
+	//	cout<<shapes.at(0)->getAfftxMean()<<" "<<shapes.at(0)->getAfftyMean()<<" "<< shapes.at(0)->getAfftzMean()<<" "<<shapes.at(0)->getAffrxMean()<<" "<<shapes.at(0)->getAffryMean()<<" "<< shapes.at(0)->getAffrzMean()<<endl;
+		
+		Vec trOffSet(var.at(0)*sqrt(Etr1)*tr1.at(0)+var.at(1)*sqrt(Etr2)*tr2.at(0)+var.at(2)*sqrt(Etr3)*tr3.at(0) + shapes.at(0)->getAfftxMean() , \
+					 var.at(0)*sqrt(Etr1)*tr1.at(1)+var.at(1)*sqrt(Etr2)*tr2.at(1)+var.at(2)*sqrt(Etr3)*tr3.at(1) + shapes.at(0)->getAfftyMean(), \
+					 var.at(0)*sqrt(Etr1)*tr1.at(2)+var.at(1)*sqrt(Etr2)*tr2.at(2)+var.at(2)*sqrt(Etr3)*tr3.at(2) + shapes.at(0)->getAfftzMean()); 
+		//cout<<"trOffSet "<<trOffSet.X<<" "<<trOffSet.Y<<" "<<trOffSet.Z<<endl;
+		
+		Pt MeanPt;
+		//calculate centroid
+		int count=0;
+		
+		for (vector<Mpoint*>::iterator i = m._points.begin(); i!=m._points.end(); i++ ){
+			MeanPt+=(*i)->get_coord() ;
+			count++;
+		}
+		MeanPt/=static_cast<float>(count);
+	//	cout<<"centroid "<<MeanPt.X<<" "<<MeanPt.Y<<" "<<MeanPt.Z<<endl;
+		
+		
+		//calculate scale
+	//	float scale =var.at(6)*sqrt( shapes.at(0)->getAffscEig())+ shapes.at(0)->getAffscMean();
+	float scale=1;
+	//	cout<<"scale "<<scale<<endl;
+		//calculate rotation
+		vector< float > rr1= shapes.at(0)->getAffrxVecs();
+		vector< float > rr2= shapes.at(0)->getAffryVecs();
+		vector< float > rr3= shapes.at(0)->getAffrzVecs();
+		float rx=var.at(3)*sqrt( shapes.at(0)->getAffrxEig())*rr1.at(0)+var.at(4)*sqrt( shapes.at(0)->getAffryEig())*rr2.at(0)+var.at(5)*sqrt( shapes.at(0)->getAffrzEig())*rr3.at(0) + shapes.at(0)->getAffrxMean();
+		float ry=var.at(3)*sqrt( shapes.at(0)->getAffrxEig())*rr1.at(1)+var.at(4)*sqrt( shapes.at(0)->getAffryEig())*rr2.at(1)+var.at(5)*sqrt( shapes.at(0)->getAffrzEig())*rr3.at(1) + shapes.at(0)->getAffryMean();
+		float rz=var.at(3)*sqrt( shapes.at(0)->getAffrxEig())*rr1.at(2)+var.at(4)*sqrt( shapes.at(0)->getAffryEig())*rr2.at(2)+var.at(5)*sqrt( shapes.at(0)->getAffrzEig())*rr3.at(2) + shapes.at(0)->getAffrzMean();
+
+	//	cout<<"Angles "<<rx<<" "<<ry<<" "<<rz<<endl;
+		//calculate rotation matrix
+		float cX=cos(rx);
+		float sX=sin(rx);
+		float cY=cos(ry);
+		float sY=sin(ry);
+		float cZ=cos(rz);
+		float sZ=sin(rz);
+
+
+		//calculate rotation matrix
+		float r11=cY*cZ;
+		float r12= cY*sZ;
+		float r13=-sY;
+		float r21=sX*sY*cZ-cX*sZ;
+		float r22=sX*sY*sZ+cX*cZ;
+		float r23=sX*cY;
+		float r31=cX*sY*cZ+sX*sZ;
+		float r32=cX*sY*sZ-sX*cZ;
+		float r33= cX*cY;
+		
+	//	m.rotation(cY*cZ, cY*sZ, -sY, sX*sY*cZ-cX*sZ, sX*sY*sZ+cX*cZ , sX*cY , cX*sY*cZ+sX*sZ, cX*sY*sZ-sX*cZ, cX*cY, MeanPt.X,MeanPt.Y,MeanPt.Z);
+	//	m.update();
+		//m.rescale(scale, MeanPt.X,MeanPt.Y,MeanPt.Z);
+		//m.update();
+		//m.translation(trOffSet);
+	//	m.update();
+	//	cout<<"varsize "<<var.size()-7<<endl;
+	
+	
+	
+		for (vector<Mpoint*>::iterator i = m._points.begin(); i!=m._points.end(); i++ ){
+				Vec cen= (*i)->get_coord() - Pt(MeanPt.X,MeanPt.Y,MeanPt.Z);
+				(*i)->_update_coord = Pt(MeanPt.X,MeanPt.Y,MeanPt.Z) + scale*Vec( (cen.X*r11+cen.Y*r12+cen.Z*r13) , (cen.X*r21+cen.Y*r22+cen.Z*r23) , (cen.X*r31+cen.Y*r32+cen.Z*r33)) + trOffSet;
+			//	(*i)->_update_coord = Pt(MeanPt.X,MeanPt.Y,MeanPt.Z) +scale*cen + trOffSet;
+
+				//	cout<<(*i)->_update_coord.X<<endl;
+				count++;
+			}
+	
+		m.update();
+		for (unsigned int mode=0; mode<(var.size()-6);mode++){
+			//for each mode
+		//cout<<"get shape mode "<<mode<<endl;
+			const vector<Vec> mvec = shapes.at(shape)->getModeVector(mode);
+		//	cout<<"mode got"<<endl;
+			int count=0;
+			
+			for (vector<Mpoint*>::iterator i = m._points.begin(); i!=m._points.end(); i++ ){
+				(*i)->_update_coord = (*i)->get_coord() + (var.at(mode+6)*sqrt(eigenVals.at(mode))*mvec.at(count));
+				//	cout<<(*i)->_update_coord.X<<endl;
+				count++;
+			}
+		//	cout<<"reached end p"<<endl;
+			m.update();
+		}
+		//cout<<"done deform1"<<endl;
+		//translates mesh to centre of image
+		Vec trans((xsize-1)/2.0*abs(xdim),(ysize-1)/2.0*abs(ydim),(zsize-1)/2.0*abs(zdim));
+		for (vector<Mpoint*>::iterator i = m._points.begin(); i!=m._points.end(); i++ ){
+			(*i)->_update_coord = (*i)->get_coord() + trans;
+		//	cout<<(*i)->_update_coord.X<<endl;
+		}
+		
+		m.update();
+			//	cout<<"done deform2"<<endl;
+
+		return m;
+	}
+		
 	Mesh shapeModel::getDeformedMeshAff7( vector<float> var, int shape, int numModes){
 		//this function assumes that the first 7 modes are the affine parameters
 		///they should be used in the specific order
@@ -2767,7 +2893,7 @@ int shapeModel::load_bmv_binary(string s, int type){
 
 		return m;
 	}
-	
+
 	
 	Mesh shapeModel::getDeformedMeshP3dof( vector<float> var, int shape, int numModes,float tx, float ty, float tz){
 		//get shape mesh shapes.at(shape);
@@ -2868,6 +2994,51 @@ int shapeModel::load_bmv_binary(string s, int type){
 		return imean;
 	
 	}
+vector<float> shapeModel::getDeformedIprofAff6( vector<float> var, int shape, int numModes){
+	
+		vector<float> imean=shapes.at(shape)->getIMean();
+		for (unsigned int mode=0; mode<var.size();mode++){
+			//for each mode
+			vector<float> mvec;
+			//cout<<"mode "<<mode<<" "<<var.at(mode)<<endl;
+			//cout<<"shape "<<shape<<" "<<shapes.size()<<" "<<endl;
+			//should not have more than 7 modes anyways
+			if (mode<6){
+				mvec= shapes.at(shape)->getAffIModeVector(mode);
+				//	cout<<"helpiprof"<<endl;
+				float eig=0;
+				switch (mode){
+					case 0:
+						eig=shapes.at(shape)->getAfftxEig();
+						break;
+						case 1:
+						eig=shapes.at(shape)->getAfftyEig();
+						break;
+							case 2:
+						eig=shapes.at(shape)->getAfftzEig();
+						break;
+							case 3:
+						eig=shapes.at(shape)->getAffrxEig();
+						break;
+							case 4:
+						eig=shapes.at(shape)->getAffryEig();
+						break;
+							case 5:
+						eig=shapes.at(shape)->getAffrzEig();
+						break;
+					
+				}
+				for (unsigned int i=0;i<imean.size();i++){
+					//cout<<"helpiprof "<<i<<endl;
+					imean.at(i)=imean.at(i) +var.at(mode)*sqrt(eig)*mvec.at(i);
+				}
+		}
+		
+		//	cout<<"helpiprof2"<<endl;
+		}
+		return imean;
+	
+	}
 
 //	Mesh shapeModel::getTranslatedMesh( vector<float> var, int shape){
 //		
@@ -2913,7 +3084,85 @@ int shapeModel::load_bmv_binary(string s, int type){
 		m.update();
 		return m;
 	}
-	
+	vector<float> shapeModel::getProjectModeParameters( Mesh m , int shape, int trunc, float* res ){
+		vector<float> vars;
+		vars.push_back(0);
+		//get MeanMesh
+		Mesh m1=getDeformedMesh(vars,shape,static_cast<int>(vars.size()));
+
+		//translates mesh to centre of image
+//		Vec trans(-(xsize-1)/2.0*abs(xdim),-(ysize-1)/2.0*abs(ydim),-(zsize-1)/2.0*abs(zdim));
+		vector< float > vtrans;
+		//load mean into vector
+		for (vector<Mpoint*>::iterator i = m1._points.begin(); i!=m1._points.end(); i++ ){
+			vtrans.push_back( (*i)->get_coord().X );
+			vtrans.push_back( (*i)->get_coord().Y );
+			vtrans.push_back( (*i)->get_coord().Z );
+		}
+
+		//trans.Y=trans.Y+var;
+		//trans.Y=trans.Y+3.4;
+		vector< float > vdmean;
+		vector< float > vmesh;
+
+		int count=0;
+		//demean and store in vector
+	//	cout<<"sp 1"<<endl;
+		for (vector<Mpoint*>::iterator i = m._points.begin(); i!=m._points.end(); i++ ){
+			vdmean.push_back((*i)->get_coord().X-vtrans.at(count));
+			vdmean.push_back((*i)->get_coord().Y-vtrans.at(count+1));
+			vdmean.push_back((*i)->get_coord().Z-vtrans.at(count+2));
+			
+			vmesh.push_back((*i)->get_coord().X);
+			vmesh.push_back((*i)->get_coord().Y);
+			vmesh.push_back((*i)->get_coord().Z);
+			
+			count+=3;
+		}
+	//			cout<<"sp 2"<<endl;
+
+		
+		//now project caculate D^(-1)U^tvdean
+		vector<float> bvars;
+	//	cout<<eigenVals.size()<<endl;
+		for (int i=0;i<getNumberOfModes();i++){
+	//						cout<<"sp 31 "<<i<<" "<<eigenVals.at(i)<<endl;
+
+			vector< Vec > vmode = shapes.at(shape)->getModeVector(i);
+			float vari=0;
+			count=0;
+	//				cout<<"sp 3 "<<i<<endl;
+			if(i<trunc){
+			for (unsigned int j=0;j<vmode.size();j++){
+				vari+=vdmean.at(count)*vmode.at(j).X;
+				vari+=vdmean.at(count+1)*vmode.at(j).Y;
+				vari+=vdmean.at(count+2)*vmode.at(j).Z;
+				count+=3;
+			}
+			}
+			bvars.push_back(vari/sqrt(eigenVals.at(i)));
+		}
+		
+		
+		m1=getDeformedMesh(bvars,shape,static_cast<int>(bvars.size()));
+	//	cout<<"lengthsa "<<vdmean.size()<<" "<<vtrans.size()<<" "<<bvars.size()<<endl;
+		vector< float > vdif;
+		 count=0;
+		//demean and store in vector
+	//	cout<<"sp 1"<<endl;
+		float ssx=0;
+		for (vector<Mpoint*>::iterator i = m1._points.begin(); i!=m1._points.end(); i++ ){
+			float difx=vmesh.at(count)- ((*i)->get_coord().X);
+			float dify=vmesh.at(count+1)- ((*i)->get_coord().Y);
+			float difz=vmesh.at(count+2)- ((*i)->get_coord().Z);
+			ssx+=difx*difx+dify*dify+difz*difz;
+			count+=3;
+		}
+
+		*res=ssx;
+		return bvars;
+	}
+
 	
 	Mesh shapeModel::getInverseTranslatedMesh( Mesh m ){
 		
@@ -3413,7 +3662,7 @@ int shapeModel::cumResidual( volume<float>* image, const volume<short>* mask,  i
 	if (ptcount!=numpix){
 		cerr<<"mismatch between in number of voxels"<<endl;
 	}
-	cout<<"NUMPIX "<<numpix<<" ptcount "<<ptcount<<endl;
+	//cout<<"NUMPIX "<<numpix<<" ptcount "<<ptcount<<endl;
 	Matrix val(1,1);
 	val=Y.t()*Y-(A.i()*XY).t()*XY;
 	
@@ -4649,35 +4898,39 @@ int shapeModel::intensityHistMult(const volume<float>* image, const volume<short
 	return 0;
 			}
 			
-float shapeModel::EMgmm3(vector<float>* vgl,bool lesser,int niter, float* var){
+float shapeModel::EMgmm3(vector<float>* vgl,bool lesser,int niter, vector<float>* mu, vector<float>* vvars, float init0, float init1, float init2){
 //implement a mixture of 3 gaussians .... csf,grey matter, white matter
 //returns lower mean
 	//implement a mixture of 2 gaussians
 	vector <float>::iterator Iter;
 	float si=0.0, ssi=0.0;
 	int N=0;
-		float muest1=10;//vgl->at(static_cast<int>(floor(static_cast<float>(vgl->size())/3.0)));
-	float muest2=vgl->at(static_cast<int>(floor(vgl->size()/2.0)));
-	float muest3=vgl->at(static_cast<int>(floor(vgl->size()*2.0/3.0)));;
+//		float muest1=10;//vgl->at(static_cast<int>(floor(static_cast<float>(vgl->size())/3.0)));
+//	float muest2=vgl->at(static_cast<int>(floor(vgl->size()/2.0)));
+//	float muest3=vgl->at(static_cast<int>(floor(vgl->size()*2.0/3.0)));;
+	
+		float muest1=init0;//vgl->at(static_cast<int>(floor(static_cast<float>(vgl->size())/3.0)));
+	float muest2=init1;//vgl->at(static_cast<int>(floor(vgl->size()/2.0)));
+	float muest3=init2;//vgl->at(static_cast<int>(floor(vgl->size()*2.0/3.0)));;
 	for ( Iter = vgl->begin( ) ; Iter !=vgl->end( ) ; Iter++ ){
 	//	cout<<"Iter "<<*Iter<<endl;
 		si+=*Iter;
 		ssi+=(*Iter)*(*Iter);
 		N++;
 	}
-	
-	float varest1=(ssi-si*si/N)/(N-1);
-	float varest2=varest1;
-	float varest3=varest1;
+	//cout<<"SSI "<<si<<" "<<ssi<<endl;
+	float varest1=1;//(ssi-si*si/N)/(N-1);
+	float varest2=1;//varest1;
+	float varest3=1;//varest1;
 	//cout<<"init estimates "<<muest1<<" "<<muest2<<" "<<varest1<<" "<<varest2<<endl;
 	//int niter=10;
 	
 	//initial misture weigthing
-	float f1=1/3.0;
-	float f2=1/3.0;
+	float f1=0.5;//1/3.0;
+	float f2=0.25;//1/3.0;
 	float f3=1-f1-f2;
 	//cout<<"Niter "<<niter<<endl;
-	float mulast=0;
+	//float mulast=0;
 	 
 	for (int i=0; i<niter; i++){
 		float C1=1/sqrt(2.0*3.14*varest1);
@@ -4695,10 +4948,11 @@ float shapeModel::EMgmm3(vector<float>* vgl,bool lesser,int niter, float* var){
 			float resp2=C2*exp(-0.5*(*Iter-muest2)*(*Iter-muest2)/varest2);
 			float resp3=C3*exp(-0.5*(*Iter-muest3)*(*Iter-muest3)/varest3);
 			float Sresp=f1*resp1+f2*resp2+f3*resp3;
-			
-			fresp1=resp1/Sresp;
-			fresp2=resp2/Sresp;
-			fresp3=resp3/Sresp;
+			//cout<<"resp "<<resp1<<" "<<resp2<<" "<<resp3<<" "<<Sresp<<endl;
+
+			fresp1=f1*resp1/Sresp;
+			fresp2=f2*resp2/Sresp;
+			fresp3=f3*resp3/Sresp;
 			
 			sumfresp1+=fresp1;
 			sumfresp2+=fresp2;
@@ -4707,7 +4961,8 @@ float shapeModel::EMgmm3(vector<float>* vgl,bool lesser,int niter, float* var){
 			muesttemp1+= fresp1*(*Iter);
 			muesttemp2+= fresp2*(*Iter);
 			muesttemp3+= fresp3*(*Iter);
-			
+		//				cout<<"fresp "<<fresp1<<" "<<fresp2<<" "<<fresp3<<" "<<muesttemp1<<" "<<muesttemp2<<" "<<muesttemp3<<endl;
+
 			
 			//this should really be in a seperate loop
 				varesttemp1+=fresp1*(*Iter-muest1)*(*Iter-muest1);
@@ -4718,20 +4973,21 @@ float shapeModel::EMgmm3(vector<float>* vgl,bool lesser,int niter, float* var){
 		muest1=muesttemp1/sumfresp1;
 		muest2=muesttemp2/sumfresp2;
 		muest3=muesttemp3/sumfresp3;
-cout<<"estimeate "<<muest1<<" "<<sumfresp1<<" "<<muest2<<" "<<sumfresp2<<" "<<endl;
+//cout<<"estimeate "<<muest1<<" "<<sumfresp1<<" "<<muest2<<" "<<sumfresp2<<" "<<endl;
 	//	for ( Iter = vgl->begin( ) ; Iter !=vgl->end( ) ; Iter++ ){
 		
 	
 	//		}
 
-				varest1=varesttemp1/sumfresp1;
+			
+					varest1=varesttemp1/sumfresp1;
 		varest2=varesttemp2/sumfresp2;
 		varest3=varesttemp3/sumfresp3;
 		f1=sumfresp1/N;
-		f2=sumfresp1/N;
-		f3=sumfresp1/N;
-		cout<<"estimeate "<<muest1<<" "<<muest2<<" "<<muest3<<" "<<varest1<<" "<<varest2<<" "<<varest3<<" "<<f1<<endl;
-		
+		f2=sumfresp2/N;
+		f3=sumfresp3/N;
+		//cout<<"estimeate "<<muest1<<" "<<muest2<<" "<<muest3<<" "<<varest1<<" "<<varest2<<" "<<varest3<<" "<<f1<<" "<<f2<<" "<<f3<<endl;
+		/*
 		//implement a convergence criteria
 		if (lesser){
 			float dmu=abs(mulast-muest1);
@@ -4767,11 +5023,81 @@ cout<<"estimeate "<<muest1<<" "<<sumfresp1<<" "<<muest2<<" "<<sumfresp2<<" "<<en
 		}else{
 			return muest2;
 		}
-	}
-	return -1; 	
+	}*/
 }
 
+mu->clear();
+vvars->clear();
+if (muest1<muest2){	
+	if (muest1<muest3){
+		mu->push_back(muest1);
+		vvars->push_back(varest1);
+//		vf->push_back(f1);
+		if(muest3<muest2){
+			mu->push_back(muest3);
+//			vf->push_back(f1);
+			vvars->push_back(varest3);
 			
+			mu->push_back(muest2);
+//			vf->push_back(f1);
+			vvars->push_back(varest2);
+			
+		}else{
+			mu->push_back(muest2);
+//			vf->push_back(f1);
+			vvars->push_back(varest2);
+			
+			mu->push_back(muest3);
+//			vf->push_back(f1);
+			vvars->push_back(varest3);
+			
+		}
+	}
+	
+}else if (muest2<muest3){
+	mu->push_back(muest2);
+//	vf->push_back(f1);
+	vvars->push_back(varest2);
+	
+	if(muest3<muest1){
+		mu->push_back(muest3);
+//		vf->push_back(f1);
+		vvars->push_back(varest3);
+		
+		mu->push_back(muest1);
+//		vf->push_back(f1);
+		vvars->push_back(varest1);
+		
+	}else{
+		mu->push_back(muest2);
+//		vf->push_back(f1);
+		vvars->push_back(varest2);
+		
+		mu->push_back(muest1);
+//		vf->push_back(f1);
+		vvars->push_back(varest1);
+		
+	}
+}else{
+	mu->push_back(muest3);
+//	vf->push_back(f1);
+	vvars->push_back(varest3);
+	
+	mu->push_back(muest2);
+//	vf->push_back(f1);
+	vvars->push_back(varest2);
+	
+	mu->push_back(muest1);
+//	vf->push_back(f1);
+	vvars->push_back(varest1);
+	
+}
+		//cout<<"estimeate "<<mu->at(0)<<" "<<mu->at(1)<<" "<<mu->at(2)<<" "<<vvars->at(0)<<" "<<vvars->at(1)<<" "<<vvars->at(2)<<" "<<f1<<" "<<f2<<" "<<f3<<endl;
+
+return -1; 	
+		}
+
+
 float shapeModel::EMgmm(vector<float>* vgl,bool lesser,int niter){
 //returns lower mean
 	//implement a mixture of 2 gaussians
@@ -4824,12 +5150,12 @@ float shapeModel::EMgmm(vector<float>* vgl,bool lesser,int niter){
 		varest1=varesttemp1/invsumresp;
 		varest2=varesttemp2/sumresp;
 		f=sumresp/N;
-	cout<<"estimeate "<<muest1<<" "<<muest2<<" "<<varest1<<" "<<varest2<<" "<<f<<endl;
+	//cout<<"estimeate "<<muest1<<" "<<muest2<<" "<<varest1<<" "<<varest2<<" "<<f<<endl;
 		//implement a convergence criteria
 		if (lesser){
 			float dmu=abs(mulast-muest1);
 			if (dmu<0.05){
-			cout<<"estimeate "<<muest1<<" "<<muest2<<" "<<varest1<<" "<<varest2<<" "<<f<<" "<<i<<endl;
+			//cout<<"estimeate "<<muest1<<" "<<muest2<<" "<<varest1<<" "<<varest2<<" "<<f<<" "<<i<<endl;
 				break;
 			}else{
 				mulast=muest1;
@@ -4851,21 +5177,21 @@ float shapeModel::EMgmm(vector<float>* vgl,bool lesser,int niter){
 		//muest1=60;
 		//	*var=varest1;
 
-			cout<<"returen lesser "<<muest1<<endl;
+			//cout<<"returen lesser "<<muest1<<endl;
 			return muest1;
 		}else{
 		  //*var=varest2;
-		cout<<"returen greater "<<muest2<<endl;
+		//cout<<"returen greater "<<muest2<<endl;
 			return muest2;
 		}
 	}else{
 		if (lesser){
-			cout<<"returen lesser "<<muest2<<endl;
+			//cout<<"returen lesser "<<muest2<<endl;
 			//	*var=varest2;
 			return muest2;
 		}else{
 		  //	*var=varest2;
-						cout<<"returen greater "<<muest1<<endl;
+						//cout<<"returen greater "<<muest1<<endl;
 
 			return muest1;
 		}
@@ -4978,14 +5304,17 @@ void shapeModel::modelReg(int appmode, string flirtmatname, int refxsize, int re
 		//deformed matruxbrigs it into flirt space (world coordinates)
 		m1=getDeformedMesh(vars,s,static_cast<int>(vars.size()));
 		int count=0;
-    //	cout<<"transform mesh points..."<<endl;
+	//	cout<<"transform mesh points... "<<xdim<<" "<<ydim<<" "<<zdim<<endl;
+		
 		
 		for (vector<Mpoint*>::iterator i = m1._points.begin(); i!=m1._points.end(); i++ ){
 		//	cout<<"count "<<count<<endl;	
-			
 			MeshPts.element(0,count)=(*i)->get_coord().X;
 			MeshPts.element(1,count)=(*i)->get_coord().Y;
 			MeshPts.element(2,count)=(*i)->get_coord().Z;
+	//		MeshPts.element(0,count)=(*i)->get_coord().X/xdim;
+	//		MeshPts.element(1,count)=(*i)->get_coord().Y/ydim;
+	//		MeshPts.element(2,count)=(*i)->get_coord().Z/zdim;
 			MeshPts.element(3,count)=1;
 			
 			//Pt newPt(jointAvgShapes.element(count),jointAvgShapes.element(count+1),jointAvgShapes.element(count+2));
@@ -4993,11 +5322,15 @@ void shapeModel::modelReg(int appmode, string flirtmatname, int refxsize, int re
 			//count=count+3;
 			count++;
 		}
-//		cout<<"mesh points loaded into matrix..."<<endl;
+	//cout<<"mesh points loaded into matrix... "<<refxdim<<" "<<refydim<<" "<<refzdim<<endl;
 		NewMeshPts=flirtmat*MeshPts;
 		count=0;
 		for (vector<Mpoint*>::iterator i = m1._points.begin(); i!=m1._points.end(); i++ ){
+			//Pt newPt(NewMeshPts.element(0,count)*refxdim,NewMeshPts.element(1,count)*refydim,NewMeshPts.element(2,count)*refzdim);
+						
+						
 			Pt newPt(NewMeshPts.element(0,count),NewMeshPts.element(1,count),NewMeshPts.element(2,count));
+
 			(*i)->_update_coord = newPt;
 			count++;
 		}
@@ -5129,6 +5462,73 @@ void shapeModel::meshReg(Mesh* m, Matrix flirtmat){
 	
 }
 
+void  shapeModel::worldToVoxelCoords(Mesh* m){
+	for (vector<Mpoint*>::iterator i = m->_points.begin(); i!=m->_points.end(); i++ ){
+		Pt newPt((*i)->get_coord().X / xdim,(*i)->get_coord().Y / ydim,(*i)->get_coord().Z /zdim);
+		(*i)->_update_coord = newPt;
+		
+	}
+	m->update();
+}
+
+void  shapeModel::voxelToWorldCoords(Mesh* m){
+	for (vector<Mpoint*>::iterator i = m->_points.begin(); i!=m->_points.end(); i++ ){
+		Pt newPt((*i)->get_coord().X * xdim,(*i)->get_coord().Y * ydim,(*i)->get_coord().Z *zdim);
+		(*i)->_update_coord = newPt;
+		
+	}
+	m->update();
+}
+
+void shapeModel::meshReg(Mesh* m, string flirtmatname){
+//void shapeModel::meshReg(Mesh* m, Matrix flirtmat){
+
+	//refsize is actually target image
+	int numPoints=m->nvertices();
+	Matrix MeshPts(4,numPoints);
+	Matrix NewMeshPts(4,numPoints);
+	Matrix flirtmat(4,4);
+	
+	//read in flirt matrix, uses ascii
+	
+	ifstream fmat;
+	fmat.open(flirtmatname.c_str());
+	float tmpfloat=0;
+	for (int i=0; i<4;i++){
+		for (int j=0; j<4;j++){
+			fmat>>tmpfloat;
+			flirtmat.element(i,j)=tmpfloat;
+		//	cout<<flirtmat.element(i,j)<<" ";
+		}
+		//cout<<endl;
+	}
+				flirtmat=flirtmat.i();
+	
+	
+    //	cout<<"transform mesh points..."<<endl;
+	int count=0;
+	for (vector<Mpoint*>::iterator i = m->_points.begin(); i!=m->_points.end(); i++ ){
+		//	cout<<"count "<<count<<endl;	
+		
+		MeshPts.element(0,count)=(*i)->get_coord().X;
+		MeshPts.element(1,count)=(*i)->get_coord().Y;
+		MeshPts.element(2,count)=(*i)->get_coord().Z;
+		MeshPts.element(3,count)=1;
+		
+		count++;
+	}
+	//		cout<<"mesh points loaded into matrix..."<<endl;
+	NewMeshPts=flirtmat*MeshPts;
+	count=0;
+	for (vector<Mpoint*>::iterator i = m->_points.begin(); i!=m->_points.end(); i++ ){
+		Pt newPt(NewMeshPts.element(0,count),NewMeshPts.element(1,count),NewMeshPts.element(2,count));
+		(*i)->_update_coord = newPt;
+		count++;
+	}
+	m->update();
+	
+	
+}
 
 // Uninteresting byte swapping functions
 

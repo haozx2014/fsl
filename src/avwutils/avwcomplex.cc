@@ -1,4 +1,4 @@
-/*  avwcomplex.cc
+/*  fslcomplex.cc
 
     Mark Jenkinson, FMRIB Image Analysis Group
 

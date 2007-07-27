@@ -1,4 +1,4 @@
-//     avwcpgeom++.cc - Copy certain parts of an AVW header
+//     fslcpgeom.cc - Copy certain parts of an AVW header
 //     Mark Jenkinson, Steve Smith and Matthew Webster, FMRIB Image Analysis Group
 //     Copyright (C) 2001-2005 University of Oxford  
 //     COPYRIGHT  
@@ -10,7 +10,7 @@ using namespace NEWIMAGE;
 void print_usage(const string& progname) 
 {
   cout << endl;
-  cout << "Usage: avwcpgeom <source> <destination> [-d]" << endl;
+  cout << "Usage: fslcpgeom <source> <destination> [-d]" << endl;
   cout << "-d : don't copy image dimensions" << endl;
 }
 

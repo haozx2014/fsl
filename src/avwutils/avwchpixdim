@@ -1,6 +1,6 @@
 #!/bin/sh
 
-#   avwchpixdim - change pixel dimensions, but keep everything else the same
+#   fslchpixdim - change pixel dimensions, but keep everything else the same
 #
 #   Mark Jenkinson, FMRIB Image Analysis Group
 #
@@ -78,23 +78,23 @@ if [ `${FSLDIR}/bin/imtest $1` = 0 ] ; then
   exit 1;
 fi
 
-xsz=`$FSLDIR/bin/avwval $1 dim1`;
-ysz=`$FSLDIR/bin/avwval $1 dim2`;
-zsz=`$FSLDIR/bin/avwval $1 dim3`;
-tsz=`$FSLDIR/bin/avwval $1 dim4`;
-dt=`$FSLDIR/bin/avwval $1 datatype`;
-xor=`$FSLDIR/bin/avwval $1 origin1`;
-yor=`$FSLDIR/bin/avwval $1 origin2`;
-zor=`$FSLDIR/bin/avwval $1 origin3`;
-tr=`$FSLDIR/bin/avwval $1 pixdim4`;
+xsz=`$FSLDIR/bin/fslval $1 dim1`;
+ysz=`$FSLDIR/bin/fslval $1 dim2`;
+zsz=`$FSLDIR/bin/fslval $1 dim3`;
+tsz=`$FSLDIR/bin/fslval $1 dim4`;
+dt=`$FSLDIR/bin/fslval $1 datatype`;
+xor=`$FSLDIR/bin/fslval $1 origin1`;
+yor=`$FSLDIR/bin/fslval $1 origin2`;
+zor=`$FSLDIR/bin/fslval $1 origin3`;
+tr=`$FSLDIR/bin/fslval $1 pixdim4`;
 
-flag=`$FSLDIR/bin/avwhd $1 | cat -v | grep swapping | wc -w`;
+flag=`$FSLDIR/bin/fslhd $1 | cat -v | grep swapping | wc -w`;
 if [ $flag -eq 0 ] ; then
   flag='';
 else
   flag='-r';
 fi
 
-echo $FSLDIR/bin/avwcreatehd $xsz $ysz $zsz $tsz $2 $3 $4 $tr $xor $yor $zor $dt $1 $flag
-$FSLDIR/bin/avwcreatehd $xsz $ysz $zsz $tsz $2 $3 $4 $tr $xor $yor $zor $dt $1 $flag
+echo $FSLDIR/bin/fslcreatehd $xsz $ysz $zsz $tsz $2 $3 $4 $tr $xor $yor $zor $dt $1 $flag
+$FSLDIR/bin/fslcreatehd $xsz $ysz $zsz $tsz $2 $3 $4 $tr $xor $yor $zor $dt $1 $flag
 

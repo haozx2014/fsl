@@ -73,7 +73,7 @@ Usage() {
     echo ""
     echo "Usage: slices <input> [input2] [-s scale] [-i <intmin> <intmax>]"
     echo ""
-    exit
+    exit 1
 }
 
 [ "$1" = "" ] && Usage
@@ -91,14 +91,14 @@ fi
 
 
 # deal with complex images separately
-if [ X`${FSLDIR}/bin/avwval $1 datatype` = X32 ] ; then
+if [ X`${FSLDIR}/bin/fslval $1 datatype` = X32 ] ; then
   nm1=${f}_abs
   nm2=${f}_ph
   nm0=`${FSLDIR}/bin/remove_ext $1`;
   if [ X$1 != X ] ; then
     shift ;
   fi
-  ${FSLDIR}/bin/avwcomplex -realpolar $nm0 $nm1 $nm2
+  ${FSLDIR}/bin/fslcomplex -realpolar $nm0 $nm1 $nm2
   ${FSLDIR}/bin/slices $nm1 $@
   ${FSLDIR}/bin/slices $nm2 $@
   ${FSLDIR}/bin/imrm $nm1 $nm2
@@ -107,7 +107,7 @@ fi
 
 # deal with 2D and 3D images separately
 
-if [ X`${FSLDIR}/bin/avwval $1 dim3` = X1 ] ; then
+if [ X`${FSLDIR}/bin/fslval $1 dim3` = X1 ] ; then
   # 2D case
   slicenum=-0
   im1=`${FSLDIR}/bin/remove_ext $1`;
@@ -121,8 +121,8 @@ if [ X`${FSLDIR}/bin/avwval $1 dim3` = X1 ] ; then
   if [ X$im2 != X ] ; then
     if [ `$FSLDIR/bin/imtest $im2` -eq 1 ] ; then
       # make a stacked version for getting edges
-      ${FSLDIR}/bin/avwmerge -z ${f}b $im1 $im1 $im1
-      ${FSLDIR}/bin/avwmerge -z ${f}c $im2 $im2 $im2
+      ${FSLDIR}/bin/fslmerge -z ${f}b $im1 $im1 $im1
+      ${FSLDIR}/bin/fslmerge -z ${f}c $im2 $im2 $im2
       im1=${f}b
       im2=${f}c
       slicenum=-1

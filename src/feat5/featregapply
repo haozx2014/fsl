@@ -6,7 +6,7 @@
 #
 #   Stephen Smith, FMRIB Image Analysis Group
 #
-#   Copyright (C) 2002-2006 University of Oxford
+#   Copyright (C) 2002-2007 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -115,7 +115,7 @@ if { [ file exists design.lev ] } {
 
 # for older first-level FEAT dirs: create mean_func if it's not already there
 if { [ imtest filtered_func_data ] && ! [ imtest mean_func ] } {
-    fsl:exec "${FSLDIR}/bin/avwmaths filtered_func_data -Tmean mean_func"
+    fsl:exec "${FSLDIR}/bin/fslmaths filtered_func_data -Tmean mean_func"
 }
 
 set FD [ pwd ]
@@ -138,7 +138,7 @@ if { $cleanup || $force } {
 }
 
 if { ! $cleanup } {
-    #{{{ apply the normalisation
+    #{{{ apply the registration
 
 if { ! [ file exists reg/example_func2standard.mat ] } {
     puts "Error - registration has not been run for $FD"
@@ -146,6 +146,17 @@ if { ! [ file exists reg/example_func2standard.mat ] } {
 }
 
 catch { exec sh -c "mkdir -p reg_standard/reg reg_standard/stats" } errmsg
+
+#if { [ file exists reg_standard/featregapplyrunning ] } {
+#    puts "featregapply already running in $FD"
+#    exit 0
+#}
+#fsl:echo reg_standard/featregapplyrunning "havergalbrian"
+
+set APPLYXFM "-applyxfm"
+if { [ info exists fmri(regstandard_res) ] && $fmri(regstandard_res)>0.0001 } {
+    set APPLYXFM "-applyisoxfm $fmri(regstandard_res)"
+}
 
 # sinc interpolated lowres images
 foreach inputs [ imglob -oneperimage example_func.* ] {
@@ -176,6 +187,8 @@ if { [ file exists reg/highres2standard.mat ] } {
 	}
     }
 }
+
+fsl:exec "/bin/rm reg_standard/featregapplyrunning" -n
 
 #}}}
 }

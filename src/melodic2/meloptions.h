@@ -6,7 +6,7 @@
 
     Christian F. Beckmann, FMRIB Image Analysis Group
     
-    Copyright (C) 1999-2004 University of Oxford */
+    Copyright (C) 1999-2007 University of Oxford */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -84,106 +84,114 @@
 #include "utils/log.h"
 #include "melodic.h"
 
-
 using namespace Utilities;
 
 namespace Melodic {
 
 class MelodicOptions {
- public:
-  static MelodicOptions& getInstance();
-  ~MelodicOptions() { delete gopt; }
+	public:
+  	static MelodicOptions& getInstance();
+  	~MelodicOptions() { delete gopt; }
   
-  string version;
-  string binpath;
-  string logfname;
-  bool   filtermode;
-  bool   explicitnums;
+  	string version;
+  	string binpath;
+  	string logfname;
+  	bool   filtermode;
+  	bool   explicitnums;
   
-  Option<string> logdir;
-  Option< std::vector<string> > inputfname;
+  	Option<string> logdir;
+  	Option< std::vector<string> > inputfname;
 
-  Option<string> outputfname;
+  	Option<string> outputfname;
 
-  Option<string> maskfname;
-  Option<bool>   use_mask;
-  Option<bool>   update_mask;
-  Option<bool>   perf_bet;
-  Option<float>  threshold;
+  	Option<string> maskfname;
+  	Option<bool>   use_mask;
+  	Option<bool>   update_mask;
+  	Option<bool>   perf_bet;
+  	Option<float>  threshold;
 
-  Option<int>    pca_dim;
-  Option<string> pca_est;
-  Option<bool>   joined_whiten;
-  Option<int>    numICs;
-  Option<string> approach;
-  Option<string> nonlinearity;
+  	Option<int>    pca_dim;
+  	Option<string> pca_est;
+  	Option<bool>   joined_whiten;
+  	Option<int>    numICs;
+  	Option<string> approach;
+  	Option<string> nonlinearity;
 
-  Option<bool>   varnorm;
-  Option<bool>   pbsc;
-  Option<bool>   pspec;
-  Option<string> segment;
-  Option<bool>   tsmooth;
-  Option<float>  epsilon;
-  Option<int>    maxNumItt;
-  Option<int>    maxRestart;
+  	Option<bool>   varnorm;
+  	Option<bool>   pbsc;
+  	Option<bool>   pspec;
+  	Option<string> segment;
+  	Option<bool>   tsmooth;
+  	Option<float>  epsilon;
+  	Option<int>    maxNumItt;
+  	Option<int>    maxRestart;
+  	Option<int>    rank1interval;
 
-  Option<string> mmthresh;
-  Option<bool>   perf_mm;
-  Option<string> ICsfname;
-  Option<string> filtermix; 
-  Option<string> filter; 
+  	Option<string> mmthresh;
+  	Option<bool>   perf_mm;
+  	Option<string> ICsfname;
+  	Option<string> filtermix; 
+  	Option<string> smodename; 
+  	Option<string> filter; 
 
-  Option<bool>   genreport;
-  Option<float>  tr;
-  Option<bool>   logPower;
+  	Option<bool>   genreport;
+  	Option<float>  tr;
+  	Option<bool>   logPower;
 
-  Option<bool>   output_all;
-  Option<bool>   output_unmix;
-  Option<bool>   output_MMstats;
-  Option<bool>   output_pca;
-  Option<bool>   output_white;
-  Option<bool>   output_origIC;
-  Option<bool>   output_mean;
+		Option<string> fn_Tdesign;
+		Option<string> fn_Tcon;
+		Option<string> fn_TconF;
+		Option<string> fn_Sdesign;
+		Option<string> fn_Scon;	
+		Option<string> fn_SconF;	
+	
+  	Option<bool>   output_all;
+  	Option<bool>   output_unmix;
+  	Option<bool>   output_MMstats;
+  	Option<bool>   output_pca;
+  	Option<bool>   output_white;
+  	Option<bool>   output_origIC;
+  	Option<bool>   output_mean;
 
-  Option<bool> verbose;  
-  Option<bool> vers;
-  Option<bool> copyright;
-  Option<bool> help;
+  	Option<bool> verbose;  
+  	Option<bool> vers;
+  	Option<bool> copyright;
+  	Option<bool> help;
+  	Option<bool> debug;
 
-  Option<string> guessfname;
-  Option<string> paradigmfname;
+  	Option<string> guessfname;
+  	Option<string> paradigmfname;
 
-  Option<int>  dummy;
-  Option<int>  repeats;
-  Option<float> nlconst1;
-  Option<float> nlconst2;
-  Option<float> smooth_probmap;
+  	Option<int>  dummy;
+  	Option<int>  repeats;
+  	Option<float> nlconst1;
+  	Option<float> nlconst2;
+  	Option<float> smooth_probmap;
 
+  	Option<bool> remove_meanvol;
+  	Option<bool> remove_endslices;
+  	Option<bool> rescale_nht;
 
-  Option<bool> remove_meanvol;
-  Option<bool> remove_endslices;
-  Option<bool> rescale_nht;
+  	Option<bool> guess_remderiv;
+  	Option<bool> temporal;
 
-  Option<bool> guess_remderiv;
-  Option<bool> temporal;
+  	int retrystep;
 
-  int retrystep;
+  	void parse_command_line(int argc, char** argv, Log& logger,  const string &p_version);
 
-  void parse_command_line(int argc, char** argv, Log& logger,  const string &p_version);
+ 	private:
+  	MelodicOptions();  
+  	const MelodicOptions& operator=(MelodicOptions&);
+  	MelodicOptions(MelodicOptions&);
 
- private:
-  MelodicOptions();  
-  const MelodicOptions& operator=(MelodicOptions&);
-  MelodicOptions(MelodicOptions&);
-
-  OptionParser options; 
+  	OptionParser options; 
       
-  static MelodicOptions* gopt;
+  	static MelodicOptions* gopt;
 
-  void print_usage(int argc, char *argv[]);  
-  void print_version(); 
-  void print_copyright();
-  void status();
+  	void print_usage(int argc, char *argv[]);  
+  	void print_version(); 
+  	void print_copyright();
+  	void status();
 };
 
  inline MelodicOptions& MelodicOptions::getInstance(){
@@ -198,7 +206,7 @@ class MelodicOptions {
 	  string("output directory name\n"), 
 	  false, requires_argument),
    inputfname(string("-i,--in"), std::vector<string>(),
-	      string("input file names (either single file name or comma-separated list)"), 
+	      string("input file names (either single file name or comma-separated list or text file)"), 
 	      true, requires_argument),
    outputfname(string("-O,--out"), string("melodic"),
 	   string("output file name"), 
@@ -224,14 +232,14 @@ class MelodicOptions {
    pca_est(string("--dimest"), string("lap"),
 	   string("use specific dim. estimation technique: lap, bic, mdl, aic, mean (default: lap)"), 
 	   false, requires_argument),
-   joined_whiten(string("--joined_whiten"), false,
-	   string("switch on joined whitening"), 
+   joined_whiten(string("--separate_whiten"), true,
+	   string("switch on separate whitening"), 
 	   false, no_argument),
    numICs(string("-n,--numICs"), -1,
 	   string("numer of IC's to extract (for deflation approach)"), 
 	   false, requires_argument),
    approach(string("-a,--approach"),  string("symm"),
-	   string("approach for decomposition, 2D: defl, symm (default), 3D: tica (default), concat"), 
+	   string("approach for decomposition, 2D: defl, symm (default), 3D: tica (default), concat"),
 	   false, requires_argument),
    nonlinearity(string("--nl"), string("pow3"),
 	   string("\tnonlinearity: gauss, tanh, pow3, pow4"), 
@@ -239,7 +247,7 @@ class MelodicOptions {
    varnorm(string("--vn,--varnorm"), true,
 	   string("switch off variance normalisation"), 
 	   false, no_argument),
-   pbsc(string("--pbsc"), true,
+   pbsc(string("--pbsc"), false,
 	   string("switch off conversion to percent BOLD signal change"), 
 	   false, no_argument),
    pspec(string("--pspec"), false,
@@ -260,7 +268,10 @@ class MelodicOptions {
    maxRestart(string("--maxrestart"),  6,
 	   string("maximum number of restarts\n"), 
 	   false, requires_argument),
-   mmthresh(string("--mmthresh"), string("0.5"),
+   rank1interval(string("--rank1interval"),  5,
+	   string("number of iterations between rank-1 approximation (TICA)\n"), 
+		 false, requires_argument,false),
+    mmthresh(string("--mmthresh"), string("0.5"),
 	   string("threshold for Mixture Model based inference"), 
 	   false, requires_argument),
    perf_mm(string("--no_mm"), true,
@@ -271,6 +282,9 @@ class MelodicOptions {
 	   false, requires_argument),
    filtermix(string("--mix"),  string(""),
 	   string("\tmixing matrix for mixture modelling / filtering"), 
+	   false, requires_argument),
+   smodename(string("--smode"),  string(""),
+	   string("\tmatrix of session modes for report generation"), 
 	   false, requires_argument),
    filter(string("-f,--filter"),  string(""),
 	   string("component numbers to remove\n "), 
@@ -284,6 +298,24 @@ class MelodicOptions {
    logPower(string("--logPower"),  false,
 	   string("calculate log of power for frequency spectrum\n"), 
 	    false, no_argument),
+	 fn_Tdesign(string("--Tdes"), string(""),
+	   string("design matrix across time-domain"),
+		 false, requires_argument),
+	 fn_Tcon(string("--Tcon"), string(""),
+		 string("t-contrast matrix across time-domain"),
+		 false, requires_argument),
+   fn_TconF(string("--Tconf"), string(""),
+		 string("F-contrast matrix across time-domain"),
+		 false, requires_argument),
+   fn_Sdesign(string("--Sdes"), string(""),
+		 string("design matrix across subject-domain"),
+		 false, requires_argument),
+	 fn_Scon(string("--Scon"), string(""),
+		 string("t-contrast matrix across subject-domain"),
+		 false, requires_argument),	
+	 fn_SconF(string("--Sconf"), string(""),
+		 string("F-contrast matrix across subject-domain"),
+		 false, requires_argument),	
    output_all(string("--Oall"),  false,
 	   string("output everything"), 
 	   false, no_argument),
@@ -316,6 +348,9 @@ class MelodicOptions {
 	   false, no_argument),
    help(string("-h,--help"),  false,
 	   string("prints this help message"), 
+	   false, no_argument),
+   debug(string("--debug"),  false,
+	   string("switch on debug messages"), 
 	   false, no_argument),
    guessfname(string("-g,--guess"), string(""),
 	   string("file name of guess of mixing matrix"), 
@@ -389,14 +424,22 @@ class MelodicOptions {
 	    options.add(epsilon);
 	    options.add(maxNumItt);
 	    options.add(maxRestart);
+	    options.add(rank1interval);
 	    options.add(mmthresh);
 	    options.add(perf_mm);
 	    options.add(ICsfname);
 	    options.add(filtermix);
+	    options.add(smodename);
 	    options.add(filter);
 	    options.add(genreport);
 	    options.add(tr);
 	    options.add(logPower);
+			options.add(fn_Tdesign);
+			options.add(fn_Tcon);
+			options.add(fn_TconF);
+			options.add(fn_Sdesign);
+			options.add(fn_Scon);
+			options.add(fn_SconF);
 	    options.add(output_all);
 	    options.add(output_unmix);
 	    options.add(output_MMstats);
@@ -408,6 +451,7 @@ class MelodicOptions {
 	    options.add(vers);
 	    options.add(copyright);
 	    options.add(help);
+	    options.add(debug);
 	   
 	    options.add(guessfname);
 	    options.add(paradigmfname); 

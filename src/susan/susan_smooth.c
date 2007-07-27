@@ -170,7 +170,7 @@ void usage()
   printf("<dim> is dimensionality (2 or 3), depending on whether smoothing is to be within-plane (2) or fully 3D (3).\n");
   printf("<use_median> determines whether to use a local median filter in the cases where single-point noise is detected (0 or 1).\n");
   printf("<n_usans> determines whether the smoothing area (USAN) is to be found from secondary images (0, 1 or 2).\n\n");
-  exit(0);
+  exit(1);
 }
 
 /* }}} */
@@ -1470,6 +1470,8 @@ int    bt, i, z, dimension,
        usans, x_size, y_size, z_size, *usansize=NULL;
 FDT    *InVolume, *UsanVolume[2], *UsanSizeVolume=NULL;
 image_struct im, im2, im3, im4;
+
+ UsanVolume[0]=NULL;
 
 /* }}} */
 

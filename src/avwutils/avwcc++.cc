@@ -1,4 +1,4 @@
-//     avwmcc++.cc cross-correlate two time series
+//     fslcc.cc cross-correlate two time series
 //     Steve Smith and Matthew Webster, FMRIB Image Analysis Group
 //     Copyright (C) 2001-2005 University of Oxford  
 //     COPYRIGHT  
@@ -12,7 +12,7 @@ using namespace NEWIMAGE;
 void print_usage(const string& progname) 
 {
   cout << endl;
-  cout << "\nUsage: avwcc <first_input> <second_input> [cc_thresh]" << endl;
+  cout << "\nUsage: fslcc <first_input> <second_input> [cc_thresh]" << endl;
 }
 
 template <class T>

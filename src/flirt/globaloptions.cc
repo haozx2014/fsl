@@ -141,6 +141,14 @@ void globaloptions::parse_command_line(int argc,char** argv,
       mode2D = true;
       n++;
       continue;
+    } else if ( arg == "-ignoresqform") {
+      initmatsqform = false;
+      n++;
+      continue;    
+    } else if ( arg == "-printinit") {
+      printinit = true;
+      n++;
+      continue;    
     } else if ( arg == "-debugsave") {
       nosave = false;
       n++;
@@ -172,6 +180,7 @@ void globaloptions::parse_command_line(int argc,char** argv,
       continue;
     } else if ( arg == "-init") {
       initmatfname = argv[n+1];
+      initmatsqform = false;
       n+=2;
       continue;
     } else if ( arg == "-schedule") {
@@ -411,6 +420,8 @@ void globaloptions::print_usage(int argc, char *argv[])
        << "        -datatype {char,short,int,float,double}                    (force output data type)\n"
        << "        -cost {mutualinfo,corratio,normcorr,normmi,leastsq}        (default is corratio)\n"
        << "        -searchcost {mutualinfo,corratio,normcorr,normmi,leastsq}  (default is corratio)\n"
+       << "        -ignoresqform                      (do not initialise using sform or qform)\n"
+       << "        -displayinit                       (display initial matrix)\n"
        << "        -anglerep {quaternion,euler}       (default is euler)\n"
        << "        -interp {trilinear,nearestneighbour,sinc}  (final interpolation: def - trilinear)\n"
        << "        -sincwidth <full-width in voxels>  (default is 7)\n"

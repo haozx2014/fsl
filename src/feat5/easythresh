@@ -76,12 +76,12 @@ Usage() {
     echo "Or:    easythresh <stat> <stat_thresh> <background_image> <output_root>"
     echo "e.g.:  easythresh stats/zstat1 2.3 example_func grot"
     echo ""
-    exit
+    exit 1
 }
 
 if [ "$5" = "" ] ; then
     [ "$4" = "" ] && Usage
-    MAX=`${FSLDIR}/bin/avwstats++ $1 -R | awk '{print $2}'`
+    MAX=`${FSLDIR}/bin/fslstats $1 -R | awk '{print $2}'`
     ${FSLDIR}/bin/overlay 1 0 $3 -a $1 $2 $MAX rendered_$4
     ${FSLDIR}/bin/slicer rendered_$4 -A 750 rendered_$4.png
     exit
@@ -97,12 +97,12 @@ RESELS=`echo $SM | awk '{print $6}'`
 #echo "$DLH $VOLUME $RESELS"
 
 # run clustering after fixing stats header for talspace
-${FSLDIR}/bin/avwmaths++ $1 -mas $2 thresh_$6
-${FSLDIR}/bin/avwcpgeom $5 thresh_$6
+${FSLDIR}/bin/fslmaths $1 -mas $2 thresh_$6
+${FSLDIR}/bin/fslcpgeom $5 thresh_$6
 ${FSLDIR}/bin/cluster -i thresh_$6 -t $3 -p $4 --volume=$VOLUME -d $DLH -o cluster_mask_$6 --othresh=thresh_$6 $7 > cluster_$6.txt
 
 # colour rendering
-MAX=`${FSLDIR}/bin/avwstats++ thresh_$6 -R | awk '{print $2}'`
+MAX=`${FSLDIR}/bin/fslstats thresh_$6 -R | awk '{print $2}'`
 ${FSLDIR}/bin/overlay 1 0 $5 -a thresh_$6 $3 $MAX rendered_thresh_$6
 ${FSLDIR}/bin/slicer rendered_thresh_$6 -A 750 rendered_thresh_$6.png
 

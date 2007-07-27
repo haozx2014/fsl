@@ -74,7 +74,7 @@ Usage() {
     echo ""
     echo "e.g.:  run_first_sh_prior im1 im1_to_mni.mat 60 output_name ${FSLDIR}/etc/standard/first_models_317_bin/L_Hipp_bin.bmv"
     echo ""
-    exit
+    exit 1
 }
 
 [ "$7" = "" ] && Usage

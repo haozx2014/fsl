@@ -1,4 +1,4 @@
-//     avw2ascii++.c - convert AVW to raw ASCII text
+//     fsl2ascii.cc - convert AVW to raw ASCII text
 //     Stephen Smith and Matthew Webster, FMRIB Image Analysis Group
 //     Copyright (C) 2001-2005 University of Oxford  
 //     COPYRIGHT  
@@ -12,7 +12,7 @@ using namespace MISCMATHS;
 
 void print_usage(const string& progname) {
   cout << endl;
-  cout << "Usage: avw2ascii <input> <output>" << endl;
+  cout << "Usage: fsl2ascii <input> <output>" << endl;
 }
 
 

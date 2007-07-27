@@ -570,6 +570,7 @@ namespace NEWIMAGE {
     void addvolume(const volume4D<T>& source);
     void insertvolume(const volume<T>& source, int t);
     void deletevolume(int t);
+    void clear();  // deletes all volumes
 
     // MATRIX <-> VOLUME4D CONVERSIONS
     ReturnMatrix matrix(const volume<T>& mask) const;

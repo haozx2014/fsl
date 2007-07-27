@@ -87,13 +87,13 @@ m=$3
 M=`echo "5 k 1.0 $m / p" | dc -`
 shift 3
 
-o1=`${FSLDIR}/bin/avwval ${input} dim1`
-o2=`${FSLDIR}/bin/avwval ${input} dim2`
-o3=`${FSLDIR}/bin/avwval ${input} dim3`
+o1=`${FSLDIR}/bin/fslval ${input} dim1`
+o2=`${FSLDIR}/bin/fslval ${input} dim2`
+o3=`${FSLDIR}/bin/fslval ${input} dim3`
 
-v1=`${FSLDIR}/bin/avwval ${input} pixdim1 | sed "s/-//g"`
-v2=`${FSLDIR}/bin/avwval ${input} pixdim2 | sed "s/-//g"`
-v3=`${FSLDIR}/bin/avwval ${input} pixdim3 | sed "s/-//g"`
+v1=`${FSLDIR}/bin/fslval ${input} pixdim1 | sed "s/-//g"`
+v2=`${FSLDIR}/bin/fslval ${input} pixdim2 | sed "s/-//g"`
+v3=`${FSLDIR}/bin/fslval ${input} pixdim3 | sed "s/-//g"`
 
 t1=`echo "5 k $m 1.0 - $o1 * $v1 * _0.5 * p" | dc -`
 t2=`echo "5 k $m 1.0 - $o2 * $v2 * _0.5 * p" | dc -`

@@ -71,9 +71,9 @@
 
 Usage() {
     echo ""
-    echo "Usage: avwedithd <input> [editor]"
+    echo "Usage: fsledithd <input> [editor]"
     echo ""
-    exit
+    exit 1
 }
 
 [ "$1" = "" ] && Usage
@@ -94,7 +94,7 @@ tmpbase=`${FSLDIR}/bin/tmpnam`;
 tmpbase2=`${FSLDIR}/bin/tmpnam`;
 
 # put in helpful comments at the start
-echo "# AVWEDITHD" > ${tmpbase}
+echo "# FSLEDITHD" > ${tmpbase}
 echo "# This text file contains the header information for an Analyze or Nifti file" >> ${tmpbase}
 echo "# Simply edit this file then save it and the header will be regenerated" >> ${tmpbase}
 echo "# All lines starting with the hash (#) character, like this line, will be ignored" >> ${tmpbase}
@@ -104,8 +104,8 @@ echo "# Further note that the filetype cannot be changed by this program" >> ${t
 echo "#   i.e. changing the nifti_type has no effect" >> ${tmpbase}
 echo " " >> ${tmpbase}
 
-# generate the xml-style header with avwhd
-${FSLDIR}/bin/avwhd -x $1 | grep -v '/>' | grep -v '_filename' | grep -v '[^t]_name' | grep -v 'nvox' | grep -v 'to_ijk' | grep -v 'form_.*orientation' | grep -v 'qto_' > ${tmpbase2}
+# generate the xml-style header with fslhd
+${FSLDIR}/bin/fslhd -x $1 | grep -v '/>' | grep -v '_filename' | grep -v '[^t]_name' | grep -v 'nvox' | grep -v 'to_ijk' | grep -v 'form_.*orientation' | grep -v 'qto_' > ${tmpbase2}
 # exit if the above didn't generate a decent file
 if [ `cat ${tmpbase} | wc -l` -le 1 ] ; then
   exit 0;
@@ -125,10 +125,10 @@ echo " " >> ${tmpbase}
 # close the xml-style part
 echo "/>" >> ${tmpbase}
 
-# edit header, reprocess and pass onto avwcreatehd
+# edit header, reprocess and pass onto fslcreatehd
 ${FSLEDITOR} ${tmpbase}
 cat ${tmpbase} | grep -v '^[ 	]*#' | grep -v '^[ 	]*$' > ${tmpbase2}
-${FSLDIR}/bin/avwcreatehd ${tmpbase2} $1
+${FSLDIR}/bin/fslcreatehd ${tmpbase2} $1
 
 /bin/rm ${tmpbase} ${tmpbase2}
 

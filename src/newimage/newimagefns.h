@@ -454,7 +454,9 @@ namespace NEWIMAGE {
   volume<T> isotropic_resample(const volume<T>& aniso, float scale);
 
   template <class T>
-  volume<T> subsample_by_2(const volume<T>& refvol);
+  volume<T> subsample_by_2(const volume<T>& refvol, bool centred=true);
+  template <class T>
+  volume4D<T> subsample_by_2(const volume4D<T>& refvol, bool centred=true);
 
   void make_blur_mask(ColumnVector& bmask, const float final_vox_dim, 
 		     const float init_vox_dim);
@@ -1999,7 +2001,7 @@ template <class T, class S>
 	       << " has even dimensions" << endl;
           //offset=2;
 	  //offset gives correction to convolve to match results with fft for even kernel
-          //not even kernel with normalise (e.g. -fmean in avwmaths++) still has edge problems
+          //not even kernel with normalise (e.g. -fmean in fslmaths) still has edge problems
 	}
       int midx, midy, midz;
       midz=(kernel.maxz() - kernel.minz())/2 + offset;
@@ -2278,7 +2280,7 @@ template <class T, class S>
   
 
   template <class T>
-  volume<T> subsample_by_2(const volume<T>& refvol)
+  volume<T> subsample_by_2(const volume<T>& refvol, bool centred)
     {
       // subsamples a volume (refvol) by blurring and subsampling to give
       //  a new volume
@@ -2293,18 +2295,24 @@ template <class T, class S>
       if ((oldex==boundsassert) || (oldex==boundsexception)) 
 	{ refvol.setextrapolationmethod(constpad); }
 
-      volume<T> halfvol(sx/2,sy/2,sz/2);
+      volume<T> halfvol((sx+1)/2,(sy+1)/2,(sz+1)/2);
       halfvol.copyproperties(refvol);
       halfvol = refvol.backgroundval();
       halfvol.setdims(refvol.xdim() * 2.0, 
 		      refvol.ydim() * 2.0,
 		      refvol.zdim() * 2.0);
       // set sform and qform appropriately (if set)
+      // voxel 2 voxel mapping of subsampled vol -> original vol
       Matrix sub2mat(4,4);
       sub2mat = Identity(4);
       sub2mat(1,1) = 2.0;
       sub2mat(2,2) = 2.0;
       sub2mat(3,3) = 2.0;
+      if (!centred) {
+	sub2mat(1,4) = 0.5;
+	sub2mat(2,4) = 0.5;
+	sub2mat(3,4) = 0.5;
+      }
       if (refvol.sform_code()!=NIFTI_XFORM_UNKNOWN) {
 	halfvol.set_sform(refvol.sform_code(),refvol.sform_mat() * sub2mat);
       }
@@ -2318,39 +2326,66 @@ template <class T, class S>
 	for (int y=0, by=0; y<halfvol.ysize(); y++, by+=2) {
 	  for (int x=0, bx=0; x<halfvol.xsize(); x++, bx+=2) {
 	    // The following includes a hand-coded smoothing kernel
-	    halfvol(x,y,z) = 0.0923 * (refvol(bx,by,bz))
-	      + 0.0560 * (refvol(bx+1,by,bz) + 
-			  refvol(bx-1,by,bz) +
-			  refvol(bx,by+1,bz) + 
-			  refvol(bx,by-1,bz) +
-			  refvol(bx,by,bz+1) + 
-			  refvol(bx,by,bz-1))
-	      + 0.0339 * (refvol(bx+1,by+1,bz) + 
-			  refvol(bx+1,by-1,bz) +
-			  refvol(bx-1,by+1,bz) + 
-			  refvol(bx-1,by-1,bz) +
-			  refvol(bx+1,by,bz+1) + 
-			  refvol(bx+1,by,bz-1) +
-			  refvol(bx-1,by,bz+1) + 
-			  refvol(bx-1,by,bz-1) +
-			  refvol(bx,by+1,bz+1) + 
-			  refvol(bx,by+1,bz-1) +
-			  refvol(bx,by-1,bz+1) + 
-			  refvol(bx,by-1,bz-1))
-	      + 0.0206 * (refvol(bx+1,by+1,bz+1) + 
-			  refvol(bx+1,by+1,bz-1) +
-			  refvol(bx+1,by-1,bz+1) + 
-			  refvol(bx+1,by-1,bz-1) +
-			  refvol(bx-1,by+1,bz+1) + 
-			  refvol(bx-1,by+1,bz-1) +
-			  refvol(bx-1,by-1,bz+1) + 
-			  refvol(bx-1,by-1,bz-1));
+	    if (centred) {
+	      halfvol(x,y,z) = (T) (0.125 * (refvol(bx,by,bz))
+		+ 0.0625 * (refvol(bx+1,by,bz) + 
+			    refvol(bx-1,by,bz) +
+			    refvol(bx,by+1,bz) + 
+			    refvol(bx,by-1,bz) +
+			    refvol(bx,by,bz+1) + 
+			    refvol(bx,by,bz-1))
+		+ 0.0312 * (refvol(bx+1,by+1,bz) + 
+			    refvol(bx+1,by-1,bz) +
+			    refvol(bx-1,by+1,bz) + 
+			    refvol(bx-1,by-1,bz) +
+			    refvol(bx+1,by,bz+1) + 
+			    refvol(bx+1,by,bz-1) +
+			    refvol(bx-1,by,bz+1) + 
+			    refvol(bx-1,by,bz-1) +
+			    refvol(bx,by+1,bz+1) + 
+			    refvol(bx,by+1,bz-1) +
+			    refvol(bx,by-1,bz+1) + 
+			    refvol(bx,by-1,bz-1))
+		+ 0.0156 * (refvol(bx+1,by+1,bz+1) + 
+			    refvol(bx+1,by+1,bz-1) +
+			    refvol(bx+1,by-1,bz+1) + 
+			    refvol(bx+1,by-1,bz-1) +
+			    refvol(bx-1,by+1,bz+1) + 
+			    refvol(bx-1,by+1,bz-1) +
+			    refvol(bx-1,by-1,bz+1) + 
+			    refvol(bx-1,by-1,bz-1)) );
+	    } else {
+	      if (refvol.in_bounds(bx+1,by+1,bz+1)) {
+		T v000,v001,v010,v011,v100,v101,v110,v111;
+		refvol.getneighbours(bx,by,bz,v000,v001,v010,v011,v100,v101,v110,v111);
+		halfvol(x,y,z)=(T) ((v000+v001+v010+v011+v100+v101+v110+v111)/8.0);
+	      } else {
+		halfvol(x,y,z) = (T) ( ( refvol(bx,by,bz) +
+		  refvol(bx+1,by,bz) + refvol(bx,by+1,bz) +
+		  refvol(bx,by,bz+1) + refvol(bx+1,by+1,bz) +
+		  refvol(bx+1,by,bz+1) + refvol(bx,by+1,bz+1) +
+					 refvol(bx+1,by+1,bz+1) )/8.0);
+	      }
+	    }
 	  }
 	}
       }
       refvol.setextrapolationmethod(oldex);
       return halfvol;
     }
+
+
+  template <class T>
+  volume4D<T> subsample_by_2(const volume4D<T>& refvol, bool centred)
+  {
+      volume4D<T> temp_volume;
+      for (int t=0; t<refvol.tsize(); t++) {
+	temp_volume.addvolume(subsample_by_2(refvol[t],centred));
+      }
+      // cannot copy the properties as it resets voxel size - but is anything missing
+      //     from the 4D properties?
+      return temp_volume;
+  }
 
   ///////////////////////////////////////////////////////////////////////////
   // BLURRING

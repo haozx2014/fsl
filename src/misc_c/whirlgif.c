@@ -96,7 +96,7 @@ long sq(UBYTE i,UBYTE j)
   return((i-j)*(i-j));
 }
 
-void main(argc, argv)
+int main(argc, argv)
  int            argc;
  char           *argv[];
 {
@@ -223,7 +223,7 @@ void main(argc, argv)
 	  break;
 	default:
 	  Usage();
-	  exit(0);
+	  exit(1);
 	  break;
       }
       continue;
@@ -245,7 +245,7 @@ void main(argc, argv)
 
    fclose(fout);
    fprintf(stderr, "Processed %d files.\n", count);
-   exit(0);
+   return 0;
 }
 
 
@@ -307,6 +307,7 @@ void GifReadFile(FILE *fout, char *fname, int firstImage)
     UBYTE translator[256], *p, *po;
     int left, right, top, bot, i, j, k, l, hi, wi;
     long dsquare, dsquare1;
+    left = 0, right = 0, top = 0, bot = 0;
     hi = gifimage.height;
     wi = gifimage.width;
     if (( pix = (UBYTE *)malloc(wi * hi * sizeof(UBYTE)) ) == NULL )
@@ -738,7 +739,7 @@ void Usage()
 	"[-o outfile] [-loop [count]] [-time #delay]",
 	"\t-disp [ none | back | prev | not ]",
 	"\t[ -i listfile] file1 [ -time #delay] file2 ...");
-  exit(0);
+  exit(1);
 }
 
 UBYTE Xgetc(FILE *fin)

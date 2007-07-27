@@ -74,7 +74,7 @@ Usage() {
     echo ""
     echo "e.g.:  run_first im1 im1_to_mni.mat 60 output_name ${FSLDIR}/etc/standard/first_models_317_bin/L_Hipp_bin.bmv"
     echo ""
-    exit
+    exit 1
 }
 
 [ "$5" = "" ] && Usage
@@ -89,9 +89,6 @@ shift
 outname=`${FSLDIR}/bin/remove_ext $1`
 shift
 
-#I never usually change these
-c=1
-f=1
 
 mean=-777 ;
 # disabled
@@ -108,7 +105,7 @@ for model in $@; do
 
 	#apply model
 	  
-	${FSLDIR}/bin/first --mode --baam -i ${file} -l ${trmat}  -m ${model} -k  ${outname}_first -s 5 -g ${g} -f ${f} -c ${c} -y ${lb} -z ${ub} -e 200 -a ${mean};
+	${FSLDIR}/bin/first --baam -i ${file} -l ${trmat}  -m ${model} -k  ${outname}_first -s 8 -g ${g}  -y ${lb} -z ${ub} -a ${mean};
 	
 	else
 	    echo "linear transformation matrix file not found"

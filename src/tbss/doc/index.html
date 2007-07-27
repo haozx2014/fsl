@@ -167,7 +167,7 @@ values in your FA data are (e.g. roughly in the range 0:1). If you
 created your FA data using dtifit in FDT then the data will indeed be
 roughly in the range 0:1. You can check this, for example, by:
 
-<pre>avwstats CON_N00300_dti_data_FA -R
+<pre>fslstats CON_N00300_dti_data_FA -R
  0.000000 1.148992</pre>
 
 If the range is close to 0:1 then the scaling applied by default by
@@ -529,18 +529,22 @@ fslview mean_FA -b 0,6000 mean_FA_skeleton -l Green -b 2000,7000 tbss_fill -l Re
 
 <a name="back"></a><p><hr><H2>Transforming TBSS results back to native space</H2>
 
-<p>It is possible to take a voxel on the mean FA skeleton and show
-  where, in each subject's Fa image, that voxel originally came
-  from. This "back projection" is composed of two steps. First, the
-  skeleton voxel is projected back from its position on the skeleton
-  to the nearby position at the centre of the nearest tract in the
-  subject's FA image in standard space (i.e., after the FA image had
-  been nonlinearly registered to the target image). Second, this point
-  can then be "inverse warped" back into the subject's native space,
-  by inverting the nonlinear registration that was originally
-  applied. Graphically, the whole process can be viewed as:
+<p>It is possible to take one or more voxels on the mean FA skeleton
+  and show where, in each subject's Fa image, those voxels originally
+  came from. This "back projection" is composed of up to three
+  steps. First, the skeleton voxel is projected back from its position
+  on the skeleton to the nearby position at the centre of the nearest
+  tract in the subject's FA image in standard space (i.e., after the
+  FA image had been nonlinearly registered to the target
+  image). Second, this point can then be "inverse warped" back into
+  the subject's native space, by inverting the nonlinear registration
+  that was originally applied. Finally, the native space image can be
+  padded by a single slice on each side of the image cuboid, to match
+  the original native space data (these end slices were removed when
+  the data in FAi was originally created). Graphically, the whole
+  process can be viewed as:
 
-<p><center><img src="flowchart.png"></center>
+<p><center><img src="flowchart.png" width="100%"></center>
 
 <p>There are two obvious reasons why you might want to back-project a
   skeleton-space voxel (or voxels). The first is to confirm that a
@@ -561,23 +565,52 @@ fslview mean_FA -b 0,6000 mean_FA_skeleton -l Green -b 2000,7000 tbss_fill -l Re
   previous randomise-based statistical analysis of the skeletonised
   data:
 
-<p><pre>avwmaths++ tbss_maxc_tstat1 -thr 0.95 grot
-tbss_deproject grot
-fv all_FA grot_2_all_FA -l Red-Yellow</pre>
+<p><pre>fslmaths tbss_maxc_tstat1 -thr 0.95 grot
+tbss_deproject grot 1
+fslview all_FA grot_to_all_FA -l Red-Yellow</pre>
 
-<p>This lets you view the interesting skeleton-space voxels in the
-  space of each subject's standard space (nonlinearly registered) FA
-  image - as you move through the timepoints in FSLView you see each
-  subject in turn.
+<p>The <code>1</code> tells the script to just apply stage 1 of the
+  de-projections, i.e. from skeleton space to the all_FA space. This
+  lets you view the interesting skeleton-space voxels in the space of
+  each subject's standard space (nonlinearly registered) FA image - as
+  you move through the timepoints in FSLView you see each subject in
+  turn.
 
-<p>For an example of complete back-projection to native space, run the
-following, first making sure you run the command from within
-  the <code>stats</code> directory. The <code>-n</code> flag tells the
-  script to take the back-projection all the way back to native space:
+<p>For an example of complete back-projection to the space of the
+native data in FAi, run the following, first making sure you run the
+command from within the <code>stats</code> directory. The
+<code>2</code> flag tells the script to take the back-projection back
+to the native space:
 
-<p><pre>tbss_deproject grot -n</pre>
+<p><pre>tbss_deproject grot 2</pre>
 
-blah blah finish this once inv warping is fixed....
+<p>This results in a separate output for each subject in the
+<code>stats</code> directory. For example, if your first subject was
+called <code>subject_001</code>, you would view the results (if you
+are in the <code>stats</code> directory), with:
+
+<p><code>fslview ../FAi/subject_001_FAi subject_001_FAi_grot -l Red-Yellow</code>
+
+<p>If, instead, you want the final output in the original subject's
+native space (this is very similar to the native space in FAi, just
+with the end slices left in):
+
+<p><pre>tbss_deproject grot 3
+fslview ../orig/subject_001 subject_001_orig_grot -l Red-Yellow</pre>
+
+<p>This is probably the space you want to transform <code>grot</code>
+into if you are going to use the result to seed tractography analysis.
+
+<p>Finally, you can add the <code>-n</code> flag to the end of the
+<code>tbss_deproject</code> command to tell the transformations of
+your original skeleton voxels to use nearest-neighbour interpolation
+instead of trilinear. The advantage of trilinear is that you get a
+more continuous interpolation of the skeleton voxels into native
+space; the advantage of nearest-neighbour is that the exact
+skeleton-space values are maintained, which might be important, for
+example, if they are cluster index numbers.
+
+
 
 <!-- }}} -->
 <!-- {{{ what's new -->

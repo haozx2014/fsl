@@ -93,6 +93,9 @@ int shift2warp(const volume<float>& shiftmap,
 
 int convertwarp_rel2abs(volume4D<float>& warpvol);
 int convertwarp_abs2rel(volume4D<float>& warpvol);
+  // try to determine if the warp is stored in absolute (vs relative) convention
+bool is_abs_convention(volume4D<float>& warpvol);
+bool is_abs_convention(const volume4D<float>& warpvol);
 
 int concat_warps(const volume4D<float>& prewarp, 
                  const volume4D<float>& postwarp,
@@ -114,6 +117,25 @@ int raw_apply_warp(const volume<float>& invol, volume<float>& outvol,
 volume<float> calc_sigloss(volume4D<float>& lrgrad, float te, 
 			   float gammabar=0.5/M_PI);
 
+
+//////////////////////////////////////////////////////////////////////////
+
+void jacobian_check(volume4D<float>& jvol,
+		    ColumnVector& jacobian_stats, 
+		    const volume4D<float>& warp,
+		    float minJ, float maxJ, bool use_vol=true);
+
+volume4D<float> jacobian_check(ColumnVector& jacobian_stats, 
+			       const volume4D<float>& warp,
+			       float minJ, float maxJ);
+
+ColumnVector jacobian_quick_check(const volume4D<float>& warp,
+				  float minJ, float maxJ); 
+
+
+void constrain_topology(volume4D<float>& warp, float minJ, float maxJ);
+
+void constrain_topology(volume4D<float>& warp);
 
 //////////////////////////////////////////////////////////////////////////
 

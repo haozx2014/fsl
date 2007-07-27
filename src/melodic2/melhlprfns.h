@@ -130,7 +130,44 @@ namespace Melodic{
   ColumnVector gen_ar(const ColumnVector& in, int maxorder = 1);
   Matrix gen_ar(const Matrix& in, int maxorder);
   Matrix gen_arCorr(const Matrix& in, int maxorder);
+  
+	class basicGLM{
+		public:
+		
+			//constructor
+			basicGLM(){}
+		
+			//destructor
+			~basicGLM(){}
+		
+			void olsfit(const Matrix& data, const Matrix& design, 
+				const Matrix& contrasts, int DOFadjust = 0);
 
+			inline Matrix& get_t(){return t;}
+			inline Matrix& get_z(){return z;}
+			inline Matrix& get_p(){return p;}
+			inline Matrix& get_f_fmf(){return f_fmf;}
+			inline Matrix& get_pf_fmf(){return pf_fmf;}
+			inline Matrix& get_cbeta(){return cbeta;}
+			inline Matrix& get_beta(){return beta;}
+			inline Matrix& get_varcb(){return varcb;}
+			inline Matrix& get_sigsq(){return sigsq;}
+			inline Matrix& get_residu(){return residu;}
+			inline int get_dof(){return dof;}
+			
+		private:
+			Matrix beta;
+			Matrix residu;
+			Matrix sigsq;
+			Matrix varcb;
+			Matrix cbeta;
+			Matrix f_fmf, pf_fmf;
+			int dof;
+			Matrix t;
+			Matrix z;
+			Matrix p;
+  };
+//	Matrix glm_ols(const Matrix& dat, const Matrix& design);
 }
 
 #endif

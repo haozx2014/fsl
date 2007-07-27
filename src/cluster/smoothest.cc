@@ -377,10 +377,11 @@ int main(unsigned int argc, char **argv) {
 
   // Convert to sigma squared
   float sigmasq[3];
+
   sigmasq[X] = -1.0 / (4 * log(fabs(SSminus[X]/S2[X])));
   sigmasq[Y] = -1.0 / (4 * log(fabs(SSminus[Y]/S2[Y])));
   if (usez) { sigmasq[Z] = -1.0 / (4 * log(fabs(SSminus[Z]/S2[Z]))); }
-
+  else { sigmasq[Z]=0; }
   // the following is determininant of Lambda to the half 
   //   i.e. dLh = | Lambda |^(1/2)
   // Furthermore, W_i = 1/(2.lambda_i) = sigma_i^2 => 
@@ -400,6 +401,7 @@ int main(unsigned int argc, char **argv) {
   FWHM[X] = sqrt(8 * log(2) * sigmasq[X]);
   FWHM[Y] = sqrt(8 * log(2) * sigmasq[Y]);
   if (usez) { FWHM[Z] = sqrt(8 * log(2) * sigmasq[Z]); }
+  else { FWHM[Z]=0; }
   float resels = FWHM[X] * FWHM[Y];
   if (usez) resels *= FWHM[Z];
 
