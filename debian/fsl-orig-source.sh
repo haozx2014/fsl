@@ -30,7 +30,7 @@ while true ; do
 	case "$1" in
 		-p|--pkg-version) shift; PKG_VERSION=$1; shift;;
 		-o|--orig-version) shift; ORIG_VERSION=$1; shift;;
-		-t|--tarball-path) shift; TARBALL_PATH="$1/"; shift;;
+		-t|--tarball) shift; TARBALL="$1"; shift;;
 		-c|--check-only) CHECK_ONLY_FLAG=1; shift;;
 		-q|--quiet) QUIET_FLAG=1; shift;;
 		-u|--unpacked-path) shift; PKG_PATH="$1/"; shift;;
@@ -39,7 +39,7 @@ while true ; do
 		echo "-h, --help                 - Print this help"
 		echo "-o, --orig-version VERSION - Set the current upstream version. Autodetected otherwise."
 		echo "-p, --pkg-version VERSION  - Set the local package version. Autodetected otherwise."
-		echo "-t, --tarball-path PATH    - Path to the already downloaded tarballs (if any)."
+		echo "-t, --tarball PATH         - Path to the already downloaded tarballs or some specific tarball (if any)."
 		echo "-c, --check-only           - Just check for a newer upstream version. No source download."
 		echo "-q, --quiet                - Only minimal output."
 		echo "-u, --unpacked-path PATH   - Path of the unpackage package sources."
@@ -51,51 +51,57 @@ while true ; do
 done
 
 # get local package version (autodetect if necessary)
-if [ -z "$PKG_VERSION" ]; then
-	if [ ! -f ${PKG_PATH}debian/changelog ]; then
-		printf "Did not find debian/changelog. Please set the path to the unpacked\nsource package (-u) or give local package version number (-p).\n"
-		exit 1
+if [ -f "$TARBALL" -a -n "$ORIG_VERSION" ]; then
+	# we have a tarball to process and an upstream version
+	# --> forget about the rest
+	echo "Not attempting to detect current upstream and local version."
+else
+	if [ -z "$PKG_VERSION" ]; then
+		if [ ! -f ${PKG_PATH}debian/changelog ]; then
+			printf "Did not find debian/changelog. Please set the path to the unpacked\nsource package (-u) or give local package version number (-p).\n"
+			exit 1
+		fi
+
+		if [ "$(dpkg-parsechangelog | grep ^Source: | awk '{ print $2 }')" != "fsl" ]; then
+			printf "This is not the FSL source package.\n"
+			exit 1
+		fi
+
+		# extract current package version
+		PKG_VERSION=$(dpkg-parsechangelog | grep ^Version: | awk '{ print $2 }')
 	fi
 
-	if [ "$(dpkg-parsechangelog | grep ^Source: | awk '{ print $2 }')" != "fsl" ]; then
-		printf "This is not the FSL source package.\n"
-		exit 1
-	fi
+	# get upstream package version (autodetect if necessary)
+	if [ -z "$ORIG_VERSION" ]; then
+		# make temp file
+		TFILE=$(mktemp)
 
-	# extract current package version
-	PKG_VERSION=$(dpkg-parsechangelog | grep ^Version: | awk '{ print $2 }')
-fi
+		# download upstream HTML file with version number
+		wget -O $TFILE $UPSTREAMURL > /dev/null 2>&1
 
-# get upstream package version (autodetect if necessary)
-if [ -z "$ORIG_VERSION" ]; then
-	# make temp file
-	TFILE=$(mktemp)
+		if [ "$?" != "0" ]; then
+			echo "Could not download upstream version number."
+			# clean temp file
+			rm $TFILE
+			exit 1
+		fi
 
-	# download upstream HTML file with version number
-	wget -O $TFILE $UPSTREAMURL > /dev/null 2>&1
+		# get upstream version
+		ORIG_VERSION=`egrep "^<LI>[[:digit:]]\.[[:digit:]]\.[[:digit:]]" $TFILE | tail -n1 | cut -d ' ' -f 1,1 | cut -d '>' -f 2,2`
 
-	if [ "$?" != "0" ]; then
-		echo "Could not download upstream version number."
 		# clean temp file
 		rm $TFILE
-		exit 1
 	fi
 
-	# get upstream version
-	ORIG_VERSION=`egrep "^<LI>[[:digit:]]\.[[:digit:]]\.[[:digit:]]" $TFILE | tail -n1 | cut -d ' ' -f 1,1 | cut -d '>' -f 2,2`
-
-	# clean temp file
-	rm $TFILE
-fi
-
-# check if upstream version is greater than current package version
-if ( `dpkg --compare-versions "$ORIG_VERSION" gt "$PKG_VERSION"` ); then
-	echo "New upstream version $ORIG_VERSION available (local version is $PKG_VERSION)"
-else
-	if [ "$QUIET_FLAG" != "1" ]; then
-		echo "No new upstream version available."
+	# check if upstream version is greater than current package version
+	if ( `dpkg --compare-versions "$ORIG_VERSION" gt "$PKG_VERSION"` ); then
+		echo "New upstream version $ORIG_VERSION available (local version is $PKG_VERSION)"
+	else
+		if [ "$QUIET_FLAG" != "1" ]; then
+			echo "No new upstream version available."
+		fi
 	fi
-fi
+fi # end of version detection
 
 if [ $CHECK_ONLY_FLAG == 1 ]; then exit 0; fi
 
@@ -104,42 +110,45 @@ printf "\n\n"
 # make working directory
 CURDIR=$(pwd)
 WDIR=$(mktemp -d)
-ORIGSRC="fsl-$ORIG_VERSION-sources.tar"
+ORIGSRC="fsl-$ORIG_VERSION-sources.tar.gz"
 
-# download upstream source tarball if not present yet
-if [ ! -f ${TARBALL_PATH}${ORIGSRC} ]; then
-	printf "Downloading new upstream source tarball.\n"
-	wget http://www.fmrib.ox.ac.uk/fsldownloads/$ORIGSRC
-
-
-	if [ "$?" != "0" ]; then
-		echo "Could not download upstream sources."
-		rm -rf $WDIR
-		exit 1
-	fi
+# check if the tarball arg is a file
+if [ -f "$TARBALL" ]; then
+	echo "Processing supplied tarball: '$TARBALL'"
+	ORIGSRC=$TARBALL
 else
-	printf "Using existing upstream tarball.\n"
+	# download upstream source tarball if not present yet
+	# assume that TARBALL is a dirname
+	if [ ! -f ${ORIGSRC} ]; then
+		printf "Downloading new upstream source tarball.\n"
+		wget http://www.fmrib.ox.ac.uk/fsldownloads/$ORIGSRC
+	
+	
+		if [ "$?" != "0" ]; then
+			echo "Could not download upstream sources."
+			rm -rf $WDIR
+			exit 1
+		fi
+	else
+		printf "Using existing upstream tarball.\n"
+	fi
 fi
-
-# cp upstream source tarball to working dir
-cp ${ORIGSRC} $WDIR
-
-# enter working dir
+# put upstream source tarball into working dir
+ORIGSRC_PATH=$(readlink -f ${ORIGSRC})
 cd $WDIR
+ln -s $ORIGSRC_PATH
 
 # unpack the source tarball
 echo "Unpacking sources"
-tar xf $ORIGSRC
+if [ "${ORIGSRC##*.}" == "bz2" ]; then TARARG="j"
+elif [ "${ORIGSRC##*.}" == "gz" ]; then TARARG="z"
+elif [ "${ORIGSRC##*.}" == "tar" ]; then TARARG=""; fi
+tar xf${TARARG} $ORIGSRC
 
 ###############
 # repackaging #
 ###############
 echo "Repackaging"
-
-# disable depend.mk creation for clean runs
-#sed -e "s/^include depend.mk/#include depend.mk/" fsl/config/common/rules.mk > fsl/config/common/rules.mk.tmp
-#mv fsl/config/common/rules.mk.tmp fsl/config/common/rules.mk
-
 
 echo "Remove unnecessary 3rd-party binaries"
 rm -rf fsl/src/freeware/
@@ -166,7 +175,7 @@ ls fsl/lib
 rm -rf fsl/lib
 
 echo "Purge unnecessary source code of external software"
-parts="libiconv fftw* libgd libgdc libpng newmat newran zlib include"
+parts="libiconv fftw* libgd libgdc libpng newmat newran zlib include irtk tcl tk"
 for p in $parts; do 
 	rm -rf fsl/extras/src/$p
 done
@@ -222,7 +231,7 @@ rm -rf fsl/src/fslview
 echo -n "Determine FSLView version: "
 fslview_major=$(egrep "^const char \*Version.*\".*\"" fslview/src/fslview/version.cpp | awk -F '"' '{ print $2 }')
 fslview_minor=$(egrep "^const char \*Release.*\".*\"" fslview/src/fslview/version.cpp | awk -F '"' '{ print $2 }')
-fslview_version="${fslview_major}.${fslview_minor}"
+fslview_version="${ORIG_VERSION}+${fslview_major}.${fslview_minor}"
 echo ${fslview_version}
 
 
