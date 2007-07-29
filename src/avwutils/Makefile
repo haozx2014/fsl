@@ -33,7 +33,7 @@ FSCRIPTS = fmriborient avwswapdim++
 RUNAVWS = avw2ascii avwmaths avwcc avwroi avwfill avwinterleave
 
 all: ${XFILES}
-	@ for file in ${FSLFILES} ${AVSCRIPTS} ; do file2=$${file/++/} ; cp "$${file}" ${FSLDIR}/bin/fsl$${file2:3} ; done ; cp avwnvols++ ${FSLDIR}/bin/avwnvols
+	@ for file in ${FSLFILES} ${AVSCRIPTS} ; do file2=$${file/++/} ; cp "$${file}" ${DEB_DESTDIR}/bin/fsl$${file2:3} ; done ; cp avwnvols++ ${DEB_DESTDIR}/bin/avwnvols
 
 
 avwcheck: avwcheck.cc
