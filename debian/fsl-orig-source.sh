@@ -208,9 +208,23 @@ done
 
 
 echo "Split sources into multiple source trees"
-mkdir fsldata
+# split fslview
+mkdir fslview
+mv fsl/src/fslview/* fslview/
+rm -rf fsl/src/fslview
+cp fsl/LICENCE fslview/
+
+# put all GPL'ed data in the fsl-atlases package
+mkdir fslatlases
 # standard space templates
-mv fsl/etc/standard fsldata/
+mv fsl/etc/standard fslatlases/
+# atlases
+mv fsl/data/atlases fslatlases/
+# get a copy of the license
+cp fsl/LICENCE fslatlases/
+
+# the nonfree rest in fsldata
+mkdir fsldata
 # common data stuff
 mv fsl/data/* fsldata/
 # 'first' data files (the biggest blob)
@@ -221,11 +235,6 @@ mkdir -p fsldata/tbss
 mv fsl/src/tbss/{*.nii.gz,example_FA_target*} fsldata/tbss
 # finally copy the license
 cp fsl/LICENCE fsldata/
-
-mkdir fslview
-# split fslview
-mv fsl/src/fslview/* fslview/
-rm -rf fsl/src/fslview
 
 
 echo -n "Determine FSLView version: "
@@ -238,18 +247,21 @@ echo ${fslview_version}
 echo "Append version to source directory names"
 mv fsl fsl-$ORIG_VERSION.orig
 mv fsldata fsldata-${ORIG_VERSION}.orig
+mv fslatlases fslatlases-${ORIG_VERSION}.orig
 mv fslview fslview-${fslview_version}.orig
 
 
 echo "Compress repackaged tarballs"
 tar czf fsl_$ORIG_VERSION.orig.tar.gz fsl-$ORIG_VERSION.orig
 tar czf fslview_${fslview_version}.orig.tar.gz fslview-${fslview_version}.orig
+tar czf fslatlases_${ORIG_VERSION}.orig.tar.gz fslatlases-${ORIG_VERSION}.orig
 tar cf fsldata_$ORIG_VERSION.orig.tar fsldata-$ORIG_VERSION.orig
 
 
 echo "Copy tarballs to final destination"
 mv fsl_$ORIG_VERSION.orig.tar.gz $CURDIR
 mv fslview_${fslview_version}.orig.tar.gz $CURDIR
+mv fslatlases_${ORIG_VERSION}.orig.tar.gz $CURDIR
 mv fsldata_$ORIG_VERSION.orig.tar $CURDIR
 
 
