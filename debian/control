@@ -8,8 +8,8 @@ Standards-Version: 3.7.2
 Package: fsl
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, imagemagick (>= 6.0.6), gnuplot-x11 (>= 4.0.0), mozilla-firefox | www-browser, tcsh | c-shell, tix | tix8.1, tk8.4 (>=8.4.7), tcl8.4 (>=8.4.7), nifti-bin (>> 0.5-1), fslview
-Recommends: fsl-doc (= ${Source-Version}), fsldata-mni
-Suggests: fsl-feeds, ${octave:Depends}, dicomnifti, fsldata-tbss, fsldata-possum, fsldata-first
+Recommends: fsl-doc (= ${Source-Version}), fsl-atlases
+Suggests: fsl-feeds, ${octave:Depends}, dicomnifti, fsl-tbss-data, fsldata-possum-data, fsl-first-data
 Conflicts: fsl-fslview
 Description: analysis tools for FMRI, MRI and DTI brain imaging
  FSL is a comprehensive library of image analysis and statistical tools

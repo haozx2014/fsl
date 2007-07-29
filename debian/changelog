@@ -1,4 +1,4 @@
-fsl (3.99.pre3-1) unstable; urgency=low
+fsl (3.99.pre4-1) unstable; urgency=low
 
   * New upstream release.
   * Repackaged the FSL source tarball due to its size and the mixture of
@@ -8,8 +8,8 @@ fsl (3.99.pre3-1) unstable; urgency=low
     (>800MB).
   * Conflict with old fsl-fslview package and depend on the successor
     'fslview'.
-  * Debian diff is now handled with a nice GIT repository. Build-dependency
-    to dpatch is obsolete.
+  * Debian diff is now handled with a GIT repository. Build-dependency to
+    dpatch is obsolete.
   * All internal libraries are compiled as shared libraries with
     -W,l--no-undefined to be able to detect unresolved symbols that have been
     an issue in the past. This also reduces the size of the binary package

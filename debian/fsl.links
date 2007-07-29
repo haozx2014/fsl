@@ -1,3 +1,4 @@
+/usr/share/fsl/data/standard /usr/share/fsl/etc/standard
 /etc/fsl/fsl.sh /usr/share/fsl/etc/fslconf/fsl.sh
 /etc/fsl/feat.tcl /usr/share/fsl/etc/fslconf/feat.tcl
 /usr/share/fsl/etc/matlab /usr/share/octave/site/m/fsl

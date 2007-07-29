@@ -48,7 +48,8 @@ clean:
 	find $(CURDIR) -name '*.so' -exec rm {} \;
 	rm -f src/fdt/{xfibres,fdt_matrix_ops,indexer,replacevols,probtrackx,reord_OM,sausages}
 	rm -f src/ifit/mfilt
-
+	rm -f src/siena/doc/siena*
+	rm -f src/feat5/doc/feat.tcl
 
 	# clean the remaining temp dir
 	rm -rf include
