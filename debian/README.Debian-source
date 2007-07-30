@@ -1,0 +1,23 @@
+Debian source package of FSL
+----------------------------
+
+The FSL sources are a mixture of free and non-free source code as well as free
+and non-free datasets. Additionally it contains 3rd party software, as sources
+or in binary form. Most of this software is available as proper Debian
+packages.
+
+For these reasons and the huge size of the tarball (>1 GB) the original
+sources were split into four individual source package: two packages with
+source and two pure data packages -- one free and one non-free each.
+
+The data packages were separated as they contain datasets that are very
+unlikely to change between major releases or even less frequently.
+
+For the exact repackaging and split procedure, please look at the
+'repackage-fsl' script in the Debian packaging of the Debian 'fslview' source
+package.
+
+This source package provides the non-free (non-commercial) source code of the
+FSL suite.
+
+ -- Michael Hanke <michael.hanke@gmail.com>, Mon, 30 Jul 2007 17:43:23 +0200
