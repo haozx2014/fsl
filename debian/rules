@@ -114,7 +114,10 @@ binary-arch: install
 	dh_installdirs -a
 
 	# remove previous link to make repeated builds work
-	-rm debian/fsl/usr/share/fsl/etc/fslconf/feat.tcl
+	-rm debian/fsl/usr/share/fsl/etc/fslconf/{feat.tcl,fsl.sh}
+	# remove the empty standard space directory which is to be replaced by a
+	# softlink
+	-rm -r debian/tmp/etc/standard
 
 	# set execute permission for GUI application wrapper
 	chmod +x debian/fsl_gui_app_wrapper
