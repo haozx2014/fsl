@@ -30,6 +30,6 @@ GNU_ANSI_FLAGS = -Wall -ansi -pedantic
 SGI_ANSI_FLAGS = -ansi -fullwarn
 ANSI_FLAGS = ${GNU_ANSI_FLAGS} -I/usr/include/nifti -I/usr/include/newmat \
              -I${FSLDIR}/extras/include -I${FSLDIR}/include/libprob \
-             -DHAVE_LIBFREETYPE
+             -DHAVE_LIBFREETYPE -fPIC
 #ARCHLDFLAGS = -Wl,--no-undefined -Wl,--as-needed -Wl,--rpath ${FSLDIR}/lib -Wl,--rpath /usr/lib/fsl
 ARCHLDFLAGS = -Wl,--no-undefined -Wl,--as-needed
