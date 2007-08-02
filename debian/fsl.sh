@@ -11,6 +11,10 @@
 FSLDIR=/usr/share/fsl
 export FSLDIR
 
+# add the fsl binary path to the search path
+PATH=$PATH:/usr/lib/fsl
+export PATH
+
 # The following variable selects the default output image type
 # Legal values are:
 # ANALYZE, NIFTI, NIFTI_PAIR, ANALYZE_GZ, NIFTI_GZ, NIFTI_PAIR_GZ
