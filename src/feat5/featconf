@@ -222,7 +222,7 @@ set fmri(reghighres_search) 90
 set fmri(reghighres_dof) 12
 
 # Standard image
-set fmri(regstandard) "${FSLDIR}/etc/standard/avg152T1_brain.hdr"
+set fmri(regstandard) "${FSLDIR}/data/standard/avg152T1_brain.hdr"
 
 # Search space for registration to standard space
 set fmri(regstandard_search) 90
@@ -236,6 +236,9 @@ set fmri(regstandard_dof) 12
 
 # Alternative example_func image (not derived from input 4D dataset)
 set fmri(alternative_example_func) ""
+
+# Alternative (to BETting) mask image
+set fmri(alternative_mask) ""
 
 # Initial structural space registration initialisation transform
 set fmri(init_initial_highres) ""

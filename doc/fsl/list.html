@@ -17,17 +17,23 @@ target="_top">MCFLIRT</a> motion correction); first-level FILM GLM
 timeseries analysis; higher-level FLAME Bayesian mixed effects
 analysis.</TR>
 
-<TR VALIGN=TOP><TD><a href="../melodic2/index.html"
+<TR VALIGN=TOP><TD><a href="../melodic/index.html"
 target="_top">MELODIC</a><TD>Model-free FMRI analysis using
 Probabilistic Independent Component Analysis (PICA). MELODIC
 automatically estimates the number of interesting noise and signal
 sources in the data and because of the associated "noise model", is
-able to assign significances ("p-values") to the output spatial
-maps.</TR>
+able to assign significance ("p-values") to the output spatial
+maps. MELODIC can also analyse multiple subjects or sessions
+simultaneously using Tensor-ICA.</TR>
 
 <TR VALIGN=TOP><TD><a href="../filmbabe/index.html"
 target="_top">FLOBS</a><TD>Generation of optimal HRF basis functions
 and Bayesian activation estimation.</TR>
+
+<TR VALIGN=TOP><TD><a href="../fabber/index.html"
+target="_top">FABBER</a><TD>Fast ASL & BOLD Bayesian Estimation
+Routine.  Efficient nonlinear modelling and estimation of BOLD and CBF
+from dual-echo ASL data, using Variational Bayes.</TR>
 
 <TR VALIGN=TOP><TD><a href="../mm/index.html"
 target="_top">SMM</a><TD>Spatial mixture modelling - alternative
@@ -41,9 +47,6 @@ non-activation.</TR>
 Extraction Tool - segments brain from non-brain in
 structural and functional data, and models skull and scalp surfaces.</TR>
 
-<TR VALIGN=TOP><TD><A HREF="../susan/index.html" target="_top">SUSAN</A><TD>Nonlinear
-noise reduction. </TR>
-
 <TR VALIGN=TOP><TD><a href="../fast/index.html" target="_top">FAST</a><TD>FMRIB's
 Automated Segmentation Tool - brain segmentation (into different
 tissue types) and bias field correction.</TR>
@@ -52,17 +55,31 @@ tissue types) and bias field correction.</TR>
 Linear Image Registration Tool - linear inter- and intra-modal
 registration.</TR>
 
+<TR VALIGN=TOP><TD><A HREF="../first/index.html"
+target="_top">FIRST</A><TD>FMRIB's Integrated Registration and
+Segmentation Tool. FIRST uses mesh models trained with a large amount
+of rich hand-segmented training data to segment subcortical brain
+structures.</TR>
+
 <TR VALIGN=TOP><TD><a href="../fugue/index.html" target="_top">FUGUE</a><TD>Unwarps
 geometric distortion in EPI images using B<sub>0</sub> field maps.</TR>
 
 <TR VALIGN=TOP><TD><a href="../siena/index.html" target="_top">SIENA</a><TD>Structural
 brain change analysis, for estimating brain atrophy.</TR>
 
+<TR VALIGN=TOP><TD><a href="../fslvbm/index.html"
+target="_top">FSLVBM</a><TD>VBM-style analysis using FSL tools, for
+voxelwise analysis of grey-matter density.</TR>
+
+<TR VALIGN=TOP><TD><A HREF="../susan/index.html" target="_top">SUSAN</A><TD>Nonlinear
+noise reduction. </TR>
+
 <TR><TH colspan=2 align=left> &nbsp; &nbsp; &nbsp; &nbsp; Diffusion</TR>
 
 <TR VALIGN=TOP><TD><A HREF="../fdt/index.html"
 target="_top">FDT</A><TD>FMRIB's Diffusion Toolbox - tools for
-low-level diffusion parameter reconstruction and probabilistic tractography.</TR>
+low-level diffusion parameter reconstruction and probabilistic
+tractography, including cross-fibre modelling.</TR>
 
 <TR VALIGN=TOP><TD><A HREF="../tbss/index.html"
 target="_top">TBSS</A><TD>Tract-Based Spatial Statistics (part of
@@ -70,6 +87,13 @@ FMRIB's Diffusion Toolbox) - voxelwise analysis of multi-subject
 diffusion data.</TR>
 
 <TR><TH colspan=2 align=left> &nbsp; &nbsp; &nbsp; &nbsp; Other tools</TR>
+
+<TR VALIGN=TOP><TD><a href="../possum/index.html"
+target="_top">POSSUM</a><TD>Physics-Oriented Simulated Scanner for
+Understanding MRI. An FMRI data simulator that produces realistic
+simulated images and FMRI time series given a gradient echo pulse
+sequence, a segmented object with known tissue parameters, and a
+motion sequence..</TR>
 
 <TR VALIGN=TOP><TD>Inference<TD>Various inference/thresholding tools,
 including: <a href="../randomise/index.html"
@@ -80,10 +104,17 @@ href="../randomise/fdr.html" target="_top">FDR</a> (false discovery
 rate inference) and <b>Glm</b> (a GUI for creating model design
 matrices).</TR>
 
-<TR VALIGN=TOP><TD><a href="../fslview/index.html" target="_top">FSLView</a><TD>Interactive display tool for 3D and
-4D data.</TR>
+<TR VALIGN=TOP><TD><a href="../fslview/index.html"
+target="_top">FSLView</a><TD>Interactive display tool for 3D and 4D
+data.</TR>
 
-<TR VALIGN=TOP><TD><a href="../avwutils/index.html" target="_top">AVWUTILS</a><TD>Misc
+<TR VALIGN=TOP><TD><a href="../atlases/index.html"
+target="_top">Atlases</a><TD>Several complementary brain atlases,
+integrated into FSLView, allowing viewing of structural and
+cytoarchitectonic standard space labels and probability maps for
+cortical and subcortical structures and white matter tracts.</TR>
+
+<TR VALIGN=TOP><TD><a href="../avwutils/index.html" target="_top">FSLUTILS</a><TD>Misc
 utils for converting and processing images.</TR>
 
 <TR VALIGN=TOP><TD><a href="../miscvis/index.html" target="_top">MISCVIS</a><TD>Simple

@@ -372,6 +372,9 @@ vector<float> MShape::getTstatY(){
 vector<float> MShape::getTstatZ(){
 	return tstatz;
 }
+vector<float> MShape::getScalars(){
+	return scalars;
+}
 void MShape::setTstatX(vector<float> v){
 	tstatx=v;
 }
@@ -380,6 +383,9 @@ void MShape::setTstatY(vector<float> v){
 }
 void MShape::setTstatZ(vector<float> v){
 	tstatz=v;
+}
+void MShape::setScalars(vector<float> v){
+	scalars=v;
 }
 
 }

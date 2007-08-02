@@ -18,7 +18,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 3.3 (c) 2006, The University of
+#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -84,7 +84,7 @@ Main bet2 options:
   -f <f>      fractional intensity threshold (0->1); default=0.5; smaller values give larger brain outline estimates
   -g <g>      vertical gradient in fractional intensity threshold (-1->1); default=0; positive values give larger brain outline at bottom, smaller at top
   -r <r>      head radius (mm not voxels); initial surface sphere is set to half of this
-  -c <x y z>  centre-of-gravity (mm not voxels) of initial mesh surface.
+  -c <x y z>  centre-of-gravity (voxels not mm) of initial mesh surface.
   -t          apply thresholding to segmented brain image and mask
   -e          generates brain surface as mesh in .off format
 
@@ -266,7 +266,7 @@ ${FSLDIR}/bin/standard_space_roi $IN ${OUT}_tmp_premask -b -d
 ${FSLDIR}/bin/bet2 ${OUT}_tmp_premask ${OUT}_tmp_premask_bet -n -m -f 0.4 $bet2opts
 
 #### bring eye mask from standard space into native and dilate, mostly in 2D and then invert
-${FSLDIR}/bin/flirt -ref $IN -in ${FSLDIR}/etc/standard/avg152T1_eye_mask -applyxfm -init ${OUT}_tmp_premask_tmp_to_std_inv.mat -datatype float -out ${OUT}_tmp_eye_mask
+${FSLDIR}/bin/flirt -ref $IN -in ${FSLDIR}/data/standard/avg152T1_eye_mask -applyxfm -init ${OUT}_tmp_premask_tmp_to_std_inv.mat -datatype float -out ${OUT}_tmp_eye_mask
 ${FSLDIR}/bin/fslmaths ${OUT}_tmp_eye_mask -thr 0.5 -bin -dilF -kernel 2D -dilF -dilF -dilF -dilF -dilF -dilF -dilF ${OUT}_tmp_eyes7dil -odt short
 ${FSLDIR}/bin/fslmaths ${OUT}_tmp_eyes7dil -mul -1 -add 1 ${OUT}_tmp_eyes7dil_inv
 
@@ -333,7 +333,7 @@ elif [ $variation = 5 ] ; then
     # {{{ bet2 + betsurf (T1 only)
 
 # register T1 to standard space
-${FSLDIR}/bin/flirt -ref ${FSLDIR}/etc/standard/avg152T1 -in $IN -omat ${OUT}_tmp_T1_to_std.mat
+${FSLDIR}/bin/flirt -ref ${FSLDIR}/data/standard/avg152T1 -in $IN -omat ${OUT}_tmp_T1_to_std.mat
 
 # run brain extraction and save brain mesh
 ${FSLDIR}/bin/bet2 $IN $OUT -e $bet2opts
@@ -349,7 +349,7 @@ elif [ $variation = 6 ] ; then
 ${FSLDIR}/bin/flirt -in $IN2 -ref $IN -out ${OUT}_tmp_T2_to_T1 -omat ${OUT}_tmp_T2_to_T1.mat -interp sinc
 
 # register T1 to standard space
-${FSLDIR}/bin/flirt -ref ${FSLDIR}/etc/standard/avg152T1 -in $IN -omat ${OUT}_tmp_T1_to_std.mat
+${FSLDIR}/bin/flirt -ref ${FSLDIR}/data/standard/avg152T1 -in $IN -omat ${OUT}_tmp_T1_to_std.mat
 
 # run brain extraction and save brain mesh
 ${FSLDIR}/bin/bet2 $IN $OUT -e $bet2opts

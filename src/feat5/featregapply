@@ -19,7 +19,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 3.3 (c) 2006, The University of
+#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -113,16 +113,16 @@ if { [ file exists design.lev ] } {
     exit 0
 }
 
+feat5:setupdefaults
+feat5:load -1 1 design.fsf
+
 # for older first-level FEAT dirs: create mean_func if it's not already there
 if { [ imtest filtered_func_data ] && ! [ imtest mean_func ] } {
     fsl:exec "${FSLDIR}/bin/fslmaths filtered_func_data -Tmean mean_func"
 }
 
-set FD [ pwd ]
-
 set force 0
 set cleanup 0
-
 for { set i 1 } { $i < [ llength $argv ] } { incr i 1 } {
     if { ! [ string compare [ lindex $argv $i ] "-f" ] } {
 	set force 1
@@ -131,67 +131,80 @@ for { set i 1 } { $i < [ llength $argv ] } { incr i 1 } {
     }
 }
 
-#}}}
-
 if { $cleanup || $force } {
-    fsl:exec "rm -rf reg_standard"
+    fsl:exec "/bin/rm -rf reg_standard"
+    if { $cleanup } { exit 0 }
 }
 
-if { ! $cleanup } {
-    #{{{ apply the registration
-
 if { ! [ file exists reg/example_func2standard.mat ] } {
-    puts "Error - registration has not been run for $FD"
+    puts "Error - registration has not been run for [ pwd ]"
     exit 1
 }
 
 catch { exec sh -c "mkdir -p reg_standard/reg reg_standard/stats" } errmsg
 
-#if { [ file exists reg_standard/featregapplyrunning ] } {
-#    puts "featregapply already running in $FD"
-#    exit 0
-#}
-#fsl:echo reg_standard/featregapplyrunning "havergalbrian"
+#}}}
 
-set APPLYXFM "-applyxfm"
-if { [ info exists fmri(regstandard_res) ] && $fmri(regstandard_res)>0.0001 } {
-    set APPLYXFM "-applyisoxfm $fmri(regstandard_res)"
+
+#{{{ setup background image
+
+set BGIMAGE ""
+set BGMAT ""
+switch $fmri(bgimage) {
+    1 -
+    2 { set BGIMAGE highres ; set BGMAT "-init reg/highres2standard.mat" }
+    3 -
+    4 { set BGIMAGE example_func ; set BGMAT "-init reg/example_func2standard.mat" }
 }
 
-# sinc interpolated lowres images
-foreach inputs [ imglob -oneperimage example_func.* ] {
-    if { [ runregfiles $inputs ] } {
-	fsl:exec "${FSLDIR}/bin/flirt -ref reg/standard -in $inputs -out reg_standard/$inputs -applyxfm -init reg/example_func2standard.mat -interp sinc -datatype float"
+if { ! [ imtest reg/$BGIMAGE ] } {
+    set BGIMAGE standard
+}
+
+#}}}
+#{{{ apply the registration
+
+set FL "${FSLDIR}/bin/flirt -ref reg/standard -applyxfm"
+
+# MELODIC upsampling
+if { [ info exists fmri(inmelodic) ] && $fmri(inmelodic) } {
+    if { $fmri(regstandard_res)>0.0001 } {
+	set FL "${FSLDIR}/bin/flirt -ref reg/standard -applyisoxfm $fmri(regstandard_res)"
     }
-}
-
-# nearestneighbour interpolated lowres images
-foreach inputs [ imglob -oneperimage mask.* ] {
-    if { [ runregfiles $inputs ] } {
-	fsl:exec "${FSLDIR}/bin/flirt -ref reg/standard -in $inputs -out reg_standard/$inputs -applyxfm -init reg/example_func2standard.mat -interp nearestneighbour"
+    fsl:exec "$FL -in reg/$BGIMAGE -out reg_standard/bg_image $BGMAT -interp sinc -datatype float"
+    fsl:exec "$FL -in filtered_func_data -out reg_standard/filtered_func_data -init reg/example_func2standard.mat -datatype float"
+    fsl:exec "${FSLDIR}/bin/fslmaths reg_standard/filtered_func_data -Tstd -bin reg_standard/mask -odt char"
+} else {
+    # sinc interpolated lowres images
+    foreach input [ imglob -oneperimage example_func.* ] {
+	if { [ runregfiles $input ] } {
+	    fsl:exec "$FL -in $input -out reg_standard/$input -init reg/example_func2standard.mat -interp sinc -datatype float"
+	}
     }
-}
 
-# trilinear interpolated lowres images
-foreach inputs [ imglob -oneperimage mean_func.* stats/cope* stats/varcope* stats/tdof_t* ] {
-    if { [ runregfiles $inputs ] } {
-	fsl:exec "${FSLDIR}/bin/flirt -ref reg/standard -in $inputs -out reg_standard/$inputs -applyxfm -init reg/example_func2standard.mat"
+    # nearestneighbour interpolated lowres images
+    foreach input [ imglob -oneperimage mask.* ] {
+	if { [ runregfiles $input ] } {
+	    fsl:exec "$FL -in $input -out reg_standard/$input -init reg/example_func2standard.mat -interp nearestneighbour"
+	}
     }
-}
 
-# highres images
-if { [ file exists reg/highres2standard.mat ] } {
-    foreach inputs [ imglob -oneperimage reg/highres.* ] {
-	if { [ runregfiles $inputs ] } {
-	    fsl:exec "${FSLDIR}/bin/flirt -ref reg/standard -in $inputs -out reg_standard/$inputs -applyxfm -init reg/highres2standard.mat -interp sinc -datatype float"
+    # trilinear interpolated lowres images
+    foreach input [ imglob -oneperimage mean_func* stats/cope* stats/varcope* stats/tdof_t* ] {
+	if { [ runregfiles $input ] } {
+	    fsl:exec "$FL -in $input -out reg_standard/$input -init reg/example_func2standard.mat"
+	}
+    }
+
+    # highres images
+    if { [ file exists reg/highres2standard.mat ] } {
+	foreach input [ imglob -oneperimage reg/highres.* ] {
+	    if { [ runregfiles $input ] } {
+		fsl:exec "$FL -in $input -out reg_standard/$input -init reg/highres2standard.mat -interp sinc -datatype float"
+	    }
 	}
     }
 }
 
-fsl:exec "/bin/rm reg_standard/featregapplyrunning" -n
-
 #}}}
-}
-
-exit 0
 

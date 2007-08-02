@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 3.3 (c) 2006, The University of
+    FMRIB Software Library, Release 4.0 (c) 2007, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -85,22 +85,40 @@ namespace MISCMATHS {
   class Histogram
     {
     public:
+      Histogram(){};
+      const Histogram& operator=(const Histogram& in){
+	sourceData=in.sourceData; calcRange=in.calcRange; histMin=in.histMin; histMax=in.histMax; bins=in.bins;
+	return *this;
+      }
+
+      Histogram(const Histogram& in){*this=in;}
+
       Histogram(const ColumnVector& psourceData, int numBins)
 	: sourceData(psourceData), calcRange(true), bins(numBins){}
 
       Histogram(const ColumnVector& psourceData, float phistMin, float phistMax, int numBins) 
 	: sourceData(psourceData), calcRange(false), histMin(phistMin), histMax(phistMax), bins(numBins){}
       
+      void set(const ColumnVector& psourceData, int numBins) {	
+	sourceData=psourceData; calcRange=true; bins=numBins;
+      }
+
+      void set(const ColumnVector& psourceData, float phistMin, float phistMax, int numBins) {	
+	sourceData=psourceData; calcRange=false; histMin=phistMin; histMax=phistMax; bins=numBins;
+      }
+
       void generate();
       
       float getHistMin() const {return histMin;}
       float getHistMax() const {return histMax;}
       void setHistMax(float phistMax) {histMax = phistMax;}
       void setHistMin(float phistMin) {histMin = phistMin;}
+      void smooth();
 
       int integrateAll() {return sourceData.Nrows();}
 
       const ColumnVector& getData() {return histogram;}
+      void setData(const ColumnVector& phist) { histogram=phist;}
 
       int integrateToInf(float value) const { return integrate(value, histMax); }
       int integrateFromInf(float value) const { return integrate(histMin, value); }
@@ -114,11 +132,8 @@ namespace MISCMATHS {
     protected:
 
     private:
-      Histogram();
-      const Histogram& operator=(Histogram&);
-      Histogram(Histogram&);
 
-      const ColumnVector& sourceData;
+      ColumnVector sourceData;
       ColumnVector histogram;
 
       bool calcRange;
@@ -131,7 +146,8 @@ namespace MISCMATHS {
 
   inline int Histogram::getBin(float value) const
     {
-      return Max(1, Min((int)((((float)bins)*((float)(value-histMin)))/((float)(histMax-histMin))),bins));
+      float binwidth=(histMax-histMin)/bins;
+      return Max(1, Min((int)((((float)bins)*((float)(value-(histMin-binwidth))))/((float)(histMax-histMin))),bins));
     }
   
   inline float Histogram::getValue(int bin) const

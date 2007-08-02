@@ -18,12 +18,13 @@
 #include "newimage/newimageall.h"
 #include "meshclass/meshclass.h"
 #include "shapeModel/shapeModel.h"
+#include "miscmaths/miscmaths.h"
 using namespace std;
 using namespace NEWIMAGE;
 using namespace Utilities;
 using namespace mesh;
 using namespace shapemodel;
-
+using namespace MISCMATHS;
 
 string title="firt_utils (Version 1.0) University of Oxford (Brian Patenaude)";
 string examples="first_utils [options] -i segImage -l goldStandard -k output.txt ";
@@ -41,9 +42,7 @@ Option<bool> inputprob(string("--inputprob"), false,
 Option<bool> overlap(string("--overlap"), false,
 					 string("calculates overlap"),
 					 false, no_argument);
-Option<bool>  useDeMeanDesign(string("--useDeMeanDesign"), false,
-					   string("use de-meaned design matrix "),
-					   false, no_argument);	
+
 Option<bool> useScale(string("--useScale"), false,
 					   string("do stats"),
 					   false, no_argument);
@@ -54,15 +53,15 @@ Option<bool> singleBoundaryCorr(string("--singleBoundaryCorr"), false,
 					   string("correct boundary voxels of a single structue"),
 					   false, no_argument);
 Option<bool> bcd(string("--bcd"), false,
-				 string("use boundary corrected Dice"),
+			 string("use boundary corrected Dice"),
 				 false, no_argument);
 Option<bool> usePCAfilter(string("--usePCAfilter"), false,
 						   string("pca filter set number of modes to retain"),
 						   false, no_argument);
-Option<bool> imfrombvars(string("--imfrombvars"), false,
+Option<bool> usebvars(string("--usebvars"), false,
 						 string("make image from bavrs"),
 						 false, no_argument);
-Option<bool> tstatMesh(string("--tstatMesh"), false,
+Option<bool> useWilks(string("--useWilks"), false,
 					   string("generate mesh with vertex wise t-stat vectors"),
 					   false, no_argument);
 
@@ -111,6 +110,9 @@ Option<string> modelname(string("-m,--in"), string(""),
 Option<string> normname(string("-g,--in"), string(""),
 						string("filename of gold standard image"),
 						false, requires_argument);
+Option<string> designname(string("-d,--in"), string(""),
+						string("filename of fsl design matrix"),
+						false, requires_argument);
 
 Option<string> refname(string("-r,--in"), string(""),
 						string("filename of reference image "),
@@ -126,7 +128,7 @@ Option<float> thresh(string("-p,--thrsh"), 4,
 Option<int> numModes(string("-n,--numModes"), 0,
 					 string("number of modes to retaon per structure."),
 					 false, requires_argument);
-Option<string> outname(string("-k,--out"), string(""),
+Option<string> outname(string("-o,--out"), string(""),
 					   string("filename of output mesh"),
 					   true, requires_argument);
 
@@ -229,7 +231,7 @@ volume<short> draw_mesh(const volume<short>& image, const Mesh &m, int label)
 		
       for (double j=0; j<=d ;  j+=mininc)
 	{
-	  Pt p = (*i)->get_vertice(1)->get_coord()  + (double)j*.5 * n;
+	  Pt p = (*i)->get_vertice(1)->get_coord()  + (double)j* n;
 	  draw_segment(res, p, (*i)->get_vertice(2)->get_coord(),label);
 	} 
     }
@@ -308,53 +310,6 @@ for (int i=bounds[0];i<bounds[1];i++){
     }
 }
 return otl;
-}
-
-
-//%%%%%%%%%%%endmeshfill
-string read_bvars_designPath(string fname,Matrix* bvars, Matrix* design,vector<string>* vnames, vector<int>* vnvars,string impath){
-	string stemp;
-	string modelNames;
-	int N;//number of subjects
-		ifstream fin;
-		fin.open(fname.c_str());
-		//throw away first three lines 
-		getline(fin,stemp);//this is bvars file
-			getline(fin,modelNames);//modelnames;
-				fin>>stemp>>N;
-				for (int i=0; i<N;i++){
-					fin>>stemp;//read in subject id
-					vnames->push_back(impath+stemp);
-					int nvars;//how many vars written for the subject
-						fin>>nvars;
-						if (i==0){
-							bvars->ReSize(nvars,N);
-						}
-						vnvars->push_back(nvars);
-						for (int j=0;j<nvars;j++){
-							if (j<nvars){
-								float ftemp;
-								fin>>ftemp;
-								bvars->element(j,i)=ftemp;
-							}else{
-								bvars->element(j,i)=0;
-							}
-						}
-				}
-				//read design line
-				int Nx;	
-				fin>>stemp>>Nx;
-				getline(fin,stemp);
-				design->ReSize(N,Nx);
-				for (int i=0; i<N;i++){
-					for (int j=0;j<Nx;j++){
-						float ftemp;
-						fin>>ftemp;			
-						design->element(i,j)=ftemp;
-					}
-				}
-				
-				return modelNames;
 }
 
 //*************These are the overlap measures function**************************
@@ -522,7 +477,9 @@ Matrix overlaps(const volume<short> segIm, const volume<short> gold){
 
 
 //****************************BVARS I/O**************************************
-string read_bvars(string fname,Matrix* bvars,int M,vector<string>* vnames, vector<int>* vnvars){
+
+
+string read_bvars(string fname,Matrix* bvars, vector<string>* vnames, vector<int>* vnvars,string impath){
 	string stemp;
 	string modelNames;
 	int N;//number of subjects
@@ -530,21 +487,18 @@ string read_bvars(string fname,Matrix* bvars,int M,vector<string>* vnames, vecto
 		fin.open(fname.c_str());
 		//throw away first three lines 
 		getline(fin,stemp);//this is bvars file
-			getline(fin,modelNames);//modelnames
+			getline(fin,modelNames);//modelnames;
 				fin>>stemp>>N;
-				bvars->ReSize(M,N);
-				vnames->clear();
-				vnvars->clear();
-				
-				//transform all the bvars
 				for (int i=0; i<N;i++){
 					fin>>stemp;//read in subject id
-					vnames->push_back(stemp);
-					
+					vnames->push_back(impath+stemp);
 					int nvars;//how many vars written for the subject
 						fin>>nvars;
+						if (i==0){
+							bvars->ReSize(nvars,N);
+						}
 						vnvars->push_back(nvars);
-						for (int j=0;j<M;j++){
+						for (int j=0;j<nvars;j++){
 							if (j<nvars){
 								float ftemp;
 								fin>>ftemp;
@@ -554,8 +508,10 @@ string read_bvars(string fname,Matrix* bvars,int M,vector<string>* vnames, vecto
 							}
 						}
 				}
+							
 				return modelNames;
 }
+
 void write_bvars(string fname,string modelname,Matrix bvars, int numModes,vector<string> vnames){
 	ofstream fout;
 	
@@ -593,72 +549,6 @@ string read_bvars_ModelName(string fname){
 		getline(fin,modelNames);//modelnames
 			
 			return modelNames;
-}
-string read_bvars_design(string fname,Matrix* bvars, Matrix* design,vector<string>* vnames, vector<int>* vnvars){
-	string stemp;
-	string modelNames;
-	int N;//number of subjects
-		ifstream fin;
-		fin.open(fname.c_str());
-		//throw away first three lines 
-		getline(fin,stemp);//this is bvars file
-			getline(fin,modelNames);//modelnames;
-				fin>>stemp>>N;
-				for (int i=0; i<N;i++){
-					fin>>stemp;//read in subject id
-					vnames->push_back(stemp);
-					int nvars;//how many vars written for the subject
-						fin>>nvars;
-						if (i==0){
-							bvars->ReSize(nvars,N);
-						}
-						vnvars->push_back(nvars);
-						for (int j=0;j<nvars;j++){
-							if (j<nvars){
-								float ftemp;
-								fin>>ftemp;
-								bvars->element(j,i)=ftemp;
-							}else{
-								bvars->element(j,i)=0;
-							}
-						}
-				}
-				//read design line
-				int Nx;	
-				fin>>stemp>>Nx;
-				getline(fin,stemp);
-				design->ReSize(N,Nx);
-				for (int i=0; i<N;i++){
-					for (int j=0;j<Nx;j++){
-						float ftemp;
-						fin>>ftemp;			
-						design->element(i,j)=ftemp;
-					}
-				}
-				
-				return modelNames;
-}
-Matrix read_design(string fname){
-	string stemp;
-	string modelNames;
-	Matrix Design;
-	ifstream fin;
-	fin.open(fname.c_str());
-	//read design line subjects then EVs
-				int Nx;	
-				int Ns;
-				fin>>stemp>>Ns>>Nx;
-				getline(fin,stemp);
-				Design.ReSize(Ns,Nx);
-				for (int i=0; i<Ns;i++){
-					for (int j=0;j<Nx;j++){
-						float ftemp;
-						fin>>ftemp;			
-						Design.element(i,j)=ftemp;
-					}
-				}
-				
-				return Design;
 }
 
 //****************************END OF BVARS I/O**************************************
@@ -782,7 +672,7 @@ float boundaryCorr(volume<short>* mask, volume<float>* ref, int label, float zth
 	float dist=10000;
 	
 	for (int i=bounds[0];i<bounds[1];i++){
-			cout<<"i "<<i<<endl;
+		
 		for (int j=bounds[2];j<bounds[3];j++){
 			for (int k=bounds[4];k<bounds[5];k++){		
 				
@@ -941,39 +831,35 @@ float MVGLM_fit(Matrix G, Matrix D, Matrix contrast){
 	H=H.t()*H-E;
 	
 	//calculate Wilks Lambda
-	float wilk=(E.Determinant()/(H+E).Determinant());
-//	float pillai=(H*(H+E).i()).Trace();
-//	float HotL=(H*(E.i())).Trace();
-
-	//convert wilk's to F
-	int k=2; //number of treatments
-	int t=G.Ncols(); //number of independent variables
-	int n=G.Nrows();
-	
-	float m=(2*k*n-t-k-2)/2.0;
-	float s=sqrt((t*t*(k-1)*(k-1)-4)/(t*t+(k-1)*(k-1)-5));
-	float v=(t*(k-1)-2)/2;
-	
-	//F aprox to wilks
-	float F=( (1-powf(wilk,1/s)) / powf(wilk,1/s)  )*((m*s-v)/(t*(k-1))); 
-	float df1=(m*s-v);
-	float df2=(t*(k-1));
-	cout<<"Wilk's "<<F<<" "<<df1<<" "<<df2<<endl;
-	//Calculate Pillai trace
-	//F aprox to pillai
-	//p= rank of H+E
-		/*
-	float p=3;
-	float q=G.Ncols();
-	if (p<q) {v=p;}
-	else {v=q;}
-	m=(abs(p-q)-1)/2;
-	n=(v-p-1)/2;
-	float Fp=((2*n+s+1)/(2*m+s+1))*(pillai/(s-pillai));
-	float df1p=s*(2*m*+s+1);
-	float df2p=s*(2*n+s+1);
-	*/
-
+	int g=D.Ncols();
+	float F=0, df2=0,df1=0;
+	int p=G.Ncols();//number of dependant
+		int N=D.Nrows();//total sampel size
+			if (useWilks.value()){
+				float wilk=(E.Determinant()/(H+E).Determinant());
+				float a=N-g-((p-g+2)/2.0);
+				float b=sqrt((p*p*(g-1)*(g-1)-4)/(p*p+(g-1)*(g-1)-5));
+				float c=(p*(g-1)-2)/2;
+				//F aprox to wilks
+				F=( (1-powf(wilk,1/b)) / powf(wilk,1/b)  )*((a*b-c)/(p*(g-1)));
+				df2=(a*b-c);//denominator
+					df1=(p*(g-1));//numeraotr
+						cout<<"Wilk's "<<wilk<<" "<<F<<" "<<df1<<" "<<df2<<endl;
+			}else{
+				
+				float pillai=(H*(H+E).i()).Trace();
+				
+				int s=1;
+				if (p<(g-1)) {s=p;}
+				else {s=g-1;}
+				float t=(abs(p-g-1)-1)/2.0;
+				float u=(N-g-p-1)/2.0;				
+				F=((2*u+s+1)/(2*t+s+1))*(pillai/(s-pillai));
+				df1=s*(2*t+s+1);
+				df2=s*(2*u+s+1);
+				cout<<"Pillai F "<<pillai<<" "<<F<<" "<<df1<<" "<<df2<<endl;
+			}
+				
 	return F;
 }
 //******************************EXECUTION FUNCTIONS******************************
@@ -998,7 +884,7 @@ void do_work_SingleClean(){
 	volume<float> vz1;
 
 	boundaryCorr(&segim, &t1im,label, thresh.value(), bounds);
-		save_volume(segim,inname.value()+"FIRSTbcorr");
+		save_volume(segim,outname.value());
 	
 }
 
@@ -1026,7 +912,7 @@ Matrix rigid_linear_xfm(Matrix Data,ColumnVector meanm, Mesh mesh, bool writeToF
 	vector<float> vMx,vMy,vMz;
 	for (int i=0;i<Nsub;i++){
 		float sx=0,sy=0,sz=0;
-		cout<<" i "<<i<<endl;
+		//cout<<" i "<<i<<endl;
 		for (int j=0;j<Data.Nrows();j=j+3){
 			sx+=Data.element(j,i);
 			sy+=Data.element(j+1,i);
@@ -1062,8 +948,8 @@ Matrix rigid_linear_xfm(Matrix Data,ColumnVector meanm, Mesh mesh, bool writeToF
 			//caluclate length vectors and sum
 			float sumr=0, suml=0;
 			for (int i=0;i<DataDM.Nrows();i++){
-				suml=(DataDM.element(0,i)*DataDM.element(0,i) + DataDM.element(1,i)*DataDM.element(1,i) +DataDM.element(0,i)*DataDM.element(1,i) );
-				sumr=(RefDM.element(0,i)*RefDM.element(0,i) + RefDM.element(1,i)*RefDM.element(1,i) +RefDM.element(0,i)*RefDM.element(1,i) );
+				suml+=(DataDM.element(0,i)*DataDM.element(0,i) + DataDM.element(1,i)*DataDM.element(1,i) +DataDM.element(0,i)*DataDM.element(1,i) );
+				sumr+=(RefDM.element(0,i)*RefDM.element(0,i) + RefDM.element(1,i)*RefDM.element(1,i) +RefDM.element(0,i)*RefDM.element(1,i) );
 			}
 			scale=sqrt(sumr/suml);
 		}
@@ -1116,7 +1002,7 @@ Matrix rigid_linear_xfm(Matrix Data,ColumnVector meanm, Mesh mesh, bool writeToF
 		Matrix Reg(3,Data.Nrows()/3);//=R*DataRS+(RefMean-R*DataMean);
 									 //difference between 6dof and 7dof
 			if (useScale.value()){
-				cout<<"Scale "<<vscale.at(subject)<<endl;
+				//cout<<"Scale "<<vscale.at(subject)<<endl;
 				Reg=vscale.at(subject)*vR.at(subject)*DataRS+(RefMean-vscale.at(subject)*vR.at(subject)*DataMean);
 			}else{
 				Reg=vR.at(subject)*DataRS+(RefMean-vR.at(subject)*DataMean);
@@ -1129,11 +1015,7 @@ Matrix rigid_linear_xfm(Matrix Data,ColumnVector meanm, Mesh mesh, bool writeToF
 				DataNew.element(3*i+1,subject)=Reg.element(1,i);
 				DataNew.element(3*i+2,subject)=Reg.element(2,i);
 			}
-			
-			string snum;
-			stringstream ssnum;
-			ssnum<<subject;
-			ssnum>>snum;
+		
 			
 			Mesh m=mesh;
 			int count=0;
@@ -1144,7 +1026,12 @@ Matrix rigid_linear_xfm(Matrix Data,ColumnVector meanm, Mesh mesh, bool writeToF
 				count+=3;
 			}	
 			m.update();
-			
+				
+			string snum;
+			stringstream ssnum;
+			ssnum<<subject;
+			ssnum>>snum;
+			m.save(snum+"reg.vtk",3);
 	}
 	
 	return DataNew;			
@@ -1295,7 +1182,6 @@ Matrix deMeanMatrix(Matrix M){
 
 
 void do_work_bvars(){
-	
 	//**********read in bvars and models and lfirt matrices***************//
 	string mname;
 	mname=read_bvars_ModelName(inname.value() );	
@@ -1305,7 +1191,6 @@ void do_work_bvars(){
 	model1->setImageParameters(refXsize,refYsize, refZsize,refXdim, refYdim, refZdim);
 	model1->load_bmv_binaryInfo(mname,1);
 	model1->load_bmv_binary(mname,1);
-	
 	//need number of subjects (to detrmine number of modes)
 	vector<string> subjectnames;
 	Matrix bvars;
@@ -1313,11 +1198,13 @@ void do_work_bvars(){
 	Matrix target;	//target is only used for glm
 					//must include a design matrix with bvars to use glm
 					//modelname is used to set a path
-				read_bvars_designPath(inname.value(),&bvars,&target,&subjectnames, &vN, pathname.value());
+	
+	read_bvars(inname.value(),&bvars,&subjectnames, &vN, pathname.value());
+	target=read_vest(designname.value());
 				//can filter meshes
-				if (usePCAfilter.value()){
-					//truncate number of mdoes to recon mehs (smoothing)
-					bvars=bvars.SubMatrix(1,numModes.value(),1,bvars.Ncols());
+	if (usePCAfilter.value()){
+		//truncate number of mdoes to recon mehs (smoothing)
+		bvars=bvars.SubMatrix(1,numModes.value(),1,bvars.Ncols());
 				}
 				
 				volume<float> t1im;
@@ -1330,13 +1217,7 @@ void do_work_bvars(){
 					//need flirt matrices
 					//load their names into a vector
 					ifstream flirtmats;
-					flirtmats.open(flirtmatsname.value().c_str());
 					vector<string> flirtmatnames;
-					for (unsigned int i =0; i<subjectnames.size();i++){
-						string stemp;
-						flirtmats>>stemp;
-						flirtmatnames.push_back(stemp); ///inversion fo flirtmatrix is handled in shape model function when a string is input
-					}
 					
 					//**********done reading in bvars and models adn lfirt matrices ***************//
 					//****************RECONSTRUCTION AND ALIGNMENT*********************/
@@ -1345,6 +1226,14 @@ void do_work_bvars(){
 					Mesh modelMeanMesh;
 					ColumnVector CVmodelMeanMesh;
 					if (useReconNative.value()){
+					  	flirtmats.open(flirtmatsname.value().c_str());
+						
+						for (unsigned int i =0; i<subjectnames.size();i++){
+							string stemp;
+							flirtmats>>stemp;
+							flirtmatnames.push_back(stemp); ///inversion fo flirtmatrix is handled in shape model function when a string is input
+						}
+						
 						//Reconstruct in native spoace of the image (it recons the mni then applies flirt matrix)
 						MeshVerts=recon_meshesNative( mname, bvars, &CVmodelMeanMesh, &modelMeanMesh,subjectnames, flirtmatnames, &vMeshes);
 					}
@@ -1369,7 +1258,7 @@ void do_work_bvars(){
 					//if the design has nto been demeaned and you are dooing discrimiant analysis
 					//then perform demean of matrix
 					
-					if ( useDeMeanDesign.value()){
+					
 						bool isOne=true;
 						//checks for mean Column as first column, if it decides there is a column of ones (first column) then 
 						//it will not demean the design matrix
@@ -1402,351 +1291,91 @@ void do_work_bvars(){
 							
 							target=targTemp;
 						}
-					}
-					
-					ColumnVector CVnorm(target.Nrows());
-					// if chosen can include a normalization EV (i.e. control for size) ...useful for vertex shape statistics
-					if (useNorm.value()){
-						ifstream normIn;
-						float normtemp;
-						normIn.open(normname.value().c_str());
-						for (int subject=0;subject<target.Nrows();subject++){
-							normIn>>normtemp;
-							CVnorm.element(subject)=normtemp;
+						//this displays the demean design matrix
+						cout<<"new design matrix"<<endl;
+						for (int j=0;j<target.Nrows();j++){
+							for (int i=0;i<target.Ncols();i++){	
+								cout<<target.element(j,i)<<" ";
+							}	
+							cout<<endl;
 						}
-						target=target | CVnorm ;
-					}
 					
-					
-					//this displays the demean design matrix
-					cout<<"new design matrix"<<endl;
-					for (int j=0;j<target.Nrows();j++){
-						for (int i=0;i<target.Ncols();i++){	
-							cout<<target.element(j,i)<<" ";
-						}	
-						cout<<endl;
-					}
-					//****************END DEMEAN DESIGN MATRIX AND ADD ONE COLUMS*********************/
-					
-					Matrix contrast(target.Ncols()-1,target.Ncols());
-					int EVmin=0;//first EV to examine
-						int EVmax=1;//EV to include
-							if ( useDeMeanDesign.value()){
-								//skip the first column if it's ones
-								EVmin=1;
-								EVmax=2;
-							}
-							
-							if (tstatMesh.value()){
-								//if doign stats on vertices (not discrimant) then loop over all EVs
-								EVmax=target.Ncols();
-							}
-							
-							for (int EV=EVmin;EV<EVmax;EV++){
-								
-								
-								//append the EV number to the output
-								stringstream ev2st;
-								ev2st<<EV;
-								string evnum;
-								ev2st>>evnum;
-								
-								
-								//create F test contrast matrix (testing each EV separately
-								int count=0;
-								for (int j=0;j<contrast.Ncols();j++){
-									if (j!=EV){
-										for (int i=0;i<contrast.Ncols();i++){
-											if(i==j){
-												//if(i==EV){
-												contrast.element(count,i)=1;
-												}else{
-													contrast.element(count,i)=0;
-												}
-											
-											cout<<contrast.element(count,i)<<" ";
-											}
-										cout<<endl;
-										count++;
-										}
-									}
-								
-								
-								//update average mesh
-								//these vector store tstats to plot on mesh
-								vector<float> tstatsx;
-								vector<float> tstatsy;
-								vector<float> tstatsz;
-								
-								
-								Mesh m=vMeshes.at(0);//mesh.at(0) is used to determien topology/number of verteices
-									count=0;
-									for (vector<Mpoint*>::iterator i = m._points.begin(); i!=m._points.end(); i++ )
-									{ 
-										float meanx1=0,meany1=0,meanz1=0,meanx2=0,meany2=0, meanz2=0;
-										// for (int i=0;i<MeshVerts.Nrows();i=i+3){
-										int n1=0,n2=0;
-										for (int j=0;j<MeshVerts.Ncols();j++){
-											if (target.element(j,EV) <= 0 ){ //handles demeaned data
-												meanx1+=MeshVerts.element(count,j);
-												meany1+=MeshVerts.element(count+1,j);
-												meanz1+=MeshVerts.element(count+2,j);
-												n1++;
-											}else{
-												meanx2+=MeshVerts.element(count,j);
-												meany2+=MeshVerts.element(count+1,j);
-												meanz2+=MeshVerts.element(count+2,j);
-												n2++;
-											}
-										}
-										// }
-										meanx1/=n1;
-										meany1/=n1;
-										meanz1/=n1;
-										
-										meanx2/=n2;
-										meany2/=n2;
-										meanz2/=n2;
-										
-										//as binary classification was assumed we just finish clauclating the mean for each group
-										
-										//save vectors point from group1 mean to group2 mean, size 1 (they will be scaled to reflect
-										//the test statistic)
-										float vecx=meanx2-meanx1;
-										float vecy=meany2-meany1;
-										float vecz=meanz2-meanz1;
-										float norm=sqrt(vecx*vecx+vecy*vecy+vecz*vecz);
-										
-										//scalign occurs later
-										tstatsx.push_back(vecx/norm);
-										tstatsy.push_back(vecy/norm);
-										tstatsz.push_back(vecz/norm);
-										
-										//for each point calculate mean vertex for each group
-										(*i)->_update_coord = Pt(meanx1,meany1,meanz1);
-										count+=3;
-									}
-									m.update();
-									model1->setShapeMesh(0,m);
-									
-									
-									if (tstatMesh.value()){
-										//this provides the option to do stats on the vertices 
-										if (univariateT.value()){
-											//use univariate t-statistic on each dimension
-											ColumnVector contrastUniT(target.Ncols());
-											//create appropriate conatract
-											for (int j=0;j<target.Ncols();j++){
-												if (j!=EV){
-													contrastUniT.element(j)=0;
-												}else{
-													contrastUniT.element(j)=1;
-												}
-											}
-											
-											//performs GLM 
-											ColumnVector tstats=GLM_fit(target, MeshVerts.t(),contrastUniT);
-											
-											//scale stat vector
-											for (int i=0;i<MeshVerts.Nrows();i=i+3){
-												tstatsx.at(i/3)*=(tstats.element(i/3));
-												tstatsy.at(i/3)*=(tstats.element(i/3));								
-												tstatsz.at(i/3)*=(tstats.element(i/3));
-												
-											}
-											
-										}else{
-											//use multivariate test on each vertex
-											for (int i=0;i<MeshVerts.Nrows();i=i+3){
-												//use multivariate multiple regression on each veretx 
-												float wilkL=MVGLM_fit(target, MeshVerts.SubMatrix(i+1,i+3,1,MeshVerts.Ncols()).t(),contrast);
-												tstatsx.at(i/3)*=wilkL;
-												tstatsy.at(i/3)*=wilkL;
-												tstatsz.at(i/3)*=wilkL;									
-											}
-										}
-										
-									}
-													
-									for (int sh=0; sh<model1->getNumberOfShapes();sh++){
-										model1->setShapeTstatX(sh,tstatsx);
-										model1->setShapeTstatY(sh,tstatsy);
-										model1->setShapeTstatZ(sh,tstatsz);
-									}
-									//save the mesg with vectors
-									model1->save(outname.value()+evnum+".vtk",5,0);
-								}
-							
-					}		
-void do_work_bvarsToVols(){
-	//read in bvars
-	string mname;
-	mname=read_bvars_ModelName(inname.value() );	
-	//load model 
-	shapeModel* model1 = new shapeModel;
-	model1->setImageParameters(refXsize,refYsize, refZsize,refXdim, refYdim, refZdim);
-	model1->load_bmv_binaryInfo(mname,1);
-	model1->load_bmv_binary(mname,1);
-
-	//read bvars into a matrix, pad zeros if bvars not provided
-	vector<string> subjectnames;
-	Matrix bvars;
-	vector<int> vN;
-	//target is only used for glm
-	Matrix target;
-	//must include a design matrix with bvars to use glm
-	//read_bvars_design(inname.value(),&bvars,&target,&subjectnames, &vN);
-	//modelname is used to set a path
-				read_bvars_designPath(inname.value(),&bvars,&target,&subjectnames, &vN, pathname.value());
-				volume<float> t1im;
-				volume<short> segim;
-				vector<Mesh> vMeshes;
-				Matrix MeshVerts;//this is used when placing t-stats on a mesh
-					
-					int bounds[6]={0,0,0,0,0,0};
-					
-					//need flirt matrices
-					//load their names into a vector
-					ifstream flirtmats;
-					flirtmats.open(flirtmatsname.value().c_str());
-					vector<string> flirtmatnames;
-					if (useReconNative.value()){
-						for (unsigned int i =0; i<subjectnames.size();i++){
-							string stemp;
-							flirtmats>>stemp;
-							flirtmatnames.push_back(stemp);
-						}
+					//cout<<"done processing design"<<endl;
+					if (!vertexAnalysis.value()){
 						
-					}
-					
-					//****************RECONSTRUCTION AND ALIGNMENT*********************/
-					
-					//Choose the space in which to reconstruct the meshes
-					Mesh modelMeanMesh;
-					ColumnVector CVmodelMeanMesh;
-					if (!useVolumes.value()){
-					if (useReconNative.value()){
-						//assume native space recon
-						MeshVerts=recon_meshesNative( mname, bvars, &CVmodelMeanMesh, &modelMeanMesh,subjectnames, flirtmatnames, &vMeshes);
-					}
-					else if(useReconMNI.value()){
-						MeshVerts=recon_meshesMNI( model1, bvars, &CVmodelMeanMesh, &modelMeanMesh,&vMeshes);
-					}else{
-						cerr<<"choose a mesh reconstruction method"<<endl;
-					}
-					}
-					//Added in any realignment of meshes here
-					if (useRigidAlign.value()){
-						MeshVerts=rigid_linear_xfm(MeshVerts,CVmodelMeanMesh, modelMeanMesh, false);
-					}
-					//****************END RECONSTRUCTION AND ALIGNMENT*********************/
-					//****************DEMEAN DESIGN MATRIX AND ADD ONE COLUMS*********************/
-					//check for mean Column in first col
-					bool isOne=true;
-					for (int i=0;i<target.Nrows();i++){
-						if (target.element(i,0)!=1){
-							isOne=false;
-						}
-					}
-					
-					if (!isOne){
-						//create demena deisgn, assume a nomean column at start
-						Matrix targTemp(target.Nrows(),target.Ncols()+1);
-						for (int i=0;i<targTemp.Ncols();i++){
-							if (i==0){
-								for (int j=0;j<target.Nrows();j++){
-									targTemp.element(j,i)=1;
-								}
-							}else{
-								float mean=0;
-								for (int j=0;j<target.Nrows();j++){
-									mean+=target.element(j,i-1);
-								}	
-								mean/=target.Nrows();
-								for (int j=0;j<target.Nrows();j++){
-									targTemp.element(j,i)=target.element(j,i-1)-mean;
-								}
-							}
-						}
+						//calculate volumes
+						vector<float> vnorm;
 						
-						
-						target=targTemp;
-					}
-					
-	
-					//****************END DEMEAN DESIGN MATRIX AND ADD ONE COLUMS*********************/
-					//calculate volumes
-					vector<float> vnorm;
-					
-					if (useNorm.value()){
-						ifstream fnorm;
-						fnorm.open(normname.value().c_str());
-						for (int subject=0;subject<bvars.Ncols();subject++){
-							float temp;
-							fnorm>>temp;
-							vnorm.push_back(temp);							
-						}
-					}
-					Matrix Volumes(target.Nrows(),1); //this is only used for GLM
-					ofstream fvol_all;
-					fvol_all.open((outname.value()+".vols").c_str());
-					for (int subject=0;subject<bvars.Ncols();subject++){
-						//this conditions allows you to loads volumes
-						if (useVolumes.value()){
-							ifstream volIn;
-							volIn.open(refname.value().c_str());
-							for (int subject=0;subject<bvars.Ncols();subject++){
-								float voltemp;
-								string stemp;
-								volIn>>stemp>>voltemp>>voltemp;
-								cout<<"read vol "<<voltemp<<endl;
-								
-								if (useNorm.value()){
-									Volumes.element(subject,0)=voltemp*vnorm.at(subject);
-									
-								}else{
-									Volumes.element(subject,0)=voltemp;
-								}
-							}
-							break;
-						}
-						//if volumes are load the loop is broken
-						read_volume(t1im,pathname.value()+subjectnames.at(subject));
-						Mesh m = vMeshes.at(subject);
-						
-						//fill mesh
-						segim=make_mask_from_meshInOut(t1im,m,model1->getLabel(0),bounds);
-						stringstream sstemp;
-						string outnamess;
-						sstemp<<subject;
-						sstemp>>outnamess;
-						
-						float voltemp;
-						volume<short> segimB;
-						segimB=segim;
-						
-						voltemp=boundaryCorr(&segim, &t1im,model1->getLabel(0), thresh.value(),bounds);
-						stringstream sstemp2;
-						sstemp2<<model1->getLabel(0);
-						string lbst;
-						sstemp2>>lbst;
-		
-						save_volume(segim,subjectnames.at(subject)+"FIRSTbcorr_lb"+lbst);
-						fvol_all<<subjectnames.at(subject)<<" "<<voltemp<<" "<<voltemp*t1im.xdim()*t1im.ydim()*t1im.zdim()<<endl;
-						//save volume to a matrix if you wish to use in GLM
 						if (useNorm.value()){
-							Volumes.element(subject,0)=voltemp*t1im.xdim()*t1im.ydim()*t1im.zdim()*vnorm.at(subject);
-							
-						}else{
-							Volumes.element(subject,0)=voltemp*t1im.xdim()*t1im.ydim()*t1im.zdim();
+							ifstream fnorm;
+							fnorm.open(normname.value().c_str());
+							for (int subject=0;subject<bvars.Ncols();subject++){
+								float temp;
+								fnorm>>temp;
+								vnorm.push_back(temp);							
+							}
 						}
 						
-						
-						
-						
-					}
-					//now that volumes are load perform GLM
-					
+						Matrix Volumes(target.Nrows(),1); //this is only used for GLM
+						ofstream fvol_all;
+						fvol_all.open((outname.value()+".vols").c_str());
+						for (int subject=0;subject<bvars.Ncols();subject++){
+							//this conditions allows you to loads volumes
+							if (useVolumes.value()){
+								ifstream volIn;
+								volIn.open(refname.value().c_str());
+								for (int subject=0;subject<bvars.Ncols();subject++){
+									float voltemp;
+									string stemp;
+									volIn>>stemp>>voltemp>>voltemp;
+									cout<<"read vol "<<voltemp<<endl;
+									
+									if (useNorm.value()){
+										Volumes.element(subject,0)=voltemp*vnorm.at(subject);
+										
+									}else{
+										Volumes.element(subject,0)=voltemp;
+									}
+								}
+								break;
+							}
+							//if volumes are load the loop is broken
+							read_volume(t1im,pathname.value()+subjectnames.at(subject));
+							Mesh m = vMeshes.at(subject);
+							
+							//fill mesh
+					    	int bounds[6]={0,0,0,0,0,0};
+							segim=make_mask_from_meshInOut(t1im,m,model1->getLabel(0),bounds);
+							stringstream sstemp;
+							string outnamess;
+							sstemp<<subject;
+							sstemp>>outnamess;
+							
+							float voltemp;
+							volume<short> segimB;
+							segimB=segim;
+							voltemp=boundaryCorr(&segim, &t1im,model1->getLabel(0), thresh.value(),bounds);
+							stringstream sstemp2;
+							sstemp2<<model1->getLabel(0);
+							string lbst;
+							sstemp2>>lbst;
+							
+							save_volume(segim,subjectnames.at(subject)+"FIRSTbcorr_lb"+lbst);
+							fvol_all<<subjectnames.at(subject)<<" "<<voltemp<<" "<<voltemp*t1im.xdim()*t1im.ydim()*t1im.zdim()<<endl;
+							//save volume to a matrix if you wish to use in GLM
+							if (useNorm.value()){
+								Volumes.element(subject,0)=voltemp*t1im.xdim()*t1im.ydim()*t1im.zdim()*vnorm.at(subject);
+								
+							}else{
+								Volumes.element(subject,0)=voltemp*t1im.xdim()*t1im.ydim()*t1im.zdim();
+							}
+							
+							
+							
+							
+						}
+						//now that volumes are load perform GLM
+						cout<<"voluems loaded"<<endl;
 						ColumnVector tstats;
 						ColumnVector contrast(target.Ncols());
 						
@@ -1756,7 +1385,7 @@ void do_work_bvarsToVols(){
 							ev2st<<EV;
 							string evnum;
 							ev2st>>evnum;
-													
+							
 							for (int i=0;i<contrast.Nrows();i++){
 								if(i==EV){
 									contrast.element(i)=1;
@@ -1774,20 +1403,144 @@ void do_work_bvarsToVols(){
 								fTs<<tstats.element(i)<<endl;
 							}
 						}
-}
+						
+					}else{
+						ColumnVector CVnorm(target.Nrows());
+						// if chosen can include a normalization EV (i.e. control for size) ...useful for vertex shape statistics
+						if (useNorm.value()){
+							ifstream normIn;
+							float normtemp;
+							normIn.open(normname.value().c_str());
+							for (int subject=0;subject<target.Nrows();subject++){
+								normIn>>normtemp;
+								CVnorm.element(subject)=normtemp;
+							}
+							target=target | CVnorm ;
+						}
+						
+						
+						
+						//****************END DEMEAN DESIGN MATRIX AND ADD ONE COLUMS*********************/
+						
+						Matrix contrast(target.Ncols()-1,target.Ncols());
+						int EVmin=1;//ignore mean column first EV to examine
+							//int EVmax=1;//EV to include
+							int	EVmax=target.Ncols();
 
-void do_work_overlap(){
-	//this function is working directly on volumes
-	
-
-	volume<short> gold;
-	volume<short> segim;
-
-	read_volume(gold,refname.value());
-	read_volume(segim,inname.value());
-	overlaps(segim,gold);
-	
-}
+								
+								for (int EV=EVmin;EV<EVmax;EV++){
+									
+									
+									//append the EV number to the output
+									stringstream ev2st;
+									ev2st<<EV;
+									string evnum;
+									ev2st>>evnum;
+									
+								
+									
+									
+									//update average mesh
+									//these vector store tstats to plot on mesh
+									vector<float> tstatsx;
+									vector<float> tstatsy;
+									vector<float> tstatsz;
+									
+									
+									Mesh m=vMeshes.at(0);//mesh.at(0) is used to determien topology/number of verteices
+										int count=0;
+										for (vector<Mpoint*>::iterator i = m._points.begin(); i!=m._points.end(); i++ )
+										{ 
+											float meanx1=0,meany1=0,meanz1=0,meanx2=0,meany2=0, meanz2=0;
+											// for (int i=0;i<MeshVerts.Nrows();i=i+3){
+											int n1=0,n2=0;
+											for (int j=0;j<MeshVerts.Ncols();j++){
+												if (target.element(j,EVmin) <= 0 ){ //handles demeaned data
+													meanx1+=MeshVerts.element(count,j);
+													meany1+=MeshVerts.element(count+1,j);
+													meanz1+=MeshVerts.element(count+2,j);
+													n1++;
+												}else{
+													meanx2+=MeshVerts.element(count,j);
+													meany2+=MeshVerts.element(count+1,j);
+													meanz2+=MeshVerts.element(count+2,j);
+													n2++;
+												}
+											}
+											// }
+											meanx1/=n1;
+											meany1/=n1;
+											meanz1/=n1;
+											
+											meanx2/=n2;
+											meany2/=n2;
+											meanz2/=n2;
+											
+											//as binary classification was assumed we just finish clauclating the mean for each group
+											
+											//save vectors point from group1 mean to group2 mean, size 1 (they will be scaled to reflect
+											//the test statistic)
+											float vecx=meanx2-meanx1;
+											float vecy=meany2-meany1;
+											float vecz=meanz2-meanz1;
+											//	float norm=sqrt(vecx*vecx+vecy*vecy+vecz*vecz);
+											
+											//scalign occurs later
+											tstatsx.push_back(vecx);///norm);
+												tstatsy.push_back(vecy);///norm);
+													tstatsz.push_back(vecz);///norm);
+														
+														//for each point calculate mean vertex for each group
+														(*i)->_update_coord = Pt(meanx1,meany1,meanz1);
+														count+=3;
+										}
+										m.update();
+										model1->setShapeMesh(0,m);
+										vector<float> scalarsT;
+										
+										//this provides the option to do stats on the vertices 
+										//create F test contrast matrix (testing each EV separately
+											count=0;
+											for (int j=0;j<contrast.Ncols();j++){
+												if (j!=EV){
+													for (int i=0;i<contrast.Ncols();i++){
+														if(i==j){
+															//if(i==EV){
+															contrast.element(count,i)=1;
+															}else{
+																contrast.element(count,i)=0;
+															}
+														
+														cout<<contrast.element(count,i)<<" ";
+														}
+													cout<<endl;
+													count++;
+													}
+												}
+											
+											//use multivariate test on each vertex
+											for (int i=0;i<MeshVerts.Nrows();i=i+3){
+												//use multivariate multiple regression on each veretx 
+												float F=MVGLM_fit(target, MeshVerts.SubMatrix(i+1,i+3,1,MeshVerts.Ncols()).t(),contrast);
+												//	tstatsx.at(i/3)*=wilkL;
+												//	tstatsy.at(i/3)*=wilkL;
+												//	tstatsz.at(i/3)*=wilkL;	
+												//this may 
+												scalarsT.push_back(F);
+												
+											}
+																												
+										for (int sh=0; sh<model1->getNumberOfShapes();sh++){
+											model1->setShapeTstatX(sh,tstatsx);
+											model1->setShapeTstatY(sh,tstatsy);
+											model1->setShapeTstatZ(sh,tstatsz);
+											model1->setShapeScalars(sh,scalarsT);
+										}
+										//save the mesg with vectors
+										model1->save(outname.value()+evnum+".vtk",5,0);
+									}
+					}
+					}		
 
 
 void do_work_meshToVol(){
@@ -1833,7 +1586,18 @@ void do_work_meshToVol(){
 	save_volume(segim,outname.value());
 
 }
+void do_work_overlap(){
+  //this function is working directly on volumes
+  
 
+  volume<short> gold;
+  volume<short> segim;
+
+  read_volume(gold,refname.value());
+  read_volume(segim,inname.value());
+  overlaps(segim,gold);
+  
+}
 
 
 int main(int argc,char *argv[])
@@ -1858,16 +1622,17 @@ int main(int argc,char *argv[])
 		options.add(outname);
 		options.add(thresh);
 		options.add(meshLabel);
-		options.add(imfrombvars);
+		options.add(usebvars);
 		options.add(useReconMNI);
 		options.add(vertexAnalysis);
 		options.add(useReconNative);
 		options.add(useRigidAlign);
-		options.add(useDeMeanDesign);
+			options.add(designname);
+
 		options.add(useVolumes);
 		options.add(meshToVol);
 		options.add(centreOrigin);
-		options.add(tstatMesh);
+		options.add(useWilks);
 		options.add(inputprob);
 		options.add(verbose);
 		options.add(usePCAfilter);
@@ -1885,17 +1650,17 @@ int main(int argc,char *argv[])
 		}
 		
 		// Call the local functions
-		if  (vertexAnalysis.value()){
+		if  (usebvars.value()){
 			do_work_bvars();
 			
-		}else if (imfrombvars.value()){
-			do_work_bvarsToVols();
-		}else if (overlap.value()){
-			do_work_overlap();
+			//	}else if (imfrombvars.value()){
+			//	do_work_bvarsToVols();
 		}else if (meshToVol.value()){
 			do_work_meshToVol();
 		}else if(singleBoundaryCorr.value()){
 			do_work_SingleClean();
+		}else if (overlap.value()){
+		  do_work_overlap();
 		}
 		
 		

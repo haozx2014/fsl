@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 3.3 (c) 2006, The University of
+    FMRIB Software Library, Release 4.0 (c) 2007, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -102,9 +102,9 @@ probtrackOptions* probtrackOptions::gopt = NULL;
 	modecheck(); // check all the correct options are set for this mode.
 	if(mode.value()!="simple"){  
 	  if(forcedir.value())
-	    logger.setthenmakeDir(logdir.value(),"probtrack.log");
+	    logger.setthenmakeDir(logdir.value(),"probtrackx.log");
 	  else
-	    logger.makeDir(logdir.value(),"probtrack.log");
+	    logger.makeDir(logdir.value(),"probtrackx.log");
 	  
 	  cout << "Log directory is: " << logger.getDir() << endl;
 	  
@@ -120,7 +120,7 @@ probtrackOptions* probtrackOptions::gopt = NULL;
     }
     catch(X_OptionError& e){
       cerr<<e.what()<<endl;
-      cerr<<"try: probtrack --help"<<endl;
+      cerr<<"try: probtrackx --help"<<endl;
       exit(0);
     }
     

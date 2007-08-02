@@ -17,7 +17,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 3.3 (c) 2006, The University of
+#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -259,7 +259,7 @@ LabelSpinBox $w.f.opts.gradient -label "Threshold gradient; positive values give
 frame $w.f.opts.c
 
 set bet($w,c_x) 0
-LabelSpinBox  $w.f.opts.c_x -label "Coordinates (mm) for centre of initial brain surface sphere X " -textvariable bet($w,c_x) -range " 0.0 10000 0.05 " -width 3
+LabelSpinBox  $w.f.opts.c_x -label "Coordinates (voxels) for centre of initial brain surface sphere " -textvariable bet($w,c_x) -range " 0.0 10000 0.05 " -width 3
 set bet($w,c_y) 0
 LabelSpinBox  $w.f.opts.c_y -label " Y " -textvariable bet($w,c_y) -range " 0.0 10000 0.05 " -width 3
 set bet($w,c_z) 0

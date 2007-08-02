@@ -1,9 +1,0 @@
-#!/bin/sh
-
-/bin/cp -f siena sienax doc
-
-[ -f ${FSLDIR}/etc/insertcopyright ] && ${FSLDIR}/etc/insertcopyright doc/siena doc/sienax
-
-sh ./siena  > doc/siena_usage  2>&1
-sh ./sienax > doc/sienax_usage 2>&1
-exit 0

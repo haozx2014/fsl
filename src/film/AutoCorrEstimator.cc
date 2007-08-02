@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 3.3 (c) 2006, The University of
+    FMRIB Software Library, Release 4.0 (c) 2007, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -76,11 +76,13 @@
 #include "miscmaths/volume.h"
 #include "miscmaths/histogram.h"
 #include "miscmaths/miscmaths.h"
+#include "newimage/newimageall.h"
 #include "glm.h"
 
 using namespace Utilities;
 using namespace NEWMAT;
 using namespace MISCMATHS;
+using namespace NEWIMAGE;
 
 namespace FILM {
 
@@ -429,7 +431,7 @@ namespace FILM {
       return usanthresh;
     } 
 
-  void AutoCorrEstimator::spatiallySmooth(const string& usanfname, const Volume& epivol, int masksize, const string& epifname, const string& susanpath, int usanthresh, int lag) {
+  void AutoCorrEstimator::spatiallySmooth(const string& usanfname, const Volume& epivol, int masksize, const string& epifname, const string& susanpath, int usan_thresh, int lag) {
     Tracer trace("AutoCorrEstimator::spatiallySmooth");
     
     if(xdata.getNumSeries()<=1)
@@ -438,74 +440,52 @@ namespace FILM {
       }
     else
       {
-	Log& logger = LogSingleton::getInstance();
 	
 	if(lag==0)
 	  lag = MISCMATHS::Min(40,int(xdata.getNumVolumes()/4));
 	
-	if(usanthresh == 0)
+	if(usan_thresh == 0)
 	  {
 	    // Establish epi thresh to use:
-	    usanthresh = establishUsanThresh(epivol);
+	    usan_thresh = establishUsanThresh(epivol);
 	  }
-	
-	// Setup external call to susan program:
-	ostringstream osc3;
-	string preSmoothVol = "preSmoothVol";
-	string postSmoothVol = "postSmoothVol";
-	
-	osc3 << susanpath << " "
-	     << logger.getDir() << "/" << preSmoothVol << " 1 " 
-	     << logger.getDir() << "/" << postSmoothVol << " " 
-	     << masksize << " 3D 0 1 " << usanfname << " " << usanthresh << " " 
-	     << logger.getDir() << "/" << "usanSize";
-	
-	// Loop through first third of volumes
-	// assume the rest are zero
-	int factor = 10000;
+
+	volume<float> susan_vol(xdata.getInfo().x,xdata.getInfo().y,xdata.getInfo().z);
+	volume<float> usan_area(xdata.getInfo().x,xdata.getInfo().y,xdata.getInfo().z);
+	volume<float> usan_vol;
+	read_volume(usan_vol,usanfname);
+	volume<float> kernel;
+	kernel = kernel=gaussian_kernel3D(masksize,xdata.getInfo().vx,xdata.getInfo().vy,xdata.getInfo().vz);	
 	
 	// Setup volume for reading and writing volumes:
 	Volume vol(acEst.getNumSeries(), xdata.getInfo(), xdata.getPreThresholdPositions());
-	
+
 	int i = 2;
-	
+	int factor = 10000;
 	cerr << "Spatially smoothing auto corr estimates" << endl;
-	
-	cerr << osc3.str() << endl;
 	
 	for(; i <= lag; i++)
 	  {
-	    // output unsmoothed estimates:
+	    // setup susan input
 	    vol = acEst.getVolume(i).AsColumn()*factor;
 	    vol.unthreshold();
-	    vol.writeAsInt(logger.getDir() + "/" + preSmoothVol);
+	    susan_vol.insert_vec(vol);
+
+	    // call susan
+	    susan_vol=susan_convolve(susan_vol,kernel,1,0,1,&usan_area,usan_vol,usan_thresh*usan_thresh);
 	    
-	    // call susan:
-	    system(osc3.str().c_str());
-	    
-	    // read in smoothed volume:
-	    vol.read(logger.getDir() + "/" + postSmoothVol);
+	    // insert output back into acEst
+	    vol=susan_vol.vec();
 	    vol.threshold();
 	    acEst.setVolume(static_cast<RowVector>((vol/factor).AsRow()), i);
+
 	    cerr << ".";
 	  }
-	cerr << endl;
 	
-	// Clear unwanted written files
-	ostringstream osc;
-	osc << "rm -rf " 
-	    << logger.getDir() + "/" + postSmoothVol + "* "
-	    << logger.getDir() + "/" + preSmoothVol + "* "
-	    << logger.getDir() + "/usanSize*";
-	
-	cerr << osc.str() << endl;
-	
-	system(osc.str().c_str());
-	
-	cerr << "Completed" << endl;
+	cerr << endl << "Completed" << endl;
       }
   }
-
+  
   void AutoCorrEstimator::calcRaw(int lag) { 
     
     cerr << "Calculating raw AutoCorrs...";      

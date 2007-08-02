@@ -1,14 +1,12 @@
- <HTML><HEAD>
-  <TITLE>Registration of EPI and Structural Images (with undistortion)</TITLE>
-</HEAD>
- <BODY BACKGROUND="http://www.fmrib.ox.ac.uk/fsl/images/fugue-bg.jpg" BGCOLOR="white">
-  <TABLE BORDER=0 WIDTH="100%"><TR>
-   <TD ALIGN=CENTER><H1>Registration of EPI and Structural Images (with undistortion)
-  <TD ALIGN=RIGHT>  <a href="../index.html"><IMG BORDER=0 SRC="http://www.fmrib.ox.ac.uk/fsl/images/fsl-logo.jpg"></a>
-   </TR></TABLE>
-  <!-- No Table of Contents -->
+<HTML><HEAD><link REL="stylesheet" TYPE="text/css" href="../fsl.css"><TITLE>FSL</TITLE></HEAD><BODY><hr><TABLE BORDER=0 WIDTH="100%"><TR><TD ALIGN=CENTER><H1>
+Registration &amp; Unwarping
+</H1>
+Registration of EPI and Structural Images (with undistortion)
+<TD ALIGN=RIGHT><a href="../index.html"><IMG BORDER=0 SRC="../images/fsl-logo.jpg"></a></TR></TABLE><HR>
 
-<A NAME="section1"></A><HR><H2>INTRODUCTION</H2>
+<!-- No Table of Contents -->
+
+<A NAME="section1"></A><H2>INTRODUCTION</H2>
  
 This page aims to explain how to get a good registration between
 EPI and structural images using FLIRT, PRELUDE and FUGUE.  It
@@ -82,7 +80,7 @@ the fieldmap and EPI must also be registered.
 <p>
 Initial processing of the fieldmap acquisition
 <br>1 - generate the magnitude (absolute) fieldmap image - which is undistorted 
-(using AVWCOMPLEX).
+(using FSLCOMPLEX).
 <br>2 - remove non-brain structures from the magnitude fieldmap image (using BET)
 	and save the mask used
 <br>3 - run PRELUDE on the initial fieldmap acquisition
@@ -237,13 +235,13 @@ use the value stored here instead
 <br> from here on I will use the value of 0.0025 but you should
 use the value stored here instead
 <li> Run LoadVarian on all images
-<li> <tt>avwroi epi_series example_func 90 1</tt>
+<li> <tt>fslroi epi_series example_func 90 1</tt>
 <br> NB: the 90 here is only an example, it should be half the number of timepoints in the epi_series
 </ul>
 
 <p>Main Steps
 <br>
-<br> 1. &nbsp; <tt>avwcomplex -realabs b0map b0map_abs</tt>
+<br> 1. &nbsp; <tt>fslcomplex -realabs b0map b0map_abs</tt>
 <br> 2. &nbsp; <tt>bet b0map_abs b0map_abs -m</tt>
 <br> 3. &nbsp; <tt>prelude -c b0map -u phase_unw -m b0map_abs_mask</tt>
 <br> 4. &nbsp; <tt>fugue -s 0.5 -p phase_unw --dwell=0.000737 --asym=0.0025 --savefmap=fmap</tt>
@@ -274,13 +272,13 @@ use the value stored here instead
 <li> from here on I will use the value of 0.0025 but you should
 use the value stored here instead
 <li> Run LoadVarian on all images
-<li> <tt>avwroi epi_series example_func 90 1</tt>
+<li> <tt>fslroi epi_series example_func 90 1</tt>
 <li> NB: the 90 here is only an example, it should be half the number of timepoints in the epi_series
 </ul>
 
 <p>Main Steps
 <br>
-<br> 1. &nbsp; <tt>avwcomplex -realabs b0map b0map_abs</tt>
+<br> 1. &nbsp; <tt>fslcomplex -realabs b0map b0map_abs</tt>
 <br> 2. &nbsp; <tt>bet b0map_abs b0map_abs -m</tt>
 <br> 3. &nbsp; <tt>prelude -c b0map -u phase_unw -m b0map_abs_mask</tt>
 <br> 4. &nbsp; <tt>fugue -s 0.5 -p phase_unw --dwell=0.000737 --asym=0.0025 --savefmap=fmap</tt>

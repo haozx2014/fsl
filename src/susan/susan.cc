@@ -12,7 +12,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 3.3 (c) 2006, The University of
+    FMRIB Software Library, Release 4.0 (c) 2007, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -109,7 +109,7 @@ int fmrib_main(int argc, char *argv[])
     if (three_by_three) kernel = box_kernel(3,3,1);
     else kernel=gaussian_kernel3D(sigmad,input_vol.xdim(),input_vol.ydim(),0);
   }
-  kernel.value((kernel.xsize()-1)/2,(kernel.ysize()-1)/2,(kernel.zsize()-1)/2)=0;  
+  //kernel.value((kernel.xsize()-1)/2,(kernel.ysize()-1)/2,(kernel.zsize()-1)/2)=0;  
   //Finalised kernel: Zero middle value 
   //Set up external usans (if any)
   num_usan=atoi(argv[6]);   

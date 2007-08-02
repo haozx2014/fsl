@@ -1,8 +1,9 @@
-/*  fast_two.cc
+/*  FAST4 - FMRIB's Automated Segmentation Tool v4
 
-    John Vickers, FMRIB Image Analysis Group
+    John Vickers, Mark Jenkinson and Steve Smith
+    FMRIB Image Analysis Group
 
-    Copyright (C) 2004-2006 University of Oxford  */
+    Copyright (C) 2005-2007 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -15,7 +16,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 3.3 (c) 2006, The University of
+    FMRIB Software Library, Release 4.0 (c) 2007, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -66,8 +67,6 @@
     University, to negotiate a licence. Contact details are:
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
-// fast_two
-
 #define _GNU_SOURCE 1
 #define POSIX_SOURCE 1
 
@@ -76,7 +75,7 @@
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-string title="FAST4 (Version 1.01)\nCopyright(c) 2004-6, University of Oxford (John Vickers)";
+string title="FAST4 (Version 4.0)\nCopyright(c) 2004-7, University of Oxford (John Vickers)";
 string examples="fast4 [options] file(s)";
 string examples_multi_channel="fast4 [options] <image> [<image2> ... <imagen>]";
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -188,7 +187,7 @@ int prior_registration(string inname, string main_prior_vol, NEWIMAGE::volume<fl
   string name1, name2, name3;
   if(anotherstdspace.unset())
     {
-      string fname=string(getenv("FSLDIR")) + "/etc/standard/avg152T1_";
+      string fname=string(getenv("FSLDIR")) + "/data/standard/avg152T1_";
       name1 = fname+"csf";
       name2 = fname+"gray";
       name3 = fname+"white";

@@ -8,7 +8,7 @@
 <hr><P><b>Release 4.0, August 2007</b><br>
 Minor release revision history <a href="#revisions">here</a>.<UL>
 
-<LI><a href="../melodic2/index.html" target="_top">MELODIC</a> v3.0 -
+<LI><a href="../melodic/index.html" target="_top">MELODIC</a> v3.0 -
   now contains multi-subject ICA, including Tensor-ICA
   spaceXtimeXsubjects decomposition.
 
@@ -18,7 +18,7 @@ Minor release revision history <a href="#revisions">here</a>.<UL>
   rich hand-segmented training data to segment subcortical brain
   structures.
 
-<LI><a href="../fdt/index.html" target="_top">FDTX</a> - FMRIB's
+<LI><a href="../fdt/index.html" target="_top">FDT</a> - FMRIB's
   Diffusion Toolbox now has Bayesian crossing-fibre modelling with
   automatic estimation of the number of crossing-fibres.
 
@@ -48,17 +48,18 @@ to back-transform skeleton-space voxels into subjects' native DTI
 space, for example to allow the automated seeding of tractography in
 FDTX.
 
-<LI><a href="../beanmap/index.html">BEANMAP</a> - Bayesian Estimation
-   Blah Blah - efficient modelling and estimation of simultaneous
-   BOLD+ASL data using Variational Bayes.
+<LI><a href="../fabber/index.html">FABBER</a> - Fast ASL & BOLD
+Bayesian Estimation Routine.  Efficient nonlinear modelling and
+estimation of BOLD and CBF from dual-echo ASL data, using Variational
+Bayes.
 
 <LI>The mechanism for running FSL under windows has changed. Instead
   of using Cygwin we now use VMware Player (freely available) with a
   Linux virtual machine inside it.
 
-<LI><a href="../fnirt/index.html">FNIRT</a> - FMRIB's Nonlinear Image
-  Regsitration Tool - a beta release of a computationally efficient
-  generic nonlinear registration tool.
+<!-- <LI><a href="../fnirt/index.html">FNIRT</a> - FMRIB's Nonlinear Image -->
+<!--   Regsitration Tool - a beta release of a computationally efficient -->
+<!--   generic nonlinear registration tool. -->
 
 <LI><a href="../fast4/index.html">FAST4</a> - a beta release of a new
   version of the FAST generic segmentation tool.
@@ -68,13 +69,18 @@ FDTX.
   and confounds, f-tests, TFCE (threshold-free cluster enhancement, a
   new method for cluster-based statistics).
 
+<LI>Several of the more compute-intensive tools can now take advantage
+of cluster computing, via SunGridEngine (SGE). For example, FEAT,
+MELODIC, TBSS, BEDPOST (FDT), FSLVBM can automatically parallelise
+their processing to speed up total analysis time.
+
 <LI>New standard space template: the MNI152(?) nonlinear template from
 MNI.
 
-<LI><a href="../feat5/index.html">FEAT</a> - v5.90, various minor
-  updates. "ip" is removed and replaced with calls to fslmaths.
+<LI><a href="../feat5/index.html">FEAT</a> - v5.90, various
+  miscellaneous updates.
 
-<LI><a href="../bet2/index/html">BET</a> - old C code now removed and
+<LI><a href="../bet2/index.html">BET</a> - old C code now removed and
   replaced with equivalent "bet2" C++ program; new wrapper script
   "bet" which adds various functionality such as improved eye and neck
   removal.

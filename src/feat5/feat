@@ -19,7 +19,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 3.3 (c) 2006, The University of
+#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -91,6 +91,10 @@ proc feat5:success { return_code } {
 
 if { [ lindex $argv 0 ] == "" } {
     puts "
+Usage: feat <design.fsf>
+"
+    exit 1
+    puts "
 Usage: feat <design.fsf> \[options\]
 
 If no options are set then the whole design.fsf is processed
@@ -108,8 +112,8 @@ Partial analysis options:
  -flame1                           : run higher-level stats part 1 (pre-FLAME)
  -flame2                           : run higher-level stats part 2 (FLAME)
  -flame3                           : run higher-level stats part 3 (post-FLAME)
+ -gica                             : run higher-level MELODIC
 "
-    exit 1
 }
 
 #}}}
@@ -176,6 +180,10 @@ for { set argindex 1 } { $argindex < $argc } { incr argindex 1 } {
 
 	-flame3 { 
 	    feat5:success [ feat5:proc_flame3 ]
+	}
+
+	-gica { 
+	    feat5:success [ feat5:proc_gica ]
 	}
     }
 }
@@ -327,7 +335,11 @@ if { $fmri(featwatcher_yn) } {
     set howlong [ expr int( $fmri(npts) / 10 ) ]
 
     if { $fmri(filtering_yn) ||  $fmri(stats_yn) } {
-	set prestatsID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -I $session -prestats" -b $howlong -N feat_pre ]
+	set howlongpre $howlong
+	if { $fmri(melodic_yn) } {
+	    set howlongpre 300
+	}
+	set prestatsID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -I $session -prestats" -b $howlongpre -N feat_pre ]
     }
 		
     if { $fmri(stats_yn) } {
@@ -599,16 +611,69 @@ set comout ${GFD}/report.com
 
 fsl:exec "/bin/cp ${fsfroot}.fsf design.fsf"
 
-set ALLregID ""
+#}}}
+    #{{{ setup toplevel .gfeat web pages
+
+fsl:echo report.html "<link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+
+<TABLE BORDER=0><TR>
+
+<TD ALIGN=CENTER WIDTH=\"100%\">
+
+<TABLE BORDER=0>
+
+<tr><td align=center><font size=+3><b>Higher-Level FEAT Report</b></font></tr>
+
+<tr><td valign=center height=\"25\" align=center>$GFD<br>[ exec date ]</tr>
+
+<tr valign=bottom><td align=center>
+<A HREF=\"report_firstlevel.html\" target=\"_top\">Inputs</A> &nbsp;-&nbsp;
+<A HREF=\"report_reg.html\" target=\"_top\">Registration summary</A> &nbsp;-&nbsp;
+<A HREF=\"groupmelodic.ica/report/00index.html\" target=\"_top\">MELODIC output</A> &nbsp;-&nbsp;
+<A HREF=\"report_log.html\" target=\"_top\">Log</A>
+
+</tr></table>
+
+<TD ALIGN=RIGHT>
+<a href=\"http://www.fmrib.ox.ac.uk/fsl\" target=\"_top\">
+<IMG BORDER=0 SRC=\"file:${FSLSLASH}${FSLDIR}/doc//images/fsl-logo-big.jpg\" WIDTH=165></a>
+</TD>
+
+</TR></TABLE><hr>
+"
+
+fsl:echo report_firstlevel.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+<TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"report.html\"></OBJECT>
+<h2>Inputs to higher-level analysis</h2>(lower-level processing)<p>" -o
+
+fsl:echo report_reg.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+<TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"report.html\"></OBJECT>
+<h2>Summary of first-level registrations and masks</h2>" -o
+
+fsl:echo .logA "<HTML><HEAD>
+<!--refreshstart-->
+<META HTTP-EQUIV=REFRESH CONTENT=5>
+<!--refreshstop-->
+<link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+<TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"report.html\"></OBJECT>
+<h2>Progress Report / Log</h2>
+Feat main script<br><pre>" -o
+
+fsl:echo .logZ "</pre><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br></BODY></HTML>"
+
+if { $fmri(featwatcher_yn) } {
+    FmribWebHelp file: ${GFD}/report_log.html
+} else {
+    fsl:echo "" "To view the FEAT progres and final report, point your web browser at ${FD}/report_log.html"
+}
 
 #}}}
 }
+set ALLregID ""
 
 for { set session 1 } { $session <= $fmri(multiple) } { incr session 1 } {
 
     #{{{ setup output directory
-
-#{{{ setup new featdir name
 
 if { $fmri(outputdir) != "" } {
     if { $fmri(multiple) == 1 } {
@@ -622,8 +687,6 @@ if { $fmri(outputdir) != "" } {
 new_file $FD
 fsl:exec "/bin/mkdir $FD" -n
 
-#}}}
-
 cd $FD
 set FD [ pwd ]
 set logout ${FD}/.logA
@@ -633,7 +696,10 @@ fsl:exec "/bin/cp ${fsfroot}.fsf design.fsf"
 
 set fsfroot ${FD}/design
 
-fsl:echo ${GFD}/filelist ${FD}/filtered_func_data
+if { $fmri(icaopt) > 1 } {
+    fsl:echo ${GFD}/.filelist ${FD}/reg_standard/filtered_func_data
+    fsl:echo ${GFD}/design.fsf "set feat_files($session) \"$FD\""
+}
 
 #}}}
     #{{{ setup web pages
@@ -652,9 +718,13 @@ fsl:echo report.html "<link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${F
 
 <tr valign=bottom><td align=center>
 <A HREF=\"report_prestats.html\" target=\"_top\">Pre-stats</A> &nbsp;-&nbsp;
-<A HREF=\"report_reg.html\" target=\"_top\">Registration</A> &nbsp;-&nbsp;
-<A HREF=\"filtered_func_data.ica/report/00index.html\" target=\"_top\">ICA</A> &nbsp;-&nbsp;
-<A HREF=\"report_log.html\" target=\"_top\">Log</A>
+<A HREF=\"report_reg.html\" target=\"_top\">Registration</A> &nbsp;-&nbsp;" -o
+
+if { $fmri(icaopt) == 1 } {
+    fsl:echo report.html "<A HREF=\"filtered_func_data.ica/report/00index.html\" target=\"_top\">ICA</A> &nbsp;-&nbsp;"
+}
+
+fsl:echo report.html "<A HREF=\"report_log.html\" target=\"_top\">Log</A>
 
 </tr></table>
 
@@ -664,7 +734,7 @@ fsl:echo report.html "<link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${F
 </TD>
 
 </TR></TABLE><hr>
-" -o
+"
 
 if { ! [ file exists report_prestats.html ] } {
     fsl:echo report_prestats.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
@@ -698,12 +768,11 @@ if { $fmri(featwatcher_yn) } {
 #}}}
 
     set howlong [ expr int( $fmri(npts) / 10 ) ]
-
-    set prestatsID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -I $session -prestats" -b $howlong -N ica_pre ]
+    set ID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -I $session -prestats" -b $howlong -N ica_pre ]
 
     if { $fmri(reginitial_highres_yn) || $fmri(reghighres_yn) || $fmri(regstandard_yn) } {
-	set regID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -I $session -reg" -b 30 -h $prestatsID -N ica_reg ]
-	set ALLregID "$ALLregID -h $regID"
+	set ID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -I $session -reg" -b 30 -h $ID -N ica_reg ]
+	set ALLregID "$ALLregID -h $ID"
     }
 
     if { $fmri(icaopt) == 1 } {
@@ -741,59 +810,22 @@ if { $fmri(ostats) == 1 } {
     set thecommand "$thecommand --Ostats"
 }
 
+if { [ file exists $fmri(ts_model_mat) ] && [ file exists $fmri(ts_model_con) ] } {
+    set thecommand "$thecommand --Tdes=$fmri(ts_model_mat) --Tcon=$fmri(ts_model_con)"
+}
+
 #}}}
-	fsl:exec "$thecommand" -b $howlong -h $prestatsID -N ica
+	fsl:exec "$thecommand" -b $howlong -h $ID -N ica
     }
 }
 
 if { $fmri(icaopt) > 1 } {
-    #{{{ setup melodic command
-
-cd $GFD
-set logout ${GFD}/.logC
-
-set thecommand "${FSLDIR}/bin/melodic -i filelist --filelist -v --nobet --bgthreshold=$fmri(thresh) --tr=$fmri(tr) --report"
-
-set howlong 20
-if { $fmri(dim_yn) == 1 } {
-    set thecommand "$thecommand -d 0"
-    if { $fmri(npts) > 300 } {
-	set howlong 180
-    }
-} else {
-    set thecommand "$thecommand -d $fmri(dim)"
-    if { $fmri(dim) > 100 } {
-	set howlong 180
-    }
-}
-
-if { $fmri(varnorm) == 0 } {
-    set thecommand "$thecommand --vn"
-}
-
-if { $fmri(thresh_yn) == 0 } {
-    set thecommand "$thecommand --no_mm"
-} else {
-    set thecommand "$thecommand --mmthresh=\"$fmri(mmthresh)\""
-}
-
-if { $fmri(ostats) == 1 } {
-    set thecommand "$thecommand --Ostats"
-}
-
-if { $fmri(icaopt) == 2 } {
-    set thecommand "$thecommand -a concat"
-} else {
-    set thecommand "$thecommand -a tica"
-}
-
-#}}}
-    fsl:exec "$thecommand" -b $howlong $ALLregID -N ica
+    cd $GFD
+    set logout ${GFD}/.logC
+    fsl:exec "${FSLDIR}/bin/feat ${GFD}/design.fsf -D $GFD -gica" -b 180 $ALLregID -N ica_group
 }
 
 #}}}
     }
 }
-
-exit 0
 

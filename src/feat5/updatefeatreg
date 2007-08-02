@@ -1,13 +1,13 @@
 #!/bin/sh
 
-#   updatefeatreg - updates all inverse transforms and gif images based
+#   updatefeatreg - updates all inverse transforms and summary images based
 #                   on fundamental registration matrices:
 #                   i.e. example_func2highres.mat , highres2standard.mat
 #                 - this allows for manual/other correction of the matrices
 #
-#   Mark Jenkinson, FMRIB Image Analysis Group
+#   Mark Jenkinson & Steve Smith, FMRIB Image Analysis Group
 #
-#   Copyright (C) 1999-2004 University of Oxford
+#   Copyright (C) 1999-2007 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -20,7 +20,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 3.3 (c) 2006, The University of
+#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -71,10 +71,40 @@
 #   University, to negotiate a licence. Contact details are:
 #   innovation@isis.ox.ac.uk quoting reference DE/1112.
 
+regupdate() {
+    if [ -f ${1}2${2}.mat -a -f ${2}2${3}.mat ] ; then
+	echo concatenating ${1}2${2}.mat and ${2}2${3}.mat
+	${FSLDIR}/bin/convert_xfm -omat ${1}2${3}.mat -concat ${2}2${3}.mat ${1}2${2}.mat
+    fi
+}
+
+invupdate() {
+    if [ -f ${1}.mat ] ; then
+	a=`echo $1 | awk -F 2 '{print $1}'`
+	b=`echo $1 | awk -F 2 '{print $2}'`
+	echo inverting ${1}.mat
+	${FSLDIR}/bin/convert_xfm -inverse -omat ${b}2${a}.mat ${1}.mat
+    fi
+}
+
+picupdate() {
+    if [ `${FSLDIR}/bin/imtest $1` -a `${FSLDIR}/bin/imtest $2` -a -f ${1}2${2}.mat ] ; then
+	out=${1}2${2}
+	echo creating summary picture for ${out}
+	${FSLDIR}/bin/flirt -in $1 -ref $2 -out ${out} -applyxfm -init ${out}.mat
+	${FSLDIR}/bin/slicer $out $2 -s 2 -x 0.35 sla.png -x 0.45 slb.png -x 0.55 slc.png -x 0.65 sld.png -y 0.35 sle.png -y 0.45 slf.png -y 0.55 slg.png -y 0.65 slh.png -z 0.35 sli.png -z 0.45 slj.png -z 0.55 slk.png -z 0.65 sll.png
+	${FSLDIR}/bin/pngappend sla.png + slb.png + slc.png + sld.png + sle.png + slf.png + slg.png + slh.png + sli.png + slj.png + slk.png + sll.png ${out}1.png
+	${FSLDIR}/bin/slicer $2 $out -s 2 -x 0.35 sla.png -x 0.45 slb.png -x 0.55 slc.png -x 0.65 sld.png -y 0.35 sle.png -y 0.45 slf.png -y 0.55 slg.png -y 0.65 slh.png -z 0.35 sli.png -z 0.45 slj.png -z 0.55 slk.png -z 0.65 sll.png
+	${FSLDIR}/bin/pngappend sla.png + slb.png + slc.png + sld.png + sle.png + slf.png + slg.png + slh.png + sli.png + slj.png + slk.png + sll.png ${out}2.png
+	${FSLDIR}/bin/pngappend ${out}1.png - ${out}2.png ${out}.png
+	/bin/rm sl?.png
+    fi
+}
+
 dirnm=$1
 
 if [ X${dirnm}X = XX ] ; then
-  echo "Usage: $0 <feat_directory> [-pngs]"
+  echo "Usage: $0 <feat_directory>"
   exit 1;
 fi
 
@@ -90,119 +120,24 @@ fi
 
 if [ "X"`echo $dirnm | grep feat`"X" = "XX" ] ; then
   echo "Directory must be a feat directory"
-  echo "Usage: $0 <feat_directory> [-pngs]"
+  echo "Usage: $0 <feat_directory>"
   exit -2
 fi
 
 cd ${dirnm}/reg
 
-init=no;
-if [ -e initial_highres2highres.mat -o -e example_func2initial_highres.mat ] ; then
-  init=yes;
-fi
+regupdate example_func initial_highres highres
+regupdate example_func highres standard
 
-if [ $init = "yes" ] ; then
-  if [ ! -f example_func2initial_highres.mat ] ; then
-    echo "Could not find example_func2initial_highres.mat"
-    exit -3 
-  fi ;
-  if [ ! -f initial_highres2highres.mat ] ; then
-    echo "Could not find initial_highres2highres.mat"
-    exit -3 
-  fi ;
-else 
-  if [ ! -f example_func2highres.mat ] ; then
-    echo "Could not find example_func2highres.mat"
-    exit -3 
-  fi ;
-fi
+invupdate example_func2initial_highres
+invupdate initial_highres2highres
+invupdate example_func2highres
+invupdate highres2standard
+invupdate example_func2standard
 
-if [ ! -f highres2standard.mat ] ; then
-  echo "Could not find highres2standard.mat"
-  exit -4 
-fi
+picupdate example_func initial_highres
+picupdate initial_highres highres
+picupdate example_func highres
+picupdate highres standard
+picupdate example_func standard
 
-if [ $init = "yes" ] ; then
-  # concatenate to make example_func2highres
-
-  ${FSLDIR}/bin/convert_xfm -omat example_func2highres.mat -concat \
-   initial_highres2highres.mat example_func2initial_highres.mat
-
-  # make inverses
-
-  ${FSLDIR}/bin/convert_xfm -inverse \
-   -omat highres2initial_highres.mat initial_highres2highres.mat
-
-  ${FSLDIR}/bin/convert_xfm -inverse \
-   -omat initial_highres2example_func.mat example_func2initial_highres.mat
-
-fi
-
-# concatenate to make example_func2standard
-
-${FSLDIR}/bin/convert_xfm -omat example_func2standard.mat -concat \
- highres2standard.mat example_func2highres.mat
-
-# make inverses
-
-${FSLDIR}/bin/convert_xfm -inverse \
- -omat standard2highres.mat highres2standard.mat
-
-${FSLDIR}/bin/convert_xfm -inverse \
- -omat highres2example_func.mat example_func2highres.mat
-
-${FSLDIR}/bin/convert_xfm -inverse \
- -omat standard2example_func.mat example_func2standard.mat
-
-
-if [ X$2 != X-pngs ] ; then
-    exit 0;
-fi
-
-
-sl=/tmp/slice_$PID
-
-ef=example_func
-ih=initial_highres
-hr=highres
-st=standard
-
-ef2hr=example_func2highres
-${FSLDIR}/bin/flirt -applyxfm -init $ef2hr.mat -in $ef -ref $hr -out $ef2hr
-${FSLDIR}/bin/slicer $ef2hr $hr -s 0.5 -x 0.4 ${sl}a.png -x 0.5 ${sl}b.png -x 0.6 ${sl}c.png -y 0.4 ${sl}d.png -y 0.5 ${sl}e.png -y 0.6 ${sl}f.png -z 0.4 ${sl}g.png -z 0.5 ${sl}h.png -z 0.6 ${sl}i.png
-${FSLDIR}/bin/pngappend ${sl}a.png + ${sl}b.png + ${sl}c.png + ${sl}d.png + ${sl}e.png + ${sl}f.png + ${sl}g.png + ${sl}h.png + ${sl}i.png ${ef2hr}.png 
-/bin/rm -f ${sl}*  `${FSLDIR}/bin/imglob $ef2hr.*`
-
-ef2st=example_func2standard
-${FSLDIR}/bin/flirt -applyxfm -init $ef2st.mat -in $ef -ref $st -out $ef2st
-${FSLDIR}/bin/slicer $ef2st $st -s 1 -x 0.4 ${sl}a.png -x 0.5 ${sl}b.png -x 0.6 ${sl}c.png -y 0.4 ${sl}d.png -y 0.5 ${sl}e.png -y 0.6 ${sl}f.png -z 0.4 ${sl}g.png -z 0.5 ${sl}h.png -z 0.6 ${sl}i.png
-${FSLDIR}/bin/pngappend ${sl}a.png + ${sl}b.png + ${sl}c.png + ${sl}d.png + ${sl}e.png + ${sl}f.png + ${sl}g.png + ${sl}h.png + ${sl}i.png ${ef2st}.png 
-/bin/rm -f ${sl}*  `${FSLDIR}/bin/imglob $ef2st.*`
-
-hr2st=highres2standard
-${FSLDIR}/bin/flirt -applyxfm -init $hr2st.mat -in $hr -ref $st -out $hr2st
-${FSLDIR}/bin/slicer $hr2st $st -s 1 -x 0.4 ${sl}a.png -x 0.5 ${sl}b.png -x 0.6 ${sl}c.png -y 0.4 ${sl}d.png -y 0.5 ${sl}e.png -y 0.6 ${sl}f.png -z 0.4 ${sl}g.png -z 0.5 ${sl}h.png -z 0.6 ${sl}i.png
-${FSLDIR}/bin/pngappend ${sl}a.png + ${sl}b.png + ${sl}c.png + ${sl}d.png + ${sl}e.png + ${sl}f.png + ${sl}g.png + ${sl}h.png + ${sl}i.png ${hr2st}.png 
-/bin/rm -f ${sl}*  `${FSLDIR}/bin/imglob $hr2st.*`
-
-if [ $init = "no" ] ; then
-  exit 0;
-fi
-
-ef2ih=example_func2initial_highres
-${FSLDIR}/bin/flirt -applyxfm -init $ef2ih.mat -in $ef -ref $ih -out $ef2ih
-${FSLDIR}/bin/slicer $ef2ih $ih -s 1 -x 0.4 ${sl}a.png -x 0.5 ${sl}b.png -x 0.6 ${sl}c.png -y 0.4 ${sl}d.png -y 0.5 ${sl}e.png -y 0.6 ${sl}f.png -z 0.4 ${sl}g.png -z 0.5 ${sl}h.png -z 0.6 ${sl}i.png
-${FSLDIR}/bin/pngappend ${sl}a.png + ${sl}b.png + ${sl}c.png + ${sl}d.png + ${sl}e.png + ${sl}f.png + ${sl}g.png + ${sl}h.png + ${sl}i.png ${ef2ih}.png 
-/bin/rm -f ${sl}*  `${FSLDIR}/bin/imglob $ef2ih.*`
-
-ih2hr=initial_highres2highres
-${FSLDIR}/bin/flirt -applyxfm -init $ih2hr.mat -in $ih -ref $hr -out $ih2hr
-${FSLDIR}/bin/slicer $ih2hr $hr -s 1 -x 0.4 ${sl}a.png -x 0.5 ${sl}b.png -x 0.6 ${sl}c.png -y 0.4 ${sl}d.png -y 0.5 ${sl}e.png -y 0.6 ${sl}f.png -z 0.4 ${sl}g.png -z 0.5 ${sl}h.png -z 0.6 ${sl}i.png
-${FSLDIR}/bin/pngappend ${sl}a.png + ${sl}b.png + ${sl}c.png + ${sl}d.png + ${sl}e.png + ${sl}f.png + ${sl}g.png + ${sl}h.png + ${sl}i.png ${ih2hr}.png 
-/bin/rm -f ${sl}*  `${FSLDIR}/bin/imglob $ih2hr.*`
-
-ih2st=initial_highres2standard
-${FSLDIR}/bin/flirt -applyxfm -init $ih2st.mat -in $ih -ref $st -out $ih2st
-${FSLDIR}/bin/slicer $ih2st $st -s 1 -x 0.4 ${sl}a.png -x 0.5 ${sl}b.png -x 0.6 ${sl}c.png -y 0.4 ${sl}d.png -y 0.5 ${sl}e.png -y 0.6 ${sl}f.png -z 0.4 ${sl}g.png -z 0.5 ${sl}h.png -z 0.6 ${sl}i.png
-{FSLDIR}/bin/pngappend ${sl}a.png + ${sl}b.png + ${sl}c.png + ${sl}d.png + ${sl}e.png + ${sl}f.png + ${sl}g.png + ${sl}h.png + ${sl}i.png ${ih2st}.png 
-/bin/rm -f ${sl}*  `${FSLDIR}/bin/imglob $ih2st.*`

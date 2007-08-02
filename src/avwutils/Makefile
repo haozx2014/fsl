@@ -11,51 +11,40 @@ LIBS = -lnewimage -lmiscmaths -lprob -lfslio -lnewmat -lutils -lniftiio -lznz -l
 IOLIBS = -lfslio -lniftiio -lznz -lm -lz
 SSLIBS = -lss_32R $(IOLIBS)
 
-FSLFILES = avworient avwstats++ avwmerge \
-         avwpspec avwroi++ avwnvols++ avw2ascii++  \
-         avwsplit++ avwcc++ avwinterleave++ \
-         avwhd++ avwcpgeom++ avwcreatehd++ avwmaths++ \
-         avwcomplex avwfft avwmeants avwcheck avwconv avwslice
+XFILES = fslorient fslstats fslmerge \
+         fslpspec fslroi fslnvols fsl2ascii  \
+         fslsplit fslcc fslinterleave \
+         fslhd fslcpgeom fslcreatehd fslmaths \
+         fslcomplex fslfft fslmeants fslcheck fslslice fslswapdim
 
-XFILES = avwsplit avwhd avwstats avwcreatehd avwcpgeom avwswapdim\
-	 avw2ascii_8UI avw2ascii_16SI avw2ascii_32SI avw2ascii_32R avw2ascii_64R \
-	 avwmaths_8UI avwmaths_16SI avwmaths_32SI avwmaths_32R avwmaths_64R \
-	 avwcc_8UI avwcc_16SI avwcc_32SI avwcc_32R avwcc_64R \
-	 avwinterleave_8UI avwinterleave_16SI avwinterleave_32SI avwinterleave_32R avwinterleave_64R \
-         avwroi_8UI avwroi_16SI avwroi_32SI avwroi_32R avwroi_64R ${FSLFILES}
+SCRIPTS = fslval fslchpixdim fslanimate fslsize sliceanimate fslinfo fsledithd fslchfiletype 
 
-SCRIPTS = avwval avwchpixdim avwanimate sliceanimate avwsize avwinfo avwedithd avwchfiletype
-
-AVSCRIPTS = avwval avwchpixdim avwanimate avwsize avwinfo avwedithd avwchfiletype 
-
-FSCRIPTS = fmriborient avwswapdim++
+FSCRIPTS = fmriborient fslswapdim2
 
 RUNAVWS = avw2ascii avwmaths avwcc avwroi avwfill avwinterleave
 
 all: ${XFILES}
-	@ for file in ${FSLFILES} ${AVSCRIPTS} ; do file2=$${file/++/} ; cp "$${file}" ${DEB_DESTDIR}/bin/fsl$${file2:3} ; done ; cp avwnvols++ ${DEB_DESTDIR}/bin/avwnvols
 
-
-avwcheck: avwcheck.cc
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o avwcheck avwcheck.cc ${LIBS}
+fslcheck: fslcheck.cc
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o fslcheck fslcheck.cc ${LIBS}
 
 avwconv: avwconv.cc
 	${CXX} ${CXXFLAGS} ${LDFLAGS} -o avwconv avwconv.cc ${LIBS}
 
-avwstats++: avwstats++.o
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ avwstats++.o ${LIBS} 
+fslstats: fslstats.o
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ fslstats.o ${LIBS} 
 
-avwfft: avwfft.cc
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o avwfft avwfft.cc ${LIBS}
+fslfft: fslfft.cc
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o fslfft fslfft.cc ${LIBS}
 
-avwmeants: avwmeants.cc
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o avwmeants avwmeants.cc ${LIBS}
+fslmeants: fslmeants.cc
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o fslmeants fslmeants.cc ${LIBS}
 
 avwfixfloat: avwfixfloat.cc
 	${CXX} ${CXXFLAGS} ${LDFLAGS} -o avwfixfloat avwfixfloat.cc ${LIBS}
 
-avwcomplex: avwcomplex.cc
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o avwcomplex avwcomplex.cc ${LIBS}
+fslcomplex: fslcomplex.cc
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o fslcomplex fslcomplex.cc ${LIBS}
 
 avwnvols: avwnvols.c
 	${CC} ${CFLAGS} ${LDFLAGS} -o avwnvols avwnvols.c ${LIBS}
@@ -100,50 +89,50 @@ avw2ascii_8UI: avw2ascii.c
 	$(CC) $(CFLAGS) -DFDT="$$STR" -o avw2ascii_$$FDT avw2ascii.c $(LDFLAGS) -lss_$$FDT $(IOLIBS); \
 	done
 
-avwswapdim: avwswapdim.o
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ avwswapdim.o ${LIBS} 
+fslswapdim: fslswapdim.o
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ fslswapdim.o ${LIBS} 
 
-avworient: avworient.o
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ avworient.o ${LIBS} 
+fslorient: fslorient.o
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ fslorient.o ${LIBS} 
 
-avwslice: avwslice.cc
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o avwslice avwslice.cc ${LIBS}
+fslslice: fslslice.cc
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o fslslice fslslice.cc ${LIBS}
 
-avwpspec: avwpspec.o
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ avwpspec.o ${LIBS} 
+fslpspec: fslpspec.o
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ fslpspec.o ${LIBS} 
 
 
 #start of matts c++ rewrites
-avwroi++: avwroi++.o
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ avwroi++.o ${LIBS}
+fslroi: fslroi.o
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ fslroi.o ${LIBS}
 
-avwnvols++: avwnvols++.o
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ avwnvols++.o ${LIBS}
+fslnvols: fslnvols.o
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ fslnvols.o ${LIBS}
 
-avw2ascii++: avw2ascii++.o
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ avw2ascii++.o ${LIBS}
+fsl2ascii: fsl2ascii.o
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ fsl2ascii.o ${LIBS}
 
-avwsplit++: avwsplit++.o
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ avwsplit++.o ${LIBS}
+fslsplit: fslsplit.o
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ fslsplit.o ${LIBS}
 
-avwmerge: avwmerge.o
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ avwmerge.o ${LIBS}
+fslmerge: fslmerge.o
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ fslmerge.o ${LIBS}
 
-avwcc++: avwcc++.o
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ avwcc++.o ${LIBS}
+fslcc: fslcc.o
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ fslcc.o ${LIBS}
 
-avwinterleave++: avwinterleave++.o
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ avwinterleave++.o ${LIBS}
+fslinterleave: fslinterleave.o
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ fslinterleave.o ${LIBS}
 
-avwhd++: avwhd++.o
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ avwhd++.o ${LIBS}
+fslhd: fslhd.o
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ fslhd.o ${LIBS}
 
-avwcpgeom++: avwcpgeom++.o
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ avwcpgeom++.o ${LIBS}
+fslcpgeom: fslcpgeom.o
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ fslcpgeom.o ${LIBS}
 
-avwcreatehd++: avwcreatehd++.o
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ avwcreatehd++.o ${LIBS}
+fslcreatehd: fslcreatehd.o
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ fslcreatehd.o ${LIBS}
 
-avwmaths++: avwmaths++.o
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ avwmaths++.o ${LIBS}
+fslmaths: fslmaths.o
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ fslmaths.o ${LIBS}
 

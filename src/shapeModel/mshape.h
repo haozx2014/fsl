@@ -96,6 +96,10 @@ public:
 	 void setTstatY(vector<float> v);
 	 void setTstatZ(vector<float> v);
 	 
+	  vector<float> getScalars();
+	 void setScalars(vector<float> v);
+	 
+	 
 	 vector<float> getAfftxVecs();
 	  vector<float> getAfftyVecs();
 	   vector<float> getAfftzVecs(); 
@@ -128,6 +132,8 @@ private:
   vector<float> tstatx;
   vector<float> tstaty;
   vector<float> tstatz;
+	vector<float> scalars;
+
 
   vector< vector<float> > iprofs;
   vector< vector<Vec> > modeVecs;

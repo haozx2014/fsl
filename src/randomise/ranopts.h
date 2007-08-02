@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 3.3 (c) 2006, The University of
+    FMRIB Software Library, Release 4.0 (c) 2007, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -202,7 +202,7 @@ class ranopts {
    tfce_height(string("--tfce_height"), -1, string(""), false, requires_argument),
    tfce_size(string("--tfce_size"), -1, string(""), false, requires_argument),
    tfce_connectivity(string("--tfce_connectivity"), 26, string(""), false, requires_argument),
-  options("randomise v0.20 - Tim Behrens, Matthew Webster & Steve Smith (FMRIB) & Tom Nichols (UMich)", "randomise -i data -o output -d design.mat")
+  options("randomise v1.1 - Matthew Webster, Tim Behrens & Steve Smith (FMRIB) & Tom Nichols (UMich)", "randomise -i data -o output -d design.mat")
 {
      
     

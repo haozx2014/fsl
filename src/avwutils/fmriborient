@@ -63,7 +63,7 @@ for fm in $@ ; do
 		    if [ `echo "( $dy * $dy - 4.0 ) * 1000" | bc -l` -eq 0 ] ; then
 			if [ `echo "( $dz * $dz - 4.0 ) * 1000" | bc -l` -eq 0 ] ; then
 			  # treat it as a standard space image
-			    $FSLDIR/bin/fslcpgeom /usr/local/fsl/etc/standard/avg152T1 $fb -d
+			    $FSLDIR/bin/fslcpgeom $FSLDIR/data/standard/avg152T1 $fb -d
 			fi
 		    fi
 		fi

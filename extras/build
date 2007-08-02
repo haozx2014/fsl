@@ -63,12 +63,14 @@ for projname in $PROJECTS; do
 	if ${MAKE} ${MAKEOPTIONS} ; then 
 	    if ${MAKE} install ; then
 		${MAKE} distclean ;
+	    else
+		errorinstall="$errorinstall $projname" ; export errorinstall ;
 	    fi
 	    if [ X"$projname" = "Xtcl" -o X"$projname" = "Xtk" ] ; then
 		cd $FSLESRCDIR/$projname ;
 		${MAKE} install
 	    fi	    
-
+	    
 	    echo " "
 	    echo " ------------------------- "
 	    echo "Successfully made $projname";
@@ -94,5 +96,15 @@ if [ "X${errorprojs}X" != XX ] ; then
 else
   echo "BUILD successfully made all projects" ;
 fi
+if [ "X${errorinstall}X" != XX ] ; then
+  echo "!!ERROR in INSTALL!!" ;
+  echo "  Could not fully install the following projects successfully:" ;
+  echo "   $errorinstall" ;
+else
+  echo " ";
+fi
 echo " ";
 
+if [ "X${errorprojs}X" != XX -o "X${errorinstall}X" != XX ] ; then
+    exit 1
+fi

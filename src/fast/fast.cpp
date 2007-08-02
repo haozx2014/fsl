@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 3.3 (c) 2006, The University of
+    FMRIB Software Library, Release 4.0 (c) 2007, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -483,12 +483,12 @@ int main(int argc, char* argv[])
 		string basepath(getenv("FSLDIR"));
 		if(!basepath.empty())
 		{
-			brainpath = basepath + "/etc/standard/avg152T1_brain.hdr";
+			brainpath = basepath + "/data/standard/avg152T1_brain.hdr";
 			fstream file(brainpath.c_str(), ios::in);
 			if(!(!file))
 			{
 				found = true;
-				basepath += "/etc/standard/";
+				basepath += "/data/standard/";
 			}
 		}
 		if(!found)

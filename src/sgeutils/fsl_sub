@@ -14,7 +14,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 3.3 (c) 2006, The University of
+#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -202,6 +202,7 @@ while [ $1 != -- ] ; do
       shift;;
     -l)
       LogOpts="-o $2 -e $2";
+      LogDir="${2}/";
       shift;;
     -F)
       scriptmode=1;
@@ -215,7 +216,7 @@ done
 
 shift
 
-sge_arch="-l arch=lx24-amd64"
+#sge_arch="-l arch=lx24-amd64"
 
 if [ "x$JobName" == x ] ; then 
     if [ "x$taskfile" != x ] ; then
@@ -275,8 +276,9 @@ EOF
 		echo executing: $@ >&2
 	    fi
 
-	    $@ > /dev/null 2>&1
-	    echo 9999
+	    /bin/sh <<EOF1 > ${LogDir}${JobName}.o$$ 2> ${LogDir}${JobName}.e$$
+$@
+EOF1
 	else
 	    if [ $verbose -eq 1 ] ; then 
 		echo "Running commands in: $taskfile" >&2
@@ -288,11 +290,13 @@ EOF
 		if [ $verbose -eq 1 ] ; then 
 		    echo executing: $line >&2
 		fi
-		nohup $line > /dev/null 2>&1
+		/bin/sh <<EOF2 > ${LogDir}${JobName}.o$$.$n 2> ${LogDir}${JobName}.e$$.$n
+$line
+EOF2
 		n=`expr $n + 1`
 	    done
-	    echo 9999
 	fi	
+	echo $$
 	;;
 
 esac

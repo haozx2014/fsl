@@ -4,7 +4,7 @@
 #
 #   Stephen Smith, FMRIB Image Analysis Group
 #
-#   Copyright (C) 2002-2006 University of Oxford
+#   Copyright (C) 2002-2007 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -17,7 +17,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 3.3 (c) 2006, The University of
+#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -73,14 +73,47 @@ source [ file dirname [ info script ] ]/fslstart.tcl
 set VARS(history) {}
 
 #}}}
+#{{{ featquery_select_label
+
+proc featquery_select_label { } {
+    global fmri atlasname atlaslabelcount atlaslabelid atlaslabelname
+
+    set count 0
+    set w0 ".dialog[incr count]"
+    while { [ winfo exists $w0 ] } {
+        set w0 ".dialog[incr count]"
+    }
+
+    toplevel $w0
+
+    wm iconname $w0 $atlasname($fmri(atlasmask))
+    wm title $w0 $atlasname($fmri(atlasmask))
+
+    frame $w0.f
+    pack $w0.f -expand yes -fill both -in $w0 -side top
+
+    canvas $w0.f.viewport -yscrollcommand "$w0.f.ysbar set"
+    scrollbar $w0.f.ysbar -command "$w0.f.viewport yview" -orient vertical
+    frame $w0.f.viewport.f
+    $w0.f.viewport create window 0 0 -anchor nw -window $w0.f.viewport.f
+    bind $w0.f.viewport.f <Configure> "feat5:scrollform_resize $w0 $w0.f.viewport"
+    pack $w0.f.viewport -side left -fill both -expand true -in $w0.f
+
+    for { set i 0 } { $i < $atlaslabelcount($fmri(atlasmask)) } { incr i 1 } {
+	button $w0.button$i -text "$atlaslabelid($fmri(atlasmask),$i) $atlaslabelname($fmri(atlasmask),$i)" -command "set fmri(atlaslabel) $i ; destroy $w0" -anchor w
+	pack $w0.button$i -in $w0.f.viewport.f -side top -expand yes -fill both -padx 0 -pady 0
+    }
+}
+
+#}}}
 #{{{ featquery
 
 proc featquery { w } {
-    global fmri PXHOME FSLDIR VARS argc argv PWD feat_files query vars
+    global fmri PXHOME FSLDIR VARS argc argv PWD feat_files query vars n_atlases atlasname atlasimage atlaslabelcount atlaslabelid atlaslabelname atlasmenu
 
     toplevel $w
-    wm title      $w "FEAT Stats Query"
-    wm iconname   $w "FEAT Query"
+    wm title      $w "FEATQuery"
+    wm iconname   $w "FEATQuery"
     wm iconbitmap $w @${FSLDIR}/tcl/fmrib.xbm
 
     set fmri(multiple) 1
@@ -90,128 +123,161 @@ proc featquery { w } {
 
     #{{{ select FEAT directories
 
-frame $w.select -relief raised -borderwidth 1
+TitleFrame $w.select -text "Input FEAT directories" -relief groove 
+set fmri(selectf) [ $w.select getframe ]
 
-LabelSpinBox $w.select.number -label "Number of FEAT directories " -textvariable fmri(multiple) -range {1 10000 1 } -width 3
+LabelSpinBox $fmri(selectf).number -label "Number of FEAT directories " -textvariable fmri(multiple) -range {1 10000 1 } -width 3
 
-button $w.select.button -text "Select" -command "feat5:multiple_select $w -1 \"Select FEAT directories\" "
+button $fmri(selectf).button -text "Select" -command "feat5:multiple_select $w -1 \"Select FEAT directories\" "
 
-pack $w.select.number $w.select.button -in $w.select -padx 5 -pady 5 -side left
+pack $fmri(selectf).number $fmri(selectf).button -in $fmri(selectf) -padx 5 -pady 5 -side left
 
 #}}}
     #{{{ setup mask or coordinates
 
-frame $w.mask -relief raised -borderwidth 1
+TitleFrame $w.roi -text "Input ROI selection" -relief groove 
+set fmri(roif) [ $w.roi getframe ]
 
+#{{{ atlas
 
-FileEntry $w.mask.mask -textvariable fmri(mask) -label "Mask image " -title "Select the mask image" -width 30 -filedialog directory -filetypes IMAGE
+frame $fmri(roif).atlas
 
-frame $w.mask.type
+set fmri(atlasmask) 0
+
+label $fmri(roif).atlas.label -text "Use atlas:"
+
+set atlasmenu ""
+parseatlases
+
+eval "optionMenu2 $fmri(roif).atlas.menu fmri(atlasmask) -command \"featquery_update $w\" 0 None $atlasmenu"
+
+button $fmri(roif).atlas.button -command "featquery_select_label" -text "Select label"
+
+pack $fmri(roif).atlas.label $fmri(roif).atlas.menu -in $fmri(roif).atlas -padx 5 -side left
+
+#}}}
+#{{{ mask
+
+frame $fmri(roif).mask
+set fmri(maskf) $fmri(roif).mask
+
+FileEntry $fmri(maskf).mask -textvariable fmri(mask) -label "Mask image " -title "Select the mask image" -width 30 -filedialog directory -filetypes IMAGE
+
+frame $fmri(maskf).type
 set fmri(masktype) 1
-radiobutton $w.mask.type.image -text "Use mask image"   -value 1 -variable fmri(masktype) -command "featquery_update $w"
-radiobutton $w.mask.type.coord -text "Use co-ordinates" -value 2 -variable fmri(masktype) -command "featquery_update $w"
-pack $w.mask.type.image $w.mask.type.coord -in $w.mask.type -padx 5 -side left -expand yes
+radiobutton $fmri(maskf).type.image -text "Use mask image"   -value 1 -variable fmri(masktype) -command "featquery_update $w"
+radiobutton $fmri(maskf).type.coord -text "Use co-ordinates" -value 2 -variable fmri(masktype) -command "featquery_update $w"
+pack $fmri(maskf).type.image $fmri(maskf).type.coord -in $fmri(maskf).type -padx 5 -side left -expand yes
 
-pack $w.mask.mask $w.mask.type -in $w.mask -padx 5 -pady 5 -side top
+pack $fmri(maskf).mask $fmri(maskf).type -in $fmri(maskf) -padx 5 -pady 5 -side top
 
-
-frame $w.mask.coords
+frame $fmri(maskf).coords
 
 set fmri(coordtype) -vox
-radiobutton $w.mask.coords.vox -text "vox" -value -vox -variable fmri(coordtype)
-radiobutton $w.mask.coords.mm  -text "mm"  -value -mm  -variable fmri(coordtype)
+radiobutton $fmri(maskf).coords.vox -text "vox" -value -vox -variable fmri(coordtype)
+radiobutton $fmri(maskf).coords.mm  -text "mm"  -value -mm  -variable fmri(coordtype)
 
 set fmri(cX) 0
 set fmri(cY) 0
 set fmri(cZ) 0
 
+LabelSpinBox $fmri(maskf).coords.cX -label "  X " -textvariable fmri(cX) -range {-10000 10000 1 } -width 5
+LabelSpinBox $fmri(maskf).coords.cY -label "Y " -textvariable fmri(cY) -range {-10000 10000 1 } -width 5
+LabelSpinBox $fmri(maskf).coords.cZ -label "Z " -textvariable fmri(cZ) -range {-10000 10000 1 } -width 5
 
-LabelSpinBox $w.mask.coords.cX -label "  X " -textvariable fmri(cX) -range {-10000 10000 1 } -width 5
-LabelSpinBox $w.mask.coords.cY -label "Y " -textvariable fmri(cY) -range {-10000 10000 1 } -width 5
-LabelSpinBox $w.mask.coords.cZ -label "Z " -textvariable fmri(cZ) -range {-10000 10000 1 } -width 5
+pack $fmri(maskf).coords.vox $fmri(maskf).coords.mm $fmri(maskf).coords.cX $fmri(maskf).coords.cY $fmri(maskf).coords.cZ -in $fmri(maskf).coords -padx 5 -side left -expand yes
 
-pack $w.mask.coords.vox $w.mask.coords.mm $w.mask.coords.cX $w.mask.coords.cY $w.mask.coords.cZ -in $w.mask.coords -padx 5 -side left -expand yes
+#}}}
+
+pack $fmri(roif).atlas $fmri(maskf) -in $fmri(roif)
 
 #}}}
     #{{{ options
 
-frame $w.opts -relief raised -borderwidth 1
+TitleFrame $w.opts -text "Output options" -relief groove 
+set fmri(optsf) [ $w.opts getframe ]
 
-#{{{ tsplot
+#{{{ atlas
 
-# frame $w.opts.tsplot
+frame $fmri(optsf).atlas
 
-# set fmri(tsplot_yn) 1
-# checkbutton $w.opts.tsplot.yn -variable fmri(tsplot_yn) -text "Create time-series plots"
+set fmri(atlas) 0
 
-# pack $w.opts.tsplot.yn -in $w.opts.tsplot -padx 5 -side left
+label $fmri(optsf).atlas.label -text "Use atlas:"
+
+eval "optionMenu2 $fmri(optsf).atlas.menu fmri(atlas) 0 None $atlasmenu"
+
+pack $fmri(optsf).atlas.label $fmri(optsf).atlas.menu -in $fmri(optsf).atlas -padx 5 -side left
 
 #}}}
 #{{{ percent
 
-frame $w.opts.percent
+frame $fmri(optsf).percent
 
 set fmri(showpercent) 0
-checkbutton $w.opts.percent.yn -variable fmri(showpercent) -text "Convert PE/COPE values to %"
+checkbutton $fmri(optsf).percent.yn -variable fmri(showpercent) -text "Convert PE/COPE values to %"
 
-pack $w.opts.percent.yn -in $w.opts.percent -padx 5 -side left
+pack $fmri(optsf).percent.yn -in $fmri(optsf).percent -padx 5 -side left
 
 #}}}
 #{{{ mask weighting
 
-frame $w.opts.maskweight
+frame $fmri(optsf).maskweight
 
 set fmri(maskweight_yn) 0
-checkbutton $w.opts.maskweight.yn -variable fmri(maskweight_yn) -text "Do not binarise mask (allow weighting)"
+checkbutton $fmri(optsf).maskweight.yn -variable fmri(maskweight_yn) -text "Do not binarise mask (allow weighting)"
 
-pack $w.opts.maskweight.yn -in $w.opts.maskweight -padx 5 -side left
+pack $fmri(optsf).maskweight.yn -in $fmri(optsf).maskweight -padx 5 -side left
 
 #}}}
 #{{{ interp thresholding
 
-frame $w.opts.ithresh
+frame $fmri(optsf).ithresh
 
 set fmri(ithresh_yn) 0
-checkbutton $w.opts.ithresh.yn -variable fmri(ithresh_yn) -text "Change post-interpolation thresholding of mask" -command "featquery_update $w"
+checkbutton $fmri(optsf).ithresh.yn -variable fmri(ithresh_yn) -text "Change post-interpolation thresholding of mask" -command "featquery_update $w"
 
 set fmri(ithresh) 0.5
 
-LabelSpinBox  $w.opts.ithresh.thresh -textvariable fmri(ithresh)    -range {0.0 10000 0.1 } -width 5
+LabelSpinBox  $fmri(optsf).ithresh.thresh -textvariable fmri(ithresh)    -range {0.0 10000 0.1 } -width 5
 
-pack $w.opts.ithresh.yn $w.opts.ithresh.thresh  -in $w.opts.ithresh -padx 5 -side left
+pack $fmri(optsf).ithresh.yn $fmri(optsf).ithresh.thresh  -in $fmri(optsf).ithresh -padx 5 -side left
 
 #}}}
 #{{{ thresholding
 
-frame $w.opts.thresh
+frame $fmri(optsf).thresh
 
 set fmri(statsthresh_yn) 0
-checkbutton $w.opts.thresh.yn -variable fmri(statsthresh_yn) -text "Threshold stats images as well as masking" -command "featquery_update $w"
+checkbutton $fmri(optsf).thresh.yn -variable fmri(statsthresh_yn) -text "Threshold stats images as well as masking" -command "featquery_update $w"
 
 set fmri(statsthresh) 0
-LabelSpinBox  $w.opts.thresh.thresh -textvariable fmri(statsthresh) -range {-10000.0 10000 1 } -width 5
+LabelSpinBox  $fmri(optsf).thresh.thresh -textvariable fmri(statsthresh) -range {-10000.0 10000 1 } -width 5
 
-pack $w.opts.thresh.yn $w.opts.thresh.thresh  -in $w.opts.thresh -padx 5 -side left
-
-#}}}
-
-pack $w.opts.percent $w.opts.maskweight $w.opts.ithresh $w.opts.thresh -in $w.opts -side top -anchor w
+pack $fmri(optsf).thresh.yn $fmri(optsf).thresh.thresh  -in $fmri(optsf).thresh -padx 5 -side left
 
 #}}}
-    #{{{ output directory name
+#{{{ web browser popup
 
-frame $w.output -relief raised -borderwidth 1
-
-frame $w.output.name
-label $w.output.name.label -text "Featquery output directory name"
-set fmri(output) "featquery"
-entry $w.output.name.entry -textvariable fmri(output) -width 15
-pack $w.output.name.label $w.output.name.entry -in $w.output.name -padx 5 -side left
+frame $fmri(optsf).popup
 
 set fmri(fqpopup) 1
-checkbutton $w.output.popup -variable fmri(fqpopup) -text "Popup results in web browser"
+checkbutton $fmri(optsf).popup.yn -variable fmri(fqpopup) -text "Popup results in web browser"
 
-pack $w.output.name $w.output.popup -in $w.output -padx 5 -pady 5 -side top -anchor w
+pack $fmri(optsf).popup.yn -in $fmri(optsf).popup -padx 5 -side left
+
+#}}}
+#{{{ output directory name
+
+frame $fmri(optsf).name
+label $fmri(optsf).name.label -text "Featquery output directory name"
+set fmri(output) "featquery"
+entry $fmri(optsf).name.entry -textvariable fmri(output) -width 15
+pack $fmri(optsf).name.label $fmri(optsf).name.entry -in $fmri(optsf).name -padx 5 -side left
+
+#}}}
+
+pack $fmri(optsf).atlas $fmri(optsf).percent $fmri(optsf).maskweight $fmri(optsf).ithresh $fmri(optsf).thresh $fmri(optsf).popup $fmri(optsf).name -in $fmri(optsf) -side top -anchor w
 
 #}}}
     #{{{ bottom buttons
@@ -226,7 +292,7 @@ pack $w.btns.apply $w.btns.cancel $w.btns.help -in $w.btns -padx 5 -pady 5 -side
 
 #}}}
 
-    pack $w.select $w.mask $w.opts $w.output $w.btns -in $w -padx 5 -pady 5 -fill x 
+    pack $w.select $w.roi $w.opts $w.btns -in $w -padx 5 -pady 5 -fill x 
     featquery_update $w
 }
 
@@ -236,21 +302,27 @@ pack $w.btns.apply $w.btns.cancel $w.btns.help -in $w.btns -padx 5 -pady 5 -side
 proc featquery_update { w } {
     global fmri
 
-    pack forget $w.mask.coords
-    if { $fmri(masktype) == 2 } {
-	pack $w.mask.coords -in $w.mask -padx 5 -pady 5 -side top
+    pack forget $fmri(maskf) $fmri(maskf).coords $fmri(roif).atlas.button
+    if { $fmri(atlasmask) == 0 } {
+	pack $fmri(maskf) -in $fmri(roif) -after $fmri(roif).atlas 
+	if { $fmri(masktype) == 2 } {
+	    pack $fmri(maskf).coords -in $fmri(maskf) -padx 5 -pady 5 -side top
+	}
+    } else {
+	set fmri(masktype) 1
+	set fmri(maskweight_yn) 1
+	pack $fmri(roif).atlas.button -in $fmri(roif).atlas -side top -anchor w
     }
 
-    pack forget $w.opts.thresh.thresh
+    pack forget $fmri(optsf).thresh.thresh
     if { $fmri(statsthresh_yn) } {
-	pack $w.opts.thresh.thresh -in $w.opts.thresh -after $w.opts.thresh.yn -padx 5 -side left
+	pack $fmri(optsf).thresh.thresh -in $fmri(optsf).thresh -after $fmri(optsf).thresh.yn -padx 5 -side left
     }
 
-    pack forget $w.opts.ithresh.thresh
+    pack forget $fmri(optsf).ithresh.thresh
     if { $fmri(ithresh_yn) } {
-	pack $w.opts.ithresh.thresh -in $w.opts.ithresh -after $w.opts.ithresh.yn -padx 5 -side left
+	pack $fmri(optsf).ithresh.thresh -in $fmri(optsf).ithresh -after $fmri(optsf).ithresh.yn -padx 5 -side left
     }
-
 }
 
 #}}}
@@ -262,12 +334,13 @@ proc featquery_whichstats { w } {
     if { [ winfo exists $w.stats ] } {
 	destroy $w.stats
     }
-    frame $w.stats -relief raised -borderwidth 1
+
+    TitleFrame $w.stats -text "Stats images of interest" -relief groove 
+    set fmri(statsf) [ $w.stats getframe ]
+    set w0 $fmri(statsf)
     pack $w.stats -in $w -after $w.select -padx 5 -pady 5 -fill x
 
     #{{{ setup scrollbar viewport as $v
-
-    set w0 $w.stats
 
     frame $w0.f
     pack $w0.f -in $w0 -side top -anchor w
@@ -324,7 +397,17 @@ proc featquery_whichstats { w } {
 #{{{ featquery_proc
 
 proc featquery_proc { w } {
-    global fmri feat_files FSLDIR
+    global fmri feat_files FSLDIR n_atlases atlasname atlasimage atlaslabelcount atlaslabelid atlaslabelname atlasmenu
+
+    if { $fmri(atlasmask) > 0 } {
+	set fmri(mask) [ fsl:exec "${FSLDIR}/bin/tmpnam /tmp/featquery" -n ]
+	set nvols [ fsl:exec "${FSLDIR}/bin/fslnvols ${FSLDIR}/data/atlases/$atlasimage($fmri(atlasmask))" -n ]
+	if { $nvols == 1 } {
+	    fsl:exec "${FSLDIR}/bin/fslmaths ${FSLDIR}/data/atlases/$atlasimage($fmri(atlasmask)) -thr $fmri(atlaslabel) -uthr $fmri(atlaslabel) -bin $fmri(mask)"
+	} else {
+	    fsl:exec "${FSLDIR}/bin/fslroi ${FSLDIR}/data/atlases/$atlasimage($fmri(atlasmask)) $fmri(mask) $fmri(atlaslabel) 1"
+	}
+    }
 
     if { ( $fmri(mask) == "" ) ||
 	 ( ! [ imtest $fmri(mask) ] && ! [ imtest $feat_files(1)/$fmri(mask) ] ) } {
@@ -347,6 +430,10 @@ proc featquery_proc { w } {
 	}
     }
     set thecommand "$thecommand $nstats $statslist $fmri(output)"
+
+    if { $fmri(atlas) > 0 } {
+    	set thecommand "$thecommand -a $fmri(atlas)"
+    }
 
     if { $fmri(showpercent) == 1 } {
     	set thecommand "$thecommand -p"
@@ -379,7 +466,8 @@ proc featquery_proc { w } {
 	set thecommand "$thecommand $fmri(coordtype) $fmri(cX) $fmri(cY) $fmri(cZ)"
     }
 
-    fsl:exec $thecommand
+    puts $thecommand
+    catch { exec sh -c "$thecommand" & } junk
 }
 
 #}}}
@@ -390,3 +478,4 @@ featquery .r
 tkwait window .r
 
 #}}}
+

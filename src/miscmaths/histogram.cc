@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 3.3 (c) 2006, The University of
+    FMRIB Software Library, Release 4.0 (c) 2007, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -69,6 +69,7 @@
 #include "miscmaths.h"
 #include "histogram.h"
 
+#include <strstream>
 using namespace std;
 
 #ifndef NO_NAMESPACE
@@ -104,6 +105,49 @@ namespace MISCMATHS {
 	{
 	   histogram(getBin(sourceData(i)))++;
 	}
+    }
+
+  void Histogram::smooth()
+    {
+      Tracer ts("Histogram::smooth");
+
+      ColumnVector newhist=histogram;
+
+      // smooth in i direction
+      newhist=0;
+
+      for(int i=1; i<=bins; i++)
+	  {
+	    float val=0.5*histogram(i);
+	    float norm=0.5;
+
+	    if(i>1)
+	      {
+		val+=0.2283*(histogram(i-1));
+		norm+=0.2283;
+	      }
+	    if(i>2)
+	      {
+		val+=0.0219*(histogram(i-2));
+		norm+=0.0219;		
+	      }
+	    if(i<bins)
+	      {
+		val+=0.2283*(histogram(i+1));
+		norm+=0.2283;
+	      }
+	    if(i<bins-1)
+	      {
+		val+=0.0219*(histogram(i+2));
+		norm+=0.0219;		
+	      }
+	    val/=norm;
+
+	    newhist(i)=val;
+	  }
+
+      histogram=newhist;
+
     }
 
   int Histogram::integrate(float value1, float value2) const

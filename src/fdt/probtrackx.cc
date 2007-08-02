@@ -11,7 +11,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 3.3 (c) 2006, The University of
+    FMRIB Software Library, Release 4.0 (c) 2007, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -92,8 +92,11 @@ int main ( int argc, char **argv ){
   if(opts.verbose.value()>0){
     opts.status();
   }
-  if(opts.mode.value()=="simple")
+  if(opts.mode.value()=="simple"){
     track();
+    return 0;
+  }
+
   string tmpin=opts.seedfile.value();
   if(fsl_imageexists(opts.seedfile.value())){ 
     if(fsl_imageexists(opts.mask2.value())){ twomasks();}

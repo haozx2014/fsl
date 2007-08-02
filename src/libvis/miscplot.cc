@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 3.3 (c) 2006, The University of
+    FMRIB Software Library, Release 4.0 (c) 2007, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -82,7 +82,7 @@ extern "C" {
 
 namespace MISCPLOT{
 	//  MATLAB Line colors
-	unsigned long sc[64] = {0x8080FF,0x008000,0xFF0000,0x00BFBF,0xBF00BF,0xBFBF00,0x404040,0x0000FF,
+	unsigned long sc_init[64] = {0x8080FF,0x008000,0xFF0000,0x00BFBF,0xBF00BF,0xBFBF00,0x404040,0x0000FF,
 		0x008000,0xFF0000,0x00BFBF,0xBF00BF,0xBFBF00,0x404040,0x0000FF,0x008000,
 		0xFF0000,0x00BFBF,0xBF00BF,0xBFBF00,0x404040,0x0000FF,0x008000,0xFF0000,
 		0x00BFBF,0xBF00BF,0xBFBF00,0x404040,0x0000FF,0x008000,0xFF0000,0x00BFBF,
@@ -101,7 +101,7 @@ namespace MISCPLOT{
     return os.str();
 	}
 
-	string float2str(float f, int width, int prec, bool scientif){
+string float2str(float f, int width, int prec, bool scientif){
     ostringstream os;
     int redw = int(std::abs(std::log10(std::abs(f))))+1;
     if(width>0)
@@ -112,9 +112,9 @@ namespace MISCPLOT{
     os.setf(ios::internal, ios::adjustfield);
     os << f;
     return os.str();
-}
+  }
 
-  void miscplot::add_legend(void* ptr, unsigned long cmap[], bool inside){
+void miscplot::add_legend(void* ptr, unsigned long cmap[], bool inside){
   
   int xsize = gdImagePtr(ptr)->sx;
   int ysize = gdImagePtr(ptr)->sy;
@@ -202,7 +202,7 @@ namespace MISCPLOT{
   outim = newim;
 }
 
-  void miscplot::timeseries(const Matrix& mat, string filename, string title, 
+void miscplot::timeseries(const Matrix& mat, string filename, string title, 
 	  float tr, int ysize, int width, int prec, bool sci){
 
   int numlines=mat.Nrows();
@@ -234,6 +234,8 @@ namespace MISCPLOT{
 				data[(ctr1-1)*numpoint + ctr2-1] = mat(ctr1,ctr2);
       }
     }
+		ymin = GDC_requested_ymin;
+		ymax = GDC_requested_ymax;
   }
 
   for(int ctr1=1;ctr1<=numlines; ctr1++)
@@ -328,25 +330,27 @@ namespace MISCPLOT{
 
   GDC_ticks = GDC_TICK_LABELS;
   GDC_grid  = GDC_TICK_NONE;
+	if(gridswapdefault)
+		GDC_grid = GDC_TICK_LABELS;
   GDC_yaxis = TRUE;
   GDC_yaxis2 = FALSE;
   GDC_xaxis = TRUE;
   GDC_xaxis_angle = 0;
-  float range=ymax-ymin;
-  if (range<1)   
-		GDC_ylabel_density = 75;	 
-  else   
-		GDC_ylabel_density = 50;
-  if (range>10) 
-		GDC_ylabel_fmt = "%.0f";
+  float range;
+  range=abs(ymax-ymin);
+  if (range<1) GDC_ylabel_density = 75;
+  else GDC_ylabel_density = 70;	 
+  if (range>1e6) GDC_ylabel_fmt = "%.1e";
+  else if (range>10) GDC_ylabel_fmt = "%.0f";
   else if (range>1) GDC_ylabel_fmt = "%.1f";
   else if (range>0.01) GDC_ylabel_fmt = "%.3f";
-  else 
-		GDC_ylabel_fmt = "%.5f";
+  else GDC_ylabel_fmt = "%.5f";
+	if(Ylabel_fmt > "")
+		GDC_ylabel_fmt = (char*)Ylabel_fmt.c_str();
+
   GDC_title_size = GDC_SMALL;
   //GDC_hard_xorig = 50;
   //GDC_hard_graphwidth = xsize - 65;
-
   if(filename.substr(filename.size()-4,filename.size())!=string(".png"))
     filename += string(".png");
   
@@ -381,7 +385,7 @@ namespace MISCPLOT{
   
   }
 
-	void miscplot::add_bpdata(const NEWMAT::ColumnVector& vec){
+void miscplot::add_bpdata(const NEWMAT::ColumnVector& vec){
   //add new boxplot column to the boxplot
   // cerr << bp_colctr << "   " << vec.Nrows() << " " << vec(vec.Nrows())<<endl;
   bp_median.push_back(median(vec));
@@ -427,7 +431,7 @@ namespace MISCPLOT{
   bp_colctr++;  
 }
 
-	void miscplot::add_bpdata(const NEWMAT::Matrix& mat){
+void miscplot::add_bpdata(const NEWMAT::Matrix& mat){
   for (int ctr = 1;ctr <=mat.Ncols(); ctr++){
     ColumnVector vec;
     vec = mat.Column(ctr);
@@ -435,17 +439,18 @@ namespace MISCPLOT{
   }
 }
 
-	void miscplot::boxplot(const Matrix& mat, string filename, string title){
+void miscplot::boxplot(const Matrix& mat, string filename, string title){
   add_bpdata(mat);
   boxplot(filename,title);
 }
 
-	void miscplot::boxplot(const ColumnVector& vec, string filename, string title){
+void  miscplot::boxplot(const  ColumnVector&   vec,  string  filename,  string
+title){
   add_bpdata(vec);
   boxplot(filename,title);
 }
 
-	void miscplot::setscatter(Matrix &data,int width){
+void miscplot::setscatter(Matrix &data,int width){
   deletescatter();
   GDC_scatter = new GDC_SCATTER_T[ data.Nrows() ]; 
   scat_ctr = 0;
@@ -468,7 +473,7 @@ namespace MISCPLOT{
   GDC_num_scatter_pts = scat_ctr;
 }
 
-	void miscplot::deletescatter(){
+void miscplot::deletescatter(){
   if(scat_ctr)
   {
 	  delete [] GDC_scatter;
@@ -476,7 +481,7 @@ namespace MISCPLOT{
   }
 }
  
-	void miscplot::GDCglobals_reset(){
+void miscplot::GDCglobals_reset(){
 		deletescatter();
 		
 		//reset all the globals
@@ -506,9 +511,9 @@ namespace MISCPLOT{
 		GDC_yaxis2 = TRUE;
 		GDC_ylabel_density = 80;
 		GDC_ylabel_fmt = NULL;
-	}
+}
 
-	void miscplot::boxplot(string filename, string title){
+void miscplot::boxplot(string filename, string title){
 
 		deletescatter();
 
@@ -669,7 +674,9 @@ namespace MISCPLOT{
   GDC_scatter         = scat;
   GDC_num_scatter_pts = scat_ctr;
 	GDC_grid = GDC_TICK_LABELS;
-
+	if(gridswapdefault)
+		GDC_grid = GDC_TICK_NONE;
+		
   if(filename.substr(filename.size()-4,filename.size())!=string(".png"))
     filename += string(".png");
 
@@ -730,7 +737,7 @@ namespace MISCPLOT{
   GDC_num_scatter_pts = 0;
 }
 
-	void miscplot::histogram(const Matrix& mat, string filename, string title){
+void miscplot::histogram(const Matrix& mat, string filename, string title){
 
   RowVector datam = mat.Row(1);
   int numpoint=datam.Ncols();
@@ -828,6 +835,9 @@ namespace MISCPLOT{
 
   GDC_ticks = GDC_TICK_LABELS;
   GDC_grid  = GDC_TICK_NONE;
+	if(gridswapdefault)
+		GDC_grid = GDC_TICK_LABELS;
+ 
   GDC_yaxis = ylabels.size()>0;
   GDC_yaxis2 = FALSE;
   GDC_xaxis = TRUE;
@@ -853,7 +863,7 @@ namespace MISCPLOT{
   FILE  *outpng1 = fopen(filename.c_str(), "wb" );
   GDC_image_type     = GDC_PNG;
 
- if (labels.size()>0||ylabels.size()>0||xlabels.size()>0||explabel.length()>0)
+  if (labels.size()>0||ylabels.size()>0||xlabels.size()>0||explabel.length()>0)
     GDC_hold_img = GDC_EXPOSE_IMAGE;
   
   GDC_out_graph( xsize, ysize, outpng1 , GDC_BAR, numpoint, (char**) lbls , 1, data, NULL ); 
@@ -1024,6 +1034,8 @@ namespace MISCPLOT{
 
   GDC_ticks = GDC_TICK_LABELS;
   GDC_grid  = GDC_TICK_NONE;
+	if(gridswapdefault)
+		GDC_grid = GDC_TICK_LABELS;
   GDC_yaxis = ylabels.size()>0;
   GDC_yaxis2 = FALSE;
   GDC_xaxis = TRUE;

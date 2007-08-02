@@ -1,94 +1,31 @@
 #!/bin/sh
 
-#   possumX - run possum on a single processor
-#
-#   Ivana Drobnjak and Mark Jenkinson, FMRIB Image Analysis Group
-#
-#   Copyright (C) 2003-2007 University of Oxford
-#
-#   Part of FSL - FMRIB's Software Library
-#   http://www.fmrib.ox.ac.uk/fsl
-#   fsl@fmrib.ox.ac.uk
-#   
-#   Developed at FMRIB (Oxford Centre for Functional Magnetic Resonance
-#   Imaging of the Brain), Department of Clinical Neurology, Oxford
-#   University, Oxford, UK
-#   
-#   
-#   LICENCE
-#   
-#   FMRIB Software Library, Release 3.3 (c) 2006, The University of
-#   Oxford (the "Software")
-#   
-#   The Software remains the property of the University of Oxford ("the
-#   University").
-#   
-#   The Software is distributed "AS IS" under this Licence solely for
-#   non-commercial use in the hope that it will be useful, but in order
-#   that the University as a charitable foundation protects its assets for
-#   the benefit of its educational and research purposes, the University
-#   makes clear that no condition is made or to be implied, nor is any
-#   warranty given or to be implied, as to the accuracy of the Software,
-#   or that it will be suitable for any particular purpose or for use
-#   under any specific conditions. Furthermore, the University disclaims
-#   all responsibility for the use which is made of the Software. It
-#   further disclaims any liability for the outcomes arising from using
-#   the Software.
-#   
-#   The Licensee agrees to indemnify the University and hold the
-#   University harmless from and against any and all claims, damages and
-#   liabilities asserted by third parties (including claims for
-#   negligence) which arise directly or indirectly from the use of the
-#   Software or the sale of any products based on the Software.
-#   
-#   No part of the Software may be reproduced, modified, transmitted or
-#   transferred in any form or by any means, electronic or mechanical,
-#   without the express permission of the University. The permission of
-#   the University is not required if the said reproduction, modification,
-#   transmission or transference is done without financial return, the
-#   conditions of this Licence are imposed upon the receiver of the
-#   product, and all original and amended source code is included in any
-#   transmitted product. You may be held legally responsible for any
-#   copyright infringement that is caused or encouraged by your failure to
-#   abide by these terms and conditions.
-#   
-#   You are not permitted under this Licence to use this Software
-#   commercially. Use for which any financial return is received shall be
-#   defined as commercial use, and includes (1) integration of all or part
-#   of the source code or the Software into a product for sale or license
-#   by or on behalf of Licensee to third parties or (2) use of the
-#   Software or any derivative of it for research with the final aim of
-#   developing software products for sale or license to a third party or
-#   (3) use of the Software or any derivative of it for research with the
-#   final aim of developing non-software products for sale or license to a
-#   third party, or (4) use of the Software to provide any service to an
-#   external organisation for which payment is received. If you are
-#   interested in using the Software commercially, please contact Isis
-#   Innovation Limited ("Isis"), the technology transfer company of the
-#   University, to negotiate a licence. Contact details are:
-#   innovation@isis.ox.ac.uk quoting reference DE/1112.
+# Copyright (C) 2007 University of Oxford
+# Authors: Ivana Drobnjak, Mark Jenkinson
+
+# shcopyright
+
 
 Usage() {
     echo ""
-    echo "Usage: possumX <subject directory> "
-    echo ""
-    echo "For running on a single machine"
+    echo "Usage: possumX <subject directory> [options]"
     echo ""
     echo "Subject directory needs to contain:"
-    echo "1. brain"
-    echo "2. MRpar" 
-    echo "3. motion "
-    echo "4. slcprof"
-    echo "5. pulse,pulse.info"
+    echo "1.  brain"
+    echo "2.  MRpar" 
+    echo "3.  motion "
+    echo "4.  slcprof"
+    echo "5.  pulse,pulse.info"
     echo "optional"
-    echo "6. RFtrans,RFrec"
-    echo "7. T2"
-    echo "8. T2timecourse"
-    echo "9. b0"
-    echo "10. b0extra"
-    echo "11. b0timecourse"
+    echo "6.  T2"
+    echo "7.  T2timecourse"
+    echo "8.  b0inh"
+    echo "9.  b0extra"
+    echo "10. b0timecourse"
     echo ""
-    echo "The description of how to obtain the files is possum/docs"
+    echo "In case there is an SGE enviroment:"
+    echo "-n (number of processors, default 1)"   
+    echo "-t (estimated running time per processor (minutes), default 2000)"
     exit
 }
 
@@ -113,13 +50,26 @@ run(){
  date >> $2/possum.log
 }
 
-[ "$1" = "" ] && Usage
-
+nargs=$#
+if [ $nargs -eq 0 ] ; then
+  Usage
+fi
 
 subjdir=`make_absolute $1`
 subjdir=`echo $subjdir | sed 's/\/$/$/g'`
-
 echo subjectdir is $subjdir
+
+nproc=1
+ntime=2000
+while [ ! -z "$2" ]
+do
+  case "$2" in
+      -n) nproc=$3;shift;;
+      -t) ntime=$3;shift;;
+      *) break;;
+  esac
+  shift
+done
 
 #check that all required files exist
 
@@ -202,15 +152,27 @@ if [ -e ${subjdir}/kcoord.on ]; then
         command="$command -k"
 fi
 
-# prepare logging files
-touch $subjdir/possum.com
-touch $subjdir/possum.log
-
+if [ ! -e ${subjdir}/noise ]; then
+        echo "sigma" 0 > ${subjdir}/noise
+fi
+    
+echo Making possum directory structure
+mkdir -p ${subjdir}/diff_proc
+mkdir -p ${subjdir}/logs
+mkdir -p ${subjdir}/logs/pid_${$}
+mailto=`whoami`@fmrib.ox.ac.uk
+    
 echo Processing stage 
-run "${FSLDIR}/bin/possum ${command} -o ${subjdir}/signal" $subjdir
- 
+command="$command --nproc=${nproc}"
+[ -f ${subjdir}/possum.com ] && rm ${subjdir}/possum.com
+for ((procnum=0; procnum < $nproc; procnum++)) ; do
+    echo "${FSLDIR}/bin/possum $command --procid=${procnum}  -o ${subjdir}/diff_proc/signal_proc_${procnum}" >> ${subjdir}/possum.com
+done
+
+possumid=`${FSLDIR}/bin/fsl_sub -T $ntime -l ${subjdir}/logs -M $mailto -N possumx -t ${subjdir}/possum.com` 
+
 echo Post processing stage
-run "${FSLDIR}/bin/signal2image -i ${subjdir}/signal -o ${subjdir}/image -p ${subjdir}/pulse -a" $subjdir
+mergeid=`${FSLDIR}/bin/fsl_sub -T 10 -j $possumid -F -l ${subjdir}/logs ${FSLDIR}/bin/possumX_postproc.sh $subjdir $nproc`
 
 echo Done
-
+exit 0

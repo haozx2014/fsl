@@ -14,7 +14,7 @@ DOBJS = readpng.o
 
 XFILES = slicer overlay fsl_tsplot fsl_boxplot fsl_histogram create_lut wpng pngappend 
 
-SCRIPTS =  slices slicesdir
+SCRIPTS =  slices slicesdir slicesmask
 
 RUNTCLS = Renderstats
 

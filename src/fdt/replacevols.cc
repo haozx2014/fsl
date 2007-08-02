@@ -11,7 +11,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 3.3 (c) 2006, The University of
+    FMRIB Software Library, Release 4.0 (c) 2007, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -72,16 +72,16 @@ int read_avg_file (vector<vector<int> >& avgs,const string fname){
   avgs.clear();
   ifstream avg_file(fname.c_str());
   string myline;
-  bool cocksize=true;
+  bool nobbsize=true;
 
   int row = 0;
   
   if(!avg_file){return -1;}
   else{
-    while(cocksize){
+    while(nobbsize){
       avgs.push_back(vector<int>());
 
-      cocksize=false;      
+      nobbsize=false;      
       getline(avg_file,myline);
       
       int pos=0;
@@ -102,7 +102,7 @@ int read_avg_file (vector<vector<int> >& avgs,const string fname){
 	int length;
 	mylinestr >> startstr;
 	if(isnum(startstr)){
-	  cocksize=true;
+	  nobbsize=true;
 	  start = atoi(startstr.c_str());
 	  mylinestr >> length;
 

@@ -17,7 +17,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 3.3 (c) 2006, The University of
+#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -70,8 +70,9 @@
 
 Usage() {
     echo ""
-    echo "Usage:   first_flirt <input_image> <output_basename> [-d]"
+    echo "Usage:   first_flirt <input_image> <output_basename> [options]"
     echo ""
+    echo "-b : input is already brain extracted"
     echo "-d : debug (don't delete intermediate files)"
     echo ""
     exit 1
@@ -79,21 +80,43 @@ Usage() {
 
 [ "$2" = "" ] && Usage
 [ `${FSLDIR}/bin/imtest $1` = 0 ] && Usage
-
 A=`${FSLDIR}/bin/remove_ext $1`
 B=`${FSLDIR}/bin/remove_ext $2`
+shift 2
 
-${FSLDIR}/bin/flirt -in $A -out ${B}grot -ref ${FSLDIR}/etc/standard/MNI152_T1_1mm.nii.gz -omat ${B}grot.mat
+debug=0
+betted=0
+
+while [ _$1 != _ ] ; do
+    if [ $1 = -d ] ; then
+        debug=1
+        shift
+    elif [ $1 = -b ] ; then
+        betted=1
+        shift
+    fi
+done
+
+refim=MNI152_T1_1mm.nii.gz
+if [ $betted = 1 ] ; then
+    refim=MNI152_T1_1mm_brain.nii.gz
+fi
+
+
+
+${FSLDIR}/bin/flirt -in $A -out ${B}grot -ref ${FSLDIR}/data/standard/${refim} -omat ${B}grot.mat
 
 #do subcortical alignment
-${FSLDIR}/bin/flirt -in ${B}grot -out ${B}grot2 -ref ${FSLDIR}/etc/standard/MNI152_T1_1mm.nii.gz -omat ${B}grot2.mat -nosearch -refweight ${FSLDIR}/etc/standard/avg152_subbr_mask.nii.gz   
-
+${FSLDIR}/bin/flirt -in ${B}grot -out ${B}grot2 -ref ${FSLDIR}/data/standard/${refim} -omat ${B}grot2.mat -nosearch -refweight ${FSLDIR}/data/standard/avg152_subbr_mask.nii.gz   
 ${FSLDIR}/bin/convert_xfm -omat ${B}.mat -concat ${B}grot2.mat ${B}grot.mat 
+
 #generate registered images
-${FSLDIR}/bin/flirt -in ${A} -out ${B} -ref ${FSLDIR}/etc/standard/MNI152_T1_1mm.nii.gz -applyxfm -init ${B}.mat
+${FSLDIR}/bin/flirt -in ${A} -out ${B} -ref ${FSLDIR}/data/standard/${refim} -applyxfm -init ${B}.mat
 
 
-if [ _$3 = _ ] ; then
+if [ $debug = 0 ] ; then
   /bin/rm ${B}grot*
 fi
+
+exit 0
 

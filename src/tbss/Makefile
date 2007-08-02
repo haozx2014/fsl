@@ -20,6 +20,6 @@ tbss_skeleton: tbss_skeleton.cc
 	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ tbss_skeleton.cc ${LIBS} 
 
 defaultfiles:
-	#@if [ ! -d ${DESTDIR}/etc/standard ] ; then ${MKDIR} -p ${DESTDIR}/etc/standard ; ${CHMOD} -R g+w ${DESTDIR}/etc ; fi
-	#${CP} *.nii.gz example_FA_target* ${DESTDIR}/etc/standard
+	#@if [ ! -d ${DESTDIR}/data/standard ] ; then ${MKDIR} -p ${DESTDIR}/data/standard ; ${CHMOD} -R g+w ${DESTDIR}/etc ; fi
+	#${CP} *.nii.gz example_FA_target* ${DESTDIR}/data/standard
 

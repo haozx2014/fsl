@@ -11,7 +11,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 3.3 (c) 2006, The University of
+    FMRIB Software Library, Release 4.0 (c) 2007, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -1065,7 +1065,21 @@ namespace shapemodel {
 		}else if(type==5){
 			//write t-stats
 			fshape<<"POINT_DATA "<<getTotalNumberOfPoints()<<endl;
-			fshape<<"VECTORS tstast float"<<endl;
+			fshape<<"SCALARS tstats float"<<endl;
+			fshape<<"LOOKUP_TABLE default"<<endl;
+			for (int sh=0;sh<getNumberOfShapes();sh++){
+				vector<float> scalars=shapes.at(sh)->getScalars();
+				
+
+				for (int i=0;i<getNumberOfPoints(sh);i++){
+					fshape<<scalars.at(i)<<endl;
+					#ifdef PPC64
+						if ((n++ % 20) == 0) fshape.flush();
+					#endif
+				}
+			}
+
+			fshape<<"VECTORS meanDif float"<<endl;
 			for (int sh=0;sh<getNumberOfShapes();sh++){
 				vector<float> tstatx=shapes.at(sh)->getTstatX();
 				vector<float> tstaty=shapes.at(sh)->getTstatY();
@@ -1182,7 +1196,7 @@ namespace shapemodel {
 			//start with shape model only
 	//		fshape<<"FIELD FieldData "<<getNumberOfModes()<<endl;
 	if ((type!=6)&&(type!=7)){
-			fshape<<"FIELD FieldData "<<2*getNumberOfModes()+6+7<<endl;
+			fshape<<"FIELD FieldData "<<2*getNumberOfModes()+12<<endl;
 		}else{
 					fshape<<"FIELD FieldData "<<2*getNumberOfModes()+6+7+7+8<<endl;
 
@@ -3235,7 +3249,9 @@ vector<float> shapeModel::getDeformedIprofAff6( vector<float> var, int shape, in
 	void shapeModel::setShapeTstatZ(int shape, vector<float> v){
 		shapes.at(shape)->setTstatZ(v);
 	}
-
+	void shapeModel::setShapeScalars(int shape, vector<float> v){
+		shapes.at(shape)->setScalars(v);
+	}
 	void shapeModel::setShapeMode(int shape, int mode, vector<Vec> v){
 		shapes.at(shape)->setModeVector(v,mode);
 	}

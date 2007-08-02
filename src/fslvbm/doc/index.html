@@ -1,0 +1,220 @@
+<HTML><HEAD><link REL="stylesheet" TYPE="text/css" href="../fsl.css">
+<TITLE>FSLVBM</TITLE></HEAD><BODY>
+<hr><TABLE BORDER=0 WIDTH="100%"><TR>
+<TD ALIGN=CENTER><H1>FSL-VBM - VBM-style analysis with FSL tools</H1>
+
+FSL-VBM v1.0&beta; - Voxelwise analysis of multi-subject structural MRI data
+
+<p>
+
+<a href="#intro">Introduction - Why FSL-VBM?</a> &nbsp;&nbsp;-&nbsp;&nbsp;
+<a href="#overview">Running FSL-VBM - Overview</a> &nbsp;&nbsp;-&nbsp;&nbsp;
+<a href="#detail">Running FSL-VBM - In detail</a><br> 
+<a href="#prepare">Preparing your data</a>&nbsp;&nbsp;-&nbsp;&nbsp;
+<a href="#format">Changing the format</a> &nbsp;&nbsp;-&nbsp;&nbsp;
+<a href="#step1">Extracting brain information</a>&nbsp;&nbsp;-&nbsp;&nbsp;
+<a href="#step2">Creating the template</a>&nbsp;&nbsp;-&nbsp;&nbsp;
+<a href="#step3">Processing the GM images</a>
+
+<TD ALIGN=RIGHT><a href="../index.html"><IMG BORDER=0 SRC="../images/fsl-logo.jpg"></a></TR></TABLE>
+
+<a name="intro"></a><p><hr><H2>Introduction - Why FSL-VBM?</H2>
+
+If you want to investigate voxel-wise changes in the grey matter
+volume/topography in one population related to say one clinical score,
+or between several populations.  Or if you're carrying a functional
+study out (fMRI, PET) and want to be sure that the effect seen in this
+functional study is not underlied by any structural GM differences.
+
+<p>It is completely unbiased as it requires no a priori on the
+location of these possible differences in the grey matter and is not
+operator-dependant. It follows the optimised VBM protocol developed by
+Good et al., 2001.
+
+<p>To be able to compare all the GM images on a voxel basis, they need
+to be placed into a standard space, which involves the use of a
+non-linear registration.  Somewhat, this approach is a trade-off: in
+order to be able to compare voxel-by-voxel the GM volume in your
+images, you want all the cerebral structures across your subjects to
+match (that's why you use a non-linear registration), but not "too
+much" or you would not be able to see any difference if all these
+structures were perfectly realigned across the subjects (that's why
+you use limited degrees of freedom for the non-linear registration).
+
+<p>Please bear in mind that the interpretation of the results you may
+obtain with such voxel-wise analysis has inherent limitations,
+however. It is sometimes not possible to determine if the results you
+may find are the consequence of an effective reduced thickness or
+atrophy in the grey matter, or rather an indirect reflection of a
+different gyrification pattern. Indeed, it might be possible that a
+misalignment of the gyri/sulci or even different folding patterns may
+lead to the difference of grey matter distribution that you have
+found.  Moreover, there is theoretically a continuum of results
+dependent on the degrees of freedom of the non-rigid registration used
+(here free-form deformation with 20 mm initial control point spacing)
+and the amount of smoothing.
+
+<p>For more detailed information:
+
+<UL>
+
+<LI>On the VBM protocol: <br>
+
+see <b>Ashburner et al.</b>, Voxel-based morphometry--the methods. Neuroimage 2000.<br>
+see Good et al., A voxel-based morphometric study of ageing in 465 normal adult human brains. Neuroimage 2001.
+
+<LI><p>On the non-linear registration used in the FSL-VBM protocol:<br>
+
+see <b>Rueckert et al.</b>, Nonrigid registration using free-form deformations: application to breast MR images. IEEE TMI 1999.
+
+<LI><p>On the issues of such voxel-wise analyses:<br>
+
+see <b>Bookstein</b>,"Voxel-based morphometry" should not be used with imperfectly registered images. Neuroimage 2001.<br>
+see <b>Ashburner et al.</b>, Why voxel-based morphometry should be used. Neuroimage 2001.<br>
+see <b>Crum et al.</b>, Zen and the art of medical image registration: correspondence, homology, and quality. Neuroimage 2003.<br>
+see <b>Jones et al.</b>, The effect of filter size on VBM analyses of DT-MRI data. Neuroimage 2005.<br>
+
+<LI><p>On one clinical application of this protocol<br>
+
+see <b>Douaud et al.</b>, Anatomically related grey and white matter abnormalities in adolescent-onset schizophrenia. Brain 2007.
+
+</UL>
+
+
+
+<a name="overview"></a><p><hr><H2>Running FSL-VBM - Overview</H2>
+
+Running FSL-VBM involves running a few simple steps/scripts from your FSL-VBM directory:
+
+<UL>
+<LI>tbss_1_preproc - prepare your T1-weighted images in the right format and place them in an FAi working directory 
+<LI>fslvbm_1_bet - extract brain information from all T1 images 
+<LI>fslvbm_2_template - create the study-specific symmetric GM template 
+<LI>fslvbm_3_proc - register all the GM inages to the template, modulate and smooth them with different kernel sizes and finally runs prestats analysis using randomise with ONE permutation 
+</UL>
+
+
+
+<a name="detail"></a><p><hr><H2>Running FSL-VBM - In detail</H2>
+
+
+
+<a name="prepare"></a><p><H3>A - Prepare your data for the FSL-VBM study</H3>
+
+
+
+
+a) Place all your T1-weighted data in your FSL-VBM directory.
+
+<p>For instance:
+
+<p>mkdir my_fsl_vbm
+
+<p>Then copy into your FSL-VBM directory all of your subjects' T1 images, giving each subject's T1 image a different name, preferably with each prefix corresponding to each of your group, for example:
+
+<p>CON_2304.nii.gz<br>  
+CON_2878.nii.gz<br> 
+CON_3456.nii.gz<br>
+CON_4133.nii.gz<br>  
+CON_4690.nii.gz<br>    
+PAT_2042.nii.gz<br>  
+PAT_2280.nii.gz<br>
+PAT_2632.nii.gz<br>
+PAT_3193.nii.gz<br>  
+PAT_4134.nii.gz<br>  
+PAT_5357.nii.gz<br>  
+PAT_6659.nii.gz<br>
+
+
+<p>b) If you have different groups and that the number of scans across them is not the same, choose among the biggest group(s) the images you want to use for the template with the same number as of the smallest group (see D - fslvbm_2_template for explanations). Once you've chosen which T1 images to keep to build the template, put all the selected names of exams in
+a "template_list" file in your FSL-VBM directory. 
+
+<p>All your different populations included in this study MUST be represented in the template construction.
+<p>For instance, as we have only 5 controls for 7 patients, we have to select 5 patients out of the 7:
+
+<p>for g in CON_2304.nii.gz CON_2878.nii.gz CON_3456.nii.gz CON_4133.nii.gz CON_4690.nii.gz PAT_2042.nii.gz PAT_2632.nii.gz PAT_3193.nii.gz PAT_4134.nii.gz PAT_6659.nii.gz; do<br>
+echo $g >> template_list<br>
+done<br>
+
+  
+<p>c) We would like you to think of your statistical model <b>before</b> you run the FSL-VBM analysis. So you have to create right from the beginning your design.mat and design.con (see randomise manual) in your FSL-VBM directory. 
+<p><b>WARNING!!!</b> The order of the rows in your design.mat model MUST match the order of your scans when doing an 'ls' command in your FSL-VBM directory.
+
+<a name="format"></a><p><H3>B - Changing the format: tbss_1_preproc</H3>
+
+<p>You need to scale the values in your T1 images to be between 0 and <b>10,000</b> and convert the format to uncompressed Analyze with positive voxel dimensions (because the nonlinear registration software IRTK used in the FSL-VBM protocol requires this format). Thus, you need to know approximately what the values in all your T1 data are. You can check this using fslstats. For example:
+
+<p>fslstats CON_2304.nii.gz -R<br>
+ 0.000000 217.000000
+
+<p>Here the scaling applied should be roughly 40 (217 x 40 = 8680). 
+
+<p>Now run the tbss_1_preproc script, from inside your FSL-VBM directory, for instance, assuming that the range of values for all the T1 images is the same:
+
+<p><b>tbss_1_preproc -f 40 *.nii.gz</b>
+
+<p>The script will now scale and convert the data, placing it in a newly-created sub-directory called FAi. It will also create a sub-directory called origdata and place all your original images in there. 
+<p>At this point, it is worth <b>CHECKING</b> the images as created in FAi. For this, you need to open the index.html link in FAi/slicesdir/ in a web browser to see quick views of all images, for verifying that they look reasonable.
+
+<a name="step1"></a><p><H3>C - Extracting brain information: fslvbm_1_bet</H3>
+
+<p>The first FSL-VBM script simply extracts the brain information from the T1 images. You can either run 'fslvbm_1_bet -b' by default, or 'fslvbm_1_bet -N' if your images include the neck which most of the time hampers the bet preprocessing.
+
+<p>To run this first step script, just type:
+
+<p><b>fslvbm_1_bet -b</b>
+
+<p>or <b>fslvbm_1_bet -N</b>
+
+<p>in your FSL-VBM directory.
+
+<p>At the end of this step, it is once again worth <b>CHECKING</b> the brain images (*_brain.hdr) in your FAi directory by loading the *new* index.html link created in FAi/slicesdir/. Brain extraction is indeed the step which is the most likely to fail in the FSL-VBM protocol.
+
+<a name="step2"></a><p><H3>D - Creating the template: fslvbm_2_template</H3>
+
+<p>The second step of the FSL-VBM protocol creates the study-specific GM template.<br> 
+All brain-extracted images are segmented into GM, WM and CSF. GM images (*_FAi_GM.hdr) and their respective mirror images (*_FAi_GM_xflipped.hdr) are then registred to the GM ICBM-152 template. In the stats directory, the registered GM images and their mirror images are concatenated in a 4D Analyze image called "template_GM_4D" and averaged to create the study-specific GM template of 2x2x2 mm3 resolution .
+
+<p>If you have different populations, they first should all be represented in your template. Second, you should put the same number of scans across them to participate in the construction of the study-specific template. This is to avoid any bias during the registration step that would have consisted in favouring one of the group. For example, if you have only controls in your template, or more controls than patients, it is likely that the non-linear registration would be more accurate for your control subjects than for your patients. Then you cannot distinguish in your results showing differences in the GM volume distribution between the two groups what is actually disease-related from what is registration-related!
+
+<p> For that second FSL-VBM step, you have two options: either you want to create a template based on an affine registration of GM images to the GM ICBM-152 template, or on a non-linear registration. 
+
+<p>So to run this second step script, just type:
+
+<p><b>fslvbm_2_template -a</b>
+
+<p>or <b>fslvbm_2_template -n</b>
+
+<p>in your FSL-VBM directory.
+
+<p>Remember to <b>CHECK</b> the "template_GM_4D" image in FAi with the movie loop in fslview.
+
+<a name="step3"></a><p><H3>E - Processing the native GM images: fslvbm_3_proc</H3>
+
+<p>This last script will non-linearly register all your GM images to the study-specific template and concatenate them in a 4D image ("GM_merg") in a stats directory parallel to your FAi directory. The FSL-VBM protocol also introduces a compensation (or "modulation") for the contraction/enlargement due to the non-linear component of the transformation: each voxel of each registered grey matter image was divided by the Jacobian of the warp field (see Good et al., 2001). All the modulated registered GM images are concatenated in a 4D image in the stats directory ("GM_mod_merg") and then smoothed ("GM_mod_merg_s2.5" for instance) by a Gaussian kernel of varying size  - sigma = 2.5; 3; 3.5; 4 mm, so roughly from FWHM = 2.5 x 2.3 = 5.75 to FWHM = 9 mm.
+
+<p>Finally, this last step allows you to run permutation-based non-parametric inference "prestats" using your design.mat and design.con created at the beginning of your study and a mask of the GM ("max_GM_mask"). It indeed run randomise with ONE permutation only, creating tstat maps very near to what you should get running randomise with 5000 permutations. These tstat maps should help you decide which smoothing is the most relevant to use, and which threshold to use for the cluster-based correction for multiple comparisons (option -c in the randomise command, see randomise manual).
+
+<p><b>WARNING!!!</b> By default fslvbm_3_proc is concatenating the images in the alphabetical order (following the prefices you have chosen for them) so it may not match the order in your design.mat model if you're not careful enough.
+
+<p>All of the above is done simply by running the script:
+
+<p><b>fslvbm_3_proc</b>
+
+<p>in your FSL-VBM directory.
+
+
+<!-- }}} -->
+<!-- {{{ end -->
+
+<p><HR><FONT SIZE=1>Copyright &copy; 2007, University of
+Oxford. Written by Gwenaelle Douaud and Stephen Smith.</FONT>
+
+<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+
+</BODY></HTML>
+
+<!-- }}} -->
+

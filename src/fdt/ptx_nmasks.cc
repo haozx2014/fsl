@@ -1,4 +1,4 @@
-/*  Copyright (C) 2004 University of Oxford  */
+/*  Copyright (C) 2007 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -11,7 +11,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 3.3 (c) 2006, The University of
+    FMRIB Software Library, Release 4.0 (c) 2007, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -84,8 +84,10 @@ void nmasks()
   volume<int> tmpvol;
   vector<string> masknames;
 
-  if(fsl_imageexists(opts.seedfile.value()))
-    masknames.push_back( opts.waypoints.value() );  
+  if(fsl_imageexists(opts.seedfile.value())){
+    cerr << "Seed file must be a text file with a list of seeds in multiple masks mode" << endl;
+    exit(0);
+  }
   else
     read_masks(masknames,opts.seedfile.value());
 
@@ -103,10 +105,14 @@ void nmasks()
 
   for(unsigned int i=0;i<seeds.size();i++){
     stline.clear_waymasks();
+    tmpvol=0;
     for(unsigned int j=0;j<seeds.size();j++){
       if(j!=i)
-	stline.add_waymask(seeds[j]);
+	tmpvol += seeds[j];
+      //	stline.add_waymask(seeds[j]);
     }
+    stline.add_waymask(tmpvol);
+
     for(int z=0;z<seeds[i].zsize();z++){
       for(int y=0;y<seeds[i].ysize();y++){
 	for(int x=0;x<seeds[i].xsize();x++){
@@ -120,6 +126,7 @@ void nmasks()
   
   counter.save();
   
+  cout<<"finished"<<endl;
 }
 
 

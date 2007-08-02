@@ -5,14 +5,13 @@ PROJNAME = fdt
 USRINCFLAGS = -I${INC_NEWMAT} -I${INC_NEWRAN} -I${INC_CPROB} -I${INC_PROB} -I${INC_ZLIB}
 USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_NEWRAN} -L${LIB_CPROB} -L${LIB_PROB} -L${LIB_ZLIB}
 
- 
 DLIBS = -lmeshclass -lbint -lnewimage -lutils -lmiscmaths -lnewmat -lfslio -lniftiio -lznz -lcprob -lprob -lm -lz
 #DLIBS = -lbint -lnewimage -lutils -lmiscmaths  -lnewmat -lfslio -lniftiio -lznz -lcprob -lprob -lm -lz
 
 
 DTIFIT=dtifit
 CCOPS=ccops
-PT=probtrack
+PT=probtrack_old
 PTX=probtrackx
 FTB=find_the_biggest
 PJ=proj_thresh
@@ -26,9 +25,7 @@ MDV=make_dyadic_vectors
 FMO=fdt_matrix_ops
 INDEXER=indexer
 TEST=testfile
-ORDVEC=reorder_dyadic_vectors
-DPM=dpm
-
+VECREG=vecreg
 
 DTIFITOBJS=dtifit.o dtifitOptions.o
 CCOPSOBJS=ccops.o ccopsOptions.o
@@ -46,22 +43,22 @@ MDVOBJS=make_dyadic_vectors.o
 FMOOBJS=fdt_matrix_ops.o
 INDEXEROBJS=indexer.o
 TESTOBJS=testfile.o
-ORDVECOBJS=reorder_dyadic_vectors.o heap.o
-DPMOBJS=dpm.o dpmOptions.o
+VECREGOBJS=vecreg.o
 
 SGEBEDPOST = bedpost bedpost_datacheck
-SGEBEDPOSTX = bedpostX bedpostX_postproc.sh bedpostX_preproc.sh bedpostX_single_slice.sh
+SGEBEDPOSTX = bedpostx bedpostx_postproc.sh bedpostx_preproc.sh bedpostx_single_slice.sh
 
-SCRIPTS = eddy_correct zeropad ${SGEBEDPOST} ${SGEBEDPOSTX}
+SCRIPTS = eddy_correct zeropad maskdyads probtrack ${SGEBEDPOST} ${SGEBEDPOSTX}
 FSCRIPTS = correct_and_average ocmr_preproc
 
-XFILES = dtifit ccops probtrack find_the_biggest medianfilter diff_pvm make_dyadic_vectors proj_thresh
-FXFILES = reord_OM sausages replacevols fdt_matrix_ops probtrackx xfibres indexer
+XFILES = dtifit ccops find_the_biggest medianfilter diff_pvm make_dyadic_vectors proj_thresh vecreg xfibres probtrackx
+
+FXFILES = reord_OM sausages replacevols fdt_matrix_ops indexer
 
 
-RUNTCLS = Fdt Fdtx
+RUNTCLS = Fdt
 
-all: ${XFILES} ${FXFILES} 
+all: ${XFILES} ${FXFILES} probtrack_old
 
 ${PTX}:		   ${PTXOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${PTXOBJS} ${DLIBS}
@@ -111,21 +108,6 @@ ${INDEXER}:    	${INDEXEROBJS}
 ${TEST}:    	${TESTOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${TESTOBJS} ${DLIBS}
 
-
-${ORDVEC}:    	${ORDVECOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${ORDVECOBJS} ${DLIBS}
-
-${DPM}:    	${DPMOBJS}
-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${DPMOBJS} ${DLIBS}
-
-
-
-
-
-
-
-
-
-
-
+${VECREG}:    	${VECREGOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${VECREGOBJS} ${DLIBS}
 

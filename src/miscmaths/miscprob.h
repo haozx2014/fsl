@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 3.3 (c) 2006, The University of
+    FMRIB Software Library, Release 4.0 (c) 2007, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -73,14 +73,19 @@
 #define __miscprob_h
 
 #include "miscmaths.h"
-#include "libprob/libprob.h"
+#include "libprob.h"
 #include "stdlib.h"
 
 using namespace NEWMAT;
-// using namespace NEWRAN;
 
 namespace MISCMATHS {
- 
+
+//   ReturnMatrix betarnd(const int dim1, const int dim2, 
+// 		       const float a, const float b); 
+
+  ReturnMatrix betapdf(const RowVector& vals, 
+		       const float a, const float b); 
+
   ReturnMatrix unifrnd(const int dim1 = 1, const int dim2 = -1, 
 		       const float start = 0, const float end = 1);
   
@@ -96,21 +101,18 @@ namespace MISCMATHS {
   ReturnMatrix normpdf(const RowVector& vals, const RowVector& mus, 
 		       const RowVector& vars);
 
-  float normpdf(const ColumnVector& val,const ColumnVector& mu,const SymmetricMatrix& sigma);
-  
-  ReturnMatrix normpdf(const Matrix& val,const ColumnVector& mu,const SymmetricMatrix& sigma);
-
   ReturnMatrix normcdf(const RowVector& vals, const float mu = 0, const float var = 1);
 
   ReturnMatrix gammapdf(const RowVector& vals, const float mu = 0, const float var = 1);
 
   ReturnMatrix gammacdf(const RowVector& vals, const float mu = 0, const float var = 1);
 
+//   ReturnMatrix gammarnd(const int dim1, const int dim2, 
+// 			const float a, const float b);
+
   // returns n! * n matrix of all possible permutations
   ReturnMatrix perms(const int n);
 
-  // ReturnMatrix wishrnd(const SymmetricMatrix&,const int);
-  // ReturnMatrix iwishrnd(const SymmetricMatrix&,const int);
   
   class Mvnormrandm
     {
@@ -134,6 +136,30 @@ namespace MISCMATHS {
 	  ret.Release();
 	  return ret;
 	}
+
+      ReturnMatrix next(const RowVector& pmu, int nsamp = 1)  
+	{
+	  mu=pmu;
+
+	  Matrix ret = ones(nsamp, 1)*mu + normrnd(nsamp,mu.Ncols())*covarw;
+	  ret.Release();
+	  return ret;
+	}
+
+      void setcovar(const SymmetricMatrix& pcovar)
+	{
+	  covar=pcovar;
+
+	  mu.ReSize(covar.Nrows());
+	  mu=0;
+
+	  Matrix eig_vec;
+	  DiagonalMatrix eig_val;
+	  EigenValues(covar,eig_val,eig_vec);
+
+	  covarw = sqrt(eig_val)*eig_vec.t();
+	}
+
     private:      
 
       RowVector mu;

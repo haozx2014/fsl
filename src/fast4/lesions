@@ -1,6 +1,6 @@
 #!/bin/sh
 
-#   lesions - lesion analysis from T1&T2 or T1&FLAIR
+#   lesions - lesion analysis from T1&T2 or T1&FLAIR - not yet completed!!!!
 #
 #   John Vickers, Mark Jenkinson & Stephen Smith, FMRIB Image Analysis Group
 #
@@ -17,7 +17,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 3.3 (c) 2006, The University of
+#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -145,11 +145,11 @@ ${FSLDIR}/bin/fast3.4 -e -ov -A ${A}_brain
 echo "Finished T1 Segmentation"
 
 #register t1 to standard space and invert transform###########################################################################
-${FSLDIR}/bin/flirt -ref ${FSLDIR}/etc/standard/avg152T1_brain -in ${A}_brain -omat ${A}_brain_2_tal.mat
+${FSLDIR}/bin/flirt -ref ${FSLDIR}/data/standard/avg152T1_brain -in ${A}_brain -omat ${A}_brain_2_tal.mat
 ${FSLDIR}/bin/convert_xfm -inverse -matonly -omat tal_2_${A}_brain.mat ${A}_brain_2_tal.mat
 
 #dilate (6mm) standard space ventricles+deep-grey, bring into t1 space and re-binarise to make "CENTRAL MASK" originally 3 dils
-${FSLDIR}/bin/fslmaths ${FSLDIR}/etc/standard/avg152T1_strucseg -thr 3.5 -bin -dilM -dilM -dilM strucseg_2_${A}_brain
+${FSLDIR}/bin/fslmaths ${FSLDIR}/data/standard/avg152T1_strucseg -thr 3.5 -bin -dilM -dilM -dilM strucseg_2_${A}_brain
 ${FSLDIR}/bin/flirt -in strucseg_2_${A}_brain -ref ${A}_brain -out strucseg_2_${A}_brain -applyxfm -init tal_2_${A}_brain.mat
 ${FSLDIR}/bin/fslmaths strucseg_2_${A}_brain -bin strucseg_2_${A}_brain
 

@@ -1,22 +1,18 @@
 <!-- {{{ start -->
 
-<HTML><HEAD>
-<TITLE>SIENA - Analysis of Structural Brain MRI Data</TITLE>
-</HEAD><BODY BACKGROUND="../images/fsl-bg.jpg">
-<hr><TABLE BORDER=0 WIDTH="100%"><TR>
-<TD ALIGN=CENTER><H1>SIENA Structural Brain Change Analysis</H1>
-SIENA - Structural Image Evaluation, using Normalisation, of Atrophy - Version 2.4<br><br>
-
+<HTML><HEAD><link REL="stylesheet" TYPE="text/css" href="../fsl.css"><TITLE>FSL</TITLE></HEAD><BODY><hr><TABLE BORDER=0 WIDTH="100%"><TR><TD ALIGN=CENTER><H1>
+SIENA - Analysis of Structural Brain MRI Data
+</H1>
+SIENA - Structural Image Evaluation, using Normalisation, of Atrophy - v2.5
+<br><br>
 <a href="#intro">intro</a> - <a href="#tools">tools used</a> - <a href="#siena">SIENA</a> - <a
 href="#sienax">SIENAX</a> - <a href="#sienar">voxelwise SIENA statistics</a>
-
-<TD ALIGN=RIGHT><a href="../index.html"><IMG BORDER=0 SRC="../images/fsl-logo.jpg"></a>
-</TR></TABLE>
+<TD ALIGN=RIGHT><a href="../index.html"><IMG BORDER=0 SRC="../images/fsl-logo.jpg"></a></TR></TABLE><HR>
 
 <!-- }}} -->
 <!-- {{{ Introduction -->
 
-<a name="intro"></a><p><hr><H2>Introduction</H2>
+<a name="intro"></a><p><H2>Introduction</H2>
 
 <p>SIENA is a package for both single-time-point ("cross-sectional")
 and two-time-point ("longitudinal") analysis of brain change, in
@@ -155,7 +151,7 @@ statistical analysis to test for.....
 
 This section lists the generic FSL programs that SIENA uses.
 
-<p><a href="../bet/index.html">bet</a> - Brain Extraction Tool. This
+<p><a href="../bet2/index.html">bet</a> - Brain Extraction Tool. This
 automatically removes all non-brain tissue from the image. It can
 optionally output the binary brain mask that was derived during this
 process, and output an estimate of the external surface of the skull,
@@ -190,16 +186,16 @@ is or is not reasonable grey-white contrast in the image.
 
 <h3>Usage</h3>
 
-<p>The script <a href="siena">siena</a> (see <a
-href="siena_usage">usage</a>) is run simply by typing
+<p>A default SIENA analysis is run by typing:
 
-<p><b>siena &lt;input1_fileroot&gt; &lt;input2_fileroot&gt;</b>
+<p><b>siena &lt;input1&gt; &lt;input2&gt;</b>
 
-<p>where the two input fileroots are images without any filename
-extensions. Note that the input fileroot must not contain directory
-names - i.e. all must be done within a single directory.
+<p>The input filenames must not contain directory names - i.e. all
+must be done within a single directory.
 
 <p>Other options are:
+
+<p><b>-o &lt;output-dir&gt;</b> : set output directory (the default output is &lt;input1&gt;_to_&lt;input2&gt;_siena)
 
 <p><b>-d</b> : debug (don't delete intermediate files)
 
@@ -303,18 +299,22 @@ into <b>siena_diff</b>.
 
 </UL>
 
-Note that all output is in the same directory as the input, so this
-must be writable by the user. The output files are (assuming the input
-images are called "A" and "B"):
+The files created in the SIENA output directory are:
 
 <UL>
 
-<LI><code>A_to_B.siena</code> the output information from the <b>siena</b> script.
+<LI><code>report.siena</code> the SIENA log, including the final PBVC
+estimate.
 
-<LI><code>A_halfwayto_B_render</code> a colour-rendered image of edge motion
-superimposed on the halfway A image.
+<LI><code>report.html</code> a webpage report including images showing
+various stages of the analysis, the final result and a description of
+the SIENA method.
 
-<LI><code>B_regto_A.gif</code> a gif image showing the results of the registration,
+<LI><code>A_halfwayto_B_render</code> a colour-rendered image of edge
+motion superimposed on the halfway A image. Red-yellow means brain
+volume increase and Blue means brain volume decrease ("atrophy").
+
+<LI><code>A_and_B.gif</code> a gif image showing the results of the registration,
 using one transformed image as the background and the other as the
 coloured edges foreground.
 
@@ -336,17 +336,16 @@ the images to the halfway positions.
 
 <h3>Usage</h3>
 
-<p>The script <a href="sienax">sienax</a> (see <a
-href="sienax_usage">usage</a>) is run simply by typing
+<p>A default SIENAX analysis is run by typing:
 
-<p><b>sienax &lt;input_fileroot&gt;</b>
+<p><b>sienax &lt;input&gt;</b>
 
-<p>where the input fileroot is an image without any filename
-extension.  Note that the input fileroot must not contain directory
-names - i.e. all must be done within a single directory.
-
+<p>The input filename must not contain directory names - i.e. all must
+be done within the current directory.
 
 <p>Other options are:
+
+<p><b>-o &lt;output-dir&gt;</b> : set output directory (the default output is &lt;input&gt;_sienax)
 
 <p><b>-d</b> : debug (don't delete intermediate files)
 
@@ -429,15 +428,18 @@ remove incorrectly labelled "grey matter" voxels
 
 </UL>
 
-Note that all output is in the same directory as the input, so this
-must be writable by the user. The output files are (assuming the input
-image is called "A"):
+The main files created in the SIENAX output directory are:
 
 <UL>
 
-<LI><code>A.sienax</code> the output information from the <b>sienax</b> script.
+<LI><code>report.sienax</code> the SIENAX log, including the final
+volume estimates.
 
-<LI><code>A_render</code> a colour-rendered image showing the segmentation
+<LI><code>report.html</code> a webpage report including images showing
+various stages of the analysis, the final result and a description of
+the SIENAX method.
+
+<LI><code>I_render</code> a colour-rendered image showing the segmentation
 output superimposed on top of the original image.
 
 </UL>
@@ -463,23 +465,24 @@ significantly with age or disease progression.
 <LI> Run <br><code>siena A B</code><br> on all subjects'
 two-timepoints data (here <code>A</code> and <code>B</code>).
 
-<LI> For each subject run <br><code>siena_flow2std A B</code><br> -
+<LI> For each subject run <br><code>cd &lt;siena_output_directory&gt;<br>
+siena_flow2std A B</code><br>
 this runs flirt to generate the transform to standard space (if it
 doesn't already exist), takes the edge flow (atrophy) image generated
 by <code>siena</code>, dilates this several times (to "thicken" this edge
 flow image), transforms to standard space, and masks with a standard
-space edge mask. It then smooths this with a Gaussian filter of
-half-width 10mm before remasking; you may want to edit this or even
-remove this step - find the call to <code>ip</code> in
-$FSLDIR/bin/siena_flow2std and change the <code>10</code> or just remove
-that line.
+space edge mask. It then smooths this with a default Gaussian filter of
+half-width 5mm before remasking. If you want to change the smoothing
+then use the -s option; set the smoothing to zero to turn if off
+completely.
 
 <LI> All subjects will now have an edge flow image in standard edge
-space called <code>A_to_B_flow_to_std</code>. Merge these into a single 4D
-image; for example, if each subject's analysis has so far been carried
-out in a subdirectory called siena_subject_*, where the * could be
-subject ID or name, use a command such as:<br><code>
-avwmerge -t flow_all_subjects `imglob -oneperimage siena_subject_*/A_to_B_flow_to_std*`</code><br>
+space called <code>A_to_B_flow_to_std</code>. Merge these into a
+single 4D image; for example, if each subject's analysis has so far
+been carried out in a subdirectory called subject_*/A_to_B_siena, where the *
+could be subject ID or name, use a command such as:<br><code> fslmerge
+-t flow_all_subjects `imglob -oneperimage
+subject_*/A_to_B_siena/A_to_B_flow_to_std*`</code><br>
 
 Note: it is very important that the order that the subjects appear in
 this command matches the order you intend when you then create the
@@ -493,67 +496,6 @@ design matrix <code>design.mat</code> and contrasts file
 <code>design.con</con>.
 
 </UL>
-
-<!-- }}} -->
-<!-- {{{ Manual Segmentation Correction -->
-
-<!--  <hr><H2>Manual Segmentation Correction</H2> -->
-
-<!--  <p>If you want to manually edit the segmentation image, to correct for -->
-<!--  any segmentation errors, you should follow the steps below. The -->
-<!--  following assumes the use of MEDx to edit images. The main steps -->
-<!--  described are for correcting <b>sienax</b>, followed by a description -->
-<!--  of how to adapt this procedure for <b>siena</b>. -->
-
-<!--  <UL> -->
-
-<!--    <LI>Load the ...seg.hdr image into MEDx. -->
-
-<!--    <LI>In lightbox mode, make sure the dimensionality is 3D. -->
-
-<!--    <LI>In "look-at-voxel-values" mode rather than the "graphics-edit" -->
-<!--    mode (controlled by the button to the right of the 3D/2D button), -->
-<!--    check the intensities of the classes of interest - for example, -->
-<!--    0=background, 1=CSF, 2=grey, 3=white. -->
-
-<!--    <LI>Using <b>Toolbox->Measurement->Statistics</b>, set the lower and -->
-<!--    upper thresholds to give the current count of G+W (eg lower=1.5, -->
-<!--    upper=3.5) and measure the <b>Area</b> (in fact the volume). This is -->
-<!--    slightly different (and less accurate) than that reported by fast -->
-<!--    as it does not directly take into account partial volume effect. -->
-
-<!--    <LI>In lightbox mode, change dimensionality from 3D to 2D. -->
-
-<!--    <LI>Using the pencil tool from the toolbox, outline all regions of -->
-<!--    one particular type that you wish to change to a different type. -->
-
-<!--    <LI>Use <b>Folder->Graphic->Select All->2D Graphics</b> to highlight -->
-<!--    all graphics that you've just drawn. Use -->
-<!--    <b>Folder->Graphic->Grouping->Derive 3D Contour</b> to convert these -->
-<!--    into one 3D object. -->
-
-<!--    <LI>Bring up the image calculator and enter the intensity of the -->
-<!--    class that you wish to set all highlighted voxels to (eg 2). Press -->
-<!--    <b>OK</b>. Delete the 3D contour with -->
-<!--    <b>Folder->Graphic->Delete</b>, and reset the display range using -->
-<!--    <b>Folder->Display->Display Range->Compute</b>. -->
-
-<!--    <LI>Now repeat the last 4 steps if you wish to also change other -->
-<!--    areas to a different class type to that which you have just set. -->
-
-<!--    <LI>Now re-run the measurement of "<b>Area</b>" using -->
-<!--    statistics. Subtract the two volumes, multiply by the VSCALING value -->
-<!--    (from the .sienax output file) and amend the BRAIN volume reported -->
-<!--    at the end of this file. -->
-
-<!--  </UL> -->
-
-<!--  If you want to amend the segmentation carried out within <b>siena</b>, -->
-<!--  carry out the above (without bothering with any of the statistics -->
-<!--  steps) and save the image, overwriting the original segmentation -->
-<!--  output. Now if you re-run <b>siena</b> the edited segmentation result -->
-<!--  will be used (as <b>siena</b> doesn't re-run segmentation if a -->
-<!--  segmentation output image is already in existence). -->
 
 <!-- }}} -->
 <!-- {{{ end -->

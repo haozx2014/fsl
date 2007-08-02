@@ -4,7 +4,7 @@
 #
 #   Stephen Smith, FMRIB Image Analysis Group
 #
-#   Copyright (C) 2002-2005 University of Oxford
+#   Copyright (C) 2002-2007 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -17,7 +17,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 3.3 (c) 2006, The University of
+#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -70,8 +70,12 @@
 
 
 Usage() {
-    echo "Usage: siena_flow2std <fileroot2> <fileroot2> [-d]"
-    echo "-d : debug (don't delete intermediate files)"
+    echo ""
+    echo "Usage: siena_flow2std <fileroot2> <fileroot2> [options]"
+    echo ""
+    echo "-s <sigma> : spatial smoothing of standard-space edge-flow image, sigma (HWHM) in mm (default=5)"
+    echo "-d         : debug (don't delete intermediate files)"
+    echo ""
     exit 1
 }
 
@@ -88,13 +92,17 @@ B=`${FSLDIR}/bin/remove_ext $2`
 shift 2
 
 debug=0
-
-for opts in $@ ; do
-
-    if [ $opts = -d ] ; then
+smooth=5
+while [ _$1 != _ ] ; do
+    if [ $1 = -d ] ; then
         debug=1
+	shift
+    elif [ $1 = -s ] ; then
+        smooth=$2
+        shift 2
+    else
+        Usage
     fi
-
 done
 
 # register to MNI152 if not already done, and create halfway2std transform
@@ -102,7 +110,7 @@ if [ ! -f ${A}_to_std.mat ] ; then
     if [ `${FSLDIR}/bin/imtest ${A}_brain` = 0 ] ; then
 	${FSLDIR}/bin/bet $A ${A}_brain
     fi
-    ${FSLDIR}/bin/flirt -ref ${FSLDIR}/etc/standard/avg152T1_brain -in ${A}_brain -omat ${A}_to_std.mat -o ${A}_to_std
+    ${FSLDIR}/bin/flirt -ref ${FSLDIR}/data/standard/avg152T1_brain -in ${A}_brain -omat ${A}_to_std.mat -o ${A}_to_std
 fi
 ${FSLDIR}/bin/convert_xfm -omat ${A}_halfwayto_${B}_inv.mat -inverse ${A}_halfwayto_${B}.mat
 ${FSLDIR}/bin/convert_xfm -omat ${A}_halfwayto_${B}_to_std.mat -concat ${A}_to_std.mat ${A}_halfwayto_${B}_inv.mat
@@ -111,14 +119,17 @@ ${FSLDIR}/bin/convert_xfm -omat ${A}_halfwayto_${B}_to_std.mat -concat ${A}_to_s
 ${FSLDIR}/bin/fslmaths ${A}_to_${B}_flow -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM ${A}_to_${B}_flow_dil
 ${FSLDIR}/bin/fslmaths ${B}_to_${A}_flow -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM ${A}_to_${B}_flow_dilback
 ${FSLDIR}/bin/fslmaths ${A}_to_${B}_flow_dil -sub ${A}_to_${B}_flow_dilback -div 2 ${A}_to_${B}_flow_dil
-/bin/rm ${A}_to_${B}_flow_dilback*
-${FSLDIR}/bin/flirt -in ${A}_to_${B}_flow_dil -ref ${FSLDIR}/etc/standard/avg152T1_brain -out ${A}_to_${B}_flow_to_std -applyxfm -init ${A}_halfwayto_${B}_to_std.mat
-${FSLDIR}/bin/fslmaths ${A}_to_${B}_flow_to_std -mas ${FSLDIR}/etc/standard/avg152T1_edges ${A}_to_${B}_flow_to_std
-${FSLDIR}/bin/ip ${A}_to_${B}_flow_to_std ${A}_to_${B}_flow_to_std 0 -s 10
-${FSLDIR}/bin/fslmaths ${A}_to_${B}_flow_to_std -mas ${FSLDIR}/etc/standard/avg152T1_edges ${A}_to_${B}_flow_to_std
+${FSLDIR}/bin/imrm ${A}_to_${B}_flow_dilback
+${FSLDIR}/bin/flirt -in ${A}_to_${B}_flow_dil -ref ${FSLDIR}/data/standard/avg152T1_brain -out ${A}_to_${B}_flow_to_std -applyxfm -init ${A}_halfwayto_${B}_to_std.mat
+${FSLDIR}/bin/fslmaths ${A}_to_${B}_flow_to_std -mas ${FSLDIR}/data/standard/avg152T1_edges ${A}_to_${B}_flow_to_std
+
+if [ $smooth != 0 ] ; then
+    ${FSLDIR}/bin/fslmaths ${FSLDIR}/data/standard/avg152T1_edges -bin -s $smooth ${A}_masksmooth -odt float
+    ${FSLDIR}/bin/fslmaths ${A}_to_${B}_flow_to_std -s $smooth -div ${A}_masksmooth -mas ${FSLDIR}/data/standard/avg152T1_edges ${A}_to_${B}_flow_to_std
+fi
 
 # cleanup
 if [ $debug = 0 ] ; then
-    /bin/rm -f ${A}_halfwayto_${B}_inv.mat `$FSLDIR/bin/imglob -oneperimage ${A}_brain.* ${A}_to_${B}_flow_dil.* ${A}_to_std.*`
+    /bin/rm -f ${A}_halfwayto_${B}_inv.mat `$FSLDIR/bin/imglob -oneperimage ${A}_masksmooth ${A}_brain.* ${A}_to_${B}_flow_dil.* ${A}_to_std.*`
 fi
 

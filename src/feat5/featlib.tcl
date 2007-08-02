@@ -1,4 +1,4 @@
- #{{{ copyright and setup 
+#{{{ copyright and setup 
 
 #   FEAT TCL functions library
 #
@@ -17,7 +17,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 3.3 (c) 2006, The University of
+#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -737,7 +737,14 @@ set fmri(thresh_yn) $fmri(thresh_yn)
 set fmri(mmthresh) $fmri(mmthresh)
 
 # Output full stats folder
-set fmri(ostats) $fmri(ostats)"
+set fmri(ostats) $fmri(ostats)
+
+# Timeseries and subject models
+set fmri(ts_model_mat) \"$fmri(ts_model_mat)\"
+set fmri(ts_model_con) \"$fmri(ts_model_con)\"
+set fmri(subject_model_mat) \"$fmri(subject_model_mat)\"
+set fmri(subject_model_con) \"$fmri(subject_model_con)\"
+"
 
 #}}}
     }
@@ -749,6 +756,9 @@ set fmri(ostats) $fmri(ostats)"
 
 # Alternative example_func image (not derived from input 4D dataset)
 set fmri(alternative_example_func) \"$fmri(alternative_example_func)\"
+
+# Alternative (to BETting) mask image
+set fmri(alternative_mask) \"$fmri(alternative_mask)\"
 
 # Initial structural space registration initialisation transform
 set fmri(init_initial_highres) \"$fmri(init_initial_highres)\"
@@ -843,6 +853,47 @@ proc feat5:load { w full filename } {
 }
 
 #}}}
+#{{{ parseatlases
+
+proc parseatlas { atlasid filename } {
+    global atlasname atlasimage atlaslabelcount atlaslabelid atlaslabelname
+    set channel [ open $filename "r" ]
+    set atlaslabelcount($atlasid) 0
+    while { [ gets $channel instring ] >= 0 } {
+	set isname [ string first "<name>" $instring ]
+	if { $isname >= 0 } {
+	    set atlasname($atlasid) [ string range $instring [ expr $isname + 6 ] [ expr [ string last "</name>" $instring ] - 1 ] ]
+	    #puts $atlasname($atlasid)
+	}
+	set issummary [ string first "<imagefile>" $instring ]
+	if { $issummary >= 0 } {
+	    set atlasimage($atlasid) [ string range $instring [ expr $issummary + 11 ] [ expr [ string last "</imagefile>" $instring ] - 1 ] ]
+	    #puts $atlasimage($atlasid)
+	}
+	set islabel [ string first "<label " $instring ]
+	if { $islabel >= 0 } {
+	    set atlaslabelid($atlasid,$atlaslabelcount($atlasid))   [ string range $instring [ expr [ string first "index=\"" $instring ] + 7 ] [ expr [ string first "\" x=\"" $instring ] - 1 ] ]
+	    set atlaslabelname($atlasid,$atlaslabelcount($atlasid)) [ string range $instring [ expr [ string first "\">" $instring ] + 2 ] [ expr [ string first "</label>" $instring ] - 1 ] ]
+	    #puts "$atlaslabelid($atlasid,$atlaslabelcount($atlasid)) $atlaslabelname($atlasid,$atlaslabelcount($atlasid))"
+	    incr atlaslabelcount($atlasid) 1
+	}
+    }
+    close $channel
+}
+
+proc parseatlases { } {
+    global FSLDIR n_atlases atlasmenu atlasname atlasimage atlaslabelcount atlaslabelid atlaslabelname
+    set atlaslist [ glob ${FSLDIR}/data/atlases/*.xml ]
+    set n_atlases [ llength $atlaslist ]
+    for { set atlasid 1 } { $atlasid <= $n_atlases } { incr atlasid 1 } {
+	parseatlas $atlasid [ lindex $atlaslist [ expr $atlasid - 1 ] ]
+	if { [ info exists atlasmenu ] } {
+	    set atlasmenu "$atlasmenu $atlasid \"$atlasname($atlasid)\""
+	}
+    }
+}
+
+#}}}
 
 ### GUI procs
 #{{{ feat5:setupdefaults
@@ -850,7 +901,7 @@ proc feat5:load { w full filename } {
 proc feat5:setupdefaults { } {
     global fmri FSLDIR HOME
 
-    set fmri(version) 5.80
+    set fmri(version) 5.90
 
     set fmri(inmelodic) 0
 
@@ -927,6 +978,10 @@ ones."
     set fmri(feat_filename) [ exec sh -c "${FSLDIR}/bin/tmpnam /tmp/feat" ].fsf
 
     set fmri(regstandard_res) 0
+    set fmri(ts_model_mat) ""
+    set fmri(ts_model_con) ""
+    set fmri(subject_model_mat) ""
+    set fmri(subject_model_con) ""
 }
 
 #}}}
@@ -1432,6 +1487,7 @@ if { $fmri(analysis) != 0 && $fmri(analysis) != 4 } {
     feat5:updatestats $w 0
     feat5:updatepoststats $w
     feat5:updatereg $w
+    feat5:updatemotionevs $w
     $w.nb raise data
 }
 
@@ -1585,6 +1641,17 @@ proc feat5:updateprestats { w } {
     }
     if { [ winfo exists $w.nb ] } {
 	$w.nb compute_size
+    }
+}
+
+#}}}
+#{{{ feat5:updatemotionevs
+
+proc feat5:updatemotionevs { w } {
+    global fmri
+
+    if { ! $fmri(filtering_yn) } {
+	set fmri(motionevs) 0
     }
 }
 
@@ -4750,9 +4817,9 @@ if { $fmri(mc) != 0 } {
     
     #{{{ make plots
 
-fsl:exec "${FSLDIR}/bin/fsl_tsplot -i prefiltered_func_data_mcf.par -t 'MCFLIRT estimated rotations (radians)' --start=1 --finish=3 -a x,y,z -w 640 -h 144 -o rot.png " 
-fsl:exec "${FSLDIR}/bin/fsl_tsplot -i prefiltered_func_data_mcf.par -t 'MCFLIRT estimated translations (mm)' --start=4 --finish=6 -a x,y,z -w 640 -h 144 -o trans.png " 
-fsl:exec "${FSLDIR}/bin/fsl_tsplot -i prefiltered_func_data_mcf_abs.rms,prefiltered_func_data_mcf_rel.rms -t 'MCFLIRT estimated mean displacement (mm)' -w 640 -h 144 -a absolute,relative -o disp.png " 
+fsl:exec "${FSLDIR}/bin/fsl_tsplot -i prefiltered_func_data_mcf.par -t 'MCFLIRT estimated rotations (radians)' -u 1 --start=1 --finish=3 -a x,y,z -w 640 -h 144 -o rot.png " 
+fsl:exec "${FSLDIR}/bin/fsl_tsplot -i prefiltered_func_data_mcf.par -t 'MCFLIRT estimated translations (mm)' -u 1 --start=4 --finish=6 -a x,y,z -w 640 -h 144 -o trans.png " 
+fsl:exec "${FSLDIR}/bin/fsl_tsplot -i prefiltered_func_data_mcf_abs.rms,prefiltered_func_data_mcf_rel.rms -t 'MCFLIRT estimated mean displacement (mm)' -u 1 -w 640 -h 144 -a absolute,relative -o disp.png " 
 
 #}}}
     #{{{ extract mean displacements
@@ -4962,13 +5029,21 @@ if { $fmri(st) > 0 } {
 #}}}
 	#{{{ BET
 
-if { $fmri(bet_yn) } {
-    set ps "$ps; non-brain removal using BET \[Smith 2002\]"
-    set rs "$rs\[<a href=\"http://www.fmrib.ox.ac.uk/analysis/techrep/#TR00SMS2\">Smith 2002</a>\] S. Smith. Fast Robust Automated Brain Extraction. Human Brain Mapping 17:3(143-155) 2002.<br>
-    "
+if { [ info exists fmri(alternative_mask) ] && [ imtest $fmri(alternative_mask) ] } {
 
-    fsl:exec "${FSLDIR}/bin/bet $funcdata prefiltered_func_data_bet -F"
-    set funcdata prefiltered_func_data_bet
+    fsl:exec "${FSLDIR}/bin/fslmaths $funcdata -mas $fmri(alternative_mask) prefiltered_func_data_altmasked"
+    set funcdata prefiltered_func_data_altmasked
+
+} else {
+
+    if { $fmri(bet_yn) } {
+	set ps "$ps; non-brain removal using BET \[Smith 2002\]"
+	set rs "$rs\[<a href=\"http://www.fmrib.ox.ac.uk/analysis/techrep/#TR00SMS2\">Smith 2002</a>\] S. Smith. Fast Robust Automated Brain Extraction. Human Brain Mapping 17:3(143-155) 2002.<br>
+    "
+	fsl:exec "${FSLDIR}/bin/bet $funcdata prefiltered_func_data_bet -F"
+	set funcdata prefiltered_func_data_bet
+    }
+
 }
 
 #}}}
@@ -5151,10 +5226,10 @@ proc feat5:proc_film { } {
 #}}}
 
     # copy input timing files into FEAT directory for future reference
+    new_file custom_timing_files
     for { set evs 1 } { $evs <= $fmri(evs_orig) } { incr evs 1 } {
 	if { $fmri(shape${evs}) == 2 || $fmri(shape${evs}) == 3 } {
-	    new_file custom_timing_files
-	    fsl:exec "mkdir custom_timing_files ; /bin/cp $fmri(custom${evs}) custom_timing_files/ev${evs}.txt"
+	    fsl:exec "mkdir -p custom_timing_files ; /bin/cp $fmri(custom${evs}) custom_timing_files/ev${evs}.txt"
 	}
     }
 
@@ -5802,7 +5877,6 @@ if { $fmri(regstandard_yn) } {
 	fsl:exec "${FSLDIR}/bin/slicer highres example_func2highres -s 3 -x -[ expr round([ lindex $h 0 ]) ] sld.png -y -[ expr round([ lindex $h 1 ]) ] sle.png -z -[ expr round([ lindex $h 2 ]) ] slf.png"
 	fsl:exec "${FSLDIR}/bin/pngappend sla.png + sld.png + slb.png + sle.png + slc.png + slf.png example_func2highres3sl.png"
     }
-
 }
 
 #}}}
@@ -6340,6 +6414,147 @@ if { [ imtest stats/res4d ] } {
 }
 
 #}}}
+    return 0
+}
+
+#}}}
+#{{{ feat5:proc_gica
+
+proc feat5:proc_gica { } {
+
+    #{{{ setup
+
+global FSLDIR FSLSLASH PWD HOME HOSTNAME OSFLAVOUR logout fmri feat_files unwarp_files unwarp_files_mag initial_highres_files highres_files FD report ps rs comout gui_ext FSLPARALLEL
+
+cd $fmri(outputdir)
+set FD [ pwd ]
+
+set logout ${FD}/.logC
+fsl:echo $logout "</pre><hr>Higher-level MELODIC<br><pre>"
+
+#}}}
+    #{{{ fix feat_files and run featregapply
+
+for { set session 1 } { $session <= $fmri(multiple) } { incr session 1 } {
+    fsl:exec "${FSLDIR}/bin/featregapply $feat_files($session)"
+    fsl:echo report_firstlevel.html "${session} <A HREF=\"$feat_files($session)/report_prestats.html\">$feat_files($session)</A><br>"
+}
+fsl:echo report_firstlevel.html "</BODY></HTML>"
+
+#}}}
+    #{{{ setup background and mask images
+
+set bg_list ""
+set mask_list ""
+for { set session 1 } { $session <= $fmri(multiple) } { incr session 1 } {
+    set bg_list "$bg_list $feat_files($session)/reg_standard/bg_image"
+    set mask_list "$mask_list $feat_files($session)/reg_standard/mask"
+}
+
+fsl:exec "${FSLDIR}/bin/fslmerge -t bg_image $bg_list"
+fsl:exec "${FSLDIR}/bin/fslmaths bg_image -inm 1000 -Tmean bg_image -odt float"
+
+#}}}
+    #{{{ setup mask image and inputreg report
+
+fsl:exec "${FSLDIR}/bin/fslmerge -t mask $mask_list"
+
+#{{{ create reg images
+
+fsl:exec "mkdir inputreg"
+
+cd inputreg
+
+fsl:exec "${FSLDIR}/bin/fslmaths ../mask -mul $fmri(multiple) -Tmean masksum -odt short"
+fsl:exec "${FSLDIR}/bin/fslmaths masksum -thr $fmri(multiple) -add masksum masksum"
+fsl:exec "$FSLDIR/bin/overlay 0 0 -c ../bg_image -a masksum 0.9 [ expr 2 * $fmri(multiple) ] masksum_overlay"
+fsl:exec "${FSLDIR}/bin/slicer masksum_overlay -S 2 750 masksum_overlay.png"
+#imrm masksum_overlay
+
+fsl:exec "${FSLDIR}/bin/fslmaths masksum -mul 0 maskunique"
+for { set session 1 } { $session <= $fmri(multiple) } { incr session 1 } {
+    fsl:exec "${FSLDIR}/bin/fslmaths [ feat5:find_std $feat_files($session) mask ] -mul -1 -add 1 -mul $session -add maskunique maskunique"
+}
+fsl:exec "${FSLDIR}/bin/fslmaths masksum -thr [ expr $fmri(multiple) - 1 ] -uthr [ expr $fmri(multiple) - 1 ] -bin -mul maskunique maskunique"
+fsl:exec "$FSLDIR/bin/overlay 0 0 ../bg_image -a maskunique 0.9 $fmri(multiple) maskunique_overlay"
+fsl:exec "${FSLDIR}/bin/slicer maskunique_overlay -S 2 750 maskunique_overlay.png"
+#imrm maskunique_overlay
+
+cd $FD
+
+#}}}
+#{{{ create reg webpage
+
+fsl:exec "/bin/cp ${FSLDIR}/etc/luts/ramp.gif .ramp.gif"
+
+fsl:echo report_reg.html "<hr><p><b>Summaries of functional-to-standard registrations for all inputs</b>
+"
+
+for { set i 1 } { $i <= $fmri(multiple) } { incr i 1 } {
+    # use new format web reports if they exist, otherwise assume old format web report
+    if { [ file exists $feat_files($i)/report_reg.html ] } {
+	fsl:echo report_reg.html "<p>${i} <A HREF=\"$feat_files($i)/report_reg.html\">$feat_files($i)<br>
+<IMG BORDER=0 SRC=\"$feat_files($i)/reg/example_func2standard1.png\" width=\"100%\"></A>
+"
+    } else {
+	fsl:echo report_reg.html "<p>${i} <A HREF=\"$feat_files($i)/reg/index.html\">$feat_files($i)<br>
+<IMG BORDER=0 SRC=\"$feat_files($i)/reg/example_func2standard1.gif\" width=\"100%\"></A>
+"
+    }
+}
+
+fsl:echo report_reg.html "<hr><p><b>Sum of all input masks after transformation to standard space
+&nbsp; &nbsp; &nbsp; &nbsp; 1 <IMG BORDER=0 SRC=\".ramp.gif\"> $fmri(multiple)</b>
+<br><IMG BORDER=0 SRC=\"inputreg/masksum_overlay.png\">
+<hr><p><b>Unique missing-mask voxels
+&nbsp; &nbsp; &nbsp; &nbsp; 1 <IMG BORDER=0 SRC=\".ramp.gif\"> $fmri(multiple)</b>
+<br>This shows voxels where only one mask is missing, to enable easy identification of single gross registration problems.
+For detail, view image ${FD}/inputreg/maskunique
+<br><IMG BORDER=0 SRC=\"inputreg/maskunique_overlay.png\">
+</BODY></HTML>
+"
+
+#}}}
+
+fsl:exec "${FSLDIR}/bin/fslmaths mask -Tmin -bin mask -odt char"
+
+#}}}
+    #{{{ MELODIC
+
+set thecommand "${FSLDIR}/bin/melodic -i .filelist -o groupmelodic.ica -v --nobet --bgthreshold=$fmri(thresh) --tr=$fmri(tr) --report --bgimage=bg_image"
+
+if { $fmri(varnorm) == 0 } {
+    set thecommand "$thecommand --vn"
+}
+
+if { $fmri(thresh_yn) == 0 } {
+    set thecommand "$thecommand --no_mm"
+} else {
+    set thecommand "$thecommand --mmthresh=\"$fmri(mmthresh)\""
+}
+
+if { $fmri(ostats) == 1 } {
+    set thecommand "$thecommand --Ostats"
+}
+
+if { $fmri(icaopt) == 2 } {
+    set thecommand "$thecommand -a concat"
+} else {
+    set thecommand "$thecommand -a tica"
+}
+
+if { [ file exists $fmri(ts_model_mat) ] && [ file exists $fmri(ts_model_con) ] } {
+    set thecommand "$thecommand --Tdes=$fmri(ts_model_mat) --Tcon=$fmri(ts_model_con)"
+}
+
+if { [ file exists $fmri(subject_model_mat) ] && [ file exists $fmri(subject_model_con) ] } {
+    set thecommand "$thecommand --Sdes=$fmri(subject_model_mat) --Scon=$fmri(subject_model_con)"
+}
+
+fsl:exec "$thecommand"
+
+#}}}
+
     return 0
 }
 

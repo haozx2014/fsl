@@ -17,7 +17,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 3.3 (c) 2006, The University of
+#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -70,43 +70,68 @@
 
 Usage() {
     echo ""
-    echo "Usage: tbss_reg <input_fileroot> <reference_fileroot> [-a]"
+    echo "Usage: tbss_reg <input_fileroot> <reference_fileroot> [-a] [-A]"
     echo "-a : apply transformation to input (as well as estimating it)"
+    echo "-A : affine-only registration"
     echo "tbss_reg MUST be run with both files in current directory and no pathnames specified"
     echo ""
     exit 1
 }
 
-[ "$2" = "" ] && Usage
-
 D=${FSLDIR}/bin/DR
 
-INPUT=$1
-REFERENCE=$2
+[ "$2" = "" ] && Usage
+INPUT=`${FSLDIR}/bin/remove_ext $1`
+REFERENCE=`${FSLDIR}/bin/remove_ext $2`
 I2R=${INPUT}_to_${REFERENCE}
+shift 2
+
+apply=0
+affine=0
+while [ _$1 != _ ] ; do
+    if [ $1 = -a ] ; then
+	apply=1
+        shift
+    elif [ $1 = -A ] ; then
+        affine=1
+        shift
+    else
+        Usage
+    fi
+done
+
 
 # do the registration
 ${D}/areg ${REFERENCE}.hdr ${INPUT}.hdr -dofout ${I2R}_affine.dof -parameter ${D}/affineCC.par
-${D}/nreg ${REFERENCE}.hdr ${INPUT}.hdr -dofin ${I2R}_affine.dof -dofout ${I2R}_nonlinear.dof -ds 20 -Tp 0 -parameter ${D}/nonlinearCC.par
 
-# apply registration if requested
-if [ "$3" != "" ] ; then
-  ${D}/transformation ${INPUT}.hdr ${I2R}.hdr -dofin ${I2R}_nonlinear.dof -linear -target ${REFERENCE}.hdr
+if [ $affine = 1 ] ; then
+
+    if [ $apply = 1 ] ; then
+	${D}/transformation ${INPUT}.hdr ${I2R}.hdr -dofin ${I2R}_affine.dof -linear -target ${REFERENCE}.hdr
+    fi
+    
+else
+
+    ${D}/nreg ${REFERENCE}.hdr ${INPUT}.hdr -dofin ${I2R}_affine.dof -dofout ${I2R}_nonlinear.dof -ds 20 -Tp 0 -parameter ${D}/nonlinearCC.par
+
+    if [ $apply = 1 ] ; then
+	${D}/transformation ${INPUT}.hdr ${I2R}.hdr -dofin ${I2R}_nonlinear.dof -linear -target ${REFERENCE}.hdr
+    fi
+
+    # now estimate the mean deformation
+    T=${I2R}_tmp
+    mkdir -p $T
+    ${D}/dof2gipl ${REFERENCE}.hdr ${INPUT}_to_${REFERENCE}_affine.dof ${T}/grotAx.hdr ${T}/grotAy.hdr ${T}/grotAz.hdr
+    ${D}/dof2gipl ${REFERENCE}.hdr ${INPUT}_to_${REFERENCE}_nonlinear.dof ${T}/grotNx.hdr ${T}/grotNy.hdr ${T}/grotNz.hdr
+    cd $T
+    $FSLDIR/bin/fslmaths grotNx -sub grotAx -sqr grotSx
+    $FSLDIR/bin/fslmaths grotNy -sub grotAy -sqr grotSy
+    $FSLDIR/bin/fslmaths grotNz -sub grotAz -sqr grotSz
+    $FSLDIR/bin/fslmaths grotSx -add grotSy -add grotSz -mas ../$REFERENCE grotSS
+    $FSLDIR/bin/fslstats grotSS -M -P 50 > ../${I2R}_nonlinear.msf
+    cd ..
+    /bin/rm -rf $T
+
+    $FSLDIR/bin/dof2warp $INPUT $REFERENCE ${I2R}_nonlinear.dof ${I2R}_nonlinear
 fi
-
-# now estimate the mean deformation
-T=${I2R}_tmp
-mkdir -p $T
-${D}/dof2gipl ${INPUT}.hdr ${INPUT}_to_${REFERENCE}_affine.dof ${T}/grotAx.hdr ${T}/grotAy.hdr ${T}/grotAz.hdr
-${D}/dof2gipl ${INPUT}.hdr ${INPUT}_to_${REFERENCE}_nonlinear.dof ${T}/grotNx.hdr ${T}/grotNy.hdr ${T}/grotNz.hdr
-cd $T
-$FSLDIR/bin/fslmaths grotNx -sub grotAx -sqr grotSx
-$FSLDIR/bin/fslmaths grotNy -sub grotAy -sqr grotSy
-$FSLDIR/bin/fslmaths grotNz -sub grotAz -sqr grotSz
-$FSLDIR/bin/fslmaths grotSx -add grotSy -add grotSz -mas ../$REFERENCE grotSS
-$FSLDIR/bin/fslstats grotSS -M -P 50 > ../${I2R}_nonlinear.msf
-cd ..
-/bin/rm -rf $T
-
-$FSLDIR/bin/dof2warp $INPUT $REFERENCE ${I2R}_nonlinear.dof ${I2R}_nonlinear
 

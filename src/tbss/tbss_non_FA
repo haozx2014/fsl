@@ -17,7 +17,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 3.3 (c) 2006, The University of
+#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -101,7 +101,7 @@ $FSLDIR/bin/fslmaths all_$ALTIM -mas mean_FA_mask all_$ALTIM
 
 echo "projecting all_$ALTIM onto mean FA skeleton"
 thresh=`cat thresh.txt`
-${FSLDIR}/bin/tbss_skeleton -i mean_FA -p $thresh mean_FA_skeleton_mask_dst ${FSLDIR}/etc/standard/lower-cingulum all_FA all_${ALTIM}_skeletonised -a all_$ALTIM
+${FSLDIR}/bin/tbss_skeleton -i mean_FA -p $thresh mean_FA_skeleton_mask_dst ${FSLDIR}/data/standard/lower-cingulum all_FA all_${ALTIM}_skeletonised -a all_$ALTIM
 
 echo "now run stats - for example:"
 echo "randomise -i all_${ALTIM}_skeletonised -o tbss_$ALTIM -m mean_FA_skeleton_mask -d design.mat -t design.con -n 5000 -c 3 -V"

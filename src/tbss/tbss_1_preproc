@@ -17,7 +17,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 3.3 (c) 2006, The University of
+#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -73,7 +73,7 @@ Usage() {
     echo "Usage: tbss_1_preproc [-f <intensity_scaling_factor>] <image1> <image2> ..."
     echo ""
     echo "-f <intensity_scaling_factor>   : scale intensities of all input data by <intensity_scaling_factor>"
-    echo "                                  this should result in a final intensity range of 0:1000"
+    echo "                                  this should result in a final intensity range of 0:10000"
     echo ""
     exit 1
 }

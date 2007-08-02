@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 3.3 (c) 2006, The University of
+    FMRIB Software Library, Release 4.0 (c) 2007, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -72,10 +72,64 @@
 #include "stdlib.h"
 #include "newmatio.h"
 #include <iostream>
+// #include "gam.h"
 
 using namespace NEWMAT;
 
 namespace MISCMATHS {
+
+//   ReturnMatrix betarnd(const int dim1, const int dim2, const float a, const float b)
+//   {
+//     // Devroye, L. (1986) Non-Uniform Random Variate Generation, Springer-Verlag.
+
+//     int tdim = dim2;
+
+//     if(tdim<0){tdim=dim1;}
+
+    
+//     Matrix g1=gammarnd(dim1, tdim, a, 1);
+//     Matrix g2=gammarnd(dim1, tdim, b, 1);
+
+//     Matrix res(dim1,tdim);
+//     for (int mc=1; mc<=res.Ncols(); mc++) {
+//       for (int mr=1; mr<=res.Nrows(); mr++) {
+// 	res(mr,mc)=g1(mr,mc)/(g1(mr,mc)+g2(mr,mc));
+//       }
+//     }
+    
+//     res.Release();
+//     return res;
+//   }
+
+ReturnMatrix betapdf(const RowVector& vals, const float a, const float b)
+{
+
+  RowVector res(vals);
+
+  if(a<0 || b<0)
+    {
+      throw Exception("Negative a or b in call to Miscprob::betapdf");
+    }
+
+  for (int mc=1; mc<=res.Ncols(); mc++)
+    {
+      float x=vals(mc);
+      if(x<0)
+	{
+	  res(mc)=0;
+	}
+      else
+	{
+	  float logkerna=(a-1)*std::log(x);
+	  float logkernb=(b-1)*std::log(1-x);
+	  float betaln_ab=lgam(a)+lgam(b)-lgam(a+b);
+	  res(mc)=std::exp(logkerna+logkernb-betaln_ab);	 
+	}
+    }
+  
+  res.Release();
+  return res;
+}
 
 ReturnMatrix unifrnd(const int dim1, const int dim2, const float start, const float end)
 {
@@ -126,33 +180,7 @@ ReturnMatrix normpdf(const RowVector& vals, const float mu, const float var)
   res.Release();
   return res;
 }
-float normpdf(const ColumnVector& vals, const ColumnVector& mu, const SymmetricMatrix& sigma)
-{
-  float res;
-  LogAndSign ld=(2*M_PI*sigma).LogDeterminant();
 
-  res =  std::exp(-0.5*(
-			((vals-mu).t()*sigma.i()*(vals-mu)).AsScalar()
-			+ld.LogValue()
-			));
-  return res;
-}
-ReturnMatrix normpdf(const Matrix& vals, const ColumnVector& mu, const SymmetricMatrix& sigma)
-{
-  RowVector res(vals);
-  LogAndSign ld = (2*M_PI*sigma).LogDeterminant();
-  Matrix isigma = sigma.i();
-
-  for (int mc=1; mc<=res.Ncols(); mc++){
-    res(mc) = std::exp( -0.5*(
-			      ((vals.Column(mc)-mu).t()*isigma*(vals.Column(mc)-mu)).AsScalar() 
-			      +ld.LogValue()
-			      ));
-  }
-
-  res.Release();
-  return res;
-}
 ReturnMatrix normcdf(const RowVector& vals, const float mu, const float var)
 {
   RowVector res(vals);
@@ -231,53 +259,26 @@ ReturnMatrix mvnrnd(const RowVector& mu, const SymmetricMatrix& covar, int nsamp
   return mvn.next(nsamp);
 }
 
-  /*
-// Saad: Wishart and inverseWishart Random Generator
-ReturnMatrix wishrnd(const SymmetricMatrix& sigma,const int dof){
-  // compute cholesky factor for sigma
-  LowerTriangularMatrix L = Cholesky(sigma);
+// ReturnMatrix gammarnd(const int dim1, const int dim2, 
+// 			const float a, const float b)
+// {
+//   // Marsaglia, G. and Tsang, W.W. (2000) "A Simple Method for Generating Gamma Variables", ACM Trans. Math. Soft. 26(3):363-372.
 
-  // for small degrees of freedom, use the definition
-  int n = sigma.Nrows();
-  Matrix X;
-  if(dof <= 81+n ){
-    X.ReSize(dof,n);
-    X = normrnd(dof,n) * L.t();
-  }
-  // otherwise, use Smith & Hocking procedure
-  else{
-    X.ReSize(n,n);
-    Matrix A(n,n);
-    for(int i=1;i<=n;i++){
-      Gamma G((dof-i+1)/2);
-      G.Set(rand()/float(RAND_MAX));
-      for(int j=1;j<=n;j++){
-	if     (i>j) { A(i,j) = 0; }
-	else if(i<j) { A(i,j) = normrnd(1,1).AsScalar(); }
-	else         { A(i,j) = std::sqrt(2*G.Next()); }
-      }
-    }
-    X = A * L.t();
-  }
+//   int tdim = dim2;
+//   if(tdim<0){tdim=dim1;}
+//   Matrix res(dim1,tdim);
 
-  SymmetricMatrix res(n);
-  res << X.t() * X;
+//   Gam& gam=Gam::getInstance();
+//   gam.setParams(a,b);
 
-  res.Release();
-  return res;
-}
-ReturnMatrix iwishrnd(const SymmetricMatrix& sigma,const int dof){
-  // assumes inv-Wishart(sigma.i(),dof)
-
-  SymmetricMatrix res;
-  res = wishrnd(sigma,dof);
-  res = res.i();
-
-  res.Release();
-  return res;
-}
-
-  */
+//   for (int mc=1; mc<=res.Ncols(); mc++) {
+//     for (int mr=1; mr<=res.Nrows(); mr++) {
+//       res(mr,mc)=gam.rnd();
+//     }
+//   }
+//   res.Release();
+//   return res;
+// }
 
 ReturnMatrix perms(const int n){
   if(n<=1){

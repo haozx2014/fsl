@@ -1,14 +1,13 @@
- <HTML><HEAD>
-  <TITLE>FUGUE: FMRIB's Utility for Geometrically Unwarping EPIs - User Guide</TITLE>
-</HEAD>
- <BODY BACKGROUND="../images/fugue-bg.jpg" BGCOLOR="white">
-  <TABLE BORDER=0 WIDTH="100%"><TR>
-   <TD ALIGN=CENTER><H1>FUGUE: FMRIB's Utility for Geometrically Unwarping EPIs - User Guide</H1>FUGUE Version 2.2 (in c# minor)
-  <TD ALIGN=RIGHT>  <a href="../index.html"><IMG BORDER=0 SRC="../images/fsl-logo.jpg"></a>
-   </TR></TABLE>
-  <!-- No Table of Contents -->
+<HTML><HEAD><link REL="stylesheet" TYPE="text/css" href="../fsl.css"><TITLE>FSL</TITLE></HEAD><BODY><hr><TABLE BORDER=0 WIDTH="100%"><TR><TD ALIGN=CENTER><H1>
+<STYLE TYPE="text/css">BODY { background-image: url("../images/fugue-bg.jpg") }</STYLE>
+FUGUE EPI Unwarping
+</H1>
+FMRIB's Utility for Geometrically Unwarping EPIs - v2.2 (in c# minor)
+<TD ALIGN=RIGHT><a href="../index.html"><IMG BORDER=0 SRC="../images/fsl-logo.jpg"></a></TR></TABLE><HR>
 
-<A NAME="section1"></A><HR><H2>INTRODUCTION</H2>
+<!-- No Table of Contents -->
+
+<A NAME="section1"></A><H2>INTRODUCTION</H2>
 
 Standard functional images, using the EPI sequence, are distorted
 due to magnetic field inhomogeneities.  These inhomogeneities are
@@ -74,7 +73,7 @@ Alternatively no reconstruction may be done, and the raw phase and
 magnitude (or complex) images may be saved instead.  It is important
 for each different scanner/site/sequence to know what form your data
 is in.  If they have been converted to NIFTI or ANALYZE format, then
-you can use the FSL tools (particularly <code>avwinfo</code>) to
+you can use the FSL tools (particularly <code>fslinfo</code>) to
 determine the types of images present.  To obtain fieldmaps that can
 be used within FSL using the FSL tools (in particular, PRELUDE and
 FUGUE), please refer to the page on

@@ -17,7 +17,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 3.3 (c) 2006, The University of
+#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -139,7 +139,7 @@ echo $best > best.msf
 mkdir -p ../stats
 
 # create NIFTI-format MNI152 at 1x1x1mm for later usage
-$FSLDIR/bin/flirt -in $FSLDIR/etc/standard/avg152T1_brain -ref $FSLDIR/etc/standard/avg152T1 -out ../stats/MNI152 -applyisoxfm 1
+$FSLDIR/bin/flirt -in $FSLDIR/data/standard/avg152T1_brain -ref $FSLDIR/data/standard/avg152T1 -out ../stats/MNI152 -applyisoxfm 1
 
 # is target already in MNI152 space?
 if [ `$FSLDIR/bin/fslval $best dim1` = 182 -a `$FSLDIR/bin/fslval $best dim2` = 218 -a `$FSLDIR/bin/fslval $best dim3` = 182 ] ; then
@@ -183,10 +183,10 @@ if [ $SKELETON = 0 ] ; then
     echo "skeletonising mean FA"
     $FSLDIR/bin/tbss_skeleton -i mean_FA -o mean_FA_skeleton
 else
-    $FSLDIR/bin/fslmaths $FSLDIR/etc/standard/FMRIB58_FA_1mm -mas mean_FA_mask mean_FA
+    $FSLDIR/bin/fslmaths $FSLDIR/data/standard/FMRIB58_FA_1mm -mas mean_FA_mask mean_FA
     $FSLDIR/bin/fslmaths mean_FA -bin mean_FA_mask
     $FSLDIR/bin/fslmaths all_FA -mas mean_FA_mask all_FA
-    $FSLDIR/bin/imcp $FSLDIR/etc/standard/FMRIB58_FA-skeleton_1mm mean_FA_skeleton
+    $FSLDIR/bin/imcp $FSLDIR/data/standard/FMRIB58_FA-skeleton_1mm mean_FA_skeleton
 fi
 
 echo "now view mean_FA_skeleton to check whether the default threshold of 2000 needs changing, when running:"
