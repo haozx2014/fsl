@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 3.3 (c) 2006, The University of
+    FMRIB Software Library, Release 4.0 (c) 2007, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -71,8 +71,8 @@
 
 using namespace Utilities;
 
-string title="vector_flirt (Version 1.0)\nVector Affine/non linear Tranformation with Orientation Preservation";
-string examples="vector_flirt -i <input4Dvector> -o <output4D> -t <transformation>";
+string title="vecreg (Version 1.0)\nVector Affine/non linear Tranformation with Orientation Preservation";
+string examples="vecreg -i <input4Dvector> -o <output4D> -t <transformation>";
 
 Option<bool> verbose(string("-v,--verbose"),false,
 		       string("switch on diagnostic messages"),

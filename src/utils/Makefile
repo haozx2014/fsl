@@ -15,6 +15,8 @@ LibraryTarget = libutils.a
 LibraryObjects = matches.o functions.o usage.o check.o parse.o log.o time_tracer.o
 
 all: ${LibraryTarget}
+	rm -rf ${FSLDIR}/etc/standard
+	ln -s ${FSLDIR}/data/standard ${FSLDIR}/etc/
 
 ${OptionsTestTarget}: ${LibraryTarget} ${OptionsTestObjects}
 	${CXX} ${LDFLAGS} -o $@  ${OptionsTestObjects} \

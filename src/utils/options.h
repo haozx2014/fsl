@@ -11,7 +11,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 3.3 (c) 2006, The University of
+    FMRIB Software Library, Release 4.0 (c) 2007, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -105,7 +105,8 @@ namespace Utilities {
       m_option(o), m_explanation(e) {}
 
     virtual const char * what() const throw() {
-      return string(m_option + ": " + m_explanation + "!").c_str();   
+      string str(string(m_option + ": " + m_explanation + "!"));
+      return str.c_str();
     }
 
     ~X_OptionError() throw() {}
@@ -364,7 +365,7 @@ namespace Utilities {
      <pre>
 #include "options.h"
 
-// $Id: options.h,v 1.23 2006/11/21 13:46:35 beckmann Exp $ 
+// $Id: options.h,v 1.24 2007/07/31 12:29:00 flitney Exp $ 
 
 using namespace Utilities;
 

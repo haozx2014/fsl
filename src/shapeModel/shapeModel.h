@@ -73,6 +73,7 @@ public:
 		void setShapeTstatX(int shape, vector<float> v);
 		void setShapeTstatY(int shape, vector<float> v);
 		void setShapeTstatZ(int shape, vector<float> v);
+		void setShapeScalars(int shape, vector<float> v);
 		void save(string s, int type, int numModes);
 		void save_binary(string s, int type, int numModes);
 

@@ -17,7 +17,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 3.3 (c) 2006, The University of
+#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -92,17 +92,9 @@ do_reg(){
 	o=${g}_to_$f
 	
 	if [ ! -f ${o}_nonlinear.msf ] ; then
-	    echo processing $o
+	    echo $o
 	    touch ${o}_nonlinear.msf
-
-	    # if you have a batch system then set the following according to your local batch environment, and
-	    # make sure that $FSLDIR/bin/runfsl is setup correctly
-	    if [ _$SGE_ROOT != _ ] ; then
-		echo "$FSLDIR/bin/tbss_reg $g $f" >> .commands
-	    else
-		$FSLDIR/bin/tbss_reg $g $f
-	    fi
-
+	    echo "$FSLDIR/bin/tbss_reg $g $f" >> .commands
 	fi
 	
     done
@@ -121,7 +113,7 @@ if [ $1 = -n ] ; then
     done
 else
     if [ $1 = -T ] ; then
-	TARGET=$FSLDIR/etc/standard/FMRIB58_FA_1mm
+	TARGET=$FSLDIR/data/standard/FMRIB58_FA_1mm
     elif [ $1 = -t ] ; then
 	TARGET=$2
     else
@@ -143,7 +135,5 @@ else
     do_reg target
 fi
 
-if [ _$SGE_ROOT != _ ] ; then
-    /usr/local/bin/pbatch -N tbss_2_reg -q long.q -a lx24-amd64 .commands
-fi
+${FSLDIR}/bin/fsl_sub -T 300 -N tbss_2_reg -t .commands
 

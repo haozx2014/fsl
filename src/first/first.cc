@@ -35,76 +35,91 @@ Option<bool> verbose(string("-v,--verbose"), false,
 Option<bool> help(string("-h,--help"), false,
 			  string("display this message"),
 			  false, no_argument);
-Option<bool> inputprob(string("--inputprob"), false,
-					   string("Input image is probability - do not do any thresholding or smoothing"),
-					   false, no_argument);
+			  
+//Standard Inputs
+Option<string> inname(string("-i,--in"), string(""),
+					  string("Filename of input image to be segmented."),
+					  true, requires_argument);
+					  
+Option<string> outname(string("-k,--outputName"), string(""),
+					   string("Output name"),
+					   true, requires_argument);
+Option<string> flirtmatname(string("-l,--flirtMatrix"), string(""),
+						 string("Filename of flirt matrix that transform input image to MNI space (output of first_flirt)"),
+						 true, requires_argument);
+
+Option<string> modelname(string("-m,--inputModel"), string(""),
+						 string("Filename of input model (the structure to be segmented)."),
+						 true, requires_argument);
+						 
+Option<int> g(string("-g,--numModes"), 10,
+			  string("Specifies number of modes used."),
+			  false, requires_argument);
+
+Option<float> stdTrunc(string("-s,--sh"), 8.0,
+					   string("This provides a hard limit on minimum/maximum mode parameters (should not need to use)."),
+					   false, requires_argument);	
+//General FIRST options
+
 Option<bool> loadvars(string("--loadvars"), false,
-					   string("load intial parameter estimates from a previous segmentation"),
+					   string("load intial parameter estimates from a previous segmentation."),
 					   false, no_argument);
 Option<bool> shcond(string("--shcond"), false,
-					   string("use conditional probability on shape"),
+					   string("Use conditional shape probability"),
 					   false, no_argument);
 Option<bool> shcond2(string("--shcond2"), false,
-					   string("use conditional probability on 2 shapes"),
+					   string("Use conditional shape probability from a second structure."),
 					   false, no_argument);
 
 Option<bool> useIntRefModel(string("--useIntRefModel"), false,
-					   string("reeistmate mode for each iteration"),
+					   string("Use intensity of a reference structure to normalize."),
 					   false, no_argument);
 
+//Cost function option
 Option<bool> baam(string("--baam"), false,
-					   string("use appearaance model"),
+					   string("Use bayesian appearaance model to fit the model."),
 					   false, no_argument);
 
 Option<bool> overlap(string("--overlap"), false,
-					   string("use overlapcost - can fit mesh to labelled data"),
+					   string("Use overlap metric to fit model (can be used to fit model to volumetric data)"),
 					   false, no_argument);
 
 					   
-Option<string> inname(string("-i,--in"), string(""),
-					  string("filename of input image to be segmented"),
-					  true, requires_argument);
-
-Option<string> flirtmatname(string("-l,--flirtMatrix"), string(""),
-						 string("filename containing flirt matrix (transformattion to MNI space"),
-						 true, requires_argument);
-Option<string> modelname(string("-m,--modelin"), string(""),
-						 string("filename of input model: the structure to be segmented"),
-						 true, requires_argument);
-Option<string> modelname2(string("-n,--modelin2"), string(""),
-						 string("filename of 2nd input model for dual: the structure to be segmented"),
-						 false, requires_argument);
-Option<string> bvarsname(string("-o,--name of bvars file your conditioning on"), string(""),
-						  string("load bvars"),
-						  false, requires_argument);
-Option<string> bvarsname2(string("-p,--name of second bvars file your conditioning on"), string(""),
-						  string("load bvars2"),
-						  false, requires_argument);
-Option<string> bmapname(string("-b,--bmapin"), string(""),
-						  string("load bmap"),
-						  false, requires_argument);
-Option<string> bmapname2(string("-d,--bmap2in"), string(""),
-						  string("load bmap2"),
-						  false, requires_argument);
-Option<string> outname(string("-k,--out"), string(""),
-					   string("basename of output"),
-					   true, requires_argument);
-Option<float> stdTrunc(string("-s,--sh"), 8.0,
-					   string("number of standard deviation to truncate at"),
-					   false, requires_argument);		
-Option<float> manMean(string("-a,--mean intensity"), -777.0,
-					  string("override mean estimation"),
+//intensity normalization options
+Option<float> robmin(string("-y,--RobustMinimum"), 0.0,
+					 string("Robust minimum. Used for global intensity normalization."),
+					 false, requires_argument);
+Option<float> robmax(string("-z,--RobustMaximum"), 255.0,
+					 string("Robust maximum. Used for global inetensity normalization."),
+					 false, requires_argument);
+Option<float> manMean(string("-a,--Manual Set Mode of Intensity Distribution"), -777.0,
+					  string("Overrides estimate of mode of the intensity distribution by manually setting it."),
 					  false, requires_argument);
 
-Option<int> g(string("-g,--nmodes"), 10,
-			  string("numberOfModes in window"),
-			  false, requires_argument);
-Option<float> robmin(string("-y,--robmin"), 0.0,
-					 string("how many multiples of g"),
-					 false, requires_argument);
-Option<float> robmax(string("-z,--robmax"), 255.0,
-					 string("robust max for normalization"),
-					 false, requires_argument);
+//Additional inputs. This includes an additional model, bvars to load previous structures as well as mapping matrices required to 
+//map bvars into the conditional space 
+
+Option<string> modelname2(string("-n,--inputModel2"), string(""),
+						 string("Filename of model used for intensity reference (to be used in conjuction with intRefModel)"),
+						 false, requires_argument);
+Option<string> bvarsname(string("-o,--bvars"), string(""),
+						  string("Initialize using bvars from a previous segmenation. When using with --shcond specifies the \
+						  the shape of the structure we are conditioning on."),
+						  false, requires_argument);
+Option<string> bvarsname2(string("-p,--bvars2"), string(""),
+						  string("Shape of second structure being conditioned on (used along with --shcond2)"),
+						  false, requires_argument);
+Option<string> bmapname(string("-b,--inputBmap"), string(""),
+						  string("Maps bvars into conditional space."),
+						  false, requires_argument);
+Option<string> bmapname2(string("-d,--inputBmap2"), string(""),
+						  string("Maps bvars2 into conditional space."),
+						  false, requires_argument);
+	
+
+
+
+
 
 int nonoptarg;
 
@@ -845,7 +860,7 @@ float costfuncApp(shapeModel* model1, vector<float> vars, vector<float> fvals, i
 			mean=mode(vintens,minint,maxint);
 			if ((globMean==mean)&&(vintens.size()>=1)){
 				if (verbose.value()){
-				  cout<<"Found mode "<<mode(vintens,minint,maxint)<<" "<<mean<<endl;
+				  cout<<"Found mode "<<mean<<endl;
 				}
 				globfoundmode=true;
 			}
@@ -1352,9 +1367,7 @@ string read_bvars(string fname,vector<float>* bvars,int M){
 	float ftemp;
 	fin>>ftemp;
 	bvars->push_back(ftemp);
-      }//else{
-      //bvars->element(j,i)=0;
-      //}
+      }
     }
   }
   return modelNames;
@@ -1471,13 +1484,9 @@ int do_work(int argc, char* argv[])
 			  //perturbe the system
 			  vars.push_back(0);
 		  }
-		  
-		  
-		  
+						
 		  if (loadvars.value()){
-			  
-			  read_bvars(bvarsname.value(),&vars,model1->getNumberOfModes());
-			  
+		     read_bvars(bvarsname.value(),&vars,model1->getNumberOfModes());
 		  }
 		  
 		  
@@ -1600,7 +1609,7 @@ int main(int argc,char *argv[])
 		options.add(overlap);
 		options.add(outname);
 		options.add(stdTrunc);
-		options.add(inputprob);
+
 		options.add(verbose);
 		options.add(help);
 		options.add(modelname); 

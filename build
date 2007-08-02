@@ -5,10 +5,10 @@ if [ $# -ge 1 ] ; then
 else
   PROJECTS="extras utils znzlib niftiio fslio miscmaths \
 newimage libhfunc libss libvis meshclass misc_tcl bint \
-afni avwutils bet bet2 cluster fast fdt feat5 film filmbabe flame flirt \
-fslpres fugue mcflirt melodic2 misc_c miscvis mm \
+avwutils bet2 cluster fast fdt feat5 film filmbabe flame flirt fabber \
+fslpres fslvbm fugue mcflirt melodic misc_c miscvis mm \
 randomise siena slicetimer susan tbss \
-dropouts ifit load_varian taldaemon misc_scripts fast4 shapeModel first possum sgeutils";
+ifit load_varian misc_scripts fast4 shapeModel first possum sgeutils";
 fi
 
 echo "Building projects - see build.log file for progress..."

@@ -15,7 +15,7 @@ Copyright (C) 2002 University of Oxford  */
     
     LICENCE
     
-    FMRIB Software Library, Release 3.3 (c) 2006, The University of
+    FMRIB Software Library, Release 4.0 (c) 2007, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the

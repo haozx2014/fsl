@@ -170,11 +170,11 @@ roughly in the range 0:1. You can check this, for example, by:
 <pre>fslstats CON_N00300_dti_data_FA -R
  0.000000 1.148992</pre>
 
-If the range is close to 0:1 then the scaling applied by default by
-the first TBSS script (10000) is already correct. Otherwise, you need
-to tell the script what scaling to apply; for example, if your data is
-in the range 0:1000 then you need a scaling of 10, etc. Now run the
-script, from inside your working TBSS directory:
+If the range is close to 0:1 then the default scaling of 10000 will be
+correct. Otherwise, you need to tell the script what scaling to apply;
+for example, if your data is in the range 0:1000 then you need a
+scaling of 10, etc. Now run the script, from inside your working TBSS
+directory:
 
 <pre><b>tbss_1_preproc *</b></pre>
 
@@ -541,8 +541,8 @@ fslview mean_FA -b 0,6000 mean_FA_skeleton -l Green -b 2000,7000 tbss_fill -l Re
   that was originally applied. Finally, the native space image can be
   padded by a single slice on each side of the image cuboid, to match
   the original native space data (these end slices were removed when
-  the data in FAi was originally created). Graphically, the whole
-  process can be viewed as:
+  the data in FAi was originally created). The whole process can be
+  viewed thus:
 
 <p><center><img src="flowchart.png" width="100%"></center>
 
@@ -560,6 +560,9 @@ fslview mean_FA -b 0,6000 mean_FA_skeleton -l Green -b 2000,7000 tbss_fill -l Re
   tractography for each subject, with that result forming the
   tractography seed mask.
 
+<p><b>Option 1: just deproject &lt;skeleton-space-input-image&gt; onto the
+    space of each nonlinearly registered subject in all_FA</b>
+
 <p>For an example of confirming the final tract-centre projection
   stage, first form an image containing significant voxels from a
   previous randomise-based statistical analysis of the skeletonised
@@ -576,6 +579,9 @@ fslview all_FA grot_to_all_FA -l Red-Yellow</pre>
   you move through the timepoints in FSLView you see each subject in
   turn.
 
+<p><b>Option 2: do the first step and also invert the nonlinear warping, to
+get back to subjects' native space in FAi</b>
+
 <p>For an example of complete back-projection to the space of the
 native data in FAi, run the following, first making sure you run the
 command from within the <code>stats</code> directory. The
@@ -590,6 +596,9 @@ called <code>subject_001</code>, you would view the results (if you
 are in the <code>stats</code> directory), with:
 
 <p><code>fslview ../FAi/subject_001_FAi subject_001_FAi_grot -l Red-Yellow</code>
+
+<p><b>Option 3: do the first two steps and also pad the end slices to get
+    back to the subjects' native space in orig</b>
 
 <p>If, instead, you want the final output in the original subject's
 native space (this is very similar to the native space in FAi, just

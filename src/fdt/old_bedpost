@@ -11,7 +11,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 3.3 (c) 2006, The University of
+#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -73,7 +73,7 @@ Usage() {
     echo "expects to find bvals and bvecs in subject directory"
     echo "expects to find data nodif_brain_mask nodif in subject directory"
     echo ""
-    exit
+    exit 1
 }
 
 trap Clean_Exit 2
@@ -95,7 +95,7 @@ Clean_Exit(){
 		rm ${subjdir}.bedpost/logs/pid_${$}/${j}
 	    done
 	fi
-	ExitUnlock;
+	ExitUnlock 1;
 }
 
 Lock(){
@@ -105,6 +105,7 @@ Lock(){
 }
 
 ExitUnlock(){
+    returncode=$1
     if [ -f ${FSLLOCKDIR}/.bedpost.lock ];then
 	rm ${FSLLOCKDIR}/.bedpost.lock
     fi
@@ -120,7 +121,7 @@ ExitUnlock(){
 	rm -f ${subjdir}/nodif_brain_mask_slice_*
     fi
     
-    exit
+    exit $returncode
 }
 
 LockTest(){
@@ -152,13 +153,13 @@ make_absolute(){
 
 if [ `LockTest` -eq 0 ]; then
     echo "bedpost is currently being run - try again later"
-    exit
+    exit 1
 fi
 
 if [ "x${FSLMACHINELIST}" != "x" ];then
     if [ "x${FSLREMOTECALL}" = "x" ];then
 	echo "error: you must set FSLREMOTECALL if you have set FSLMACHINELIST"
-	exit
+	exit 1
     fi
 fi
 
@@ -174,32 +175,32 @@ echo subjectdir is $subjdir
 
 if [ ! -d $subjdir ]; then
 	echo "subject directory $1 not found"
-	ExitUnlock
+	ExitUnlock 1
 fi
 
 if [ ! -f ${subjdir}/bvecs ]; then
 	echo "${subjdir}/bvecs not found"
-	ExitUnlock
+	ExitUnlock 1
 fi
 
 if [ ! -f ${subjdir}/bvals ]; then
 	echo "${subjdir}/bvals not found"
-	ExitUnlock
+	ExitUnlock 1
 fi
 
 if [ `${FSLDIR}/bin/imtest ${subjdir}/data` -eq 0 ]; then
 	echo "${subjdir}/data not found"
-	ExitUnlock
+	ExitUnlock 1
 fi
 
 if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif` -eq 0 ]; then
 	echo "${subjdir}/nodif not found"
-	ExitUnlock
+	ExitUnlock 1
 fi
 
 if [ `${FSLDIR}/bin/imtest ${subjdir}/nodif_brain_mask` -eq 0 ]; then
 	echo "${subjdir}/nodif_brain_mask not found"
-	ExitUnlock
+	ExitUnlock 1
 fi
 
 
@@ -210,16 +211,16 @@ mkdir -p ${subjdir}.bedpost/diff_slices
 echo copying files to bedpost directory
 cp ${subjdir}/bvecs ${subjdir}/bvals ${subjdir}.bedpost
 ${FSLDIR}/bin/imcp ${subjdir}/nodif ${subjdir}/nodif_brain_mask ${subjdir}.bedpost
-${FSLDIR}/bin/avwmaths ${subjdir}/nodif -mas ${subjdir}/nodif_brain_mask ${subjdir}.bedpost/nodif_brain
+${FSLDIR}/bin/fslmaths ${subjdir}/nodif -mas ${subjdir}/nodif_brain_mask ${subjdir}.bedpost/nodif_brain
 
 
 mkdir -p ${subjdir}.bedpost/logs
 mkdir -p ${subjdir}.bedpost/logs/pid_${$}
 
-nslices=`${FSLDIR}/bin/avwval ${subjdir}/data dim3`
+nslices=`${FSLDIR}/bin/fslval ${subjdir}/data dim3`
 
-${FSLDIR}/bin/avwslice ${subjdir}/data
-${FSLDIR}/bin/avwslice ${subjdir}/nodif_brain_mask
+${FSLDIR}/bin/fslslice ${subjdir}/data
+${FSLDIR}/bin/fslslice ${subjdir}/nodif_brain_mask
 
 #for parallel processing, the following need to be setup elsewhere
 #FSLMACHINELIST="list of machines (can be duplicated for two processors etc.)"
@@ -257,12 +258,12 @@ done
 ##this will have to change..
 echo "Merging outputs into 4D files"
 
-${FSLDIR}/bin/avwmerge -z ${subjdir}.bedpost/merged_thsamples `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpost/diff_slices/data_slice_*/th_samples`
-${FSLDIR}/bin/avwmerge -z ${subjdir}.bedpost/merged_phsamples `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpost/diff_slices/data_slice_*/ph_samples`
-${FSLDIR}/bin/avwmerge -z ${subjdir}.bedpost/merged_fsamples  `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpost/diff_slices/data_slice_*/f_samples`
-${FSLDIR}/bin/avwmaths ${subjdir}.bedpost/merged_thsamples -Tmean ${subjdir}.bedpost/mean_thsamples
-${FSLDIR}/bin/avwmaths ${subjdir}.bedpost/merged_phsamples -Tmean ${subjdir}.bedpost/mean_phsamples
-${FSLDIR}/bin/avwmaths ${subjdir}.bedpost/merged_fsamples -Tmean ${subjdir}.bedpost/mean_fsamples
+${FSLDIR}/bin/fslmerge -z ${subjdir}.bedpost/merged_thsamples `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpost/diff_slices/data_slice_*/th_samples`
+${FSLDIR}/bin/fslmerge -z ${subjdir}.bedpost/merged_phsamples `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpost/diff_slices/data_slice_*/ph_samples`
+${FSLDIR}/bin/fslmerge -z ${subjdir}.bedpost/merged_fsamples  `${FSLDIR}/bin/imglob -oneperimage ${subjdir}.bedpost/diff_slices/data_slice_*/f_samples`
+${FSLDIR}/bin/fslmaths ${subjdir}.bedpost/merged_thsamples -Tmean ${subjdir}.bedpost/mean_thsamples
+${FSLDIR}/bin/fslmaths ${subjdir}.bedpost/merged_phsamples -Tmean ${subjdir}.bedpost/mean_phsamples
+${FSLDIR}/bin/fslmaths ${subjdir}.bedpost/merged_fsamples -Tmean ${subjdir}.bedpost/mean_fsamples
 
 ${FSLDIR}/bin/make_dyadic_vectors ${subjdir}.bedpost/merged_thsamples ${subjdir}.bedpost/merged_phsamples ${subjdir}.bedpost/nodif_brain_mask ${subjdir}.bedpost/dyadic_vectors
 
@@ -288,7 +289,7 @@ echo 0 0 1 0 >> ${xfmdir}/eye.mat
 echo 0 0 0 1 >> ${xfmdir}/eye.mat
 
 echo "DONE"
-ExitUnlock
+ExitUnlock 0
 
 
 

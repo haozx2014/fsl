@@ -17,7 +17,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 3.3 (c) 2006, The University of
+#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -70,34 +70,95 @@
 
 Usage() {
     echo ""
-    echo "Usage:   run_first_all <input_image> <N-modes> <boundary_threshold> <output_basename>"
+    echo "Usage:   run_first_all <input_image> <boundary_threshold> <output>"
     echo ""
-    echo "e.g.:  run_first_all im1 60 2.94 output_name "
+    echo "e.g.:  run_first_all im1 4 output_name "
     echo ""
     exit 1
 }
 
-[ "$4" = "" ] && Usage
+[ "$3" = "" ] && Usage
 [ `${FSLDIR}/bin/imtest $1` = 0 ] && Usage
 A=`${FSLDIR}/bin/remove_ext $1`
 
+Af=`echo $A | awk -F / '{print $NF}'`
+echo $Af
 
 
-${FSLDIR}/bin/first_flirt $A ${A}_to_std
+echo ${FSLDIR}/bin/first_flirt $A ${Af}_to_std
 
+FLIRTID=`${FSLDIR}/bin/fsl_sub -T 15 ${FSLDIR}/bin/first_flirt $A ${Af}_to_std`
+COM=${3}.com
+/bin/rm -f ${COM}
 
-for s in L_Accu L_Amyg L_Caud L_Hipp L_Late L_Pall L_Puta L_Thal R_Accu R_Amyg R_Caud R_Hipp R_Pall R_Puta R_Thal ; do
-echo $s
-  ${FSLDIR}/bin/run_first $A ${A}_to_std.mat $2 ${4}-$s ${FSLDIR}/etc/standard/first_models_317_bin/${s}_bin.bmv
+imscorr=""
+imsfirst=""
 
-  ${FSLDIR}/bin/first_bcorr ${4}-${s}_first $A $3 ${4}-${s}_corr
+for s in L_Accu L_Amyg L_Caud L_Hipp L_Late L_Pall L_Puta L_Thal R_Accu R_Amyg R_Caud R_Hipp R_Late R_Pall R_Puta R_Thal BrStem; do
+   
+    intref=0;
+    case "${s:2:4}" in 
+	Accu)
+	    nmodes=50
+	    ;;
+	Amyg)
+	    nmodes=50;
+	    intref=1;
+	    ;;
+	Caud)
+	    nmodes=30;
+	    intref=1;
+	    ;;
+	Hipp)
+	    nmodes=30;
+	    intref=1;
+	    ;;
+	Late)
+	    nmodes=40;
+	    intref=1;
+	    ;;
+	Pall)
+	    nmodes=40;
+	    ;;
+	Puta)
+	    nmodes=40;
+	    ;;
+	Thal)
+	    nmodes=40;
+	    ;;
+	Stem)
+	    nmodes=40;
+	    ;;
+	*)
+	    echo "Structure unknown"
+	    exit 1
+
+    esac
+    #run_first , choose between normal and intref
+    if [ $intref = 0 ] ; then 
+	echo -n "${FSLDIR}/bin/run_first -i $A -t ${Af}_to_std.mat -n $nmodes -o ${3}-${s}_first -m ${FSLDIR}/data/first/models_317_bin/${s}_bin.bmv" >> $COM
+    else
+	echo -n "${FSLDIR}/bin/run_first -i $A -t ${Af}_to_std.mat -n $nmodes -o ${3}-${s}_first -m ${FSLDIR}/data/first/models_317_bin/intref_thal/${s}_bin.bmv -intref ${FSLDIR}/data/first/models_317_bin/${s:0:1}_Thal_bin.bmv" >> $COM
+
+    fi
+      
+    ##boundary correction 
+    echo "; ${FSLDIR}/bin/first_utils --singleBoundaryCorr -i ${3}-${s}_first -r $A -p $2 -o ${3}-${s}_corr" >> $COM
+   
+    imsfirst="${imsfirst} ${3}-${s}_first"
+    imscorr="${imscorr} ${3}-${s}_corr"
 
 done
 
-threshnop=`echo ${3} | sed 's/\.//g'`
+FIRSTID=`fsl_sub -T 60 -N first -j $FLIRTID -t $COM`
 
-avwmerge -t ${4}_m${2}_th${threshnop}_first `$FSLDIR/bin/imglob -oneperimage ${4}-*_corr*`
-avwmaths_32R ${4}_m${2}_th${threshnop}_first -Tmean -mul 15 ${4}_m${2}_th${threshnop}_first
+threshnop=`echo ${2} | sed 's/\.//g'`
 
-/bin/rm ${4}-*_corr* ${4}-*_first*
 
+echo "${FSLDIR}/bin/fslmerge -t ${3}_all_th${threshnop}_first ${imscorr} ; ${FSLDIR}/bin/fslmaths ${3}_all_th${threshnop}_first -Tmean -mul 16 ${3}_all_th${threshnop}_first -odt int ; ${FSLDIR}/bin/fslmerge -t ${3}_all_th${threshnop}_first ${3}_all_th${threshnop}_first  ${imsfirst}" > ${COM}2
+
+MERGEID=`fsl_sub -T 15 -N first_post -j $FIRSTID -t ${COM}2`
+
+echo "/bin/rm ${3}-*_corr*.nii.gz  ${3}-*_first*.nii.gz" >${COM}3
+
+fsl_sub -T 5 -N clean_up -j $MERGEID -t ${COM}3 

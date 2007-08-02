@@ -16,7 +16,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 3.3 (c) 2006, The University of
+#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -163,7 +163,7 @@ prewhitening to make the statistics valid and maximally efficient. For
 other data - for example, very long TR (>30s) FMRI data, PET data or
 data with very few time points (<50) - this should be turned off."
 
-checkbutton $w.motionevs -text "Add motion parameters to model" -variable fmri(motionevs)
+checkbutton $w.motionevs -text "Add motion parameters to model" -variable fmri(motionevs) -command "feat5:updatemotionevs $w"
 balloonhelp_for $w.motionevs "You may want to include the head motion parameters (as estimated by
 MCFLIRT motion correction in the Pre-stats processing) as confound EVs
 in your model. This can sometimes help remove the residual effects of
@@ -181,7 +181,10 @@ and rotation parameters are added as extra confound EVs in the model.
 
 If you select this option then only the components of the main EVs
 that are orthogonal to the motion confound EVs will be used in
-determining significance of the effects of interest."
+determining significance of the effects of interest.
+
+You cannot use this option unless you are carrying out both pre-stats
+and stats in the same FEAT run."
 
 
 button $w.wizard -width 20 -text "Model setup wizard" -command "feat5:wizard $w"
@@ -207,7 +210,7 @@ optionMenu2 $w.mixed fmri(mixed_yn) 3 "Fixed effects" 0 "Mixed effects: Simple O
 
 balloonhelp_for $w.mixed "The main choice here is between fixed effects (FE) and mixed effects (ME) higher-level modelling. FE modelling is more \"sensitive\" to activation than ME, but is restricted in the inferences that can be made from its results; because FE ignores cross-session/subject variance, reported activation is with respect to the group of sessions or subjects present, and not representative of the wider population. ME does model the session/subject variability, and it therefore allows inference to be made about the wider population from which the sessions/subjects were drawn.
 
-The FE option implements a standard weighted fixed effects model.  No random effects variances are modelled or estimated. The FE error variances are the variances (varcopes) from the previous level. Weighting is introduced by allowing these variances to be unequal (heteroscedastic). Degrees-of-freedom are calculated by summing the effective degrees-of-freedom for each input from the previous level and subtracting the number of higher-level regressors.
+The FE option implements a standard weighted fixed effects model. No random effects variances are modelled or estimated. The FE error variances are the variances (varcopes) from the previous level. Weighting is introduced by allowing these variances to be unequal (heteroscedastic). Degrees-of-freedom are calculated by summing the effective degrees-of-freedom for each input from the previous level and subtracting the number of higher-level regressors.
 
 We now discuss the different ME options.
 
@@ -217,9 +220,11 @@ For the most accurate estimation of higher-level activation you should use FLAME
 
 The first stage of FLAME is significantly more accurate than OLS, and nearly as fast. The second stage of FLAME increases accuracy slightly over the first stage, but is quite a lot slower (typically 45-200 minutes). It takes all voxels which FLAME stage 1 shows to be near threshold and carries out a full MCMC-based analysis at these points, to get the most accurate estimate of activation.
 
-We generally recommend using \"FLAME 1\", as it is MUCH faster than running both stages, and nearly as accurate. 
+We generally recommend using \"FLAME 1\", as it is MUCH faster than running both stages, and nearly as accurate. The added value from running full \"FLAME 1+2\" is most significant in a highest-level analysis when you have a small number of subjects (say <10).
 
-If you are carrying out a mid-level analysis (e.g., cross-sessions) and will be feeding this into an even higher-level analysis (e.g., cross-subjects), then you should definitely use the \"FLAME 1\" option, as it is not possible for FLAME to know in advance of the highest-level analysis what voxels will ultimately be near threshold. Also, given that the second stage is only run on certain voxels, you should definitely only run stage 1 if you are going to use inference methods (such as mixture modelling) that analyse the unthresholded statistic histogram.
+
+If you are carrying out a mid-level analysis (e.g., cross-sessions) and will be feeding this into an even higher-level analysis (e.g., cross-subjects), then you should not use the \"FLAME 1+2\" option, as it is not possible for FLAME to know in advance of the highest-level analysis what voxels will ultimately be near threshold. In fact, in such situations, you should probably use FE (fixed effects) for the mid-level analysis, with a separate FE analysis for each subject. This in effect treats the multiple first-level sessions (for each subject) as if they were one long session, and ignores the session-session variability (which arguably is not of interest, and which you never model explicitly if you only took just one session for each subject). This approach also avoids the problem of having to pool second-level variance across subjects, in the case where you don't have many sessions for each subject. Finally, it does not seem to make much sense that a ME cross-session analysis leaves you less certain about the combined within-subject-across-session results than if you have just analysed _one_ of the first-level sessions - hence FE makes more sense.
+
 
 If you do decide to run \"FLAME 1+2\" and the FEAT logs indicate a large difference between the stage 1 and stage 2 estimations (or, for example, the final thresholded zstat image looks \"speckled\"), this is an indication that your data is highly non-Gaussian (e.g., has one or more strong outlier subjects, or has two clearly different groups of subjects being modelled as a single group). In such a case, stage 1 estimation is quite inaccurate (OLS even more so), hence the larger-than-normal difference between stages 1 and 2. The only really good solution is to investigate in your data what is going on - for example, to find the bad outlier."
 

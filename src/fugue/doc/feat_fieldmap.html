@@ -1,14 +1,12 @@
- <HTML><HEAD>
-  <TITLE>Making Fieldmap Images for FEAT</TITLE>
-</HEAD>
- <BODY BACKGROUND="http://www.fmrib.ox.ac.uk/fsl/images/fugue-bg.jpg" BGCOLOR="white">
-  <TABLE BORDER=0 WIDTH="100%"><TR>
-   <TD ALIGN=CENTER><H1>Making Fieldmap Images for FEAT</H1>
-  <TD ALIGN=RIGHT>  <a href="../index.html"><IMG BORDER=0 SRC="http://www.fmrib.ox.ac.uk/fsl/images/fsl-logo.jpg"></a>
-   </TR></TABLE>
-  <!-- No Table of Contents -->
+<HTML><HEAD><link REL="stylesheet" TYPE="text/css" href="../fsl.css"><TITLE>FSL</TITLE></HEAD><BODY><hr><TABLE BORDER=0 WIDTH="100%"><TR><TD ALIGN=CENTER><H1>
+Making Fieldmap Images for FEAT
+</H1>
 
-<A NAME="section1"></A><HR><H2>Introduction</H2>
+<TD ALIGN=RIGHT><a href="../index.html"><IMG BORDER=0 SRC="../images/fsl-logo.jpg"></a></TR></TABLE><HR>
+
+<!-- No Table of Contents -->
+
+<A NAME="section1"></A><H2>Introduction</H2>
  
 This page outlines some of the most common ways to construct the required
 fieldmap images for B0 unwarping in FEAT.  Also see the documentation on
@@ -36,16 +34,16 @@ reconstruction software.  There are three main types:
 
 <p>
 If the images from the scanner are in ANALYZE or NIFTI form then you
-can determine their type, use <code>avwinfo</code>.  If not,
+can determine their type, use <code>fslinfo</code>.  If not,
 you <b>must</b> convert to either ANALYZE or NIFTI format before
 progressing.  See
 the <a href="http://www.fmrib.ox.ac.uk/fslfaq/index.html#general_format">FSL
 FAQ</a> for information about conversion.
 
-<p>When <code>avwinfo</code> is run it will display a datatype
+<p>When <code>fslinfo</code> is run it will display a datatype
 string or number (the value 32 represents a complex image).  You can
 convert a complex image into its phase and magnitude components by
-using <code>avwcomplex</code> or, alternatively, leave it in this
+using <code>fslcomplex</code> or, alternatively, leave it in this
 format.  The number of images contained in each file is shown as the
 <code>dim4</code> value.
 
@@ -109,7 +107,7 @@ steps that are required are:
 If you start with a complex Analyze or Nifti volume that contains
 the scans at two echo times then you need to do:
 <br><pre>
-avwcomplex -realabs complex_acq fieldmap_mag
+fslcomplex -realabs complex_acq fieldmap_mag
 </pre>
 
 <p><b>(b)</b>
@@ -124,7 +122,7 @@ from the original DICOM or vendor-specific format.
 <p><b>(c)</b>
 Check that the magnitude image and the phase/fieldmap images have
 the same resolution.  You can do this by looking at the dim and pixdim
-entries (only the first three of each) as reported by <code>avwinfo</code>.
+entries (only the first three of each) as reported by <code>fslinfo</code>.
 <p>
 If they are not the same then they must be resampled to be equal.
 In this case choose the one with the best resolution and use this as
@@ -139,7 +137,7 @@ flirt -in original_phase1 -ref fieldmap_mag -applyxfm -out orig_phase1
 </pre>
 <p>
 Once this is done, check that the output images (e.g. orig_phase0) have
-the same dimensions and resolution as the reference (using <code>avwinfo</code>)
+the same dimensions and resolution as the reference (using <code>fslinfo</code>)
 and <b>also</b> check that they are aligned correctly by loading both
 the output and reference images into <code>fslview</code> and visually
 inspecting them.
@@ -150,16 +148,16 @@ inspecting them.
 <br><b>(a)</b>
 If you have complex volumes then do:
 <br><pre>
-avwcomplex -realphase complex_acq phase0_rad 0 1
-avwcomplex -realphase complex_acq phase1_rad 1 1
+fslcomplex -realphase complex_acq phase0_rad 0 1
+fslcomplex -realphase complex_acq phase1_rad 1 1
 </pre>
 These phase volumes will now be in radians.
 
 <p><b>(b)</b>
 If you have seperate phase volumes that are in <u>integer</u> format then do:
 <br><pre>
-avwmaths_32R orig_phase0 -mul 3.14159 -div 2048 phase0_rad
-avwmaths_32R orig_phase1 -mul 3.14159 -div 2048 phase1_rad
+fslmaths orig_phase0 -mul 3.14159 -div 2048 phase0_rad -odt float
+fslmaths orig_phase1 -mul 3.14159 -div 2048 phase1_rad -odt float
 </pre>
 Note that the value of 2048 needs to be adjusted for each different
 site/scanner/sequence in order to be correct.  The final range of
@@ -169,7 +167,7 @@ not the case then this scaling is wrong.
 <p>
 If you have separate phase volumes are not in integer format, you
 must still check that the units are in radians, and if not scale
-them appropriately using <code>avwmaths</code>.
+them appropriately using <code>fslmaths</code>.
 
 <hr>
 
@@ -186,7 +184,7 @@ prelude -a fieldmap_mag -p phase1_rad -o phase1_unwrapped_rad
 <br><b>(a)</b>
 For separate phase images do:
 <pre>
-avwmaths_32R phase1_unwrapped_rad -sub phase0_unwrapped_rad -mul 1000 -div TE fieldmap_rads
+fslmaths phase1_unwrapped_rad -sub phase0_unwrapped_rad -mul 1000 -div TE fieldmap_rads -odt float
 </pre>
 where <b>TE</b> must be replaced with the appropriate difference in echo times (in units of milliseconds).
 

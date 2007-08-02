@@ -16,7 +16,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 3.3 (c) 2006, The University of
+    FMRIB Software Library, Release 4.0 (c) 2007, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -177,7 +177,17 @@ Option<bool> opt_kcoord(string("-k,--kcoord"),false,
 
 
 int nonoptarg;
-
+////////////////////////////////////////////////
+double round_ivana(const double x, const int n){
+  //rounds a number up to n digits of precision
+  double xx,xxx,xxxx,nn;
+  nn=MISCMATHS::pow(10.0f,(double) n);
+  xx=nn*x;
+  if (x>0) xxx=floor((float)xx+0.5);
+  else xxx=ceil(xx-0.5);
+  xxxx=xxx/nn;
+  return xxxx;
+}
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 Matrix partialepisequence(const int n,const RowVector zc,const int ns,const double ddz,const string slicedir, const string phasedir, const string readdir,const int resX,const int resY){
  // Input parameters: n = number of volumes, ns = number of slices (per volume)
@@ -217,7 +227,7 @@ Matrix partialepisequence(const int n,const RowVector zc,const int ns,const doub
  double TE=(double) (opt_TE.value());
  double TR=(double) (opt_TR.value());
  double TRslc=(double) (opt_TRslc.value());
- if (TRslc*ns>TR){
+ if (round_ivana(TRslc,5)*ns>round_ivana(TR,5)){
    cout<<"WARNING:TR>=TRslc*numslc and your values TR="<<TR<<"; TRslc="<<TRslc<<"; numslc="<<ns<<" do not satisfy this."<<endl;
    exit(EXIT_FAILURE);
  }
@@ -402,7 +412,7 @@ Matrix episequence(const int n,const RowVector zc,const int ns,const double ddz,
  double TE=(double) (opt_TE.value());
  double TR=(double) (opt_TR.value());
  double TRslc=(double) (opt_TRslc.value());
- if (TRslc*ns>TR){
+ if (round_ivana(TRslc,5)*ns>round_ivana(TR,5)){
    cout<<"WARNING:TR>=TRslc*numslc and your values TR="<<TR<<"; TRslc="<<TRslc<<"; numslc="<<ns<<" do not satisfy this."<<endl;
    exit(EXIT_FAILURE);
  }
@@ -582,7 +592,7 @@ Matrix gradecho(const int n,const RowVector zc,const int ns,const double ddz,con
  float TE=opt_TE.value();
  float TR=opt_TR.value();
  float TRline=opt_TRslc.value();
- if (TRline*resY*ns>TR){
+ if (round_ivana(TRline,5)*resY*ns>round_ivana(TR,5)){
    cout<<"TR and TRline and numslc do not agree"<<endl;//in general in gradecho TR is the time between the RF pulses so TRline is what actually is being considered to be TR. I am just trying to make it here consistant with the episeq generator and am calleing themlike this. TR here is the time that takes for generation of one volume!!
    exit(EXIT_FAILURE);
  }

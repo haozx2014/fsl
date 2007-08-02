@@ -33,9 +33,9 @@ fi
 MAKE=none
 if [ X"`make --version 2>&1 | grep -i gnu`"X != XX ] ; then
    MAKE=make;
-else if [ X"`gmake --version 2>&1 | grep -i gnu`"X != XX ] ; then
+elif [ X"`gmake --version 2>&1 | grep -i gnu`"X != XX ] ; then
    MAKE=gmake;
-fi; fi
+fi
 if [ ${MAKE} = none ] ; then
    echo "Could not find the gnu make utility in path" ;
    exit 1 ;
@@ -48,8 +48,13 @@ errorinstall="" ; export errorinstall ;
 for projname in $PROJECTS; do
 
     if [ X"${projname}" = "Xextras" -a -d ${FSLDIR}/extras ] ; then
-      ( cd ${FSLDIR}/extras ; ./build ) ;
-      MAKEOPTIONS="${MAKEOPTIONS} FSLEXTLIB=${FSLDIR}/extras/lib FSLEXTINC=${FSLDIR}/extras/include" ;
+	here=`pwd`
+	cd ${FSLDIR}/extras ; ./build ;
+	if [ $? -ne 0 ]; then
+	    errorprojs="extras $errorprojs"; export errorprojs
+	fi
+	cd ${here}
+	MAKEOPTIONS="${MAKEOPTIONS} FSLEXTLIB=${FSLDIR}/extras/lib FSLEXTINC=${FSLDIR}/extras/include" ;
     elif [ -d $FSLDIR/src/$projname ] ; then
 
 	  echo " " ;
@@ -64,6 +69,8 @@ for projname in $PROJECTS; do
 	  if ${MAKE} -k ${MAKEOPTIONS} ; then 
 	    if ${MAKE} install ; then
 	      installok=true;
+	      # Clean up after ourselves
+	      ${MAKE} distclean ;
 	    else 
 	      installok=false;
 	      errorinstall="$errorinstall $projname" ; export errorinstall ;

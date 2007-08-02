@@ -17,7 +17,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 3.3 (c) 2006, The University of
+    FMRIB Software Library, Release 4.0 (c) 2007, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -142,7 +142,7 @@ for (i=2; i<argc; i++)
     {
       if (grf)
 	{
-	  double l=2, u=100, z, pp;
+	  double l=2, u=100, z=0, pp;
 	  while (u-l>0.001)
 	    {
 	      z=(u+l)/2;

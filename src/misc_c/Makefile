@@ -6,14 +6,13 @@ USRINCFLAGS = -I${INC_PROB} -I${INC_ZLIB}
 USRLDFLAGS = -L${LIB_PROB} -L${LIB_ZLIB}
 
 IOLIBS = -lfslio -lniftiio -lznz
-LIBS = -lss_8UI $(IOLIBS) -lprob -lm -lz
+#LIBS = -lss_8UI $(IOLIBS) -lprob -lm -lz
 
-XFILES = whirlgif freqtest hist2prob morph_kernel ptoz runavw sphere tmpnam ztop
+XFILES = whirlgif hist2prob morph_kernel ptoz runavw tmpnam ztop add4bytes
+
+SCRIPTS = correctheader
 
 all: $(XFILES)
-
-freqtest: freqtest.c
-	$(CC) $(CFLAGS) -DFDT="short" -o freqtest freqtest.c $(LDFLAGS) -lss_16SI $(IOLIBS) -lm -lz
 
 hist2prob: hist2prob.c
 	$(CC) $(CFLAGS) -o hist2prob hist2prob.c -L${LIB_ZLIB} -lm -lz
@@ -38,3 +37,6 @@ tmpnam: tmpnam.c
 
 whirlgif: gifdecod.c gifencod.c whirlgif.c
 	$(CC) $(CFLAGS) -o whirlgif whirlgif.c gifdecod.c gifencod.c
+
+add4bytes: add4bytes.cc
+	$(CXX) $(CFLAGS) -o add4bytes add4bytes.cc 

@@ -23,7 +23,7 @@ determining streaming to the Logfile and/or cout. */
     
     LICENCE
     
-    FMRIB Software Library, Release 3.3 (c) 2006, The University of
+    FMRIB Software Library, Release 4.0 (c) 2007, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -139,6 +139,8 @@ namespace Utilities{
 
       /** returns passed in filename appended onto the end of the dir name */
       const string appendDir(const string& filename) const;
+
+			inline void flush() { logfileout.flush();} 
 
       /** allows streaming into cout and/or logfile depending upon the */
       /** stream_to_cout and stream_to_logfile respectively */

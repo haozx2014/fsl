@@ -15,7 +15,8 @@
 
 
 namespace MISCPLOT{
-  
+
+	extern unsigned long sc_init[64];
   class miscplot
   {
     public:
@@ -25,7 +26,10 @@ namespace MISCPLOT{
 				req_xsize=0; req_ysize=0;explabel=string("");bp_colctr=0;
 				null_shift=0.0;minmaxscale=0.0;spacing=0;ymin=0.0;ymax=0.0;
 				bp_whiskerlength = 1.5; bp_notched = TRUE; 
-				histogram_bins = 0;scat_ctr=0;
+				histogram_bins = 0;scat_ctr=0;gridswapdefault=false;
+				Ylabel_fmt = string("");
+				for(int ctr=0; ctr<64; ++ctr)
+					sc[ctr]=MISCPLOT::sc_init[ctr];
       };
 
       //destructor
@@ -66,12 +70,18 @@ namespace MISCPLOT{
 				labels.push_back(txt);}
       inline void remove_labels(int i) {
 				for (int j=1;j<=i;j++) labels.pop_back();}
+			inline void clear_labels(){
+				labels.clear();}
       inline void add_xlabel(string txt){ 
 				xlabels.push_back(txt);}
       inline void remove_xlabel(){ 
 				xlabels.pop_back();}
+			inline void clear_xlabel(){
+					xlabels.clear();}
       inline void add_ylabel(string txt){ 
 				ylabels.push_back(txt);}
+			inline void clear_ylabel(){
+				ylabels.clear();}
       void setscatter(Matrix &data, int width=15);
       void deletescatter();
 			void GDCglobals_reset();
@@ -93,9 +103,17 @@ namespace MISCPLOT{
 				bp_whiskerlength = val;};
       inline void set_histogram_bins(int val){
 				histogram_bins = val;};
+			inline void grid_swapdefault(){
+				gridswapdefault = true;};
+			inline void set_Ylabel_fmt(string what){
+				Ylabel_fmt = what;}
+			inline void col_replace(int which, unsigned long what){
+				if(which>0 && which<64)
+					sc[which] = what;
+			}
 
     private:
-      
+			unsigned long sc[64];
       vector<string> labels;
       vector<string> xlabels;
       vector<string> ylabels;
@@ -118,11 +136,14 @@ namespace MISCPLOT{
       double null_shift;
       double minmaxscale;
       float ymin,ymax;
+			string Ylabel_fmt;
+			
       int spacing;
       int bp_colctr;
       int histogram_bins;
 
       bool bp_notched;
+			bool gridswapdefault;
       float bp_whiskerlength, bp_maxall, bp_minall;
 
       gdImagePtr outim;

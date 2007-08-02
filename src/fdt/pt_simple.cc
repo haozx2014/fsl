@@ -11,7 +11,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 3.3 (c) 2006, The University of
+    FMRIB Software Library, Release 4.0 (c) 2007, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -261,7 +261,9 @@ void track(){
       
     } // Close Particle Number Loop    
     string thisout=opts.outfile.value()+num2str(Seeds(SN,1))+(string)"_"+num2str(Seeds(SN,2))+(string)"_"+num2str(Seeds(SN,3));
-    save_volume(prob,logger.appendDir(thisout));
-    //save_volume(prob,thisout);
+
+    save_volume(prob,thisout);
+  
   } //Close Seed number Loop
+
 }

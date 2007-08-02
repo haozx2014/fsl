@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 3.3 (c) 2006, The University of
+    FMRIB Software Library, Release 4.0 (c) 2007, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -338,9 +338,9 @@ public:
       m_sum_lam[f]=0;
     }
     m_beenhere(int(m_matrix2volkey(vox,1)),int(m_matrix2volkey(vox,2)),int(m_matrix2volkey(vox,3)))=nfibs;
-    cout<<nfibs<<endl;
-    cout <<"boobooboo"<<endl;
-    cout<<int(m_matrix2volkey(vox,1))<<" "<<int(m_matrix2volkey(vox,2))<<" "<<int(m_matrix2volkey(vox,3))<<endl;
+    //cout<<nfibs<<endl;
+    //cout <<"boobooboo"<<endl;
+    //cout<<int(m_matrix2volkey(vox,1))<<" "<<int(m_matrix2volkey(vox,2))<<" "<<int(m_matrix2volkey(vox,3))<<endl;
 }
   
   

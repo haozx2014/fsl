@@ -5,7 +5,7 @@ PROJNAME = siena
 USRINCFLAGS = -I${INC_NEWMAT} -I${INC_ZLIB}
 USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_ZLIB}
 
-LIBS = -lss_32R -lfslio -lniftiio -lznz -lm -lz
+#LIBS = -lss_32R -lfslio -lniftiio -lznz -lm -lz
 LIBCC = -lnewimage -lmiscmaths -lprob -lfslio -lniftiio -lznz -lnewmat -lutils -lm -lz
 
 SN_OBJS = surface_norm.o
@@ -16,7 +16,7 @@ XFILES = siena_diff surface_norm cylsamp groupttest
 
 SCRIPTS = siena siena_flirt siena_cal sienax siena_flow2std
 
-all:	${XFILES} docscripts
+all:	${XFILES}
 
 # DON'T REMOVE THE -O0!!!! siena_diff doesn't work with optimisation
 siena_diff: siena_diff.cc
@@ -30,7 +30,4 @@ cylsamp: ${CS_OBJS}
 
 groupttest: ${GT_OBJS}
 	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${GT_OBJS} ${LIBCC}
-
-docscripts:
-	./makedoc
 

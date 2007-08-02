@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 3.3 (c) 2006, The University of
+    FMRIB Software Library, Release 4.0 (c) 2007, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -147,6 +147,12 @@ int main(int argc, char *argv[])
 	write_vest(logger.appendDir("Gc"), parad.getDesignMatrix());
       }
     
+
+    OUT(parad.getDesignMatrix().Nrows());
+    OUT(parad.getDesignMatrix().Ncols());
+    OUT(sizeTS);
+    OUT(numTS);
+
     // Setup GLM:
     int numParams = parad.getDesignMatrix().Ncols();
     GlimGls glimGls(numTS, sizeTS, numParams);
@@ -212,9 +218,7 @@ int main(int argc, char *argv[])
     cout << "Prewhitening and Computing PEs..." << endl;
     cout << "Percentage done:" << endl;
     int co = 1;
-    
-    OUT(parad.getDesignMatrix().Nrows());
-    OUT(parad.getDesignMatrix().Ncols());
+
     Matrix mean_prewhitened_dm(parad.getDesignMatrix().Nrows(),parad.getDesignMatrix().Ncols());
     mean_prewhitened_dm=0;
 

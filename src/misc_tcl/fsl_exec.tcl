@@ -17,7 +17,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 3.3 (c) 2006, The University of
+#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -109,6 +109,7 @@ proc fsl:exec { thecommand args } {
     set job_holds ""
     set job_name ""
     set runtime 300
+    set args [ join $args ]
     for { set argindex 0 } { $argindex < [ llength $args ] } { incr argindex 1 } {
 	set thearg [ lindex $args $argindex ]
 

@@ -17,7 +17,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 3.3 (c) 2006, The University of
+#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -91,7 +91,7 @@ fi
 
 echo "de-projecting <skeleton-space-image> into all_FA (nonlinearly aligned) subject space"
 echo "output will be ${IN}_to_all_FA"
-$FSLDIR/bin/tbss_skeleton -i mean_FA -p `cat thresh.txt` mean_FA_skeleton_mask_dst $FSLDIR/etc/standard/lower-cingulum all_FA ${IN}_tmp -D $IN
+$FSLDIR/bin/tbss_skeleton -i mean_FA -p `cat thresh.txt` mean_FA_skeleton_mask_dst $FSLDIR/data/standard/lower-cingulum all_FA ${IN}_tmp -D $IN
 $FSLDIR/bin/immv ${IN}_tmp_deprojected ${IN}_to_all_FA
 $FSLDIR/bin/imrm ${IN}_tmp
 echo "de-projection done"

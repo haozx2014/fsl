@@ -1,32 +1,56 @@
-<HTML><HEAD><link REL="stylesheet" TYPE="text/css" href="../fsl.css">
-<TITLE>BET - Brain Extraction Tool</TITLE></HEAD><BODY>
-<hr><TABLE BORDER=0 WIDTH="100%"><TR>
-<TD ALIGN=CENTER><H1>BET - Brain Extraction Tool - User Guide</H1>BET Version 2.1
-<TD ALIGN=RIGHT><a href="../index.html"><IMG BORDER=0 SRC="../images/fsl-logo.jpg"></a>
-</TR></TABLE>
+<HTML><HEAD><link REL="stylesheet" TYPE="text/css" href="../fsl.css"><TITLE>FSL</TITLE></HEAD><BODY><hr><TABLE BORDER=0 WIDTH="100%"><TR><TD ALIGN=CENTER><H1>
+BET - Brain Extraction Tool
+</H1>
+BET v2.1 - User Guide
+<TD ALIGN=RIGHT><a href="../index.html"><IMG BORDER=0 SRC="../images/fsl-logo.jpg"></a></TR></TABLE><HR>
 
-<HR><IMG ALIGN=RIGHT SRC="bet2_eg_small.png"><H2>INTRODUCTION</H2>
+<IMG ALIGN=RIGHT SRC="bet2_eg_small.png" width="50%" hspace="20"><H2>INTRODUCTION</H2>
  
 <P>BET (Brain Extraction Tool) deletes non-brain tissue from an image
 of the whole head. It can also estimate the inner and outer skull
 surfaces, and outer scalp surface, if you have good quality
-T1 <i>and</i> T2 input images. BET comprises one main script, one GUI
-and two C++ programs:
+T1 <i>and</i> T2 input images. 
+
+<p>For more information about BET, see the <A
+HREF="http://www.fmrib.ox.ac.uk/analysis/research/bet/">BET research
+web page</A>. If you use BET, please make sure that you quote the
+following reference in any publications:
+
+<font size=-1><em>
+<p>S.M. Smith.
+<br>Fast robust automated brain extraction. 
+<br>Human Brain Mapping, 17(3):143-155, November 2002.
+</em></font>
+
+<p>If you use the skull and scalp surface extraction functions, please
+also reference the following:
+
+<font size=-1><em>
+<p>M. Jenkinson, M. Pechaud, and S. Smith. 
+<br>BET2: MR-based estimation of brain, skull and scalp surfaces. 
+<br>In Eleventh Annual Meeting of the Organization for Human Brain Mapping, 2005.
+</em></font>
+
+<hr><H2>BET PROGRAMS</H2>
 
 <UL>
-<LI><a href="#bet">bet</a> - a simple script which makes calling bet2 and betsurf easy
-<LI><a href="#Bet">Bet</a> - the BET GUI<br>
-<LI><a href="#bet">bet2</a> - the main brain extraction program
-<LI><a href="#betsurf">betsurf</a> - using a registered T1 and T2 image pair, estimates
-inner and outer skull surfaces and outer scalp surface
+<LI><a href="#bet">bet</a> - the main command-line script which makes
+  calling the core bet2 and betsurf programs easy
+  <UL>
+  <LI><a href="#bet">bet2</a> - the main brain extraction program
+  <LI><a href="#betsurf">betsurf</a> - using a registered T1 and T2 image pair, estimates
+  inner and outer skull surfaces and outer scalp surface
+</UL>
+<LI><a href="#betgui">Bet</a> - the BET GUI<br>
 </UL>
 
-<P>For more detail on BET and a journal reference, see the <A
-HREF="http://www.fmrib.ox.ac.uk/analysis/research/bet/">BET research
-web page</A>. If you use BET in your research, please quote the
-journal reference listed there.
-
-
+<P>Changes: The old C program called <b>bet</b> has now been
+discontinued; the <b>bet2</b> C++ program gives almost identical
+results. <b>betall</b> has been replaced by the -A and -A2 options in
+the new <b>bet</b> script. <b>betfunc</b> has been replaced by the -F
+option in <b>bet</b>. <b>betpremask</b> has been replaced by the -b
+option in <b>standard_space_roi</b>. <b>betsmallz</b> has been
+replaced by the -Z option in <b>bet</b>.
 
 <A NAME="bet"></A><hr><H2>bet and bet2</H2>
 
@@ -127,7 +151,7 @@ slightly before being used.
   image, and then applied to this to create the output.
 
 
-<A NAME="Bet"></A><hr><H2>Bet GUI</H2>
+<A NAME="betgui"></A><hr><H2>Bet GUI</H2>
 
 <H3>MAIN OPTIONS</H3>
 
@@ -210,8 +234,8 @@ real-world space with the co-ordinate axis in the corner of the image
 the voxel size values (and any co-ordinate centre set in the header is
 not used).
 
-<p>As an example of how to use bet2 and betsurf together, see the
-<b>betall</b> script (in $FSLDIR/bin). This:<UL>
+<p>As an example of how to use bet2 and betsurf together, see the -A
+and -A2 options in the <b>bet</b> script. The -A2 option:<UL>
 
 <LI>Registers the T2 to the T1 image.
 

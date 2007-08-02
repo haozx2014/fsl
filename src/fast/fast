@@ -52,6 +52,7 @@ for fn in `$FSLDIR/bin/imglob -oneperimage ${tmpbase}.fastout/*` ; do
     outname=`echo $fn | sed "s/QQQQQ//g"`
     outname=`basename $outname`
     $FSLDIR/bin/fslmaths $fn ${outputroot}$outname
+    $FSLDIR/bin/fslcpgeom $fastinput ${outputroot}$outname  -d
     # now copy other non-analyze info across (if necessary)
     #if [ $FSLOUTPUTTYPE != ANALYZE -a $FSLOUTPUTTYPE != ANALYZE_GZ ] ; then
         # Unfortunately fslcreatehd doesn't seem to work in general - FIX!

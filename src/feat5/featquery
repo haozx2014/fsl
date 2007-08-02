@@ -6,7 +6,7 @@
 #
 #   Stephen Smith, FMRIB Image Analysis Group
 #
-#   Copyright (C) 2002-2006 University of Oxford
+#   Copyright (C) 2002-2007 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -19,7 +19,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 3.3 (c) 2006, The University of
+#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -75,6 +75,8 @@ exec $FSLTCLSH "$0" "$@"
 
 set INGUI 0
 
+global n_atlases atlasmenu atlasname atlasimage atlaslabelcount atlaslabelid atlaslabelname
+
 source $env(FSLDIR)/tcl/fslstart.tcl
 
 proc fq_exit { errmsg } {
@@ -88,8 +90,9 @@ proc fq_exit { errmsg } {
 #{{{ process options
 
 if { [ lindex $argv 0 ] == "" } {
-    puts "\nUsage: featquery <N_featdirs> <featdir1> ... <N_stats> <stats1> ... <outputrootname> \[-p\] \[-t <thresh>\] \[-i <interp_thresh>\] \[-s\] \[-w\] \[-b\] <mask> \[-vox <X> <Y> <Z>\]
+    puts "\nUsage: featquery <N_featdirs> <featdir1> ... <N_stats> <stats1> ... <outputrootname> \[-a <atlas>\] \[-p\] \[-t <thresh>\] \[-i <interp_thresh>\] \[-s\] \[-w\] \[-b\] <mask> \[-vox <X> <Y> <Z>\]
 
+-a : use selected atlas to generate label (etc.) information
 -p : convert PE / COPE values into %
 -t : threshold stats images
 -i : affect size of resampled masks by changing post-interpolation thresholding (default 0.5)
@@ -106,6 +109,14 @@ set featquery(nstats)   [ lindex $argv [ expr $featquery(multiple) + 1 ] ]
 set featquery(output)   [ lindex $argv [ expr $featquery(multiple) + $featquery(nstats) + 2 ] ]
 
 set pm [ expr $featquery(multiple) + $featquery(nstats) + 3 ]
+
+set atlas ""
+if { [ string compare [ lindex $argv $pm ] -a ] == 0 } {
+    incr pm 1
+    set atlas [ lindex $argv $pm ]
+    parseatlases
+    incr pm 1
+}
 
 set percent 0
 if { [ string compare [ lindex $argv $pm ] -p ] == 0 } {
@@ -170,8 +181,11 @@ set fq ${fqroot}/report.html
 set fqtxt ${fqroot}/report.txt
 set logout ${fqroot}/report.log
 
-fsl:echo $fq "<HTML><TITLE>Featquery output</TITLE><BODY BACKGROUND=\"file:${FSLDIR}/doc/images/fsl-bg.jpg\">
-<CENTER><hr><H2>Featquery output</H2><p>${fqroot}<hr>
+fsl:echo $fq "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+<TITLE>FSL</TITLE></HEAD><BODY>
+<STYLE TYPE=\"text/css\">BODY { font-size: small }</STYLE>
+<STYLE TYPE=\"text/css\">TABLE { font-size: x-small }</STYLE>
+<CENTER><H2>Featquery output</H2><p>${fqroot}<hr>
 "
 
 #}}}
@@ -214,7 +228,7 @@ set maskdimz [ exec sh -c "$FSLDIR/bin/fslval $mask dim3" ]
 
 set spaces ""
 
-if { ! $higherlevel } {
+if { ! $higherlevel && [ file exists reg ] } {
     foreach possiblespaces { example_func highres standard } {
 	if { [ imtest reg/$possiblespaces ] &&
 	     $maskdimx == [ exec sh -c "$FSLDIR/bin/fslval reg/$possiblespaces dim1" ] &&
@@ -236,7 +250,7 @@ if { $spaces == "" } {
     fq_exit "Error - mask size doesn't match any of the images in the FEAT directory"
 }
 
-fsl:echo $fq "Mask $origmask is in space of $spaces. "
+fsl:echo $fq "Mask $origmask is in space of $spaces. Image of mask in native space:<br><IMG SRC=\"mask.png\">"
 
 #}}}
     #{{{ make mask
@@ -280,7 +294,7 @@ if { $percent } {
 #}}}
     #{{{ run tsplot
 
-fsl:echo $fq "<br>"
+fsl:echo $fq "<p>"
 
 if { [ imtest filtered_func_data ] } {
     fsl:exec "${FSLDIR}/bin/fslmeants -i filtered_func_data -o ${fqroot}/mean_mask_ts.txt -m ${fqroot}/mask"
@@ -297,9 +311,13 @@ if { $tsplot } {
 #}}}
     #{{{ setup html table
 
-fsl:echo $fq "<p><table border=3 cellspacing=6>
-<tr><th> # featdir <th> image name <th> # voxels <th colspan=6> image statistics <th colspan=6> position of max </tr>
-<tr><th><th><th><th> min <th> 10% <th> mean <th> median <th> 90% <th> max <th colspan=3> vox (FMRI space) <th colspan=3> mm (standard space) </tr>
+if { $atlas > 0 } {
+    fsl:echo $fq "<p>Using atlas:  $atlasname($atlas)"
+}
+
+fsl:echo $fq "<p><table border=1 cellspacing=3>
+<tr><th>stats image<th> # voxels <th colspan=6> image statistics <th colspan=7> position of max </tr>
+<tr><th><th><th> min <th> 10% <th> mean <th> median <th> 90% <th> max <th colspan=3> vox (FMRI space) <th colspan=3> mm (standard space) <th>atlas results</tr>
 "
 
 #}}}
@@ -369,15 +387,28 @@ if { $percent } {
     set SSmaxx ""
     set SSmaxy ""
     set SSmaxz ""
-    if { $higherlevel || ( [ imtest reg/standard ] && [ file exists reg/example_func2standard.mat ] ) } {
+    set atlasstring ""
+    if { $higherlevel || ( [ imtest reg/standard ] && [ file exists reg/example_func2standard.mat ] ) && $maxx != 0  && $maxy != 0  && $maxz != 0 } {
 	if { $higherlevel } {
 	    set SSmax [ fsl:exec "echo $maxx $maxy $maxz | ${FSLDIR}/bin/img2stdcoord -img example_func -vox -" ]	    
+	    # 	    set atlasx $maxx
+	    # 	    set atlasy $maxy
+	    # 	    set atlasz $maxz
 	} else {
 	    set SSmax [ fsl:exec "echo $maxx $maxy $maxz | ${FSLDIR}/bin/img2stdcoord -img example_func -std reg/standard -xfm reg/example_func2standard.mat -vox -" ]
+	    # 	    fsl:echo ${fqroot}/.coords "$maxx $maxy $maxz" -o
+	    # 	    set AtlasSSmax [ fsl:exec "${FSLDIR}/bin/img2imgcoord -src example_func -dest reg/standard -xfm reg/example_func2standard.mat ${fqroot}/.coords" ]
+	    # 	    set atlasx [ expr round ( [ lindex $AtlasSSmax 0 ] ) ]
+	    # 	    set atlasy [ expr round ( [ lindex $AtlasSSmax 1 ] ) ]
+	    # 	    set atlasz [ expr round ( [ lindex $AtlasSSmax 2 ] ) ]
 	}
 	set SSmaxx [ format %.2f [ lindex $SSmax 0 ] ]
 	set SSmaxy [ format %.2f [ lindex $SSmax 1 ] ]
 	set SSmaxz [ format %.2f [ lindex $SSmax 2 ] ]
+
+	if { $atlas > 0 } {
+	    set atlasstring [ fsl:exec "export DYLD_LIBRARY_PATH=/Applications/fslview.app/Contents/Frameworks; ${FSLDIR}/bin/atlasquery -a \"$atlasname($atlas)\" -c ${SSmaxx},${SSmaxy},${SSmaxz} | awk -F \"<br>\" '{print \$2}' " -n ]
+	}
     }
 
 #}}}
@@ -394,7 +425,7 @@ if { [ imtest filtered_func_data ] } {
 #}}}
 	#{{{ main stats text outputs to html and raw text files
 
-fsl:echo $fq "<tr><td> $f <td> $txtfiletxt <td> $thecount <td> $themin <td> $perc10 <td> $themean <td> $perc50 <td> $perc90 <td> $themax <td> $maxx <td> $maxy <td> $maxz <td> $SSmaxx <td> $SSmaxy <td> $SSmaxz </tr>"
+fsl:echo $fq "<tr><td> $txtfiletxt <td> $thecount <td> $themin <td> $perc10 <td> $themean <td> $perc50 <td> $perc90 <td> $themax <td> $maxx <td> $maxy <td> $maxz <td> $SSmaxx <td> $SSmaxy <td> $SSmaxz <td width=\"40%\"> $atlasstring</tr>"
 
 fsl:echo $fqtxt "$f $statsimage $thecount $themin $perc10 $themean $perc50 $perc90 $themax $maxx $maxy $maxz $SSmaxx $SSmaxy $SSmaxz"
 
@@ -405,7 +436,9 @@ fsl:echo $fqtxt "$f $statsimage $thecount $themin $perc10 $themean $perc50 $perc
 
 fsl:exec "/bin/rm ${fqroot}/tmp*"
 
-fsl:echo $fq "</table><p><a href=\"report.txt\">Raw text version of Featquery table</a></BODY></HTML>"
+fsl:exec "${FSLDIR}/bin/slicesmask mean_func ${fqroot}/mask ${fqroot}/mask.png"
+
+fsl:echo $fq "</table></BODY></HTML>"
 
 if { $fqpopup } {
 	FmribWebHelp file: $fq
@@ -413,6 +446,4 @@ if { $fqpopup } {
 
 #}}}
 }
-
-exit 0
 

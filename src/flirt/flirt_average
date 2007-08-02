@@ -17,7 +17,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 3.3 (c) 2006, The University of
+#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -76,7 +76,7 @@ Usage() {
     echo " -FAref <ref_image> : reference image to use instead of first input"
     echo ""
     echo "e.g.  flirt_average 3 rawT1_1 rawT1_2 rawT1_3 averageT1"
-    echo "e.g.  flirt_average 2 rawT1_1 rawT1_2 averageT1 -FAref /usr/local/fsl/etc/standard/avg152T1 -FAdim 1 -cost normcorr"
+    echo "e.g.  flirt_average 2 rawT1_1 rawT1_2 averageT1 -FAref /usr/local/fsl/data/standard/avg152T1 -FAdim 1 -cost normcorr"
     echo ""
     exit 1
 }

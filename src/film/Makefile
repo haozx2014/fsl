@@ -5,7 +5,7 @@ PROJNAME = film
 USRINCFLAGS = -I${INC_NEWMAT} -I${INC_PROB} -I${INC_ZLIB}
 USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_PROB} -L${LIB_ZLIB}
 
-LIBS = -lmiscmaths -lutils -lm -lnewmat -lfslio -lniftiio -lznz -lprob -lz
+LIBS = -lnewimage -lmiscmaths -lutils -lm -lnewmat -lfslio -lniftiio -lznz -lprob -lz
 
 XFILES = film_gls contrast_mgr ttoz ftoz ttologp
 

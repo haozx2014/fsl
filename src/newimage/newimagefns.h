@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 3.3 (c) 2006, The University of
+    FMRIB Software Library, Release 4.0 (c) 2007, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -1944,7 +1944,7 @@ template <class T, class S>
     for (int y=ly; y<=uy; y++) 
       for (int x=lx; x<=ux; x++) 
       {
-	 int x3=x-midx,y3=y-midy,z3=z-midz,count=1;
+	 int x3=x-midx,y3=y-midy,z3=z-midz;
          float num=0, denom=0, center_val,center_val1=0,center_val2=0;
          center_val=source.value(x,y,z);
          if (num_usan>=1) center_val1=usan_vol1.value(x,y,z);
@@ -1954,7 +1954,7 @@ template <class T, class S>
 	     for (int mx=kernel.minx(); mx<=kernel.maxx(); mx++) 
              {
                 int x2=x3+mx,y2=y3+my,z2=z3+mz;
- 		if (x2<=ux && x2>=lx && y2<=uy && y2>=ly && z2<=uz && z2>=lz && (kernel.value(mx,my,mz) != 0) ) 
+ 		if (x2<=ux && x2>=lx && y2<=uy && y2>=ly && z2<=uz && z2>=lz && (kernel.value(mx,my,mz) >= 0) ) 
                 {    
 		   float factor=0;
 		   if (num_usan==0) factor= lut[(int)((source.value(x2,y2,z2)-center_val)/range)]; 
@@ -1966,19 +1966,22 @@ template <class T, class S>
 		   factor*=kernel.value(mx,my,mz);  
 		   num+=source.value(x2,y2,z2) * factor;
 		   denom+=factor;
-                   if ( abs(x2-x)<2 && abs(y2-y)<2 && abs(z2-z)<2 )        vals(count++)=source.value(x2,y2,z2);
 		}
 	     }
 	     if (num_usan>=1) usan_area->value(x,y,z)=(T) denom;
-	     //cout << " " << denom;
-	     if (denom>2) result.value(x,y,z)=(T) (num/denom);
-	     else if (use_median)
+	     if (use_median && denom<1.5)
              {	  
-	       //cout << x << " " << y << " " << z << endl;
+               int count=1;
+               cerr << "x " << x << " y " << y << " z " << z << endl;
+               for (int x2=x-1;x2<=x+1;x2++)
+		 for (int y2=y-1;y2<=y+1;y2++)
+		   for (int z2=z-1;z2<=z+1;z2++)
+		     if (x2<=ux && x2>=lx && y2<=uy && y2>=ly && z2<=uz && z2>=lz && abs(x2-x)<2 && abs(y2-y)<2 && abs(z2-z)<2 && ( (x2-x) || (y2-y) || (z2-z) ) ) {cerr << count << " " <<  x2 << " " << y2 << " " << z2 << endl ; vals(count++)=source.value(x2,y2,z2);}
 	       ColumnVector littlevals = vals.SubMatrix(1,count-1,1,1);
 	       SortAscending(littlevals);               
 	       result(x,y,z) = (T)((littlevals(count/2)+littlevals((count+1)/2))/2.0);    
 	     }
+             else result.value(x,y,z)=(T) (num/denom);
       }
   source.setextrapolationmethod(oldex);
   return result;
