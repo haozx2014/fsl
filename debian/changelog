@@ -1,4 +1,4 @@
-fsl (3.99.pre4-1) unstable; urgency=low
+fsl (4.0~pre2) unstable; urgency=low
 
   * New upstream release.
   * Repackaged the FSL source tarball due to its size and the mixture of
@@ -17,8 +17,9 @@ fsl (3.99.pre4-1) unstable; urgency=low
   * FSL now uses libfslio, libniftiio and the im* tools from the corresponding
     Debian packages instead of a compiling a local copy.
   * Added 'dicomnifti' to the list of the suggested packages.
+  * Removed obsolete runtime dependency to tix, imagemagick and gnuplot.
 
- -- Michael Hanke <michael.hanke@gmail.com>  Fri, 20 Jul 2007 17:36:28 +0200
+ -- Michael Hanke <michael.hanke@gmail.com>  Fri,  3 Aug 2007 08:29:47 +0200
 
 fsl (3.3.11-2) unstable; urgency=low
 

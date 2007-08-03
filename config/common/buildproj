@@ -95,7 +95,7 @@ for projname in $PROJECTS; do
 	    if ${MAKE} install ; then
 	      installok=true;
 	      # Clean up after ourselves
-	      ${MAKE} distclean ;
+#	      ${MAKE} distclean ;
 	    else 
 	      installok=false;
 	      errorinstall="$errorinstall $projname" ; export errorinstall ;
