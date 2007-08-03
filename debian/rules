@@ -46,10 +46,9 @@ clean:
 
 	# remove leftovers
 	find $(CURDIR) -name '*.so' -exec rm {} \;
-	rm -f src/fdt/{xfibres,fdt_matrix_ops,indexer,replacevols,probtrackx,reord_OM,sausages}
-	rm -f src/ifit/mfilt
-	rm -f src/siena/doc/siena*
-	rm -f src/feat5/doc/feat.tcl
+	-rm src/fdt/{xfibres,fdt_matrix_ops,indexer,replacevols,probtrackx,reord_OM,sausages,probtrack_old}
+	-rm src/feat5/doc/{feat.tcl,top.html}
+	-rm -r etc/standard
 
 	# clean the remaining temp dir
 	rm -rf include
@@ -104,7 +103,6 @@ binary-indep: install
 
 	# cleanup doc path
 	rm debian/tmp/doc/feat5/DO
-	rm debian/tmp/doc/siena/siena*
 
 	$(MAKE) -f debian/rules DH_OPTIONS=-i binary-common
 
