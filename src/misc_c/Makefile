@@ -8,7 +8,7 @@ USRLDFLAGS = -L${LIB_PROB} -L${LIB_ZLIB}
 IOLIBS = -lfslio -lniftiio -lznz
 #LIBS = -lss_8UI $(IOLIBS) -lprob -lm -lz
 
-XFILES = whirlgif hist2prob morph_kernel ptoz runavw tmpnam ztop add4bytes
+XFILES = whirlgif hist2prob morph_kernel ptoz tmpnam ztop add4bytes
 
 SCRIPTS = correctheader
 
@@ -26,12 +26,6 @@ ptoz: ptoz.cc
 ztop: ztop.cc
 	$(CXX) $(CFLAGS) -o ztop ztop.cc $(LDFLAGS) -lprob -lm -lz
 
-runavw: runavw.c
-	$(CC) $(CFLAGS) -o runavw runavw.c $(LDFLAGS) -lss_8UI $(IOLIBS) -lm -lz
-
-sphere: sphere.c
-	$(CC) $(CFLAGS) -o sphere sphere.c $(LDFLAGS) -lss_8UI $(IOLIBS) -lm -lz
-
 tmpnam: tmpnam.c
 	$(CC) $(CFLAGS) -o tmpnam tmpnam.c
 
@@ -40,3 +34,4 @@ whirlgif: gifdecod.c gifencod.c whirlgif.c
 
 add4bytes: add4bytes.cc
 	$(CXX) $(CFLAGS) -o add4bytes add4bytes.cc 
+

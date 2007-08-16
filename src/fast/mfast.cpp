@@ -356,12 +356,12 @@ int main(int argc, char* argv[])
 		string basepath(getenv("FSLDIR"));
 		if(!basepath.empty())
 		{
-			brainpath = basepath + "/data/standard/avg152T1_brain.hdr";
+			brainpath = basepath + "/data/standard/tissuepriors/avg152T1_brain.hdr";
 			fstream file(brainpath.c_str(), ios::in);
 			if(!(!file))
 			{
 				found = true;
-				basepath += "/data/standard/";
+				basepath += "/data/standard/tissuepriors/";
 			}
 		}
 		if(!found)

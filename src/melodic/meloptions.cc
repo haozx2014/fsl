@@ -92,7 +92,7 @@ MelodicOptions* MelodicOptions::gopt = NULL;
   		version = p_version;
   		filtermode = false;
   		explicitnums = false;
-  		logfname = string("melodic.log");
+  		logfname = string("log.txt");
 
   		// work out the path to the $FSLDIR/bin directory
   		if(getenv("FSLDIR")!=0){
@@ -172,8 +172,11 @@ MelodicOptions* MelodicOptions::gopt = NULL;
       		print_usage(argc,argv);
       		exit(2);
     		} else {   
+					temporal.set_T(false);
       		filtermode = true;
       		varnorm.set_T(false);
+					pbsc.set_T(false);
+					cerr << "WARNING: melodic denoising is deprecated, please use fsl_regfilt instead!" <<endl;
     		} 
   		}
   		if (threshold.value()<=0){
@@ -242,7 +245,7 @@ MelodicOptions* MelodicOptions::gopt = NULL;
   		inputfname.set_T(tmpfnames);
 
   		//create melodic directory name
-  		if(logdir.value()==string("melodic.log")){
+  		if(logdir.value()==string("log.txt")){
     		logdir.set_T(string(inputfname.value().at(0)+".ica"));
     		logger.makeDir(logdir.value(),logfname);
  			} else{

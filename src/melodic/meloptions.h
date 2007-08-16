@@ -125,6 +125,7 @@ class MelodicOptions {
   	Option<string> segment;
   	Option<bool>   tsmooth;
   	Option<float>  epsilon;
+  	Option<float>  epsilonS;
   	Option<int>    maxNumItt;
   	Option<int>    maxRestart;
   	Option<int>    rank1interval;
@@ -137,9 +138,14 @@ class MelodicOptions {
   	Option<string> filter; 
 
   	Option<bool>   genreport;
+		Option<string> guireport;
 		Option<string> bgimage;
   	Option<float>  tr;
   	Option<bool>   logPower;
+		Option<bool>   addsigchng;
+		Option<bool>   allPPCA;
+		Option<bool>   varplots;
+		Option<bool>   varvals;
 
 		Option<string> fn_Tdesign;
 		Option<string> fn_Tcon;
@@ -165,8 +171,8 @@ class MelodicOptions {
   	Option<string> guessfname;
   	Option<string> paradigmfname;
 
-  	Option<int>  dummy;
-  	Option<int>  repeats;
+  	Option<int>   dummy;
+  	Option<int>   repeats;
   	Option<float> nlconst1;
   	Option<float> nlconst2;
   	Option<float> smooth_probmap;
@@ -206,7 +212,7 @@ class MelodicOptions {
  }
 
  inline MelodicOptions::MelodicOptions() :
-   logdir(string("-o,--outdir"), string("melodic.log"),
+   logdir(string("-o,--outdir"), string("log.txt"),
 	  string("output directory name\n"), 
 	  false, requires_argument),
    inputfname(string("-i,--in"), std::vector<string>(),
@@ -227,7 +233,7 @@ class MelodicOptions {
    perf_bet(string("--nobet"), true,
 	   string("\tswitch off BET"), 
 	   false, no_argument),
-   threshold(string("--bgthreshold"),  0.00000001,
+   threshold(string("--bgthreshold"),  0.01,
 	   string("brain / non-brain threshold (only if --nobet selected)\n"), 
 	   false, requires_argument),
    pca_dim(string("-d,--dim"), 0,
@@ -239,8 +245,8 @@ class MelodicOptions {
    joined_whiten(string("--sep_whiten"), true,
 	   string("switch on separate whitening"), 
 	   false, no_argument),
-	 joined_vn(string("--joined_vn"), false,
-		   string("switch on joined variance nomalisation"), 
+	 joined_vn(string("--sep_vn"), true,
+		   string("switch off joined variance nomalisation"), 
 		   false, no_argument, false),
    numICs(string("-n,--numICs"), -1,
 	   string("numer of IC's to extract (for deflation approach)"), 
@@ -259,7 +265,7 @@ class MelodicOptions {
 	   false, no_argument),
    pspec(string("--pspec"), false,
 	   string("        switch on conversion to powerspectra"), 
-	   false, no_argument),
+	   false, no_argument, false),
    segment(string("--covarweight"), string(""),
 	   string("voxel-wise weights for the covariance matrix (e.g. segmentation information)"),
 	   false, requires_argument),
@@ -269,6 +275,9 @@ class MelodicOptions {
    epsilon(string("--eps,--epsilon"), 0.0005,
 	   string("minimum error change"), 
 	   false, requires_argument),
+ 	 epsilonS(string("--epsS,--epsilonS"), 0.03,
+		   string("minimum error change for rank-1 approximation in TICA"), 
+		   false, requires_argument),
    maxNumItt(string("--maxit"),  500,
 	   string("\tmaximum number of iterations before restart"), 
 	   false, requires_argument),
@@ -278,7 +287,7 @@ class MelodicOptions {
    rank1interval(string("--rank1interval"),  10,
 	   string("number of iterations between rank-1 approximation (TICA)\n"), 
 		 false, requires_argument,false),
-    mmthresh(string("--mmthresh"), string("0.5"),
+   mmthresh(string("--mmthresh"), string("0.5"),
 	   string("threshold for Mixture Model based inference"), 
 	   false, requires_argument),
    perf_mm(string("--no_mm"), true,
@@ -299,15 +308,30 @@ class MelodicOptions {
    genreport(string("--report"), false,
 	   string("generate Melodic web report"), 
 	   false, no_argument),
+	 guireport(string("--guireport"), string(""),
+		   string("modify report for GUI use"), 
+		   false, requires_argument, false),
 	 bgimage(string("--bgimage"),  string(""),
 		 string("specify background image for report (default: mean image)\n "), 
 		 false, requires_argument),
    tr(string("--tr"),  0.0,
 	   string("\tTR in seconds"), 
 	   false, requires_argument),
-   logPower(string("--logPower"),  false,
-	   string("calculate log of power for frequency spectrum\n"), 
-	    false, no_argument),
+	 logPower(string("--logPower"),  false,
+		 string("calculate log of power for frequency spectrum\n"), 
+		 false, no_argument),
+	 addsigchng(string("--sigchng"),  false,
+		 string("add signal change estimates to report pages\n"), 
+		 false, no_argument, false),
+	 allPPCA(string("--allPPCA"),  false,
+			 string("add all PPCA plots\n"), 
+			 false, no_argument, false),
+	 varplots(string("--varplots"),  false,
+		 string("add std error envelopes to time course plots\n"), 
+		 false, no_argument, false),
+	 varvals(string("--varvals"),  false,
+		 string("add rank1 values after plots\n"), 
+		 false, no_argument, false),
 	 fn_Tdesign(string("--Tdes"), string(""),
 	   string("        design matrix across time-domain"),
 		 false, requires_argument),
@@ -424,6 +448,7 @@ class MelodicOptions {
 	    options.add(segment);
 	    options.add(tsmooth);
 	    options.add(epsilon);
+	    options.add(epsilonS);
 	    options.add(maxNumItt);
 	    options.add(maxRestart);
 	    options.add(rank1interval);
@@ -434,9 +459,14 @@ class MelodicOptions {
 	    options.add(smodename);
 	    options.add(filter);
 	    options.add(genreport);
+	    options.add(guireport);
 			options.add(bgimage);
 	    options.add(tr);
 	    options.add(logPower);
+	    options.add(addsigchng);
+	    options.add(allPPCA);
+	    options.add(varplots);
+	    options.add(varvals);
 			options.add(fn_Tdesign);
 			options.add(fn_Tcon);
 			options.add(fn_TconF);

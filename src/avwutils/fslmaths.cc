@@ -119,7 +119,7 @@ void print_usage(const string& progname)
   cout << " -index : replace each nonzero voxel with a unique (subject to wrapping) index number" << endl;
   cout << " -grid <value> <spacing> : add a 3D grid of intensity <value> with grid spacing <spacing>" << endl;
   cout << " -edge  : edge strength" << endl;
-  cout << " -cluster <height_power> <size_power> <connectivity>: cluster-enhance (connectivity = 6 for 3D, 26 for skeletons)" << endl;
+  cout << " -tfce <H> <E> <connectivity>: enhance with TFCE, e.g. -tfce 2 0.5 6 (maybe change 6 to 26 for skeletons)" << endl;
   cout << " -nan   : replace NaNs (improper numbers) with 0" << endl;
   cout << " -nanm  : make NaN (improper number) mask with 1 for NaN voxels, 0 otherwise" << endl;
   cout << " -inm <mean> :  (-i i ip.c) intensity normalisation (per 3D volume mean)" << endl;
@@ -800,7 +800,7 @@ if (!separatenoise)
     /*****************END OF FILTERING OPTIONS***************/
     else if (string(argv[i])=="-edge")
        input_volume=edge_strengthen(input_volume);
-    else if (string(argv[i])=="-cluster")
+    else if (string(argv[i])=="-tfce")
       {
 	float height_power = atof(argv[++i]);
 	float size_power = atof(argv[++i]);

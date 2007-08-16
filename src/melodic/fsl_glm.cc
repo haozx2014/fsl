@@ -87,14 +87,14 @@ using namespace std;
 		string(" \n Simple GLM usign ordinary least-squares regression on\n")+
 		string(" time courses and/or 3D/4D imges against time courses \n")+
 		string(" or 3D/4D images\n\n");
-  string examples="fsl_glm -i <input> -d <design> [options]";
+  string examples="fsl_glm -i <input> -d <design> -o <output> [options]";
 
 //Command line Options {
   Option<string> fnin(string("-i,--in"), string(""),
 		string("        input file name (matrix 3D or 4D image)"),
 		true, requires_argument);
   Option<string> fnout(string("-o,--out"), string(""),
-		string("       output file name for GLM parameter estimates"),
+		string("output file name for GLM parameter estimates"),
 		true, requires_argument);
   Option<string> fndesign(string("-d,--design"), string(""),
 		string("file name of the GLM design matrix (time courses or spatial maps)"),
@@ -104,7 +104,7 @@ using namespace std;
 		false, requires_argument);
   Option<string> fncontrasts(string("-c,--contrasts"), string(""),
 		string("matrix of t-statistics contrasts"),
-		false, requires_argument);
+		false, requires_argument, false);
   Option<string> fnftest(string("-f,--ftests"), string(""),
 		string("matrix of F-tests on contrasts"),
 		false, requires_argument);
@@ -191,6 +191,8 @@ bool isimage(Matrix what){
 void saveit(Matrix what, string fname){
 	if(isimage(what))
 		save4D(what,fname);
+	else if(fsl_imageexists(fndesign.value()))
+		write_ascii_matrix(what.t(),fname);
 	else
 		write_ascii_matrix(what,fname);
 }

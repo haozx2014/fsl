@@ -101,8 +101,8 @@ betopts=""
 segopts=""
 nseg=3
 stdroi=""
-origin3=37 # `fslval ${FSLDIR}/data/standard/avg152T1 origin3`
-pixdim3=2  # `fslval ${FSLDIR}/data/standard/avg152T1 pixdim3`
+origin3=37 # `fslval ${FSLDIR}/data/standard/MNI152_T1_2mm origin3`
+pixdim3=2  # `fslval ${FSLDIR}/data/standard/MNI152_T1_2mm pixdim3`
 imtype=-t1
 
 while [ _$1 != _ ] ; do
@@ -180,22 +180,22 @@ echo "<hr><p><b>BET brain extraction results</b><p><IMG BORDER=0 SRC=\"${I}_bet.
 echo ""                                                                        >> report.sienax
 echo "----------  register to standard space using brain and skull  --------" >> report.sienax
 echo "(do not worry about histogram warnings)"                                 >> report.sienax
-${FSLDIR}/bin/pairreg ${FSLDIR}/data/standard/avg152T1_brain ${I}_brain ${FSLDIR}/data/standard/avg152T1_skull ${I}_brain_skull ${I}2std.mat >> report.sienax 2>&1
-${FSLDIR}/bin/avscale ${I}2std.mat ${FSLDIR}/data/standard/avg152T1 > ${I}2std.avscale
+${FSLDIR}/bin/pairreg ${FSLDIR}/data/standard/MNI152_T1_2mm_brain ${I}_brain ${FSLDIR}/data/standard/MNI152_T1_2mm_skull ${I}_brain_skull ${I}2std.mat >> report.sienax 2>&1
+${FSLDIR}/bin/avscale ${I}2std.mat ${FSLDIR}/data/standard/MNI152_T1_2mm > ${I}2std.avscale
 xscale=`grep Scales ${I}2std.avscale | awk '{print $4}'`
 yscale=`grep Scales ${I}2std.avscale | awk '{print $5}'`
 zscale=`grep Scales ${I}2std.avscale | awk '{print $6}'`
 vscale=`echo "10 k $xscale $yscale * $zscale * p"|dc -`
 echo "VSCALING $vscale" >> report.sienax
-${FSLDIR}/bin/flirt -in $I -ref ${FSLDIR}/data/standard/avg152T1_brain -o ${I}2std -applyxfm -init ${I}2std.mat
-${FSLDIR}/bin/slicer ${I}2std ${FSLDIR}/data/standard/avg152T1_brain -a ${I}2std.png
+${FSLDIR}/bin/flirt -in $I -ref ${FSLDIR}/data/standard/MNI152_T1_2mm_brain -o ${I}2std -applyxfm -init ${I}2std.mat
+${FSLDIR}/bin/slicer ${I}2std ${FSLDIR}/data/standard/MNI152_T1_2mm_brain -a ${I}2std.png
 ${FSLDIR}/bin/imrm ${I}2std
 echo "<hr><p><b>FLIRT standard space registration results</b><p><IMG BORDER=0 SRC=\"${I}2std.png\">" >> report.html
 
 echo ""                                                                        >> report.sienax
 echo "----------  mask with std mask  ---------------------------------------" >> report.sienax
 ${FSLDIR}/bin/convert_xfm -inverse -omat ${I}2std_inv.mat ${I}2std.mat
-MASK=${FSLDIR}/data/standard/avg152T1_brain_mask_dil
+MASK=${FSLDIR}/data/standard/MNI152_T1_2mm_brain_mask_dil
 if [ "$stdroi" != "" ] ; then
     ${FSLDIR}/bin/fslmaths $MASK $stdroi ${I}_stdmaskroi
     MASK=${I}_stdmaskroi
@@ -209,9 +209,9 @@ ${FSLDIR}/bin/imrm ${I}_grot
 echo "<hr><p><b>Field-of-view and standard space masking</b><br>Red shows the standard-space-based brain mask combined with the field-of-view mask (if used). Blue shows the original BET-derived brain mask. Green shows the intersection of the two.<p><IMG BORDER=0 SRC=\"${I}_masks.png\">" >> report.html
 
 if [ $regional = 1 ] ; then
-    ${FSLDIR}/bin/flirt -in ${FSLDIR}/data/standard/avg152T1_strucseg_periph -ref ${I}_brain -out ${I}_stdmask_segperiph -applyxfm -init ${I}2std_inv.mat
+    ${FSLDIR}/bin/flirt -in ${FSLDIR}/data/standard/MNI152_T1_2mm_strucseg_periph -ref ${I}_brain -out ${I}_stdmask_segperiph -applyxfm -init ${I}2std_inv.mat
     ${FSLDIR}/bin/fslmaths ${I}_stdmask_segperiph -thr 0.5 -bin ${I}_stdmask_segperiph
-    ${FSLDIR}/bin/fslmaths ${FSLDIR}/data/standard/avg152T1_strucseg -thr 4.5 -bin ${I}_tmpmask
+    ${FSLDIR}/bin/fslmaths ${FSLDIR}/data/standard/MNI152_T1_2mm_strucseg -thr 4.5 -bin ${I}_tmpmask
     ${FSLDIR}/bin/flirt -in ${I}_tmpmask -ref ${I}_brain -out ${I}_stdmask_segvent -applyxfm -init ${I}2std_inv.mat
     ${FSLDIR}/bin/fslmaths ${I}_stdmask_segvent -thr 0.5 -bin ${I}_stdmask_segvent
     /bin/rm ${I}_tmpmask*

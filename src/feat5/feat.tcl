@@ -85,6 +85,8 @@ wm title      $w "FEAT - FMRI Expert Analysis Tool v$fmri(version)"
 wm iconname   $w "FEAT [ expr int($fmri(version)) ]"
 wm iconbitmap $w @${FSLDIR}/tcl/fmrib.xbm
 
+set fmri(donemodel) 0
+
 #}}}
     #{{{ mode
 

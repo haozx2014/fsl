@@ -110,19 +110,19 @@ namespace Melodic{
   void em_pca(const Matrix& Mat, Matrix& evecs, RowVector& evals, int num_pc = 1, int iter = 20);
   void em_pca(const Matrix& Mat, Matrix& guess, Matrix& evecs, RowVector& evals, int num_pc = 1, int iter = 20);
 
-  void rankapprox(const Matrix& Mat, Matrix& cols, Matrix& rows, int dim = 1);
-  void krfact(const Matrix& Mat, Matrix& cols, Matrix& rows);
-  void krfact(const Matrix& Mat, int colnum, Matrix& cols, Matrix& rows);
+  float rankapprox(const Matrix& Mat, Matrix& cols, Matrix& rows, int dim = 1);
+  RowVector krfact(const Matrix& Mat, Matrix& cols, Matrix& rows);
+  RowVector krfact(const Matrix& Mat, int colnum, Matrix& cols, Matrix& rows);
   Matrix krprod(const Matrix& cols, const Matrix& rows);
   Matrix krapprox(const Matrix& Mat, int size_col, int dim = 1);
 
   void adj_eigspec(const RowVector& in, RowVector& out1, RowVector& out2, RowVector& out3, int& out4, int num_vox, float resels);
   void adj_eigspec(const RowVector& in, RowVector& out1, RowVector& out2);
 
-  int ppca_dim(const Matrix& in, const Matrix& weights, ColumnVector& PPCA, RowVector& AdjEV, RowVector& PercEV, Matrix& Corr, Matrix& tmpE, RowVector &tmpD, float resels, string which);
-  int ppca_dim(const Matrix& in, const Matrix& weights, ColumnVector& PPCA, RowVector& AdjEV, RowVector& PercEV, float resels, string which);
+  int ppca_dim(const Matrix& in, const Matrix& weights, Matrix& PPCA, RowVector& AdjEV, RowVector& PercEV, Matrix& Corr, Matrix& tmpE, RowVector &tmpD, float resels, string which);
+  int ppca_dim(const Matrix& in, const Matrix& weights, Matrix& PPCA, RowVector& AdjEV, RowVector& PercEV, float resels, string which);
   int ppca_dim(const Matrix& in, const Matrix& weights, float resels, string which);
-  ColumnVector ppca_select(const Matrix& PPCAest, int& dim, int maxEV, string which);
+  ColumnVector ppca_select(Matrix& PPCAest, int& dim, int maxEV, string which);
   Matrix ppca_est(const RowVector& eigenvalues, const int N1, const float N2);
   Matrix ppca_est(const RowVector& eigenvalues, const int N);
 

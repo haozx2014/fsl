@@ -122,8 +122,8 @@ namespace MISCMATHS {
       void unthreshold();
       void unthreshold(const VolumeInfo& pvolinfo, const ColumnVector& in);
 
-	  void writeAsInt(const std::string& fname);
-	  void writeAsFloat(const std::string& fname);
+      void writeAsInt(const std::string& fname);
+      void writeAsFloat(const std::string& fname);
 
       const VolumeInfo& getInfo() const { return volinfo; }
       void setInfo(const VolumeInfo& pvolinfo) { volinfo = pvolinfo; }

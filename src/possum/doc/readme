@@ -35,11 +35,11 @@ bet ${struct} ${struct}_brain -f 0.5 -g 0
 #running fast in order to obtain all of the segmented partial volumes. For this case we only use one chanel input T1-weighted image. The output of this is $struct_brain_seg_0-2 for thre different tissue types,$struct_seg is all of them in one image, $struct_bias is the estimates biased field (1/bias). In order to calculate the restore image you just need to multiply this field with the $struct.
 
 fast -t1 -c 3 -os -ob -od ${struct}_brain ${struct}_brain
-fslmerge -t brain ${struct}_brain_seg_1  ${struct}_brain_seg_2 ${struct}_brain_seg_0 
+avwmerge -t brain ${struct}_brain_seg_1  ${struct}_brain_seg_2 ${struct}_brain_seg_0 
 
 ***NOTE: in case you need change in voxel dimensions BUT preservation of the size do:
 
-A) fslcreatehd Nx Ny Nz Nt dx dy dz dt x0 y0 z0 datatype NAME
+A) avwcreatehd Nx Ny Nz Nt dx dy dz dt x0 y0 z0 datatype NAME
    flirt -in brain.nii.gz -ref ref_highres.nii.gz -out brain_highres -applyxfm
 
 B) flirt -in brain.nii.gz -ref brain.nii.gz -out brain_highres -applyisoxfm 0.1
@@ -56,13 +56,13 @@ if [ ${t1t2} != mj ] && [ ${t1t2} != def ]; then
 
 #do on tuesday
 
-fslmaths ${t1}_reg -mas ${struct}_brain_seg_0 -Xmean -Ymean -Zmean t1c
-fslmaths ${t1}_reg -mas ${struct}_brain_seg_1 -Xmean -Ymean -Zmean t1g
-fslmaths ${t1}_reg -mas ${struct}_brain_seg_2 -Xmean -Ymean -Zmean t1w
+avwmaths ${t1}_reg -mas ${struct}_brain_seg_0 -Xmean -Ymean -Zmean t1c
+avwmaths ${t1}_reg -mas ${struct}_brain_seg_1 -Xmean -Ymean -Zmean t1g
+avwmaths ${t1}_reg -mas ${struct}_brain_seg_2 -Xmean -Ymean -Zmean t1w
 
-fslmaths ${t2}_reg -mas ${struct}_brain_seg_0 -Xmean -Ymean -Zmean t2c
-fslmaths ${t2}_reg -mas ${struct}_brain_seg_1 -Xmean -Ymean -Zmean t2g
-fslmaths ${t2}_reg -mas ${struct}_brain_seg_2 -Xmean -Ymean -Zmean t2w
+avwmaths ${t2}_reg -mas ${struct}_brain_seg_0 -Xmean -Ymean -Zmean t2c
+avwmaths ${t2}_reg -mas ${struct}_brain_seg_1 -Xmean -Ymean -Zmean t2g
+avwmaths ${t2}_reg -mas ${struct}_brain_seg_2 -Xmean -Ymean -Zmean t2w
 
 fi
 
@@ -149,18 +149,18 @@ echo "9.b0"
 
 TEdiff=0.0025
 gamma=2.675e+8
-fslcomplex -realabs $fmap ${fmap}abs 0 1
-fslcomplex -realphase ${fmap} ${fmap}phase1 0 0
-fslcomplex -realphase ${fmap} ${fmap}phase2 1 1
+avwcomplex -realabs $fmap ${fmap}abs 0 1
+avwcomplex -realphase ${fmap} ${fmap}phase1 0 0
+avwcomplex -realphase ${fmap} ${fmap}phase2 1 1
 
-fslmaths ${fmap}phase1 -sub ${fmap}phase2 ${fmap}phasediff -odt float
+avwmaths_32R ${fmap}phase1 -sub ${fmap}phase2 ${fmap}phasediff
 
-fslcomplex -complexpolar ${fmap}abs ${fmap}phasediff ${fmap}complex 0 0 
-fslcomplex -realphase ${fmap}complex ${fmap}phase 0 0
+avwcomplex -complexpolar ${fmap}abs ${fmap}phasediff ${fmap}complex 0 0 
+avwcomplex -realphase ${fmap}complex ${fmap}phase 0 0
 
 prelude -a ${fmap}abs -p ${fmap}phase -o ${fmap}uphase -v
-fslmaths ${fmap}uphase -mul 1000 -div 2.5  b0_radps -odt float
-fslmaths b0_radps -div ${gamma} b0_tesla -odt float
+avwmaths_32R ${fmap}uphase -mul 1000 -div 2.5  b0_radps
+avwmaths_32R b0_radps -div ${gamma} b0_tesla
 
 #register b0 (which is now in tesla) to the structural image
 bet ${fmap}abs ${fmap}abs_brain -f 0.5 -g 0
@@ -169,7 +169,7 @@ flirt -in ${fmap}abs_brain -ref ${struct}_brain -omat regmatrix.mat  -bins 256 -
 
 flirt -in b0_tesla -ref ${struct}_brain -out b0 -applyxfm -init regmatrix.mat -interp trilinear
 
-fslmaths b0 -mul -1 -odt float
+avwmaths_32R b0 -mul -1 
 
 cp b0.nii.gz $subjdir/b0z_dz.nii.gz
 
@@ -182,7 +182,7 @@ cp b0.nii.gz $subjdir/b0z_dz.nii.gz
 #time ${CODE}/b0calc -i ${CHI} -o ${b0}y --xyz --b0x=0 --b0y=1 --b0=0 
 #time ${CODE}/b0calc -i ${CHI} -o ${b0}z --xyz --b0x=0 --b0y=0 --b0=1
 #time ${CODE}/spharm_rm ${b0}x ${BRAINMASK} ${b0} 
-#fslmaths ${b0}x -mul -1 ${b0}x
+#avwmaths ${b0}x -mul -1 ${b0}x
 
 echo "10.b0timecourse"
 

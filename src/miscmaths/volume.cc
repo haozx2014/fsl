@@ -163,7 +163,8 @@ namespace MISCMATHS {
     FSLIO* OP = FslOpen(fname.c_str(), "wb");
 
     FslCloneHeader(OP,volinfo.miscinfo);
-   
+
+    FslSetCalMinMax(OP,Minimum(),Maximum());
     FslSetDim(OP,volinfo.x, volinfo.y, volinfo.z, 1);
     FslSetVoxDim(OP,volinfo.vx, volinfo.vy, volinfo.vz, 0);
     FslSetDataType(OP, DT_FLOAT);
@@ -195,7 +196,8 @@ namespace MISCMATHS {
     FSLIO* OP = FslOpen(fname.c_str(), "wb");
  
     FslCloneHeader(OP,volinfo.miscinfo);
-   
+
+    FslSetCalMinMax(OP,Minimum(),Maximum());
     FslSetDim(OP, volinfo.x, volinfo.y, volinfo.z, 1);  
     FslSetVoxDim(OP, volinfo.vx, volinfo.vy, volinfo.vz, 0);  
     FslSetDataType(OP, DT_SIGNED_SHORT);

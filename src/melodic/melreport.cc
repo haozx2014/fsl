@@ -84,31 +84,36 @@ namespace Melodic{
 			IChtml.setDir(report.getDir(),mmodel.get_prefix()+".html");
 
       {//start IC page
-				IChtml << "<HTML> " << endl
-	       	<< "<TITLE>MELODIC Component " << num2str(cnum)
-	       	<< "</TITLE>" << endl
-	       	<< "<BODY BACKGROUND=\"file:" << getenv("FSLDIR") 
-	       	<< "/doc/images/fsl-bg.jpg\">" << endl 
-	       	<< "<hr><CENTER><H1>MELODIC Component " << num2str(cnum)
-	       	<< "</H1>"<< endl;
+				IChtml << "<HTML><HEAD><link REL=stylesheet TYPE=text/css href=file:" +
+					(string) getenv("FSLDIR") +"/doc/fsl.css>" << endl
+					<< "<style type=\"text/css\">OBJECT { width: 100% }</style>"
+	       	<< "<TITLE>FSL</TITLE></HEAD>" << endl
+	  			<< "<IFRAME  height=" << int(melodat.get_numfiles()/30 + 1)*50 
+					<<"px width=100% src=nav.html frameborder=0></IFRAME><BR>"<< endl
+	       	<< "<Center>" << endl;
 			
 				if(cnum>1)
 	  			IChtml << "<a href=\"" << string("IC_")+num2str(cnum-1)
-		 				<<".html\">previous</a>&nbsp;-&nbsp;";
-				IChtml << "<a href=\"00index.html\">&nbsp;index&nbsp;</a>" ;
+					<<".html\">&#60;</a>&nbsp;-&nbsp;";
+				else
+	  			IChtml << "<a href=\"" << string("IC_")+num2str(melodat.get_mix().Ncols())
+					<<".html\">&#60;</a>&nbsp;-&nbsp;";
 	
 				if(cnum<dim)
-	  			IChtml << "&nbsp;-&nbsp;<a href=\"" << string("IC_")+num2str(cnum+1)
-		 				<<".html\">next</a><p>";
-	
-				IChtml << "<hr><p>" << endl;
+	  			IChtml << "<a href=\"" << string("IC_")+num2str(cnum+1)
+					<<".html\">&#62;</a>";
+				else 
+	  			IChtml << "<a href=\"" << string("IC_")+num2str(1)
+					<<".html\">&#62;</a>";
+				IChtml << "<p><H3>MELODIC Component " << num2str(cnum)
+				<< "<br></b></H3><hr><p>" << endl;
 			}
       {//output IC stats
     		if(ICstats.Storage()>0&&ICstats.Nrows()>=cnum){
 	  			IChtml << fixed << setprecision(2) << ICstats(cnum,1) << " % of explained variance";
 	  			if(ICstats.Ncols()>1)
 	    			IChtml << "; &nbsp; &nbsp; " << ICstats(cnum,2) << " % of total variance";
-					if(ICstats.Ncols()>2&&melodat.get_numfiles()==1){
+					if(ICstats.Ncols()>2&&opts.addsigchng.value()){
 	    			IChtml << "<p>" <<endl;
 	    			IChtml << " &nbsp; &nbsp; " << ICstats(cnum,3) << " % signal change (pos peak voxel); &nbsp; &nbsp;" << ICstats(cnum,4) << "% signal change (peak neg. voxel)" << endl ;
 	  			}
@@ -167,15 +172,27 @@ namespace Melodic{
       {//plot time course
     	IChtml << "<H3> Temporal mode </H3><p>" << endl <<endl;
     	miscplot newplot;
-			Matrix tmptc = melodat.get_Tmodes(cnum-1).t();
+			Matrix tmptc = melodat.get_Tmodes(cnum-1).Column(1).t();
+			newplot.col_replace(0,0xFF0000);
 
+			newplot.add_label(string("IC ")+num2str(cnum)+" time course");
 			//add GLM OLS fit
-			if(melodat.Tdes.Storage() > 0){
+			if(melodat.Tdes.Storage()>0 &&
+		  melodat.glmT.get_beta().Nrows() == melodat.Tdes.Ncols()){
 				tmptc &= melodat.glmT.get_beta().Column(cnum).t() * melodat.Tdes.t();
-				newplot.add_label(string("IC ")+num2str(cnum)+" time course");
 				newplot.add_label("full model fit");
 			}
 
+			//add deviation around time course
+			if(melodat.get_Tmodes(cnum-1).Ncols()>1 && opts.varplots.value()){
+				Matrix tmp = stdev(melodat.get_Tmodes(cnum-1).Columns(2,melodat.get_Tmodes(cnum-1).Ncols()).t(),1);
+				tmptc &= melodat.get_Tmodes(cnum-1).Column(1).t()+tmp;
+				tmptc &= melodat.get_Tmodes(cnum-1).Column(1).t()-tmp;
+				newplot.add_label("std error across subjects");
+				newplot.col_replace(tmptc.Nrows()-1,0x808080);
+				newplot.col_replace(tmptc.Nrows()-2,0x808080);				
+			}
+		
 	    if(opts.tr.value()>0.0)
 				newplot.add_xlabel(string("Time (seconds); TR = ")+
 				float2str(opts.tr.value(),0,2,0)+" s");
@@ -183,20 +200,28 @@ namespace Melodic{
 		  	newplot.add_xlabel(string("Time (TRs)"));
 			
 			newplot.add_ylabel("Normalised Response");
-			newplot.set_yrange(tmptc.Minimum()-0.05*(tmptc.Maximum()-tmptc.Minimum()),
-				tmptc.Maximum()+0.05*(tmptc.Maximum()-tmptc.Minimum()));
+			newplot.set_yrange(tmptc.Row(1).Minimum()-0.05*(tmptc.Row(1).Maximum() - 
+				tmptc.Row(1).Minimum()),tmptc.Row(1).Maximum()+
+				0.05*(tmptc.Row(1).Maximum()-tmptc.Row(1).Minimum()));
 			newplot.grid_swapdefault();
 	    newplot.timeseries(tmptc,
 			  report.appendDir(string("t")+num2str(cnum)+".png"),
 			  string("Timecourse No. ")+num2str(cnum), 
 			  opts.tr.value(),150,12,1,false);
 
+			if(melodat.get_Tmodes(cnum-1).Ncols()>1)
+				tmptc &= melodat.get_Tmodes(cnum-1).Columns(2,melodat.get_Tmodes(cnum-1).Ncols()).t();
 	     write_ascii_matrix(report.appendDir(string("t")
 				+num2str(cnum)+".txt"),tmptc.t());
 	     IChtml << "<A HREF=\"" << string("t")
 	  	  +num2str(cnum)+".txt" << "\"> ";
 			 IChtml << "<img BORDER=0 SRC=\"" 
 	  	  +string("t")+num2str(cnum)+".png\"></A><p>" << endl;	
+	
+			if(melodat.get_numfiles()>1 && melodat.explained_var.Storage()>0 
+				&& melodat.explained_var.Ncols()>=cnum && opts.varvals.value())
+				IChtml << "Rank-1 approximation of individual time courses explains " 
+				<< melodat.explained_var(cnum) << "% of variance.<p>" << endl;
 			}//time series plot
 
 	 		if(!opts.pspec.value())
@@ -210,7 +235,7 @@ namespace Melodic{
 				else
 					newplot.add_ylabel(string("Power"));
 		
-				Matrix fmixtc = calc_FFT(melodat.get_Tmodes(cnum-1), opts.logPower.value());
+				Matrix fmixtc = calc_FFT(melodat.get_Tmodes(cnum-1).Column(1), opts.logPower.value());
 			  
 				newplot.set_Ylabel_fmt("%.0f");
 				newplot.set_yrange(0.0,1.02*fmixtc.Maximum());
@@ -242,7 +267,8 @@ namespace Melodic{
 	  			+string("f")+num2str(cnum)+".png\"></A><p>" << endl;
       }//frequency plot
    		{//add T-mode GLM F-stats for full model fit & contrasts
-				if(melodat.Tdes.Storage() > 0){
+				if(melodat.Tdes.Storage() > 0 &&
+					melodat.glmT.get_beta().Nrows() == melodat.Tdes.Ncols()){
 							IChtml << " <TABLE border=1 bgcolor=ffffff cellpadding=5>" <<
 								"<CAPTION><EM> <b>GLM (OLS) on time series </b></EM></CAPTION>" << endl
 								<< "<TR valign=middle><TH ><EM>GLM &beta;'s</EM> <TH> <EM> F-test on <br> full model fit </em>";
@@ -265,8 +291,8 @@ namespace Melodic{
 								IChtml << fixed << setprecision(5) << " p < " << 
 								melodat.glmT.get_pf_fmf().Column(cnum) << 
 								"<BR> (uncorrected for #comp.)</TD>" << endl;
-						}
-				if(melodat.Tcon.Storage() > 0){
+						if(melodat.Tcon.Storage() > 0	&&
+						melodat.Tdes.Ncols() == melodat.Tcon.Ncols()){
 							IChtml << fixed << setprecision(2) << "<TD><TABLE border=0><TR><TD align=right>" <<endl;
 							for(int ctr=1; ctr <= melodat.Tcon.Nrows() ; ctr++)
 								IChtml << "COPE(" << num2str(ctr) << "): <br>" << endl;
@@ -285,22 +311,26 @@ namespace Melodic{
 									IChtml << fixed << setprecision(5) <<" p < " << melodat.glmT.get_p().Column(cnum).Row(ctr) << 
 									"<BR>" << endl;
 							IChtml << "</TABLE></td></tr>" << endl;
-						}
+					  }
+					}
 				IChtml << "</TABLE><p>" << endl;
 			}
   
       if(cnum <= (int)melodat.get_Smodes().size())
 	    {//plot subject mode 
+			  
 	  		Matrix smode;
 	  		smode = melodat.get_Smodes(cnum-1);
 	
 	  		if(smode.Nrows() > 1){
-	      	miscplot newplot;
+	  	  	IChtml << "<hr><H3> Sessions/Subjects mode </H3><p>" << endl <<endl;
+		    	miscplot newplot;
 
 					//add GLM OLS fit
 					//newplot.setscatter(smode,2);
 
-					if(melodat.Sdes.Storage() > 0){
+					if(melodat.Sdes.Storage() > 0&&
+					melodat.glmS.get_beta().Nrows() == melodat.Sdes.Ncols()){
 						smode |= melodat.Sdes * melodat.glmS.get_beta().Column(cnum);
 						newplot.add_label(string("IC ")+num2str(cnum)+" subject/session-mode");
 						newplot.add_label("full model fit");
@@ -311,7 +341,7 @@ namespace Melodic{
 //					newplot.set_xysize(smode.Nrows()*80,150);
 	      	newplot.timeseries(smode.t(), 
 			    	report.appendDir(string("s")+num2str(cnum)+".png"),
-			      string("Subject/Session mode"));
+			      string("Subject/Session mode No. ") + num2str(cnum));
 					newplot.clear_xlabel();
 					newplot.clear_labels();
 					newplot.set_xysize(120,200);
@@ -332,7 +362,8 @@ namespace Melodic{
 	      		+string("b")+num2str(cnum)+".png\"></A><p>" << endl;
 	    	}
    			{//add S-mode GLM F-stats for full model fit & contrasts
-			  	if(melodat.Sdes.Storage() > 0){
+			  	if(melodat.Sdes.Storage() > 0 &&
+					melodat.glmS.get_beta().Nrows() == melodat.Sdes.Ncols()){
 							IChtml << " <TABLE border=1 bgcolor=ffffff cellpadding=5>" <<
 								"<CAPTION><EM> <b>GLM (OLS) on subject/session-mode </b></EM></CAPTION>" << endl
 								<< "<TR valign=middle><TH ><EM>GLM &beta;'s</EM> <TH> <EM> F-test on <br> full model fit </em>";
@@ -355,8 +386,8 @@ namespace Melodic{
 								IChtml << fixed << setprecision(5) << " p < " << 
 								melodat.glmS.get_pf_fmf().Column(cnum) << 
 								"<BR> (uncorrected for #comp.)</TD>" << endl;
-						}
-				  if(melodat.Scon.Storage() > 0){
+				  if(melodat.Scon.Storage() > 0 	&& melodat.Sdes.Storage() > 0 &&
+							melodat.Sdes.Ncols() == melodat.Scon.Ncols()){
 							IChtml << fixed << setprecision(2) << "<TD><TABLE border=0><TR><TD align=right>" <<endl;
 							for(int ctr=1; ctr <= melodat.Scon.Nrows() ; ctr++)
 								IChtml << "COPE(" << num2str(ctr) << "): <br>" << endl;
@@ -376,8 +407,8 @@ namespace Melodic{
 									"<BR>" << endl;
 							IChtml << "</TABLE></td></tr>" << endl;
 					}
+				}
 				IChtml << "</TABLE><p>" << endl;
-
 				}
 	    }//subject mode plot
    
@@ -442,7 +473,7 @@ namespace Melodic{
 	    	IChtml<< "<HR><FONT SIZE=1>This page produced automatically by "
 	      	<< "<A HREF=\"http://www.fmrib.ox.ac.uk/fsl/melodic/index.html\"> MELODIC</A> Version "  
 	      	<< version << " - a part of <A HREF=\"http://www.fmrib.ox.ac.uk/fsl\">FSL - "
-	      	<< "FMRIB Software Library</A>.</FONT>" << endl
+	      	<< "FMRIB Software Library</A>.</FONT></Center>" << endl
 	      		<< "</BODY></HTML>" << endl;
       } //finish IC page
       IC_rep_det(mmodel, cnum, dim);
@@ -454,24 +485,30 @@ namespace Melodic{
 
       {//start IC2 page
 				IChtml2.setDir(report.getDir(),mmodel.get_prefix()+"_MM.html");
-				IChtml2 << "<HTML> " << endl
-					<< "<TITLE>Component " << num2str(cnum)
-					<< " Mixture Model fit </TITLE>" << endl
-					<< "<BODY BACKGROUND=\"file:" << getenv("FSLDIR") 
-					<< "/doc/images/fsl-bg.jpg\">" << endl 
-					<< "<hr><CENTER><H1>Component " << num2str(cnum)
-					<< " Mixture Model fit </H1>"<< endl;
-     
+				IChtml2 << "<HTML><HEAD><link REL=stylesheet TYPE=text/css href=file:" +
+					(string) getenv("FSLDIR") +"/doc/fsl.css>" << endl
+					<< "<style type=\"text/css\">OBJECT { width: 100% }</style>"
+	       	<< "<TITLE>FSL</TITLE></HEAD>" << endl
+					<< "<IFRAME  height="<< int(melodat.get_numfiles()/30 + 1)*50 
+					<<"px width=100% src=nav.html frameborder=0></IFRAME><p>"<< endl	
+					<< "<CENTER>";
 				if(cnum>1)
-	  			IChtml2 << "<a href=\"" << string("IC_")+num2str(cnum-1)
-		  			<<"_MM.html\">previous</a>&nbsp;-&nbsp;";
-				IChtml2 << "<a href=\""+ mmodel.get_prefix() + 
-	  			".html\">&nbsp;up&nbsp;to IC report&nbsp;</a>";
+	  			IChtml2 << "<b><a href=\"" << string("IC_")+num2str(cnum-1)
+					<<"_MM.html\">&#60;</a>&nbsp;-&nbsp;";
+				else
+					IChtml2 << "<b><a href=\"" << string("IC_")+num2str(melodat.get_mix().Ncols())
+					<<"_MM.html\">&#60;</a>&nbsp;-&nbsp;";
+			//	IChtml << "<a href=\"00index.html\">&nbsp;index&nbsp;</a>" ;
+	
 				if(cnum<dim)
-	  			IChtml2 << "&nbsp;-&nbsp;<a href=\"" << string("IC_")+num2str(cnum+1)
-		  			<<"_MM.html\">next</a><p>";
-				IChtml2 << "<hr><p>" << endl;
-      }
+	  			IChtml2 << "<a href=\"" << string("IC_")+num2str(cnum+1)
+					<<"_MM.html\">&#62;</a>";
+				else 
+					IChtml2 << "<a href=\"" << string("IC_")+num2str(1)
+					<<"_MM.html\">&#62;</a>";
+				IChtml2 << "<p><H3>Component " << num2str(cnum)
+				<< " Mixture Model fit <br></b></H3><hr><p>" << endl;
+			}
 
       volume4D<float> tempVol; 
 
@@ -614,7 +651,7 @@ namespace Melodic{
 				IChtml2<< "<HR><FONT SIZE=1>This page produced automatically by "
 	       	<< "<A HREF=\"http://www.fmrib.ox.ac.uk/fsl/melodic/index.html\"> MELODIC</A> Version " 
 	       	<< version << " - a part of <A HREF=\"http://www.fmrib.ox.ac.uk/fsl\">FSL - "
-	       	<< "FMRIB Software Library</A>.</FONT>" << endl
+	       	<< "FMRIB Software Library</A>.</FONT></CENTER>" << endl
 	       		<< "</BODY></HTML>" << endl;
       } //finish IC2 page
     }
@@ -766,7 +803,7 @@ namespace Melodic{
   void MelodicReport::PPCA_rep(){
     
     {//plot time course
-      report << "<p> <H3>PCA estimates </H3> <p>" << endl;
+      report << "<p><hr><b>PCA estimates </b> <p>" << endl;
  
       Matrix what;
       miscplot newplot;
@@ -779,8 +816,17 @@ namespace Melodic{
 
       if(melodat.get_PPCA().Storage()>0){
 				what = what.Columns(1,melodat.get_PPCA().Nrows());
-				what &= melodat.get_PPCA().t();
-				newplot.add_label("dim. estimate");
+				if(opts.allPPCA.value()&&melodat.get_PPCA().Ncols()==7){
+					what &= melodat.get_PPCA().Columns(3,7).t();
+					newplot.add_label("Laplace");
+					newplot.add_label("BIC");
+					newplot.add_label("MDL");
+					newplot.add_label("RRN");
+					newplot.add_label("AIC");
+				}else{
+					what &= melodat.get_PPCA().Column(1).t();
+					newplot.add_label("dim. estimate");
+				}
       }
 			
 			newplot.set_Ylabel_fmt("%.2f");
@@ -797,12 +843,18 @@ namespace Melodic{
   }
 	
 	void MelodicReport::Smode_rep(){
-		report << "<p> <H3>TICA Subject/Session modes </H3> <p>" << endl;
+		report << "<p><hr><b>TICA Subject/Session modes </b> <br>" << endl;
 		miscplot newplot;
+		report << "Boxplots show the relative response amplitudes across the "
+			<< "session/subject domain (" << melodat.get_numfiles() 
+			<< " input files). Components have been sorted in decreasing order of "
+			<< " the median response per component. <br><br>";
 		Matrix allmodes = melodat.get_Smodes().at(0);
 		for(int ctr = 1; ctr < (int)melodat.get_Smodes().size();++ctr)
 			allmodes |= melodat.get_Smodes().at(ctr);
 		
+		newplot.add_xlabel("Component No.");
+		newplot.add_ylabel("");
 		newplot.set_xysize(100+30*allmodes.Ncols(),300);
 		newplot.boxplot(allmodes,report.appendDir(string("bp_Smodes.png")),
     string("Subject/Session modes"));

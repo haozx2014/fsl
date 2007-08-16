@@ -91,7 +91,7 @@ using namespace std;
 const double gammabar=42.58*1e06;//(in Hz/T)
 
 string title="pulse (Version 2.0)\nCopyright(c) 2003, University of Oxford (Ivana Drobnjak and Mark Jenkinson)";
-string examples="pulse";
+string examples="pulse -i <input digital brain> -o <output base name> [optional arguments]";
 
 Option<bool>   verbose(string("-v,--verbose"), false, 
 		  string("switch on diagnostic messages"), 
@@ -101,7 +101,7 @@ Option<bool>   help(string("-h,--help"), false,
 		  false, no_argument);
 
 Option<string> opt_object(string("-i,--inp"), string(""),
-		  string("4D brain, resolution can be any."),
+		  string("4D digital brain, resolution can be any."),
 		  true, requires_argument);
 
 //INPUT pulse sequence properties 
@@ -121,10 +121,10 @@ Option<string> opt_slcdir(string("--slcdir"), string("z-"),
 		  string("default=z- (x+,x-, y+,y- or z+,or z- slice direction/orientation)"),
 		  false, requires_argument);
 Option<string> opt_phasedir(string("--phasedir"), string("y"),
-		  string("default=y (x,y,or z phase encode direction"),
+		  string("default=y (x,y,or z phase encode direction)"),
 		  false, requires_argument);
 Option<string> opt_readdir(string("--readdir"), string("x"),
-		  string("default=x (x,y, or z read encode direction"),
+		  string("default=x (x,y, or z read encode direction)"),
 		  false, requires_argument);
 Option<float>  opt_slcthk(string("--slcthk"),0.006,
 	          string("default=0.006m (slice thickness)"),
@@ -154,7 +154,7 @@ Option<float>  opt_TR(string("--tr"),3,
 	          string("default=3s (the time between the two RF pulses applied on the same part of the object (in epi the acquisition time for the whole k-space in GE time for the first line)"),
 	          false,requires_argument);
 Option<float>  opt_TRslc(string("--trslc"),0.12,
-	          string("default=0.12s (the time that takes for one slice, in EPI def is TR/25 , in GE it is TR=TRslc)"),
+	          string("default=0.12s (the time that takes for the acquisition of one slice)"),
 	          false,requires_argument);
 Option<float>  opt_maxG(string("--maxG"),0.055,
 	          string("default=0.055 T/m (maximum gradient strength) "),

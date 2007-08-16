@@ -230,7 +230,7 @@ LabelSpinBox $f.dim.n -label "Output components" -textvariable fmri(dim) -range 
 #}}}
 #{{{ ICA level
 
-optionMenu2 $f.icaopt fmri(icaopt) -command "melodic:updatelevel $w" 1 "Single-session ICA" 2 "Multi-session temporal concatenation" 3 "Multi-session tensor ICA"
+optionMenu2 $f.icaopt fmri(icaopt) -command "melodic:updatelevel $w" 1 "Single-session ICA" 2 "Multi-session temporal concatenation" 3 "Multi-session Tensor-ICA"
 
 balloonhelp_for $f.icaopt "
 
@@ -390,13 +390,13 @@ frame $w.btns
     
 button $w.btns.apply -command "melodic:apply $w" -text "Go"
 
-button $w.btns.save -command "feat_file:setup_dialog $w a a a [namespace current] *.fsf {Save Feat setup} {feat5:write $w 1 1 0} {}" -text "Save"
+button $w.btns.save -command "feat_file:setup_dialog $w a a a [namespace current] *.fsf {Save Feat setup} {feat5:write $w 0 1 0} {}" -text "Save"
 
-button $w.btns.load -command "feat_file:setup_dialog $w a a a [namespace current] *.fsf {Load Feat setup} {feat5:load $w 1} {}" -text "Load"
+button $w.btns.load -command "feat_file:setup_dialog $w a a a [namespace current] *.fsf {Load Feat setup} {feat5:load $w 1 } {}" -text "Load"
 
 button $w.btns.cancel -command "destroy $w" -text "Exit"
 
-button $w.btns.help -command "FmribWebHelp file: ${FSLDIR}/doc/melodic3/index.html" -text "Help"
+button $w.btns.help -command "FmribWebHelp file: ${FSLDIR}/doc/melodic/index.html" -text "Help"
 
 #{{{ Utils
 
@@ -447,6 +447,7 @@ if { $fmri(perfsub_yn) } {
 
 #}}}
 
+    melodic:updatelevel $w
     feat5:updateanalysis $w
     $w.nb compute_size
 }

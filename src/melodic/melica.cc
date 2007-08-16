@@ -161,9 +161,11 @@ namespace Melodic{
 				}
 				//termination condition : angle between old and new < epsilon
 				minAbsSin = 1 - diag(abs(redUMM.t()*redUMM_old)).Minimum();
+
 				message("  Step no. " << cum_itt + itt_ctr << " change : " << minAbsSin << endl);
-				if((abs(minAbsSin) < opts.epsilon.value())&&
-				  (opts.approach.value()!=string("tica"))){ break;}
+		//		if((abs(minAbsSin) < opts.epsilon.value())&&
+		//		  (opts.approach.value()!=string("tica"))){ break;}
+				if((abs(minAbsSin) < opts.epsilon.value())){ break;}
 	
 				itt_ctr++;
       } while(itt_ctr < opts.maxNumItt.value());
@@ -174,13 +176,13 @@ namespace Melodic{
 	  		Matrix temp(melodat.get_dewhite() * redUMM);
 	  		temp = melodat.expand_dimred(temp);
 			  temp = krapprox(temp,int(temp.Nrows()/melodat.get_numfiles())); 
-				minAbsSin2 = 1 - diag(corrcoef(temp,rank1_old)).Minimum();
+				minAbsSin2 = 1 - diag(abs(corrcoef(temp,rank1_old))).Minimum();
 				rank1_old = temp;
 				temp = melodat.reduce_dimred(temp);
 				redUMM = melodat.get_white() * temp;
 
-				message(" change : " << abs(minAbsSin2) << endl);	
-				if(abs(minAbsSin2) < 0.01 && abs(minAbsSin) < opts.epsilon.value()){ break;}
+				message(" change : " << minAbsSin2 << endl);	
+				if(abs(minAbsSin2) < opts.epsilonS.value() && abs(minAbsSin) < opts.epsilon.value()){ break;}
 			}
     } while(
       (itt_ctr2 < newmaxitts/opts.maxNumItt.value()) && 
@@ -527,6 +529,7 @@ namespace Melodic{
       melodat.set_mix(tmp);
 
       melodat.set_IC(temp);
+
       melodat.set_ICstats(scales);
       melodat.sort();
 

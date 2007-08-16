@@ -72,8 +72,11 @@ Usage() {
     echo ""
     echo "Usage:   first_flirt <input_image> <output_basename> [options]"
     echo ""
-    echo "-b : input is already brain extracted"
-    echo "-d : debug (don't delete intermediate files)"
+    echo "-b        : input is already brain extracted"
+    echo "-d        : debug (don't delete intermediate files)"
+    echo "-inweight : use a weighting mask on the first registration"
+    echo ""
+    echo "e.g.:    first_flirt subject10rawT1 subject10rawT1_to_std_sub"
     echo ""
     exit 1
 }
@@ -84,30 +87,26 @@ A=`${FSLDIR}/bin/remove_ext $1`
 B=`${FSLDIR}/bin/remove_ext $2`
 shift 2
 
+refim=MNI152lin_T1_1mm
 debug=0
-betted=0
-
+inweightCom=""
 while [ _$1 != _ ] ; do
     if [ $1 = -d ] ; then
         debug=1
         shift
     elif [ $1 = -b ] ; then
-        betted=1
+	refim=MNI152lin_T1_1mm_brain
         shift
+    elif [ $1 = -inweight ] ; then
+        inweightCom="${1} ${2}"
+        shift 2
     fi
 done
 
-refim=MNI152_T1_1mm.nii.gz
-if [ $betted = 1 ] ; then
-    refim=MNI152_T1_1mm_brain.nii.gz
-fi
-
-
-
-${FSLDIR}/bin/flirt -in $A -out ${B}grot -ref ${FSLDIR}/data/standard/${refim} -omat ${B}grot.mat
+${FSLDIR}/bin/flirt -in $A -out ${B}grot -ref ${FSLDIR}/data/standard/${refim} -omat ${B}grot.mat $inweightCom
 
 #do subcortical alignment
-${FSLDIR}/bin/flirt -in ${B}grot -out ${B}grot2 -ref ${FSLDIR}/data/standard/${refim} -omat ${B}grot2.mat -nosearch -refweight ${FSLDIR}/data/standard/avg152_subbr_mask.nii.gz   
+${FSLDIR}/bin/flirt -in ${B}grot -out ${B}grot2 -ref ${FSLDIR}/data/standard/${refim} -omat ${B}grot2.mat -nosearch -refweight ${FSLDIR}/data/standard/MNI152lin_T1_1mm_subbr_mask
 ${FSLDIR}/bin/convert_xfm -omat ${B}.mat -concat ${B}grot2.mat ${B}grot.mat 
 
 #generate registered images

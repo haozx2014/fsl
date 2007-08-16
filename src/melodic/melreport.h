@@ -102,40 +102,94 @@ namespace Melodic{
 				logger(plogger){
 	  			if( bool(opts.genreport.value()) ){
 	  				const time_t tmptime = time(NULL);
- 					
-	  				report.makeDir(logger.appendDir("report"),"00index.html");
-	  				report << "<HTML>" << endl << endl 
-		 					<< "<TITLE>MELODIC Report</TITLE>"<< endl <<endl
-		 					<< "<BODY BACKGROUND=\"file:" << getenv("FSLDIR") 
-		 					<< "/doc/images/fsl-bg.jpg\">" << endl 
-		 					<< endl << "<hr><CENTER> " << endl 
-		 					<< "<H1>MELODIC Report</H1>" 
-		 					<< endl
-		 					<< report.getDir() << "/" << report.getLogFileName() 
-		 					<< "<br>" << endl
-		 					<< ctime(&tmptime) << "<br>" << endl;
-	  				report << "</CENTER>" << endl << endl
-		 					<< "<hr><H2>Components:</H2> <p>" << endl << endl;
+		    		system(("mkdir "+ logger.appendDir("report") + " 2>/dev/null").c_str());
+	  				report.setDir(logger.appendDir("report"),"00index.html");
+						report << "<HTML><HEAD><link REL=stylesheet TYPE=text/css href=file:" +
+							(string) getenv("FSLDIR") +"/doc/fsl.css>" 
+						  << "<TITLE>MELODIC report</TITLE></HEAD><BODY>"
+							<< endl <<endl;
+						loghtml.setDir(report.getDir(),"log.html");
+						loghtml << "<HTML><HEAD><link REL=stylesheet TYPE=text/css href=file:" +
+							(string) getenv("FSLDIR") +"/doc/fsl.css>" 
+						  << "<TITLE>MELODIC report</TITLE></HEAD><BODY>"
+							<< endl <<endl;						
+						navigator.setDir(report.getDir(),"nav.html");
+						head.setDir(report.getDir(),"head.html");
+	  				navigator << "<link REL=stylesheet TYPE=text/css href=file:"+
+							(string) getenv("FSLDIR") +"/doc/fsl.css>"  << endl;
+						head << "<link REL=stylesheet TYPE=text/css href=file:"+
+							(string) getenv("FSLDIR") +"/doc/fsl.css>"  << endl;
+						head  <<"<TABLE BORDER=0><TR>" << endl
+							<<" <TD ALIGN=CENTER WIDTH=100%>"<< endl
+							<<"<TABLE BORDER=0>"<< endl
+							<<"<tr><td align=center><font size=+3><b>MELODIC Report</b>"<< endl
+							<<"</font><tr><td valign=center align=center> <p>"<< endl
+							<< report.getDir() << "/" << report.getLogFileName() << "<br>"
+							<< ctime(&tmptime) << "</tr>"<< endl
+							<<"<tr valign=bottom><td align=center>"<< endl
+							<< "</tr></table>" << endl
+							<< "<TD ALIGN=RIGHT>" << endl
+							<< "<a href=http://www.fmrib.ox.ac.uk/fsl target=_top>" << endl
+						  << "<IMG BORDER=0 SRC=file:"<< getenv("FSLDIR")
+							<< "/doc/images/fsl-logo-big.jpg WIDTH=165></a>" << endl
+							<< "</TD>"<<endl<<"</TR></TABLE> <hr>"<<endl;
+						if(opts.guireport.value()==""){
+							report <<"<OBJECT data=head.html></OBJECT>" <<  endl;
+							loghtml <<"<OBJECT data=head.html></OBJECT>" <<  endl;
+						}else{
+				   		report <<"<OBJECT data="<<opts.guireport.value()<< "></OBJECT>"<< endl;
+							loghtml <<"<OBJECT data="<<opts.guireport.value()<< "></OBJECT>"<< endl;
+						}
+						report << "<IFRAME  height=80px width=100% src=nav.html frameborder=0></IFRAME><p>"<< endl;		
+						loghtml << "<IFRAME  height=100px width=100% src=nav.html frameborder=0></IFRAME><p>"
+							<<"<IFRAME width=100% height=100% src=\"../log.txt\"></IFRAME>" <<endl;		
+						navigator <<"<CENTER><TABLE BORDER=0><TR>" << endl
+							<<"<TD ALIGN=CENTER WIDTH=100%><FONT SIZE=-1>"<<endl
+							<<"<A HREF=\"00index.html\" target=\"_top\">Main</A>&nbsp;-&nbsp;";
+						if(opts.guireport.value()=="")
+							navigator << "<A HREF=\"log.html\" target=\"_top\">Log</A>&nbsp;-&nbsp;";
+						navigator	<<"Components: ";
+						navigator.flush();
 	  			}
 				}
 
       ~MelodicReport(){
 				if( bool(opts.genreport.value()) ){
-	  			report << "<HR><FONT SIZE=1>This page produced automatically by "
-		 				<< "<A HREF=\"http://www.fmrib.ox.ac.uk/fsl/melodic/index.html\"> MELODIC</A> Version " 
-		 			<< version << " - a part of <A HREF=\"http://www.fmrib.ox.ac.uk/fsl\">FSL - "
-		 			<< "FMRIB Software Library</A>.</FONT>" << endl
-		 				<< "</BODY></HTML>" << endl;
+					report << "<HR><CENTER><FONT SIZE=1>This page produced automatically by "
+		      	<< "<A HREF=\"http://www.fmrib.ox.ac.uk/fsl/melodic/index.html\"> MELODIC</A> Version "  
+		      	<< version << " - a part of <A HREF=\"http://www.fmrib.ox.ac.uk/fsl\">FSL - "
+		      	<< "FMRIB Software Library</A>.</FONT></CENTER>" << endl
+		      	<< "</BODY></HTML>" <<endl;
+					loghtml << "<HR><CENTER><FONT SIZE=1>This page produced automatically by "
+		      	<< "<A HREF=\"http://www.fmrib.ox.ac.uk/fsl/melodic/index.html\"> MELODIC</A> Version "  
+		      	<< version << " - a part of <A HREF=\"http://www.fmrib.ox.ac.uk/fsl\">FSL - "
+		      	<< "FMRIB Software Library</A>.</FONT></CENTER>" << endl
+		      	<< "</BODY></HTML>" <<endl;
+  				navigator << "</FONT></TD>"<<endl<<"</TR></TABLE></CENTER><hr>" <<endl;
 				}
       }
 
       inline void analysistxt(){
 				if( bool(opts.genreport.value()) ){
 
-	  			report << "<hr><h2>Analysis methods</h2> <p>"<<endl;
-	  			report << "Analysis was carried out using MELODIC (Multivariate Exploratory Linear Decomposition into Independent Components) Version "<< version <<", part of FSL (FMRIB's Software Library, <A HREF=\"http://www.fmrib.ox.ac.uk/fsl/\">www.fmrib.ox.ac.uk/fsl</A>), an implementation for the estimation of a Probabilistic Independent Component Analysis model [Beckmann 2004]."<<endl;
-	  
-	  			report << "The following melodic pre-processing was applied to the input data file: "<< endl;
+	  			report << "<b>Analysis methods</b> <br>"<<endl;
+					report << "Analysis was carried out using ";
+	
+					if(opts.approach.value() != string("tica"))
+						report << "Probabilistic Independent Component Analysis"
+						  <<" [Beckmann 2004] as implemented in "<<endl;
+					else	
+						report << "Tensorial Independent Component Analysis "
+					  	<<"[Beckmann 2005] as implemented in "<< endl;
+	
+					report << " MELODIC (Multivariate"
+						<<" Exploratory Linear Decomposition into Independent Components)"
+						<<" Version "<< version <<", part of FSL (FMRIB's Software"
+						<<" Library, <A HREF=\"http://www.fmrib.ox.ac.uk/fsl/\">"
+						<<"www.fmrib.ox.ac.uk/fsl</A>).<br>";
+			
+	  			report << "The following data pre-processing was applied to"
+						<<" the input data: "<< endl;
 
 	  			if(opts.use_mask.value())
 	    			report << " masking of non-brain voxels;";
@@ -144,35 +198,52 @@ namespace Melodic{
 	  
 	  			if(opts.varnorm.value())
 	    			report << " normalisation of the voxel-wise variance; ";
-	  
+	  	    if(opts.pbsc.value())
+						report << " conversion to %BOLD signal change; ";
 	  			report << "<br>"<<endl;
 	  
-	  			report << " Pre-processed data was whitened and projected into a " 
+	  			report << " Pre-processed data were whitened and projected into a " 
 		 				<< melodat.get_mix().Ncols()<< "-dimensional subspace using ";
 	  			if(melodat.get_PPCA().Storage()>0){	    
-	    			report << "probabilistic Principal Component Analysis where the number of dimensions was estimated using ";
+	    			report << "probabilistic Principal Component Analysis where the"
+							<<" number of dimensions was estimated using ";
 	    			if(opts.pca_est.value() == string("lap"))
-	      			report << "the Laplace approximation to the Bayesian evidence of the model order [Minka 2000, Beckmann 2004]. " << endl;
+	      			report << "the Laplace approximation to the Bayesian"
+							<<" evidence of the model order [Minka 2000, Beckmann 2004]. " << endl;
 	    			else
 	      			if(opts.pca_est.value() == string("bic"))
-							report << "the <em> Bayesian Information Criterion</em> (BIC) [Kass 1993]. " << endl;
+							  report << "the <em> Bayesian Information Criterion</em>"
+								  <<" (BIC) [Kass 1993]. " << endl;
 	      		else
 							if(opts.pca_est.value() == string("mdl"))
-		  				report << "<em> Minimum Description Length</em> (MDL) [Rissanen 1978]. " << endl;
+		  				  report << "<em> Minimum Description Length</em> (MDL)"
+						    	<<" [Rissanen 1978]. " << endl;
 						else
 		  				if(opts.pca_est.value() == string("aic"))
-		    			report << "the <em> Akaike Information Criterion</em> (AIC) [Akaike 1969]. " << endl;
+		    			report << "the <em> Akaike Information Criterion</em>"
+								<<" (AIC) [Akaike 1969]. " << endl;
 		  			else
-		    			report << "a committee of approximations to Bayesian the model order [Beckmann 2004]. " << endl;
+		    			report << " approximations to Bayesian the"
+								<<" model order [Beckmann 2004]. " << endl;
 	  			}	  
 	  			else
 	    			report << "Principal Component Analysis. ";
 	  
-	  			report << " The whitened observations were decomposed into a set of time-courses and spatial maps by optimising for non-Gaussian spatial source distributions using a fixed-point iteration technique [Hyv&auml;rinen 1999]. " << endl;	  
-	  			report << "Estimated Component maps were divided by the standard deviation of the residual noise";
+	  			report << " <BR>The whitened observations were decomposed into "
+						<<" sets of vectors which describe signal variation across"
+						<<" the temporal domain (time-courses)";
+					if(opts.approach.value() == string("tica") ||
+						opts.approach.value() == string("concat"))
+						report << ", the session/subject domain ";
+					report <<"  and across the spatial domain (maps) by optimising for"
+						<<" non-Gaussian spatial source distributions using a"
+						<<" fixed-point iteration technique [Hyv&auml;rinen 1999]. " << endl;	  
+	  			report << "Estimated Component maps were divided by the standard"
+						<<" deviation of the residual noise";
 	  
 	  			if(opts.perf_mm.value())
-	    			report << " and thresholded by fitting a mixture model to the histogram of intensity values [Beckmann 2004]. <p>" << endl;
+	    			report << " and thresholded by fitting a mixture model "
+	 						<<"to the histogram of intensity values [Beckmann 2004]. <p>" << endl;
 	  			else
 	    			report <<".<p>" << endl;
 	 
@@ -182,28 +253,58 @@ namespace Melodic{
 
       inline void refstxt(){
 				if( bool(opts.genreport.value()) ){
-	  			report << "<h3>References</h3> <p>"<<endl;
+	  			report << "<b>References</b> <br>"<<endl;
 	  
-	  			report << "[Hyv&auml;rinen 1999] A. Hyv&auml;rinen. Fast and Robust Fixed-Point Algorithms for Independent Component Analysis. IEEE Transactions on Neural Networks 10(3):626-634, 1999.<br> " << endl;
- 					report << "[Beckmann 2004] C.F. Beckmann and S.M. Smith. Probabilistic Independent Component Analysis for Functional Magnetic Resonance Imaging. IEEE Transactions on Medical Imaging 23(2):137-152 2004. <br>" << endl;
+	  			report << "[Hyv&auml;rinen 1999] A. Hyv&auml;rinen. Fast and"
+						<<" Robust Fixed-Point Algorithms for Independent Component"
+						<<" Analysis. IEEE Transactions on Neural Networks 10(3):"
+						<<"626-634, 1999.<br> " << endl;
+ 						report << "[Beckmann 2004] C.F. Beckmann and S.M. Smith."
+							<<" Probabilistic Independent Component Analysis for Functional"
+							<<" Magnetic Resonance Imaging. IEEE Transactions on Medical"
+							<<" Imaging 23(2):137-152 2004. <br>" << endl;
+					if(opts.approach.value() == string("tica") || 
+						opts.approach.value() == string("concat") )
+						report << "[Beckmann 2005] C.F. Beckmann and S.M. Smith."
+							<<" Tensorial extensions of independent component analysis"
+							<< " for multisubject FMRI analysis. Neuroimage "
+							<< " 25(1):294-311 2005. <br>";
 
 	  			if(melodat.get_PPCA().Storage()>0){	    
-	    			report << "[Everson 2000] R. Everson and S. Roberts. Inferring the eigenvalues of covariance matrices from limited, noisy data. IEEE Trans Signal Processing, 48(7):2083-2091, 2000<br>"<<endl;
-	    			report << "[Tipping 1999] M.E. Tipping and C.M.Bishop. Probabilistic Principal component analysis. J Royal Statistical Society B, 61(3), 1999. <br>" << endl;
-	    		/*  report << "[Beckmann 2001] C.F. Beckmann, J.A. Noble and S.M. Smith. Investigating the intrinsic dimensionality of FMRI data for ICA. In Seventh Int. Conf. on Functional Mapping of the Human Brain, 2001. <br>" << endl;*/
+	    			report << "[Everson 2000] R. Everson and S. Roberts."
+							<<" Inferring the eigenvalues of covariance matrices from"
+							<<" limited, noisy data. IEEE Trans Signal Processing,"
+							<<" 48(7):2083-2091, 2000<br>"<<endl;
+	    			report << "[Tipping 1999] M.E. Tipping and C.M.Bishop."
+							<<" Probabilistic Principal component analysis. J Royal"
+							<<" Statistical Society B, 61(3), 1999. <br>" << endl;
+	    		  report << "[Beckmann 2001] C.F. Beckmann, J.A. Noble and"
+							<<" S.M. Smith. Investigating the intrinsic dimensionality"
+							<<" of FMRI data for ICA. In Seventh Int. Conf. on Functional"
+							<<" Mapping of the Human Brain, 2001. <br>" << endl;
 	    			if(opts.pca_est.value() == string("lap"))
-	      			report << "[Minka 2000] T. Minka. Automatic choice of dimensionality for PCA. Technical Report 514, MIT Media Lab Vision and Modeling Group, 2000. <BR>"<< endl;
+	      			report << "[Minka 2000] T. Minka. Automatic choice of"
+							  <<" dimensionality for PCA. Technical Report 514, MIT"
+								<<" Media Lab Vision and Modeling Group, 2000. <BR>"<< endl;
 	    			else
 	      			if(opts.pca_est.value() == string("bic"))
-							report << "[Kass 1995] R.E. Kass and A. E. Raftery. Bayes factors. Journal of the American Statistical Association, 90:733-795, 1995 <br>" << endl;
+							report << "[Kass 1995] R.E. Kass and A. E. Raftery. Bayes"
+								<<" factors. Journal of the American Statistical"
+								<<" Association, 90:733-795, 1995 <br>" << endl;
 	      		else
 							if(opts.pca_est.value() == string("mdl"))
-		  				report << "[Rissanen 1978]. J. Rissanen. Modelling by shortest data description. Automatica, 14:465-471, 1978. <br>" << endl;
+		  				report << "[Rissanen 1978]. J. Rissanen. Modelling by"
+							  <<" shortest data description. Automatica,"
+								<<" 14:465-471, 1978. <br>" << endl;
 						else
 		  				if(opts.pca_est.value() == string("aic"))
-		    			report << "[Akaike 1974]. H. Akaike. A new look at statistical model identification. IEEE Transactions on Automatic Control, 19:716-723, 1974. <br>" << endl;
+		    			report << "[Akaike 1974]. H. Akaike. A new look at"
+							  <<" statistical model identification. IEEE Transactions"
+								<<" on Automatic Control, 19:716-723, 1974. <br>" << endl;
 		  			else
-		    			report << "[Minka 2000]. T. Minka. Automatic choice of dimensionality for PCA. Technical Report 514, MIT Media Lab Vision and Modeling Group, 2000. <BR>" << endl;
+		    			report << "[Minka 2000]. T. Minka. Automatic choice of"
+								<<" dimensionality for PCA. Technical Report 514, MIT"
+								<<" Media Lab Vision and Modeling Group, 2000. <BR>" << endl;
 
 					}
 				}
@@ -223,7 +324,8 @@ namespace Melodic{
       
       inline void addlink(string where, string what){
 				if( bool(opts.genreport.value()) ){
-	  			report << "<A HREF=\"" << where << "\"> " << what << "</A> ";
+	  			navigator << "<A HREF=\"" << where << " \"target=\"_top\"> " << what << "</A> ";
+					navigator.flush();
 				}
       }
 
@@ -253,6 +355,9 @@ namespace Melodic{
       MelodicOptions &opts;
       Log &logger;
       Log report;
+			Log navigator;
+			Log head;
+			Log loghtml;
 
       Log IChtml;
       Log IChtml2;

@@ -69,10 +69,10 @@
 /* fwdmodel_quipss2.h
  * Class declaration for the QUIPSS II ASL model used in Woolrich MRM'06
  * with additional terms for nuisance regressors (affecting the signal). 
- * Copyright Adrian Groves, 2007
+ * Written by Adrian Groves, 2007
  * FMRIB Centre, University of Oxford
  *
- * Last modified: $Date: 2007/08/01 15:55:35 $ $Author: adriang $ $Revision: 1.11 $
+ * Last modified: $Date: 2007/08/02 11:16:47 $ $Author: adriang $ $Revision: 1.12 $
  */
 
 #ifndef __FABBER_FWDMODEL_QUIPSS2_H

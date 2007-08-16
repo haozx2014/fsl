@@ -79,7 +79,7 @@ string FwdModel::ModelVersion() const
   // Something like this:
   // return " $ I d $ "; // without the spaces
   // CVS will automatically replace this with version information that looks
-  // like this: $Id: fwdmodel.cc,v 1.10 2007/08/01 15:55:35 adriang Exp $
+  // like this: $Id: fwdmodel.cc,v 1.12 2007/08/06 13:52:16 adriang Exp $
   // It should probably go in your .cc file, not the header.
 }
 
@@ -106,7 +106,6 @@ void FwdModel::DumpParameters(const ColumnVector& params,
 
 #include "fwdmodel_simple.h"
 #include "fwdmodel_quipss2.h"
-#include "fwdmodel_asl_eagle.h"
 #include "fwdmodel_asl_grase.h"
 #include "fwdmodel_asl_buxton.h"
 #include "fwdmodel_q2tips.h"
@@ -125,14 +124,10 @@ FwdModel* FwdModel::NewFromName(const string& name, ArgsType& args)
     {
         return new Quipss2FwdModel(args);
     } 
-    else if (name == "q2tips")
+    else if (name == "q2tips-dualecho") // NOT the interleaved-echo Q2TIPS described in Woolrich06
     {
         return new Q2tipsFwdModel(args);
     } 
-    else if (name == "eagle")
-      {
-	return new EagleFwdModel(args);
-      }
     else if (name == "grase")
       {
 	return new GraseFwdModel(args);
@@ -175,10 +170,6 @@ void FwdModel::ModelUsageFromName(const string& name, ArgsType& args)
       {
 	BuxtonFwdModel::ModelUsage();
       }
-//    else if (name == "eagle")
-//      {
-//    return new EagleFwdModel(args);
-//      }
     // Your models go here!
     else
     {

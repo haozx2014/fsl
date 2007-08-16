@@ -94,7 +94,7 @@ Option<bool> help(string("-h,--help"), false,
 		  string("display this message"),
 		  false, no_argument);
 Option<string> opt_pulse(string("-p,--pulse"), string(""),
-                  string("8-column pulse_sequence matrix [time(s) rf_angle(rad) rf_freq_band(Hz) rf_center_freq(Hz) readout(1/0) Gx(T/m) Gy(T/m) Gz(T/m)] & a pulse.info file in the same directory: pulse.info is a raw vector with 17 elements in this order:seqtype(1 for EPI, 2 for GE);TE;TRvol(between volumes);TR(between RF pulses);Nx;Ny;dx;dy;maxGrad*;risetime*;BWrec*;numvol;numslc;slcthk;slcdir(put 1);gap;zstart. Elements with a * you can fill in with zeros if you don't know them."),
+                  string("8-column pulse_sequence matrix. Expects to find all other pulse sequence files in the same directory."),
 		  true, requires_argument);
 Option<bool> useabs(string("-a,--abs"), false,
 		  string("save absolute magnitude and phase"),
@@ -119,6 +119,7 @@ int ReshapeEpiSignal(const Matrix& signal,
 		     const int slcdir,const int nslc,const int phasedir, const int nphase, const int readdir, const int nread, 
              volume4D<double>& kspace_real,volume4D<double>& kspace_imag) {
   
+  cout<<"Reshaping the signal..."<<endl;
   int n=kspace_real.tsize();
   int slchelp=0;
   int simdir=1;
@@ -176,15 +177,17 @@ int ReshapeEpiSignal(const Matrix& signal,
 		 xdir2=nread-m;
 	       }
 	       kspace_real(xdir1,ydir1,zdir1,nn-1)=signal(1,a+m-1);
-               if (verbose.value() && (a+m)<20) {
+               if (verbose.value()) {
                   cout<<signal(1,a+m-1)<<endl;
                   cout<<"xdir1="<<xdir1<<" ydir1="<<ydir1<<" zdir1="<<zdir1<<endl;
 		  cout<<kspace_real(xdir1,ydir1,zdir1,nn-1)<<endl;
 		  cout<<""<<endl;
 	       }
-	       kspace_real(xdir2,ydir2,zdir2,nn-1)=signal(1,c+m-1);
 	       kspace_imag(xdir1,ydir1,zdir1,nn-1)=signal(2,a+m-1);
-	       kspace_imag(xdir2,ydir2,zdir2,nn-1)=signal(2,c+m-1);
+               if (ydir2 <= (nphase-1)) {
+	           kspace_real(xdir2,ydir2,zdir2,nn-1)=signal(1,c+m-1);
+	           kspace_imag(xdir2,ydir2,zdir2,nn-1)=signal(2,c+m-1);
+	       }
 	      }
 	  }
       }

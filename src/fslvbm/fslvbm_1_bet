@@ -70,10 +70,12 @@
 
 Usage() {
     echo ""
-    echo "Usage: fslvbm_1_bet [options]"
+    echo "Usage: fslvbm_1_bet  <-b or -N>  [options to be passed on to BET] "
     echo ""
     echo "-b  : default BET brain extraction"
     echo "-N  : increased robustness in the brain extraction when a lot of neck is present"
+    echo ""
+    echo "e.g.,   fslvbm_1_bet -b  -f 0.6 -R"
     echo ""
     exit 1
 }
@@ -86,6 +88,7 @@ bet=0
 if [ $1 = -N ] ; then
     bet=1
 fi
+shift
 
 export FSLOUTPUTTYPE=ANALYZE
 cd FAi
@@ -95,11 +98,11 @@ for g in `$FSLDIR/bin/remove_ext *FAi.hdr` ; do
     echo $g  
     imagelist="$imagelist $g ${g}_brain"
     if [ $bet = 0 ] ; then
-	$FSLDIR/bin/bet ${g} ${g}_brain -f 0.4
+	$FSLDIR/bin/bet ${g} ${g}_brain -f 0.4 $@
     else
 	$FSLDIR/bin/bet $g ${g}_brain
-	$FSLDIR/bin/standard_space_roi ${g}_brain ${g}_cut -roiNONE -ssref ${FSLDIR}/etc/standard/avg152T1_brain -altinput $g
-	$FSLDIR/bin/bet ${g}_cut ${g}_brain -f 0.4
+	$FSLDIR/bin/standard_space_roi ${g}_brain ${g}_cut -roiNONE -ssref ${FSLDIR}/data/standard/MNI152_T1_2mm_brain -altinput $g
+	$FSLDIR/bin/bet ${g}_cut ${g}_brain -f 0.4 $@
     fi
 done
 

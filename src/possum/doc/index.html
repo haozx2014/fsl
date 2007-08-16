@@ -1,95 +1,38 @@
-<!DOCTYPE HTMLPUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN""http://www.w3.org/TR/REC-html40/losse.dtd">
-<HTML><HEAD>
-  <TITLE>possum Command-line Program and Utilities</TITLE>
-</HEAD>
- <BODY BACKGROUND="../images/flirt-bg.jpg" BGCOLOR="white">
-<hr>  <TABLE BORDER=0 WIDTH="100%"><TR>
-   <TD ALIGN=CENTER><H1>possum Command-line Program and Utilities</H1>
-  <TD ALIGN=RIGHT>  <a href="../index.html"><IMG BORDER=0 SRC="../images/fsl-logo.jpg"></a>
-   </TR></TABLE>
-  <!-- No Table of Contents -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<HTML><HEAD><meta http-equiv="Content-Type"
+content="text/html;charset=utf-8">
+<link REL="stylesheet" TYPE="text/css" href="../fsl.css">
+<TITLE>POSSUM</TITLE></HEAD><BODY><OBJECT data="top.html"></OBJECT>
 
-<A NAME="section1"></A><HR><H2>INTRODUCTION</H2>
+<H2>Introduction</H2>
+<IMG ALIGN=RIGHT hspace=10 SRC="gui.png"
  
-This document gives a brief description of possum and the various command-line
-programs available in the POSSUM component of FSL.  A description of
-the available <a href="gui.html">GUI interfaces</a> is also available.
+<P>POSSUM (Physics-Oriented Simulated Scanner for Understanding MRI) is a software tool for generating simulated MRI and FMRI images. POSSUM is part of <a href="http://www.fmrib.ox.ac.uk/fsl" target="_top">FSL</a> (FMRIB's Software Library). POSSUM has an easy-to-use graphical user interface (GUI) and its component programs can also be run from the command line. POSSUM includes tools for the pulse sequence generation, signal generation, noise addition and image reconstruction. 
 
-<P>
-For each of the programs described here, a usage message which describes
-the full list of available options can be obtained by running the
-program with no options.
+<p>Running POSSUM is done in four main steps:
 
-<p>
-See also the list of common <a href="examples.html">example usages.</a>
+<P>1.<a href="input.html">Input:</a>  It is first necessary to create the input files. These files are: object, MR parameters, 
+pulse sequence, slice profile, motion sequence, B0 field inhomogeneities, 
+activation and noise. There is an example for each of these 
+files in the folder <tt>$FSLDIR/data/possum</tt>. Note that the pulse sequence and the noise file are created within the POSSUM GUI. There is no need to create those in advance.
 
-<br>
+<P>2.<a href="run.html">Run POSSUM:</a> To run POSSUM, call the POSSUM GUI. 
+This is done with a command <b>Possum</b> (or <b>Possum_gui</b> on a MAC), or run <b>fsl</b> and press the POSSUM button. After you have specified all of the input files in the GUI, press "GO". POSSUM GUI will create a POSSUM directory and save all the ouput there.
 
- <!-- J-Back -->
+<P>3. <a href="output.html">Output:</a> You can, in addition to the main outputs in the POSSUM directory (MRI signal - raw data, not yet processed into a k-space or an image; and MRI image - magnitude and phase), generate a k-space or a complex version of the image. You can do this by the use of a command-line program <b>signal2image</b>. 
 
-<A NAME="section2"></A><HR><H2>possum</H2>
+<P>4. <a href="noise.html">Thermal noise:</a> You can also add various levels of white (thermal) noise to the output (next to the one you already specified in the GUI). To do this use a command-line <b>systemnoise</b>. 
+
+<P> For other information on POSSUM and updated journal references, see the <A
+HREF="http://www.fmrib.ox.ac.uk/analysis/research/possum/">POSSUM research
+web page</A>. If you use POSSUM in your research, please quote the
+journal references listed there.
+
+
+
+
+<HR><FONT SIZE=1>Copyright &copy; 2007, University of Oxford. <A
+HREF="http://www.fmrib.ox.ac.uk/~ivana">Ivana Drobnjak</A> and <A
+HREF="http://www.fmrib.ox.ac.uk/~mark">Mark Jenkinson</A>.</FONT>
  
-<B>possum</B> is the main program that performs simulation of MRI and FMRI images. The main options are:
-
-<DL>
-<DT> <I>Input object</I></DT>
-<DD> Input object can be specified
-using <FONT COLOR=PURPLE>-i</FONT>, <FONT
-COLOR=PURPLE>--in</FONT>. The input object is a 4D volume where the 4-th dimension is tissue-type. The object can be a segmented anatomical voxel model from any source. It should consists of three-dimensional anatomical images with specified MR parameters (relaxation times T1, T2, spin density PD, and chemical shift value Dcs)  of distinct tissue types (MR parameters are provided as a separate option which is described below). For example, if the object is a brain, then a segmented anatomical voxel model would be a collection of tissue templates: three-dimensional anatomical images  of distinct tissue types (e.g. one template of grey matter, another of white matter and a third of cerebro-spinal fluid (CSF)). If the object is a breast, then a collection of these tissue templates might consists of three-dimensional anatomical images  of fat tissue, skin, etc. An example of input object is provided with possum software and can be found in <tt>$FSLDIR/etc/possumdata</tt> . It is the digital brain phantom introduced by the McConnell Brain Imaging Centre, Montreal Neurological Institute, McGill University.  The digital brain phantom consists of a set of three-dimensional tissue membership volumes, with three tissue classes (white matter, gray matter, cerebrospinal fluid (CSF)). The voxel values in these volumes reflect the proportion of tissue present in that voxel, in the range [0,1]. The volumes are defined on a 1mm voxel grid, with dimensions 181x217x181 and an origin of (90, 126, 72). Input object can be generated by the user itself. The most common way to do this is to use a segmented T1 weighted structural image (desirably 1x1x1mm size voxels). Each segmentation volume can then be used as a tissue class. By merging them together the 4D digital phantom is obtained. An example of this is shown in <a href="examples.html">example usages.</a>.
-
-</DD>
-<DT> <I>MR parameters</I></DT>
-<DD> MR parameters are selected using the
-<FONT COLOR=PURPLE>-x</FONT> option. The MR parameters (relaxation times T1, T2, spin density PD, and chemical shift value Dcs) are specified using a matrix. An example matrices (for both 1.5T and 3T scanner) with a set of parameter values for each of the tissue types are provided in  <tt>$FSLDIR/etc/possumdata</tt>.
-
-</DD>
-<DT> <I>Pulse sequence</I></DT>
-<DD>  Pulse sequence is selected using the
-<FONT COLOR=PURPLE>-p</FONT> option. There are five files expected to be found: pulse, pulse.info, pulse.readme, pulse.posx, pulse.posy, pulse.posz. All of these files are generated using an utility <B>pulse</B> which can generate EPI pulse sequences. The description of this utility is below. It is also possible to import the matrix directly from any other pulse sequence generators. These are often part of the scanner software system. 
-
-</DD>
-<DT> <I>Slice profile</I></DT>
-<DD>  Slice profile is selected using the
-<FONT COLOR=PURPLE>-s</FONT> option. Slice profile is a property of RF pulses. It describes the shape of the RF pulse in the frequency space. The shape is important as it defines the ``amount'' of excitation for the spins precessing at different frequencies. Example of slice profile file is given in <tt>$FSLDIR/etc/possumdata</tt>. 
-
-</DD>
-<DT> <I>Motion sequence</I></DT>
-<DD>  Motion sequence is selected using the
-<FONT COLOR=PURPLE>-m</FONT> option. The input motion sequence is defined in the simulator by an input file which specifies the motion parameters: Tx, Ty, Tz characterising translations, and rotations Rx, Ry, Rz characterising rotations about the center of the volume. These rotations are specified using rotation angles often called pitch (rotation about the x-axis), roll (rotation about the y-axis) and yaw (rotation about the z-axis). All rotations are assumed to happen using the right hand rule, and in the order pitch-roll-yaw.
-
-</DD>
-<DT> <I>B0 inhomogeneities</I></DT>
-<DD>  B0 inhomogeneities are selected using the
-<FONT COLOR=PURPLE>-b</FONT> option. An example of a bhe basis set is provided in <tt>$FSLDIR/etc/possumdata</tt>. 
-
-</DD>
-<DT> <I>Activation</I></DT>
-<DD>  Activation is selected using the
-<FONT COLOR=PURPLE>-a</FONT> option. It is specified as a change in T2* and through a 3D file and an extra files providing the scalling parameter together with the time-points when the scaling parameter is applied. 
-
-</DD>
-</UL>
-
- <!-- J-Back -->
-
-<A NAME="pulse"></A><HR><H2>pulse</H2>
- 
-<B>pulse</B> is a utility that is used to generate pulse sequence. The pulse sequence in the simulator is defined by the desired values of the gradient field, RF pulse parameters and readout timings at discrete, user-specified time-points. It is in the matrix form.
-
- <!-- J-Back -->
-
-<A NAME="signal2image"></A><HR><H2>signal2image</h2>
- 
-<B>signal2image</B> is a utility that converts the possum output (raw signal) into the image. 
-
- <!-- J-Back -->
-
-<A NAME="systemnoise"></A><HR><H2>systemnoise</h2>
- 
-<B>systemnoise</B> is a utility that adds white noise to the signal. Only standard deviation needs to be specified.
-
-
-   <HR>
-  <!-- No Footnotes -->
-  <H4>Ivana Drobnjak  <BR><BR>Copyright &copy; 2007, University of Oxford</H4><BR>
-</BODY></HTML>

@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.46 2007/07/09 23:02:29 mark Exp $
+# $Id: Makefile,v 1.53 2007/08/06 09:29:54 steve Exp $
 include ${FSLCONFDIR}/default.mk
 
 PROJNAME = possum
@@ -25,7 +25,7 @@ PAROBJS=possum_sum.o
 RUNTCLS=Possum
 XFILES=possum spharm_rm signal2image pulse systemnoise possum_sum b0calc
 TESTXFILES=b0sim test_possum
-SCRIPTS = sge_possum sge_possum_postproc.sh sge_possum_single_proc.sh possumRun possumX generate_pulse possum_docs generate_brainb0
+SCRIPTS = possumX possumX_postproc.sh generate_b0 generate_brain
 MFILES=read_pulse.m write_pulse.m
 
 all: ${XFILES} matlabfiles

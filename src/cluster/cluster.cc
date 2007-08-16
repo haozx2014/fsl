@@ -1,8 +1,8 @@
 /*  cluster.cc
 
-    Mark Jenkinson, FMRIB Image Analysis Group
+    Mark Jenkinson & Matthew Webster, FMRIB Image Analysis Group
 
-    Copyright (C) 2000-2002 University of Oxford  */
+    Copyright (C) 2000-2007 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -206,7 +206,7 @@ void vox2mmcoord(vector<triple<float> >& coords,
     cc(1) = coords[n].x;
     cc(2) = coords[n].y;
     cc(3) = coords[n].z;
-    cc = vol.sform_mat() * cc;
+    cc = vol.vox2mm_mat() * cc;
     coords[n].x = cc(1);
     coords[n].y = cc(2);
     coords[n].z = cc(3);
@@ -220,7 +220,7 @@ void applyvoxelxfm(vector<triple<T> >& coords, const Matrix& mat,
 	      const volume<S>& source, const volume<S>& dest)
 {
   Matrix voxmat;
-  voxmat = dest.sampling_mat().i() * mat * source.sampling_mat();
+  voxmat = Vox2VoxMatrix(mat,source,dest);
   ColumnVector vec(4);
   for (unsigned int n=0; n<coords.size(); n++) {
     vec << coords[n].x << coords[n].y << coords[n].z << 1.0;
@@ -377,7 +377,7 @@ void print_results(const vector<int>& idx,
   if (mm.value()) {
     if ( !transformname.unset() && !stdvolname.unset() ) refvol = &stdvol;
     if (verbose.value()) { 
-      cout << "Using matrix : " << endl << refvol->sform_mat() << endl; 
+      cout << "Using matrix : " << endl << refvol->vox2mm_mat() << endl; 
     }
     vox2mmcoord(fmaxpos,*refvol);
     vox2mmcoord(fcog,*refvol);

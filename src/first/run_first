@@ -70,19 +70,19 @@
 
 Usage() {
     echo ""
-    echo "Usage:   run_first [-i <input_image>] [-t <input_to_mni.mat>] [-n <N-modes>] [-o <output_basename>] [-m <model_name>] [options]"
+    echo "Usage:   run_first -i <input_image> -t <input_to_mni.mat> -n <N-modes> -o <output_basename> -m <model_name> [options]"
+    echo ""
+    echo "-v                   : verbose"
+    echo "-intref <model_name> : reference structure for the local intensity normalization"
+    echo "-loadBvars <bvars>   : initializes FIRST with a previous estimate of the structure"
+    echo "-shcond <bmapfile>   : run FIRST on a structure given a previously segmented structure"
     echo ""
     echo "e.g.:  run_first -i im1 -t im1_to_mni.mat -n 60 -o output_name -m ${FSLDIR}/data/first/models_317_bin/L_Hipp_bin.bmv"
     echo ""
     exit 1
 }
 
-
 debug=0
-betted=0
-intref=0
-shcond=0
-lvars=0
 required=0
 
 while [ _$1 != _ ] ; do
@@ -107,24 +107,20 @@ while [ _$1 != _ ] ; do
 	modes=$2
 	shift 2
     elif [ $1 = -intref ] ; then
-	intref=1
-	modelRef=$2
+	comExtras="$comExtras --useIntRefModel -n $2" 
 	shift 2
     elif [ $1 = -loadBvars ] ; then
-	lvars=1
-	bvars=$2
+	comExtras="$comExtras --loadvars -o $2"
 	shift 2
     elif [ $1 = -shcond ] ; then
-	shcond=1
-	bmap=$2
+	comExtras="$comExtras --shcond -b $2"
 	shift 2
     elif [ $1 = -o ] ; then
 	required=`echo $required + 1 | bc`
 	outname=$2
 	shift 2
     else
-	shift 1
-		#not a valid option
+	Usage
     fi
 done
 
@@ -132,30 +128,18 @@ done
 [ `${FSLDIR}/bin/imtest $image` = 0 ] && Usage
 
 #use robust statistics
-ub=`${FSLDIR}/bin/fslstats $image -r | awk '{ print $2 }'`
 lb=`${FSLDIR}/bin/fslstats $image -r | awk '{ print $1 }'`
-comExtras=""
+ub=`${FSLDIR}/bin/fslstats $image -r | awk '{ print $2 }'`
 
-if [ $intref = 1 ]; then
-	comExtras="${comExtras} --useIntRefModel -n ${modelRef}" 
-fi
-if [ $shcond = 1 ]; then
-	comExtras="${comExtras}  --shcond -b ${bmap}"
-fi
-if [ $lvars = 1 ]; then
-	comExtras="${comExtras}  --loadvars -o ${bvars} "
-fi
-
-
-if [ -f ${model} ]; then
-    if [ -f ${trmat} ]; then
-	${FSLDIR}/bin/first --baam -i ${image} -l ${trmat}  -m ${model} -k  ${outname} -s 8 -g ${modes}   -y ${lb} -z ${ub} -a -777 ${verbose} ${comExtras}
-    else
-		echo "linear transformation matrix file not found"
-	exit 1
-    fi
-else
+if [ ! -f ${model} ] ; then
     echo "model file not found"
     exit 1
 fi
+
+if [ ! -f ${trmat} ] ; then
+    echo "linear transformation matrix file not found"
+    exit 1
+fi
+
+${FSLDIR}/bin/first --baam -i $image -l $trmat -m $model -k $outname -s 8 -g $modes -y $lb -z $ub -a -777 $verbose $comExtras
 

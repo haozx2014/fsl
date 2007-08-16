@@ -1,6 +1,6 @@
 /*  fwdmodel_quipss2.cc - Implements the QUIPSS II ASL
 
-    Michael Chappell, FMRIB Image Analysis Group
+    Adrian Groves, FMRIB Image Analysis Group
 
     Copyright (C) 2007 University of Oxford  */
 
@@ -77,7 +77,7 @@ using namespace NEWIMAGE;
 
 string Quipss2FwdModel::ModelVersion() const
 {
-  return "$Id: fwdmodel_quipss2.cc,v 1.19 2007/07/27 21:58:30 adriang Exp $";
+  return "$Id: fwdmodel_quipss2.cc,v 1.20 2007/08/02 15:14:11 adriang Exp $";
 }
 
 void Quipss2FwdModel::HardcodedInitialDists(MVNDist& prior, 

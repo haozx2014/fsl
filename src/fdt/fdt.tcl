@@ -96,7 +96,7 @@ proc mm_to_voxels { X Y Z mask } {
 proc fdt:dialog { w tclstartupfile } {
 
     global eddy bedpost registration dtifit probtrack HTMLPATH FSLDIR VERSION INMEDX VARS
-    set probtrack(tool) "probtrack"
+    set probtrack(tool) "probtrackx"
 
     if [winfo exists $w] {
         wm deiconify $w
@@ -112,7 +112,7 @@ proc fdt:dialog { w tclstartupfile } {
     #-------- Stage and Mode Options -------- 
 
     frame $w.tool
-    optionMenu2 $w.tool.menu probtrack(tool) -command "fdt:select_tool $w" eddy_current "Eddy current correction" bedpost "BEDPOSTX Estimation of diffusion parameters"  registration "Registration" probtrack "PROBTRACKX Probabilistic tracking" xutilssx "----------------------------------------------------" dtifit "DTIFIT Reconstruct diffusion tensors" 
+    optionMenu2 $w.tool.menu probtrack(tool) -command "fdt:select_tool $w" eddy_current "Eddy current correction" bedpostx "BEDPOSTX Estimation of diffusion parameters"  registration "Registration" probtrackx "PROBTRACKX Probabilistic tracking" xutilssx "----------------------------------------------------" dtifit "DTIFIT Reconstruct diffusion tensors" 
     $w.tool.menu.menu entryconfigure 4 -state disabled -background black
     pack $w.tool.menu -side left -pady 3 -padx 6 -anchor nw
 
@@ -166,7 +166,7 @@ proc fdt:dialog { w tclstartupfile } {
     set registration(standard_yn) 1
     set registration(standard_dof) 12
     set registration(standard_search) 90
-    set registration(standard_image) [ file join ${FSLDIR} etc standard avg152T1_brain ]
+    set registration(standard_image) [ file join ${FSLDIR} data standard MNI152_T1_2mm_brain ]
 
     pack $w.registration.directory $w.registration.struct $w.registration.standard -side top -padx 3 -pady 3 -anchor w
 
@@ -549,9 +549,9 @@ proc fdt:select_tool { w } {
     pack forget $w.bedpost
     pack forget $w.registration
     pack forget $w.dtifit
-    if {$probtrack(tool) == "bedpost"} { 
+    if {$probtrack(tool) == "bedpostx"} { 
 	pack $w.bedpost -in $w.opts -side top -padx 3 -pady 3 -anchor nw
-    } elseif {$probtrack(tool) == "probtrack"}  { 
+    } elseif {$probtrack(tool) == "probtrackx"}  { 
 	pack $w.probtrack -in $w.opts -side top -padx 3 -pady 3 -anchor nw
     } elseif {$probtrack(tool) == "dtifit"}  { 
 	pack $w.dtifit -in $w.opts -side top -padx 3 -pady 3 -anchor nw
@@ -685,7 +685,7 @@ proc fdt:apply { w dialog } {
 		fdt_monitor_short $w "${FSLDIR}/bin/dtifit --data=$dtifit(input) --out=$dtifit(output) --mask=$dtifit(mask) --bvecs=$dtifit(bvecs) --bvals=$dtifit(bvals)"
 	    }
 	}
-	bedpost {
+	bedpostx {
 	    global bedpost
 
 	    set errorStr ""
@@ -715,7 +715,7 @@ proc fdt:apply { w dialog } {
 		fdt_monitor $w "${FSLDIR}/bin/bedpostx $bedpost(directory) -n $bedpost(nfibres) -w $bedpost(weight)  -b $bedpost(burnin)"
 	    }
 	}
-	probtrack {
+	probtrackx {
 	    global probtrack env
 	    set errorStr ""
             set FSLPARALLEL 0
@@ -748,7 +748,7 @@ proc fdt:apply { w dialog } {
 		exec mkdir -p $probtrack(output)
        	    }
 
-	    set filebase $probtrack(output)/fdtx
+	    set filebase $probtrack(output)/fdt
 	    set logfile "${filebase}_log.tcl"
 	    set log [open "$logfile" w]
 	    puts $log "set tool $probtrack(tool)"
@@ -798,15 +798,17 @@ proc fdt:apply { w dialog } {
                     set flags "--mode=simple --seedref=$probtrack(reference) -o $probtrack(output) -x ${filebase}_coordinates.txt $flags"
 	       } 
                seedmask {
-		     if { $probtrack(bcyn) } { 
-			 fdt_monitor_short $w "${FSLDIR}/bin/convert_xfm -omat $probtrack(output)/tmp_xfm_mat -inverse $probtrack(xfm)"
-			 fdt_monitor_short $w "${FSLDIR}/bin/flirt -in $probtrack(bedpost_dir)/nodif_brain_mask -ref $probtrack(reference) -applyxfm -init $probtrack(output)/tmp_xfm_mat -out $probtrack(output)/tmp_brain_mask"
-			 fdt_monitor_short $w "${FSLDIR}/bin/flirt -in $probtrack(output)/tmp_brain_mask -ref $probtrack(output)/tmp_brain_mask -applyisoxfm $probtrack(scale) -out $probtrack(output)/lowresmask"
-			 fdt_monitor_short $w "${FSLDIR}/bin/fslmaths  $probtrack(output)/lowresmask -thr 0.5 -bin  $probtrack(output)/lowresmask"
-                       set flags "$flags --lrmask=$probtrack(output)/lowresmask --omatrix2" 
-			 fdt_monitor_short $w "${FSLDIR}/bin/imrm $probtrack(output)/tmp_brain_mask"
-			 fdt_monitor_short $w "/bin/rm $probtrack(output)/tmp_xfm_mat"
-                   }
+		   if { [ file exists /usr/local/fsl/bin/reord_OM ] } {
+		       if { $probtrack(bcyn) } { 
+			   fdt_monitor_short $w "${FSLDIR}/bin/convert_xfm -omat $probtrack(output)/tmp_xfm_mat -inverse $probtrack(xfm)"
+			   fdt_monitor_short $w "${FSLDIR}/bin/flirt -in $probtrack(bedpost_dir)/nodif_brain_mask -ref $probtrack(reference) -applyxfm -init $probtrack(output)/tmp_xfm_mat -out $probtrack(output)/tmp_brain_mask"
+			   fdt_monitor_short $w "${FSLDIR}/bin/flirt -in $probtrack(output)/tmp_brain_mask -ref $probtrack(output)/tmp_brain_mask -applyisoxfm $probtrack(scale) -out $probtrack(output)/lowresmask"
+			   fdt_monitor_short $w "${FSLDIR}/bin/fslmaths  $probtrack(output)/lowresmask -thr 0.5 -bin  $probtrack(output)/lowresmask"
+			   set flags "$flags --lrmask=$probtrack(output)/lowresmask --omatrix2" 
+			   fdt_monitor_short $w "${FSLDIR}/bin/imrm $probtrack(output)/tmp_brain_mask"
+			   fdt_monitor_short $w "/bin/rm $probtrack(output)/tmp_xfm_mat"
+		       }
+		   }
                    set flags "--mode=seedmask -x $probtrack(reference) $flags"  
 	       }
 	       network {
@@ -941,7 +943,7 @@ proc fdt:apply { w dialog } {
     }
 
     if { $canwrite } { 
-	if { $FSLPARALLEL && { $probtrack(tool) == "bedpost" || $probtrack(tool)=="probtrack" } } { MxPause " Job submitted to queue" } else  { MxPause "  Done!  " }
+	if { $FSLPARALLEL == 1  && [ string match *x* $probtrack(tool) ]} { MxPause " Job submitted to queue" } else  { MxPause "  Done!  " }
 	update idletasks
     }
 

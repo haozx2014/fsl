@@ -104,13 +104,13 @@ if { [ file exists ${FSLDIR}/tcl/loadvarian.tcl ] } {
 }
 
 if { [ file exists ${FSLDIR}/tcl/bet.tcl ] } {
-    button $w.f1.bet -text "BET Brain Extraction" \
+    button $w.f1.bet -text "BET brain extraction" \
 	    -command { exec sh -c "${FSLDIR}/bin/Bet$gui_ext" & }
     pack $w.f1.bet -in $w.f1 -fill x -padx 1 -pady 1
 }
 
 if { [ file exists ${FSLDIR}/tcl/susan.tcl ] } {
-    button $w.f1.susan -text "SUSAN Noise Reduction" \
+    button $w.f1.susan -text "SUSAN noise reduction" \
 	    -command { exec sh -c "${FSLDIR}/bin/Susan$gui_ext" & }
     pack $w.f1.susan -in $w.f1 -fill x -padx 1 -pady 1
 }
@@ -122,13 +122,13 @@ if { [ file exists ${FSLDIR}/tcl/fast.tcl ] } {
 }
 
 if { [ file exists ${FSLDIR}/tcl/flirt.tcl ] } {
-    button $w.f1.flirt -text "FLIRT Linear Registration" \
+    button $w.f1.flirt -text "FLIRT linear registration" \
 	    -command { exec sh -c "${FSLDIR}/bin/Flirt$gui_ext" & }
     pack $w.f1.flirt -in $w.f1 -fill x -padx 1 -pady 1
 }
 
 if { [ file exists ${FSLDIR}/tcl/feat.tcl ] } {
-    button $w.f1.feat -text "FEAT FMRI Analysis" \
+    button $w.f1.feat -text "FEAT FMRI analysis" \
 	    -command { exec sh -c "${FSLDIR}/bin/Feat$gui_ext" & }
     pack $w.f1.feat -in $w.f1 -fill x -padx 1 -pady 1
 }
@@ -140,9 +140,15 @@ if { [ file exists ${FSLDIR}/tcl/melodic.tcl ] } {
 }
 
 if { [ file exists ${FSLDIR}/tcl/fdt.tcl ] } {
-    button $w.f1.fdt -text "FDT Diffusion" \
+    button $w.f1.fdt -text "FDT diffusion" \
 	    -command { exec sh -c "${FSLDIR}/bin/Fdt$gui_ext" & }
     pack $w.f1.fdt -in $w.f1 -fill x -padx 1 -pady 1
+}
+
+if { [ file exists ${FSLDIR}/tcl/possum.tcl ] } {
+    button $w.f1.possum -text "POSSUM MRI simulator" \
+	    -command { exec sh -c "${FSLDIR}/bin/Possum$gui_ext" & }
+    pack $w.f1.possum -in $w.f1 -fill x -padx 1 -pady 1
 }
 
 if { [ file exists ${FSLDIR}/bin/fslview ] || [ file exists ${FSLDIR}/bin/fslview.exe ] } {

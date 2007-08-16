@@ -80,16 +80,13 @@ Usage() {
 [ "$3" = "" ] && Usage
 [ `${FSLDIR}/bin/imtest $1` = 0 ] && Usage
 A=`${FSLDIR}/bin/remove_ext $1`
-
 Af=`echo $A | awk -F / '{print $NF}'`
-echo $Af
-
 
 echo ${FSLDIR}/bin/first_flirt $A ${Af}_to_std
 
 FLIRTID=`${FSLDIR}/bin/fsl_sub -T 15 ${FSLDIR}/bin/first_flirt $A ${Af}_to_std`
 COM=${3}.com
-/bin/rm -f ${COM}
+/bin/rm -f ${COM}*
 
 imscorr=""
 imsfirst=""
@@ -150,15 +147,15 @@ for s in L_Accu L_Amyg L_Caud L_Hipp L_Late L_Pall L_Puta L_Thal R_Accu R_Amyg R
 
 done
 
-FIRSTID=`fsl_sub -T 60 -N first -j $FLIRTID -t $COM`
+FIRSTID=`${FSLDIR}/bin/fsl_sub -T 60 -N first -j $FLIRTID -t $COM`
 
 threshnop=`echo ${2} | sed 's/\.//g'`
-
 
 echo "${FSLDIR}/bin/fslmerge -t ${3}_all_th${threshnop}_first ${imscorr} ; ${FSLDIR}/bin/fslmaths ${3}_all_th${threshnop}_first -Tmean -mul 16 ${3}_all_th${threshnop}_first -odt int ; ${FSLDIR}/bin/fslmerge -t ${3}_all_th${threshnop}_first ${3}_all_th${threshnop}_first  ${imsfirst}" > ${COM}2
 
 MERGEID=`fsl_sub -T 15 -N first_post -j $FIRSTID -t ${COM}2`
 
-echo "/bin/rm ${3}-*_corr*.nii.gz  ${3}-*_first*.nii.gz" >${COM}3
+echo "${FSLDIR}/bin/imrm ${3}-*_corr* ${3}-*_first*" >${COM}3
 
 fsl_sub -T 5 -N clean_up -j $MERGEID -t ${COM}3 
+

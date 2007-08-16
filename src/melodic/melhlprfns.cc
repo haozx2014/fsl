@@ -376,7 +376,7 @@ namespace Melodic{
     evecs = C * Evc;
   }  //void em_pca
 
-  void rankapprox(const Matrix& Mat, Matrix& cols, Matrix& rows, int dim)
+  float rankapprox(const Matrix& Mat, Matrix& cols, Matrix& rows, int dim)
   { 
     Matrix Corr, Evecs, tmpWM, tmpDWM, tmp;
     RowVector Evals;
@@ -385,29 +385,36 @@ namespace Melodic{
     tmp = tmpWM * Mat.t();
     cols = tmp.t();
     rows << tmpDWM;
+		float res;
+		Evals=fliplr(Evals);
+		res = sum(Evals.Columns(1,dim),2).AsScalar()/sum(Evals,2).AsScalar()*100;
+		return res;
   } // rankapprox
 
-  void krfact(const Matrix& Mat, Matrix& cols, Matrix& rows)
+  RowVector krfact(const Matrix& Mat, Matrix& cols, Matrix& rows)
   {
-    Matrix out;
-    for(int ctr1 = 1; ctr1 <= Mat.Ncols(); ctr1++)
-      {
-	Matrix tmpVals(cols.Nrows(),rows.Nrows());
-	for(int ctr2 = 1; ctr2 <= rows.Nrows(); ctr2++)
-	  tmpVals.Column(ctr2) << Mat.SubMatrix(cols.Nrows() * (ctr2 - 1) + 1,cols.Nrows()*ctr2 ,ctr1,ctr1);
+		Matrix out; RowVector res(Mat.Ncols());
+    for(int ctr1 = 1; ctr1 <= Mat.Ncols(); ctr1++){
+			Matrix tmpVals(cols.Nrows(),rows.Nrows());
+			for(int ctr2 = 1; ctr2 <= rows.Nrows(); ctr2++)
+	  		tmpVals.Column(ctr2) << Mat.SubMatrix(cols.Nrows() * 
+				(ctr2 - 1) + 1,cols.Nrows()*ctr2 ,ctr1,ctr1);
 	
-	Matrix tmpcols, tmprows;
-	rankapprox(tmpVals, tmpcols, tmprows);
-	cols.Column(ctr1) = tmpcols;
-	rows.Column(ctr1) = tmprows;
-      }
+			Matrix tmpcols, tmprows;
+	 		res(ctr1) =rankapprox(tmpVals, tmpcols, tmprows);
+			cols.Column(ctr1) = tmpcols;
+			rows.Column(ctr1) = tmprows;
+    }
+		return res;
   } // krfact
 
-  void krfact(const Matrix& Mat, int colnum, Matrix& cols, Matrix& rows)
+  RowVector krfact(const Matrix& Mat, int colnum, Matrix& cols, Matrix& rows)
   {
+		RowVector res;
     cols = zeros(colnum,Mat.Ncols());
     rows = zeros(int(Mat.Nrows() / colnum),Mat.Ncols());
-    krfact(Mat,cols,rows);
+    res = krfact(Mat,cols,rows);
+		return res;
   } // krfact
 
   Matrix krprod(const Matrix& cols, const Matrix& rows)
@@ -550,7 +557,7 @@ namespace Melodic{
     return Res;
   }  //RowVector cumsum
 
-  int ppca_dim(const Matrix& in, const Matrix& weights, ColumnVector& PPCA, RowVector& AdjEV, RowVector& PercEV, Matrix& Corr, Matrix& tmpE, RowVector &tmpD, float resels, string which)
+  int ppca_dim(const Matrix& in, const Matrix& weights, Matrix& PPCA, RowVector& AdjEV, RowVector& PercEV, Matrix& Corr, Matrix& tmpE, RowVector &tmpD, float resels, string which)
   {   
     std_pca(in,weights,Corr,tmpE,tmpD);
 
@@ -559,11 +566,14 @@ namespace Melodic{
     adj_eigspec(tmpD.AsRow(),AdjEV,PercEV,NewEV,maxEV,in.Ncols(),resels);
     
     int res;
-    PPCA = ppca_select(ppca_est(NewEV, in.Ncols(),resels), res, maxEV, which);
+		PPCA = ppca_est(NewEV, in.Ncols(),resels);
+    ColumnVector tmp = ppca_select(PPCA, res, maxEV, which);
+		
+		PPCA = tmp | PPCA;
     return res;
   }  //int ppca_dim
 
-  int ppca_dim(const Matrix& in, const Matrix& weights, ColumnVector& PPCA, RowVector& AdjEV, RowVector& PercEV, float resels, string which)
+  int ppca_dim(const Matrix& in, const Matrix& weights, Matrix& PPCA, RowVector& AdjEV, RowVector& PercEV, float resels, string which)
   {   
     RowVector tmpD;
     Matrix tmpE;
@@ -581,17 +591,16 @@ namespace Melodic{
     return res;
   }  //int ppca_dim
 
-  ColumnVector ppca_select(const Matrix& PPCAest, int& dim, int maxEV, string which)
+  ColumnVector ppca_select(Matrix& PPCAest, int& dim, int maxEV, string which)
   {
     RowVector estimators(5);
     estimators = 1.0;
     
-    Matrix PPCA2(PPCAest);
-    for(int ctr=1; ctr<=PPCA2.Ncols(); ctr++){
-      PPCA2.Column(ctr) = (PPCA2.Column(ctr) - 
-			   min(PPCA2.Column(ctr)).AsScalar()) / 
-	( max(PPCA2.Column(ctr)).AsScalar() - 
-	  min(PPCA2.Column(ctr)).AsScalar());
+    for(int ctr=1; ctr<=PPCAest.Ncols(); ctr++){
+      PPCAest.Column(ctr) = (PPCAest.Column(ctr) - 
+			   min(PPCAest.Column(ctr)).AsScalar()) / 
+	( max(PPCAest.Column(ctr)).AsScalar() - 
+	  min(PPCAest.Column(ctr)).AsScalar());
     }
     
     int ctr_i = 1;
@@ -618,35 +627,46 @@ namespace Melodic{
     int res = 0;
     ColumnVector PPCA;
  
+		if(which == string("aut"))
+			if(int(estimators(2)) < int(estimators(1)) && int(estimators(2)) > 15){
+				res=int(estimators(2));
+	      PPCA << PPCAest.Column(3);
+			}else{
+				res = int(estimators(1));
+	      PPCA << PPCAest.Column(2);
+			}				
     if(which == string("lap")){
       res = int(estimators(1));
-      PPCA << PPCA2.Column(2);
+      PPCA << PPCAest.Column(2);
     }
-
     if(which == string("bic")){
       res = int(estimators(2));
-      PPCA << PPCA2.Column(2);
+      PPCA << PPCAest.Column(3);
     }
     if(which == string("mdl")){
       res = int(estimators(3));
-      PPCA << PPCA2.Column(4);
+      PPCA << PPCAest.Column(4);
+    }
+    if(which == string("rrn")){
+      res = int(estimators(4));
+      PPCA << PPCAest.Column(5);
     }
     if(which == string("aic")){
       res = int(estimators(5));
-      PPCA << PPCA2.Column(6);
+      PPCA << PPCAest.Column(6);
     }
-    if(res==0){//median estimator
-      PPCA = PPCA2.Column(2);
-
-      for(int ctr=1; ctr<=PPCA2.Nrows(); ctr++){ 
-	RowVector tmp = PPCA2.SubMatrix(ctr,ctr,2,6);
-	PPCA(ctr) = float(tmp.Sum()/5);
-      }
-
-      ctr_i = 1; 
-      while((PPCA(ctr_i) < PPCA(ctr_i+1))&&(ctr_i<maxEV)){
-	res=ctr_i+1;ctr_i++;
-      }
+		if(which == string("median")){
+			RowVector unsorted(estimators);	
+			SortAscending(unsorted);
+			ctr_i=1;
+			res=int(unsorted(3));
+			while(res != int(estimators(ctr_i)))			
+				ctr_i++;
+			PPCA << PPCAest.Column(ctr_i);
+		}
+    if(res==0 || which == string("mean")){//median estimator
+      PPCA = mean(PPCAest.Columns(2,6),2);
+			res=int(mean(estimators,2).AsScalar());
     }
 
     dim = res;
@@ -872,10 +892,10 @@ namespace Melodic{
 			beta = pinvdes * dat;
 			residu = dat - design*beta;
 
-			dof = design.Nrows() - design.Ncols();
+			dof = design.Nrows() - design.Ncols()-1;
 			sigsq = sum(SP(residu,residu))/dof;
 			
-			float fact = float(design.Nrows() - 1 - design.Ncols()) / design.Ncols();
+			float fact = float(dof) / design.Ncols();
 			f_fmf =  SP(sum(SP(design*beta,design*beta)),pow(sum(SP(residu,residu)),-1)) * fact;
 		
 			pf_fmf = f_fmf.Row(1); 

@@ -1,6 +1,6 @@
 /*  fwdmodel_linear.h - Linear forward model and related classes
 
-    Michael Chappell, FMRIB Image Analysis Group
+    Adrian Groves, FMRIB Image Analysis Group
 
     Copyright (C) 2007 University of Oxford  */
 

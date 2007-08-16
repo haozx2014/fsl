@@ -187,7 +187,7 @@ int prior_registration(string inname, string main_prior_vol, NEWIMAGE::volume<fl
   string name1, name2, name3;
   if(anotherstdspace.unset())
     {
-      string fname=string(getenv("FSLDIR")) + "/data/standard/avg152T1_";
+      string fname=string(getenv("FSLDIR")) + "/data/standard/tissuepriors/avg152T1_";
       name1 = fname+"csf";
       name2 = fname+"gray";
       name3 = fname+"white";

@@ -79,6 +79,8 @@ Usage() {
     exit
 }
 
+[ "${1}_" = "_"  ] && Usage
+
 output=$1;
 shift;
 echo "make sure all bvar files use the same model!!!!"

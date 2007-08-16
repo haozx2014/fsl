@@ -110,7 +110,7 @@ if [ ! -f ${A}_to_std.mat ] ; then
     if [ `${FSLDIR}/bin/imtest ${A}_brain` = 0 ] ; then
 	${FSLDIR}/bin/bet $A ${A}_brain
     fi
-    ${FSLDIR}/bin/flirt -ref ${FSLDIR}/data/standard/avg152T1_brain -in ${A}_brain -omat ${A}_to_std.mat -o ${A}_to_std
+    ${FSLDIR}/bin/flirt -ref ${FSLDIR}/data/standard/MNI152_T1_2mm_brain -in ${A}_brain -omat ${A}_to_std.mat -o ${A}_to_std
 fi
 ${FSLDIR}/bin/convert_xfm -omat ${A}_halfwayto_${B}_inv.mat -inverse ${A}_halfwayto_${B}.mat
 ${FSLDIR}/bin/convert_xfm -omat ${A}_halfwayto_${B}_to_std.mat -concat ${A}_to_std.mat ${A}_halfwayto_${B}_inv.mat
@@ -120,12 +120,12 @@ ${FSLDIR}/bin/fslmaths ${A}_to_${B}_flow -dilM -dilM -dilM -dilM -dilM -dilM -di
 ${FSLDIR}/bin/fslmaths ${B}_to_${A}_flow -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM ${A}_to_${B}_flow_dilback
 ${FSLDIR}/bin/fslmaths ${A}_to_${B}_flow_dil -sub ${A}_to_${B}_flow_dilback -div 2 ${A}_to_${B}_flow_dil
 ${FSLDIR}/bin/imrm ${A}_to_${B}_flow_dilback
-${FSLDIR}/bin/flirt -in ${A}_to_${B}_flow_dil -ref ${FSLDIR}/data/standard/avg152T1_brain -out ${A}_to_${B}_flow_to_std -applyxfm -init ${A}_halfwayto_${B}_to_std.mat
-${FSLDIR}/bin/fslmaths ${A}_to_${B}_flow_to_std -mas ${FSLDIR}/data/standard/avg152T1_edges ${A}_to_${B}_flow_to_std
+${FSLDIR}/bin/flirt -in ${A}_to_${B}_flow_dil -ref ${FSLDIR}/data/standard/MNI152_T1_2mm_brain -out ${A}_to_${B}_flow_to_std -applyxfm -init ${A}_halfwayto_${B}_to_std.mat
+${FSLDIR}/bin/fslmaths ${A}_to_${B}_flow_to_std -mas ${FSLDIR}/data/standard/MNI152_T1_2mm_edges ${A}_to_${B}_flow_to_std
 
 if [ $smooth != 0 ] ; then
-    ${FSLDIR}/bin/fslmaths ${FSLDIR}/data/standard/avg152T1_edges -bin -s $smooth ${A}_masksmooth -odt float
-    ${FSLDIR}/bin/fslmaths ${A}_to_${B}_flow_to_std -s $smooth -div ${A}_masksmooth -mas ${FSLDIR}/data/standard/avg152T1_edges ${A}_to_${B}_flow_to_std
+    ${FSLDIR}/bin/fslmaths ${FSLDIR}/data/standard/MNI152_T1_2mm_edges -bin -s $smooth ${A}_masksmooth -odt float
+    ${FSLDIR}/bin/fslmaths ${A}_to_${B}_flow_to_std -s $smooth -div ${A}_masksmooth -mas ${FSLDIR}/data/standard/MNI152_T1_2mm_edges ${A}_to_${B}_flow_to_std
 fi
 
 # cleanup

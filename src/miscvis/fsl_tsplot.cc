@@ -87,7 +87,7 @@ using namespace std;
 // The two strings below specify the title and example usage that is
 //  printed out as the help or usage message
 
-string title="fsl_tsplot (Version 1.0)\nCopyright(c) 2006, University of Oxford (Christian F. Beckmann)";
+string title="fsl_tsplot (Version 1.0)\nCopyright(c) 2007, University of Oxford (Christian F. Beckmann)";
 string examples="fsl_tsplot [options] ";
 
 // Each (global) object below specificies as option and can be accessed
@@ -104,16 +104,16 @@ Option<bool> help(string("--help"), false,
 		  string("display this message"),
 		  false, no_argument);
 Option< std::vector<string> >inname(string("-i,--in"), std::vector<string>(),
-		  string("comma-separated list of input file names (ASCII text matrix, one column per timecourse)"),
+		  string("        comma-separated list of input file names (ASCII text matrix, one column per timecourse)"),
 		  true, requires_argument);
 Option<string> outname(string("-o,--out"), string(""),
 		  string("output filename for the PNG file"),
 		  true, requires_argument);
 Option<float>  ymax(string("--ymax"),float(0.0),
-		    string("maximum y-value"),
+		    string("        maximum y-value"),
 		    false, requires_argument);
 Option<float>  ymin(string("--ymin"),float(0.0),
-		    string("minimum y-value"),
+		    string("        minimum y-value"),
 		    false, requires_argument);  
 Option<string> ptitle(string("-t,--title"), string(""),
 		  string("plot title"),
@@ -140,10 +140,10 @@ Option<int> prec(string("--precision"), 2,
 		  string("precision of x-axis labels"),
 		  false, requires_argument);
 Option<bool> sci(string("--sci"), false,
-		  string("switch on sientific notation"),
+		  string("        switch on sientific notation"),
 		  false, no_argument);
 Option<int> start(string("--start"), 0,
-		  string("Position of first column to plot"),
+		  string("        Position of first column to plot"),
 		  false, requires_argument);
 Option<int> finish(string("--finish"), 0,
 		  string("Position of final column to plot"),

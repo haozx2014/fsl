@@ -96,7 +96,7 @@ namespace Melodic{
  
       void save();
 
-      Matrix process_file(string fname, int numfiles);
+      Matrix process_file(string fname, int numfiles = 1);
 
       inline void save4D(Matrix what, string fname){
 	 			volume4D<float> tempVol;
@@ -218,8 +218,8 @@ namespace Melodic{
       inline void set_EV(Matrix& Arg) {if(EV.Storage()==0)
 																				 EV = Arg;}
 
-      inline ColumnVector& get_PPCA() {return PPCA;}
-      inline void set_PPCA(ColumnVector& Arg) {if(PPCA.Storage()==0)
+      inline Matrix& get_PPCA() {return PPCA;}
+      inline void set_PPCA(Matrix& Arg) {if(PPCA.Storage()==0)
 																					 PPCA = Arg;}
 
       inline Matrix& get_stdNoisei() {return stdNoisei;}
@@ -253,7 +253,8 @@ namespace Melodic{
       volumeinfo tempInfo;
       vector<Matrix> DWM, WM;
 			basicGLM glmT, glmS;
-			Matrix Tdes, Tcon, TconF, Sdes, Scon, SconF;			
+			Matrix Tdes, Tcon, TconF, Sdes, Scon, SconF;	
+			RowVector explained_var;		
 
     private:
       MelodicOptions &opts;     
@@ -284,7 +285,7 @@ namespace Melodic{
       volume<float> background;
 
       Matrix Data;
-      ColumnVector PPCA;
+      Matrix PPCA;
       Matrix jointCC;
       
       bool after_mm;

@@ -380,17 +380,15 @@ int do_unwrapping()
   if (complexvol.set()) {
     volume4D<float> rvol, ivol;
     read_complexvolume4D(rvol,ivol,complexvol.value(),vinfo);
-    rvol.makeradiological();
-    ivol.makeradiological();
     for (int n=0; n<rvol.tsize(); n++) {
       phasemaps.addvolume(phase(rvol[n],ivol[n]));
       absmaps.addvolume(abs(rvol[n],ivol[n]));
     }
   } else {
     if (verbose.value()) cerr << "Loading volumes" << endl;
-    read_rad_volume4D(phasemaps,phasevol.value(),vinfo);
+    read_volume4D(phasemaps,phasevol.value(),vinfo);
     if (verbose.value()) cerr << "Phase loaded" << endl;
-    read_rad_volume4D(absmaps,absvol.value());
+    read_volume4D(absmaps,absvol.value());
     if (verbose.value()) cerr << "Magnitude loaded" << endl;
   }
 
@@ -401,7 +399,7 @@ int do_unwrapping()
   if (startimno.set())  imgstart = startimno.value();
   if (endimno.set())    imgend = endimno.value();
   if (inmask.set()) {
-    read_rad_volume4D(masks,inmask.value());
+    read_volume4D(masks,inmask.value());
     if (verbose.value()) cerr << "Mask loaded" << endl;
     maskend = masks.maxt();
     if (!threshset) {

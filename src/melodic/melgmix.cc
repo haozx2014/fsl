@@ -299,9 +299,7 @@ namespace Melodic{
 				SortAscending(tmp);
 				RowVector newcdf(tmp);
 	  		newcdf << normcdf(tmp,means(1),vars(1));
-				write_ascii_matrix(dat,"dat");
-				write_ascii_matrix(newcdf,"newcdf");
-				write_ascii_matrix(tmp,"tmpmat");
+
 				float thrp = tmp(tmp.Ncols())+0.01;
 				float thrn = tmp(1)-0.01;
 				int ctr=tmp.Ncols();

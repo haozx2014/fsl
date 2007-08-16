@@ -184,13 +184,13 @@ int convert_warp()
   volume<float> refvol;
 
   if (refname.set()) {
-    read_rad_volume(refvol,refname.value());
+    read_volume(refvol,refname.value());
   } else if (warp2name.set()) {
-    read_rad_volume(refvol,warp2name.value());  // only reads first volume
+    read_volume(refvol,warp2name.value());  // only reads first volume
   } else if (warp1name.set()) {
-    read_rad_volume(refvol,warp1name.value());  // only reads first volume
+    read_volume(refvol,warp1name.value());  // only reads first volume
   } else if (shiftmapname.set()) {
-    read_rad_volume(refvol,shiftmapname.value());  // only reads first volume
+    read_volume(refvol,shiftmapname.value());  // only reads first volume
   } else {
     cerr << "Cannot determine size of output warp!" << endl;
     cerr << "Must specify a reference volume (using -r)" << endl;
@@ -214,7 +214,7 @@ int convert_warp()
   }
 
   if (warp1name.set()) {
-    read_rad_volume4D(nextwarp,warp1name.value());
+    read_volume4D(nextwarp,warp1name.value());
     abs_warp = getabswarp(nextwarp);
     if (!abs_warp) { convertwarp_rel2abs(nextwarp); }
     update_warp(finalwarp,nextwarp,warpset);
@@ -227,7 +227,7 @@ int convert_warp()
   }
 
   if (warp2name.set()) {
-    read_rad_volume4D(nextwarp,warp2name.value());
+    read_volume4D(nextwarp,warp2name.value());
     abs_warp = getabswarp(nextwarp);
     if (!abs_warp) { convertwarp_rel2abs(nextwarp); }
     update_warp(finalwarp,nextwarp,warpset);
@@ -242,7 +242,7 @@ int convert_warp()
   // apply shiftmap last (if it exists)
   if (shiftmapname.set()) {
     volume<float> shiftmap;
-    read_rad_volume(shiftmap,shiftmapname.value());
+    read_volume(shiftmap,shiftmapname.value());
     shift2warp(shiftmap,nextwarp,shiftdir.value());
     update_warp(finalwarp,nextwarp,warpset);
   }

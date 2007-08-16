@@ -131,13 +131,12 @@ int main(int argc, char *argv[]){
     if (opts.filtermode || opts.filtermix.value().length()>0){
       if(opts.filtermode){ // just filter out some noise from a previous run
     		melodat.setup();
+				if(opts.debug.value())
+					message("  Denoising data setup completed "<< endl);
 				melodat.remove_components();
-      }
-      else
+      } else
 				mmonly(logger,opts,melodat,report);
-    } 
-    else
-    {  // standard PICA now
+    } else {  // standard PICA now
       int retry = 0;
       bool no_conv;
       bool leaveloop = false;
@@ -164,12 +163,10 @@ int main(int argc, char *argv[]){
 	    			opts.approach.set_T("defl");
 	    			message(endl << "Restarting MELODIC using deflation approach" 
 		    			<< endl << endl);
-	  			}
-	  			else{
+	  			}else{
 	    			leaveloop = true;
 	  			}
-				}
-				else{
+				}else{
 	  			if(no_conv){
 	    			retry++;
 	    			if(opts.pca_dim.value()-retry*opts.retrystep > 
@@ -177,7 +174,7 @@ int main(int argc, char *argv[]){
 	      				opts.pca_dim.set_T(opts.pca_dim.value()-retry*opts.retrystep);
 	    				}
 	    			else{
-	      			if(opts.pca_dim.value()-retry*opts.retrystep <  melodat.data_dim()){
+	      			if(opts.pca_dim.value()+retry*opts.retrystep <  melodat.data_dim()){
 								opts.pca_dim.set_T(opts.pca_dim.value()+retry*opts.retrystep);
 	      			}else{
 								leaveloop = true; //stupid, but break does not compile 
@@ -185,10 +182,10 @@ int main(int argc, char *argv[]){
 	      			}
 	    			}
 	    			if(!leaveloop){
-	      message(endl << "Restarting MELODIC using -d " 
-		      << opts.pca_dim.value() 
-		      << endl << endl);
-	    }
+	      			message(endl << "Restarting MELODIC using -d " 
+		      			<< opts.pca_dim.value() 
+		      			<< endl << endl);
+	          }
 	  			}
 				}
       } while (no_conv && retry<opts.maxRestart.value() && !leaveloop);	
@@ -199,6 +196,13 @@ int main(int argc, char *argv[]){
 				Matrix pmaps;//(melodat.get_IC());
 				Matrix mmres;
 
+				if( bool(opts.genreport.value()) ){
+		  		report.analysistxt();
+					if(melodat.get_numfiles()>1)
+						report.Smode_rep();
+		  		report.PPCA_rep();
+				}
+					
 				if(opts.perf_mm.value())
 	  			mmres = mmall(logger,opts,melodat,report,pmaps);
 				else{
@@ -217,13 +221,6 @@ int main(int argc, char *argv[]){
 		    			report.getDir() + "/00index.html" << endl<< endl); 
 	  			}
 				}		 
-
-				if( bool(opts.genreport.value()) ){
-	  			report.analysistxt();
-					if(melodat.get_numfiles()>1)
-						report.Smode_rep();
-	  			report.PPCA_rep();
-				}
 
 				message("finished!" << endl << endl);
       } 
@@ -297,7 +294,7 @@ void mmonly(Log& logger, MelodicOptions& opts,
     message(" done" << endl);
   }
 
-  message("Reading mixing matrix " << opts.filtermix.value());
+  message("Reading mixing matrix " << opts.filtermix.value() << " ... ");
   mixMatrix = read_ascii_matrix(opts.filtermix.value());
   if (mixMatrix.Storage()<=0) {
     cerr <<" Please specify the mixing matrix correctly" << endl;
@@ -320,13 +317,12 @@ void mmonly(Log& logger, MelodicOptions& opts,
     }
   }
 
-
   melodat.tempInfo = ICvolInfo;
   melodat.set_mask(Mask);
   melodat.set_mean(Mean);
   melodat.set_IC(ICs);
   melodat.set_mix(mixMatrix);
-  fmixMatrix = calc_FFT(melodat.expand_mix(), opts.logPower.value());
+  fmixMatrix = calc_FFT(mixMatrix, opts.logPower.value());
   melodat.set_fmix(fmixMatrix);
   fmixMatrix = pinv(mixMatrix);
   melodat.set_unmix(fmixMatrix);
@@ -335,7 +331,7 @@ void mmonly(Log& logger, MelodicOptions& opts,
   
   Matrix mmres;
   Matrix pmaps;//(ICs);
-  if(opts.perf_mm.value())
+ if(opts.perf_mm.value())
     mmres = mmall(logger,opts,melodat,report,pmaps);
 	}
 

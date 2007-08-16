@@ -108,7 +108,7 @@ namespace MISCPLOT{
 			inline void set_Ylabel_fmt(string what){
 				Ylabel_fmt = what;}
 			inline void col_replace(int which, unsigned long what){
-				if(which>0 && which<64)
+				if(which>=0 && which<64)
 					sc[which] = what;
 			}
 

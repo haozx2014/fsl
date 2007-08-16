@@ -775,7 +775,7 @@ int do_unwarping()
 
   if (inputname.set()) {
     if (verbose.value()) { cout << "Reading input volume" << endl; }
-    read_rad_volume4D(invol,inputname.value(),in_info);
+    read_volume4D(invol,inputname.value(),in_info);
   } else if (unwarpfname.set() || warpfname.set()) {
     cerr << "Must specify an input volume (-i or --in) to use (un)warping." 
 	 << endl;
@@ -784,7 +784,7 @@ int do_unwarping()
 
   if (maskfname.set()) {
     if (verbose.value()) { cout << "Reading mask volume" << endl; }
-    read_rad_volume(mask1,maskfname.value());
+    read_volume(mask1,maskfname.value());
     mask2 = mask1;
   }
 
@@ -795,7 +795,7 @@ int do_unwarping()
   if (inphase.set()) { // PROCESS UNWRAPPED PHASE MAP
     volume4D<float> uphase;
     if (verbose.value()) { cout << "Reading unwrapped phasemap" << endl; }
-    read_rad_volume4D(uphase,inphase.value());
+    read_volume4D(uphase,inphase.value());
     if (uphase.tsize()<2) {
       cerr << "Unwrappedphasemaps must contain at least two volumes!" << endl;
       return -1;
@@ -816,12 +816,12 @@ int do_unwarping()
   else { // LOAD SHIFTMAP or FIELDMAP
     if (loadshift.set()) {
       if (verbose.value()) { cout << "Reading pixel-shift map" << endl; }
-      read_rad_volume(pixshift,loadshift.value());
+      read_volume(pixshift,loadshift.value());
       if (inputname.unset()) { invol.addvolume(pixshift); }// needed for voxdims
       fmap = pixshift/fmap2pixshift_factor(invol[0],dwellval,unwarpdir.value());
     } else if (loadfmap.set()) {
       if (verbose.value()) { cout << "Reading fieldmap" << endl; }
-      read_rad_volume(fmap,loadfmap.value());
+      read_volume(fmap,loadfmap.value());
       if (inputname.unset()) { invol.addvolume(fmap); }  // needed for voxdims
       pixshift = fmap * fmap2pixshift_factor(invol[0],dwellval,unwarpdir.value());
     } else {

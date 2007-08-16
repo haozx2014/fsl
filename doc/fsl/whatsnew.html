@@ -20,7 +20,7 @@ Minor release revision history <a href="#revisions">here</a>.<UL>
 
 <LI><a href="../fdt/index.html" target="_top">FDT</a> - FMRIB's
   Diffusion Toolbox now has Bayesian crossing-fibre modelling with
-  automatic estimation of the number of crossing-fibres.
+  automatic estimation of the number of crossing fibres.
 
 <LI><a href="../possum/index.html" target="_top">POSSUM</a> -
   Physics-Oriented Simulated Scanner for Understanding MRI. An FMRI
@@ -28,25 +28,25 @@ Minor release revision history <a href="#revisions">here</a>.<UL>
   time series given a gradient echo pulse sequence, a segmented object
   with known tissue parameters, and a motion sequence.
 
-<LI><a href="../fslview/atlases.html" target="_top">Standard Space
+<LI><a href="../fslview/atlas-descriptions.html" target="_top">Standard Space
     Atlases</a> - several complementary brain atlases, integrated into
-    FSLView, allowing viewing of structural and cytoarchitectonic
-    standard space labels and probability maps for cortical and
-    subcortical structures and white matter tracts.
+    FSLView and Featquery, allowing viewing of structural and
+    cytoarchitectonic standard space labels and probability maps for
+    cortical and subcortical structures and white matter tracts.
 
-<LI><a href="../fslview/atlases.html" target="_top">FSLView</a> - in
+<LI><a href="../fslview/index.html" target="_top">FSLView</a> - in
   addition to the new atlases, new functionality includes 3D surface
   rendering and crossing-fibre diffusion direction viewing.
 
-<LI><a href="../vbm/index.html">FSLVBM</a> - an implementation of
+<LI><a href="../fslvbm/index.html">FSL-VBM</a> - an implementation of
   VBM-style analysis of grey matter density using FSL tools.
 
 <LI><a href="../tbss/index.html" target="_top">TBSS</a> v1.1 -
 improved registration efficiency in conjunction with the release of a
-new standard space FA template, the FMRIB58FA. Also it is now possible
-to back-transform skeleton-space voxels into subjects' native DTI
-space, for example to allow the automated seeding of tractography in
-FDTX.
+new standard space FA template, the <a href="../tbss/FMRIB58_FA.html"
+target="_top">FMRIB58_FA</a>. Also it is now possible to
+back-transform skeleton-space voxels into subjects' native DTI space,
+for example to allow the automated seeding of tractography in FDT.
 
 <LI><a href="../fabber/index.html">FABBER</a> - Fast ASL & BOLD
 Bayesian Estimation Routine.  Efficient nonlinear modelling and
@@ -57,57 +57,50 @@ Bayes.
   of using Cygwin we now use VMware Player (freely available) with a
   Linux virtual machine inside it.
 
-<!-- <LI><a href="../fnirt/index.html">FNIRT</a> - FMRIB's Nonlinear Image -->
-<!--   Regsitration Tool - a beta release of a computationally efficient -->
-<!--   generic nonlinear registration tool. -->
+<LI>FAST4 - a beta release of a new version of the FAST generic
+  segmentation tool.
 
-<LI><a href="../fast4/index.html">FAST4</a> - a beta release of a new
-  version of the FAST generic segmentation tool.
-
-<LI><a href="">Randomise</a> permutation testing - new features
-  including: automatically correctly dealing with general contrasts
-  and confounds, f-tests, TFCE (threshold-free cluster enhancement, a
-  new method for cluster-based statistics).
+<LI><a href="../randomise/index.html">Randomise</a> v2.0 permutation
+  testing - new features including: automatically correctly dealing
+  with general contrasts and confounds, f-tests, TFCE (threshold-free
+  cluster enhancement, a new method for cluster-based statistics).
 
 <LI>Several of the more compute-intensive tools can now take advantage
-of cluster computing, via SunGridEngine (SGE). For example, FEAT,
-MELODIC, TBSS, BEDPOST (FDT), FSLVBM can automatically parallelise
-their processing to speed up total analysis time.
+of cluster computing, via <a href="downloading.html#sge">SunGridEngine
+(SGE)</a>. For example, FEAT, MELODIC, TBSS, BEDPOST (FDT), POSSUM and
+FSL-VBM can automatically parallelise their processing to reduce total
+analysis time.
 
-<LI>New standard space template: the MNI152(?) nonlinear template from
-MNI.
+<LI>New standard space templates. We have moved to a better version of
+the MNI152 standard-space image. This is based on the same dataset
+that was used to create the avg152T1 but using nonlinear registration
+instead of linear (many thanks to Andrew Janke and MNI for
+this). MNI152_T1_2mm is the new default standard image, also available
+at 1mm and 0.5mm. MNI152lin_T1_2mm is what we are calling the old
+standard image, based on linear registration.
 
 <LI><a href="../feat5/index.html">FEAT</a> - v5.90, various
-  miscellaneous updates.
+  miscellaneous updates including partial integration of the new
+  atlases into Featquery.
 
 <LI><a href="../bet2/index.html">BET</a> - old C code now removed and
   replaced with equivalent "bet2" C++ program; new wrapper script
   "bet" which adds various functionality such as improved eye and neck
   removal.
 
-<LI>avwutils all C++ utils ending with "++" now have had the "++"
-  stripped off, as all the old C code with a similar name has been
-  removed. Also, all programs starting with "avw" are now renamed to
-  start with "fsl", e.g. "fslmaths".
-
-<LI>Programs (such as FEAT) which used to append a "+" to the end of a
-  new output file (or directory) in order to avoid overwriting an
-  existing file have now changed. Now the existing file is renamed,
-  with a "-" added to the end, and the new file is created with
-  exactly the name requested.
+<LI><a href="../avwutils/index.html">FSLUTILS</a>: all C++ utils
+  ending with "++" now have had the "++" stripped off, as all the old
+  C code with a similar name has been removed. Also, all programs
+  starting with "avw" are now renamed to start with "fsl",
+  e.g. "fslmaths". A script "avw2fsl" has been provided to help
+  convert users' shell and TCL scripts to use the new command names.
 
 <LI>NIFTI i/o updated to use the sourceforge library.
 
-<LI>Flirt will initialise using the qform/sform if set in the NIFTI
-header.
-
 <LI>Warp field inversion is now possible with "invwarp".
 
-<LI>Slicetimer - definition of slice numbering has changed - now the
-  bottom slice is referred to as "0" (instead of "1").
-
 <LI>Removed FSL dependency on Tix, Gnuplot and ImageMagick; any
-  generic TCL/TK can now be used for the scripts and GUIs.
+  generic recent TCL/TK can now be used for the scripts and GUIs.
 
 </UL>
 
@@ -115,14 +108,13 @@ header.
 
 <UL>
 
-<LI><a href="../tbss/index.html" target="_top">TBSS</a> - first
+<LI>TBSS - first
 release of Tract-Based Spatial Statistics, for voxel-based
 multi-subject statistics on diffusion (e.g. FA) data. TBSS uses the
 IRTK nonlinear registration software, binaries of which are bundled
 with this release of FSL.
 
-<LI><a href="../feat5/index.html" target="_top">FEAT</a> v5.6 new
-features:
+<LI>FEAT v5.6 new features:
   <UL>
     <LI>Perfusion FMRI modelling/subtraction
     <LI>Contrast estimability (meanginful rank deficiency and
@@ -144,7 +136,7 @@ features:
   <LI>Various other smaller improvements, plus full compilable source code now distributed
   </UL>
 
-<LI><a href="../feat5/featquery.html" target="_top">Featquery</a> changes:
+<LI>Featquery changes:
   <UL>
     <LI> % signal change calculations are now fully automated for both
   complex contrasts and higher-level FEAT output
@@ -156,7 +148,7 @@ features:
 matrix sub-GUI) for creating design matrix and contrast files, for
 example for use in randomise.
 
-<LI><a href="../siena/index.html" target="_top">SIENA</a> v2.4 - the
+<LI>SIENA v2.4 - the
 siena and sienax scripts can now pass on all relevant options to BET
 and FAST. Also the text output from sienax now includes unnormalised
 volume reporting as well as the head-size-normalised volumes. (Note
@@ -170,42 +162,36 @@ valid-voxel mask generation.
 
 <hr><P><b>Release 3.2<font size=-1>&beta;</font>, September 2004</b>
 
-<p>Note: the commands for setting up your environment to use FSL have
-changed very slightly - see the <b>Running</b> section of <a
-href="downloading.html" target="dynamic">downloading and
-installing</a>.
-
 <UL>
 
-<LI><a href="../fdt/index.html" target="_top">FDT</a> (FMRIB's Diffusion Toolbox) -
+<LI>FDT (FMRIB's Diffusion Toolbox) -
 first release of this complete toolkit for analysis of diffusion
 data, including probabilistic tractography.
 
-<LI><a href="../filmbabe/index.html" target="_top">FLOBS</a> (FMRIB's Linear
+<LI>FLOBS (FMRIB's Linear
 Optimal Basis Functions) - a new method for finding an optimal set of
 HRF convolution basis functions, plus a Bayesian estimation method
 for improving signal/noise separation using these basis functions.
 
-<LI><a href="../mm/index.html" target="_top">SMM</a> (Spatial Mixture Modelling) -
+<LI>SMM (Spatial Mixture Modelling) -
 a new tool for alternative hypothesis testing on statistic images
 using histogram mixture modelling with spatial regularisation of the
 voxel classification into activation and non-activation.
 
-<LI><a href="../randomise/index.html" target="_top">Randomise</a> - a
+<LI>Randomise - a
 randomisation-based inference tool for nonparametric statistical
 thresholding.
 
-<LI><a href="../bet2/index.html" target="_top">BET</a> v2 - can now estimate mesh
+<LI>BET v2 - can now estimate mesh
 representations of the inner and outer skull surfaces, and outer
 scalp surface, for example for use in EEG/MEG source modelling.
 
-<LI><a href="formats.html" target="dynamic">NIFTI</a> - FSL now uses
+<LI>NIFTI - FSL now uses
 the NIFTI-1 data format by default (though can still read and write
 old Analyze files). Single-file NIFTI-1 images can be read and written
 already compressed, saving much disk space.
 
-<LI><a href="../feat5/index.html" target="_top">FEAT</a> v5.4 new
-features:
+<LI>FEAT v5.4 new features:
   <UL>
     <LI>Use of FLOBS (optimised HRF basis sets).
     <LI>Fixed-effects higher-level analysis (e.g. for within-subject
@@ -217,12 +203,12 @@ features:
     <LI>Time-series (data vs model) plotting inside Featquery.
   </UL>
 
-<LI><a href="../siena/index.html" target="_top">SIENA</a> - can now do
-voxelwise cross-subject statistical atrophy analysis. Also, there is a
-small change to the partial volume estimation in FAST, causing slight
-differences in volume estimates; any multi-subject analysis using
-FAST/SIENAX estimated volumes must <i>only</i> use the previous
-version or <i>only</i> use this new version.
+<LI>SIENA - can now do voxelwise cross-subject statistical atrophy
+analysis. Also, there is a small change to the partial volume
+estimation in FAST, causing slight differences in volume estimates;
+any multi-subject analysis using FAST/SIENAX estimated volumes
+must <i>only</i> use the previous version or <i>only</i> use this new
+version.
 
 <LI><b>fslerrorreport</b> is a new script which should always be run before
 emailing the FSL email list with a problem concerning running programs
@@ -256,8 +242,7 @@ for Linux/MacosX/Windows i.e. not yet IRIX/SunOS).
 
 <LI> Bayesian multi-subject FMRI analysis: General GLM for
 higher-level analysis (e.g. analysis across sessions or across
-subjects; paired t-tests, three-level groupings etc): <a
-href="../feat5/detail.html#higher" target="_top">FLAME</a> (FMRIB's
+subjects; paired t-tests, three-level groupings etc): FLAME (FMRIB's
 Local Analysis of Mixed Effects). FLAME uses very sophisticated
 methods for modelling and estimating the random-effects component of
 the measured inter-session mixed-effects variance, using MCMC to get
@@ -307,15 +292,13 @@ and activation classes; thus alternative hypothesis testing is used.
 
 <!-- }}} -->
 
-<LI><a href="http://www.fmrib.ox.ac.uk/fsl/freesurfer/index.html" target="_top">Interoperation
-with FreeSurfer</a> - it is now very easy to display FEAT results onto
-FreeSurfer-generated inflated or flattened surfaces, and also easy to
-carry out group FEAT analysis in standard-spherical-surface space
-instead of 3D standard space.
+<LI>Interoperation with FreeSurfer - it is now very easy to display
+FEAT results onto FreeSurfer-generated inflated or flattened surfaces,
+and also easy to carry out group FEAT analysis in
+standard-spherical-surface space instead of 3D standard space.
 
-<LI><a href="../afni/index.html" target="_top">Interoperation with
-AFNI</a> - AFNI can now easily read FSL (particularly FEAT) output for
-easy visualisation.
+<LI>Interoperation with AFNI - AFNI can now easily read FSL
+(particularly FEAT) output for easy visualisation.
 
 <LI>SIENA v2: increased accuracy by forcing all steps to be symmetric;
 added masking functionality including standard-space-based Z limits.

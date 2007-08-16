@@ -85,7 +85,7 @@ using namespace std;
 // The two strings below specify the title and example usage that is
 //  printed out as the help or usage message
 
-string title="fsl_boxplot (Version 1.0)\nCopyright(c) 2006, University of Oxford (Christian F. Beckmann)";
+string title="fsl_boxplot (Version 1.0)\nCopyright(c) 2007, University of Oxford (Christian F. Beckmann)";
 string examples="fsl_boxplot [options] ";
 
 // Each (global) object below specificies as option and can be accessed

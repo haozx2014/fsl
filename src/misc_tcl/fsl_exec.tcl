@@ -82,13 +82,12 @@ proc fsl:echo { thefilename thestring args } {
     } else {
 	catch { puts $thestring } putserr
     }
-    if { [ file exists .logA ] } {
-	catch { exec sh -c "cat .log? > report_log.html" } putserr
+    if { [ glob -nocomplain logs/* ] != "" } {
+	catch { exec sh -c "cat logs/* > report_log.html" } putserr
     }
 }
 
 
-#
 # usage: fsl:exec "the command" [options]
 # note the double-quotes round "the command"
 # -n                : don't output logging information
@@ -97,6 +96,8 @@ proc fsl:echo { thefilename thestring args } {
 # -f                : "the command" is a filename to be treated as a parallel batch job (one command per line)
 # -h <job-hold-id>  : ID of SGE job that must finish before this job gets run
 # -N <job_name>     : the job will have the name <job_name> on the SGE submission
+# -l <logdir>       : output logs in <logdir>
+
 proc fsl:exec { thecommand args } {
 
     global logout comout FSLDIR FD SGEID
@@ -110,6 +111,7 @@ proc fsl:exec { thecommand args } {
     set job_name ""
     set runtime 300
     set args [ join $args ]
+    set logdir ""
     for { set argindex 0 } { $argindex < [ llength $args ] } { incr argindex 1 } {
 	set thearg [ lindex $args $argindex ]
 
@@ -138,6 +140,11 @@ proc fsl:exec { thecommand args } {
 	    set job_name "-N [ lindex $args $argindex ]"
 	}
 
+	if { $thearg == "-l" } {
+	    incr argindex 1
+	    set logdir "-l [ lindex $args $argindex ]"
+	}
+
 	if { $thearg == "-b" } {
 	    set do_runfsl 1
 	    incr argindex 1
@@ -147,7 +154,7 @@ proc fsl:exec { thecommand args } {
 
     # add runfsl call if required
     if { $do_runfsl } {
-	set thecommand "${FSLDIR}/bin/fsl_sub -T $runtime $job_name $job_holds $do_parallel $thecommand"
+	set thecommand "${FSLDIR}/bin/fsl_sub -T $runtime $logdir $job_name $job_holds $do_parallel $thecommand"
     }
 
     # save just the command to report.com if it has been setup
@@ -163,9 +170,6 @@ proc fsl:exec { thecommand args } {
     # run and log the actual command
     if { $do_logout } {
 	fsl:echo $logout "\n$thecommand"
-	if { [ file exists .logA ] } {
-	    catch { exec sh -c "cat .log? > report_log.html" } putserr
-	}
     }
     if { $do_logout } {
 	if { $logout != "" } {

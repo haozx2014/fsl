@@ -1,7 +1,7 @@
 <HTML><HEAD><link REL="stylesheet" TYPE="text/css" href="../fsl.css"><TITLE>FSL</TITLE></HEAD><BODY><hr><TABLE BORDER=0 WIDTH="100%"><TR><TD ALIGN=CENTER><H1>
 FABBER Nonlinear Perfusion Signal Modelling
 </H1>
-FABBER - Fast ASL &amp; BOLD Bayesian Estimation Routine - v1.0
+FABBER - Fast ASL &amp; BOLD Bayesian Estimation Routine - v0.1
 <TD ALIGN=RIGHT><a href="../index.html"><IMG BORDER=0 SRC="../images/fsl-logo.jpg"></a></TR></TABLE><HR>
 <a name="intro"></a><H2>INTRODUCTION</H2>
 
@@ -33,7 +33,7 @@ FABBER - Fast ASL &amp; BOLD Bayesian Estimation Routine - v1.0
 <ul>
 <li>Data sets for both echo times
 <li>Stimulus information, preconvolved with the appropriate Haemodynamic Response Functions
-<li>Details of the pulse sequence used (e.g. echo times, inversion times).  Currently the only dual-echo sequence that is implemented is QUIPSS II.
+<li>Details of the pulse sequence used (e.g. echo times, inversion times).  Currently only the QUIPSS II model is supported.
 </ul>
 
 <h3>Preprocessing</h3>
@@ -98,9 +98,9 @@ After FABBER finishes, the output folder will contain point estimate and pseudo-
 
 <p> <b>-@ &lt;options_file&gt;</b>: Read a list of options from a text file, as if they were typed at the command line.</p>
 
-<p>There are two additional features included in this beta release of <samp>fabber</samp>:
+<p>There are two additional features included in this beta release of <samp>fabber</samp>, which are both still under development:
 
-<p><b>--method=spatialvb</b>:  This instructs fabber to use spatial priors, i.e. to take spatial homogeneity between neighbouring voxels into account. This produces smoother resulting parameter images, but in a more principled manner than simply smoothing data or results.  For more details see <cite>Penny, W.D., Trujillo-Barreto, N.J., Friston K.J., "Bayesian fMRI time series analysis with spatial priors", NeuroImage 24:2, pp.350&ndash;362, 2005.</cite>
+<p><b>--method=spatialvb</b>:  This instructs fabber to use spatial priors, i.e. to take spatial homogeneity between neighbouring voxels into account. This produces smoother resulting parameter images, but in a more principled manner than simply smoothing data or results.  The implementation is based on the approach described in <cite>Penny, W.D., Trujillo-Barreto, N.J., Friston K.J., "Bayesian fMRI time series analysis with spatial priors", NeuroImage 24:2, pp.350&ndash;362, 2005</cite>, with some minor modifications.
 
 <p><b>--ar1-cross-terms=dual</b>, <b>same</b>, or <b>none</b>: By default, an independent autoregressive noise model is used for each echo time (<b>none</b>).  However, the noise between the two echo times is no independent, so this default tends to overestimate the amount of information in the data.  By selecting <b>same</b> or <b>dual</b>, you can introduce one or two cross-terms into the AR(1) noise models which partially model this correlation.
 

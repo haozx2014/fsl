@@ -12,13 +12,12 @@ SSLIBS = -lss_32R $(IOLIBS)
 LIBS = -lss_16SI -lfslio -lniftiio -lznz -lm -lz
 LIBS++ = -lnewimage -lmiscmaths -lprob -lfslio -lnewmat -lutils -lniftiio -lznz -lm -lz
 
-RUNAVWS = susan_smooth
 
 RUNTCLS = Susan
 
-XFILES = susan susan_smooth_16SI 
+XFILES = susan 
 
-all: susan	susan_smooth_16SI
+all: susan
 
 
 susan: susan.o

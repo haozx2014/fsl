@@ -14,7 +14,7 @@ function save_avw_complex(img,fname,vsize)
 
 save_avw(real(img),[fname,'R'],'f',vsize);
 save_avw(imag(img),[fname,'I'],'f',vsize);
-command=sprintf('$FSLDIR/bin/avwcomplex -complex %s %s %s \n',[fname,'R'],[fname,'I'],fname);
+command=sprintf('sh -c ". $FSLDIR/etc/fslconf/fsl.sh; $FSLDIR/bin/fslcomplex -complex %s %s %s \n"',[fname,'R'],[fname,'I'],fname);
 system(command);
 
 % cross platform compatible deleting of files

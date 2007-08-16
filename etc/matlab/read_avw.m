@@ -27,7 +27,8 @@ end
 
 %% convert to uncompressed nifti pair (using FSL)
 tmpname = tempname;
-system(['sh -c "FSLOUTPUTTYPE=NIFTI_PAIR; export FSLOUTPUTTYPE; $FSLDIR/bin/avwmaths ', fname, ' ', tmpname,'"']);
+command = sprintf('sh -c ". ${FSLDIR}/etc/fslconf/fsl.sh; FSLOUTPUTTYPE=NIFTI_PAIR; export FSLOUTPUTTYPE; $FSLDIR/bin/fslmaths %s %s"\n', fname, tmpname);
+system(command);
 
   [dims,scales,bpp,endian,datatype]= read_avw_hdr(tmpname);
   if (datatype==32),

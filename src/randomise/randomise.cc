@@ -335,12 +335,15 @@ Matrix current_stat(1, original_stat.Ncols());
     if (tstatnumber=="0") tstatnumber=num2str(row);
     save_volume4D(output,opts.out_fileroot.value()+name+tstatnumber);
     tmpvec=input_dist.Row(row);    // max stat
-    ofstream output_file;
-    string foo;
-    foo = opts.out_fileroot.value()+"_max"+name+tstatnumber+".txt";
-    output_file.open(foo.c_str(),ofstream::out);
-    output_file << tmpvec.t();
-    output_file.close();
+    if (opts.verbose.value())
+      {
+	ofstream output_file;
+	string foo;
+	foo = opts.out_fileroot.value()+"_max"+name+tstatnumber+".txt";
+	output_file.open(foo.c_str(),ofstream::out);
+	output_file << tmpvec.t();
+	output_file.close();
+      }
     SortAscending(tmpvec);
     current_stat=0;
     for(int i=1; i<=original_stat.Ncols(); i++)
@@ -358,6 +361,7 @@ Matrix current_stat(1, original_stat.Ncols());
 void OutputClusterStat(const Matrix &original_stat,const Matrix &input_dist,const volume<float> &mask, const int n_perms,const string name, ranopts& opts,string tstatnumber,float threshold,volume4D<float> optional_volume,const string mode)
 { 
 volume4D<float> output(mask.xsize(),mask.ysize(),mask.zsize(),1);
+ output.copyproperties(mask);
 volume4D<float> tstat4D(mask.xsize(),mask.ysize(),mask.zsize(),original_stat.Nrows()),tmp_tstat4D;
 ColumnVector clustersizes;
   tstat4D.setmatrix(original_stat,mask);
@@ -390,13 +394,16 @@ ColumnVector clustersizes;
 	      clustersizes(clust_label(x,y,z))=clustersizes(clust_label(x,y,z))+tmp_tstat4D[row-1](x,y,z);
     }
     RowVector tmpvec=input_dist.Row(row);
-    ofstream output_file;
-    string foo;
     if (tstatnumber=="0") tstatnumber=num2str(row);
-    foo = opts.out_fileroot.value()+name+mode+tstatnumber+".txt";
-    output_file.open(foo.c_str(),ofstream::out);
-    output_file << tmpvec.t();
-    output_file.close();
+    if (opts.verbose.value())
+      {
+	ofstream output_file;
+	string foo;
+	foo = opts.out_fileroot.value()+name+mode+tstatnumber+".txt";
+	output_file.open(foo.c_str(),ofstream::out);
+	output_file << tmpvec.t();
+	output_file.close();
+      }
     VoxelSignificance(output,clust_label,tmpvec,clustersizes,n_perms); 
     save_volume4D(output,opts.out_fileroot.value()+name+mode+tstatnumber);
   }
@@ -460,9 +467,6 @@ int Initialise(ranopts &opts, volume<float> &mask, Matrix &datam, Matrix &tc, Ma
      cerr << "Cannot load full data image, reverting to low-ram usage" << endl;
      lowram=true;
   }
-
-
-
   if (opts.low_ram.value() || lowram)
   {
   for (int t=0;t<st;t++) 
@@ -498,25 +502,27 @@ int Initialise(ranopts &opts, volume<float> &mask, Matrix &datam, Matrix &tc, Ma
    datam=data.matrix(mask);
   }
 
-   if (opts.verbose.value()) cout << endl;
-    dm=read_vest(opts.dm_file.value());
-    if (opts.tc_file.value()!="") tc=read_vest(opts.tc_file.value());
-    else
-    {
-       cerr << "Error: No tstat contrast file specified" << endl;   
-       return -1;
-    }
+  if (opts.verbose.value()) cout << endl;
+  if (opts.dm_file.value()!="") dm=read_vest(opts.dm_file.value());
+  if (opts.tc_file.value()!="") tc=read_vest(opts.tc_file.value());
+  if(opts.one_samp.value())
+  {
+    dm.ReSize(st,1);
+    dm=1;
+    tc.ReSize(1,1);
+    tc=1;
+  }
+  else if ( opts.dm_file.value()=="" || opts.tc_file.value()=="" )
+  {
+    cerr << "Error: Randomise requires a design matrix and contrast as input" << endl;   
+    return -1;
+  }
   if (opts.fc_file.value()!="") fc=read_vest(opts.fc_file.value());
   if (opts.gp_file.value()!="") gp=read_vest(opts.gp_file.value());
   else {
     gp.ReSize(dm.Nrows(),1);
     gp=1;
   }
-  if (opts.cluster_norm.value() > 0 && opts.cluster_thresh.value() < 0 )
-  {
-     cerr << "Error: c_thresh must be specified when using cn_thresh" << endl;   
-     return -1;
-  } 
   Matrix confound;
   if(opts.confound_file.value()!="") confound=read_vest(opts.confound_file.value());
   if(!check_dims(st,dm,confound,tc,fc)) exit(-1);
@@ -569,8 +575,8 @@ void DoPermutationStatistics(ranopts& opts, const volume<float> &mask, Matrix &d
   vox_numbigger=0;
   if ( opts.cluster_thresh.value()>0 || opts.f_thresh.value()>0 ) maxdistC=maxdist;
   if ( opts.clustermass_thresh.value()>0 || opts.fmass_thresh.value()>0 ) maxdistCmass=maxdist;
-  if ( opts.cluster_norm.value()>0 ) maxdistCN=maxdist;
-  if ( opts.tfce_height.value()>0 ) maxdistCE=maxdist;
+  if ( opts.cluster_norm.value() )  maxdistCN=maxdist;
+  if ( opts.tfce.value() ) maxdistCE=maxdist;
   tstat4D.reinitialize(mask.xsize(),mask.ysize(),mask.zsize(),n_distrows);
   volume4D<float> sumclusters,sumcluster_samples(mask.xsize(),mask.ysize(),mask.zsize(),n_distrows);
   sumcluster_samples=0;
@@ -604,37 +610,38 @@ void DoPermutationStatistics(ranopts& opts, const volume<float> &mask, Matrix &d
 	  if (perm !=1) labels = permbl.next_perm(perm,exhaustive);
 	  else labels=oldlabels;       	          
        } while(!exhaustive && !check_perm(oldlabs,labels));
-
-       LabelsToPerm(labels,oldlabels,permvec);    
+       LabelsToPerm(labels,oldlabels,permvec);  
        dm_permute(dm,dmperm,permvec);
        if (!exhaustive) oldlabs.push_back(labels);  
     }
     oldperms.push_back(permvec);  
-    // compute stats for current permutation
     if(opts.var_sm_sig.value()==0) ols(datam,dmperm,tc,cope,varcope,dof);   
     else ols_var_sm(datam,dmperm,tc,cope,varcope,mask,mask_sm,opts.var_sm_sig.value(),dof);   
     tstat=SD(cope,sqrt(varcope));
-    if (opts.tfce_height.value()>0.0 && tstatnum>=0 )
+    if (opts.tfce.value() && tstatnum>=0 )
     {
       if (perm==1) tfce_delta=tstat.Maximum()/100;  // i.e. 100 subdivisions of the max input stat height
       tstat_ce=tfce(tstat,mask,tfce_delta,opts.tfce_height.value(),opts.tfce_size.value(),opts.tfce_connectivity.value());
-      if (perm!=1) 
+      if (perm==1) 
+      {  
+        tstat_ce_orig=tstat_ce;
+	if ( opts.cluster_norm.value() ) 
+	{
+	  tstat_ceav=tstat_ce;
+	  tstat_cenorm=SD(tstat_ce,tstat_ce);
+	  if (!lowram)
+	  {
+	    try { oldtstatce=new Matrix(n_perms,tstat_ceav.Ncols());} //between 5e17 - 5e18 values for a 2gb machine
+	    catch (...) {cerr << "using lowram" << endl; lowram=true;}         
+	  }
+	}
+      }
+      else if (opts.cluster_norm.value()) 
       {
 	tstat_ceav+=tstat_ce;
 	tstat_cenorm+=SD(tstat_ce,tstat_ce);
       }
-      else 
-      {  
-        tstat_ceav=tstat_ce;
-        tstat_cenorm=SD(tstat_ce,tstat_ce);
-        tstat_ce_orig=tstat_ce;
-	if (!lowram)
-	{
-	  try { oldtstatce=new Matrix(n_perms,tstat_ceav.Ncols());} //between 5e17 - 5e18 values for a 2gb machine
-	  catch (...) {cerr << "using lowram" << endl; lowram=true;}         
-	  }
-      }
-      if(!lowram) oldtstatce->Row(perm)=tstat_ce.Row(1);
+      if(!lowram && opts.cluster_norm.value() ) oldtstatce->Row(perm)=tstat_ce.Row(1);
       maxdistCE.Column(perm)=max(tstat_ce.t()).t();
     }
     if ( tstatnum < 0 ) tstat=generate_fstat(dmperm,datam,NewW2,dof);
@@ -647,32 +654,27 @@ void DoPermutationStatistics(ranopts& opts, const volume<float> &mask, Matrix &d
    if (threshold>0) { //cluster thresholding
       tstat4D.setmatrix(tstat,mask);
       tstat4D.binarise(threshold);
-      for(int t=0;t<tstat4D.tsize();t++){
+      for(int t=0;t<tstat4D.tsize();t++)
+      {
 	clust_label=connected_components(tstat4D[t],clustersizes,26);
-	if ( clustersizes.Nrows() > 0 )  // Store Max cluster size for each perm  
-	  maxdistC(t+1,perm)=int(clustersizes.MaximumAbsoluteValue());
-      }
-    }
-   
+	if ( clustersizes.Nrows() > 0 ) maxdistC(t+1,perm)=int(clustersizes.MaximumAbsoluteValue());
+        if ( opts.cluster_norm.value() && tstatnum>=0)
+	{
+	  for(int z=0; z<clust_label.zsize(); z++)
+	    for(int y=0; y<clust_label.ysize(); y++)
+	      for(int x=0; x<clust_label.xsize(); x++)
+	      {
+		if (clust_label(x,y,z)) 
+		{
+		  sumclusters(x,y,z,t)+=clustersizes(clust_label(x,y,z));
+		  sumcluster_samples(x,y,z,t)++; 
+		}
+	      }
+	} 
 
-    if ( opts.cluster_norm.value() > 0 ) { //cluster norm thresholding
-      tstat4D.setmatrix(tstat,mask);
-      tstat4D.binarise(opts.cluster_norm.value());
-      for(int t=0;t<tstat4D.tsize();t++){
-	clust_label=connected_components(tstat4D[t],clustersizes,26);
-	for(int z=0; z<clust_label.zsize(); z++)
-	  for(int y=0; y<clust_label.ysize(); y++)
-	    for(int x=0; x<clust_label.xsize(); x++)
-	    {
-	      if (clust_label(x,y,z)) 
-              {
-                sumclusters(x,y,z,t)+=clustersizes(clust_label(x,y,z));
-		sumcluster_samples(x,y,z,t)++; 
-              }
-            }
       }
-    }
-  
+   } //end of cluster tresholding
+     
     if (tstatnum>=0) threshold=opts.clustermass_thresh.value();
     else threshold=opts.fmass_thresh.value();
     if ( threshold > 0 ) { //cluster mass thresholding
@@ -693,7 +695,7 @@ void DoPermutationStatistics(ranopts& opts, const volume<float> &mask, Matrix &d
   }
 
   //Create cluster norm map
- if (opts.cluster_norm.value() > 0  && tstatnum>=0) 
+ if ( opts.cluster_thresh.value()>0 && opts.cluster_norm.value() && tstatnum>=0) 
  {
    save_volume4D(sumclusters,opts.out_fileroot.value()+"_clusternormpre");
    save_volume4D(sumcluster_samples,opts.out_fileroot.value()+"_clusternormdiv");
@@ -705,60 +707,60 @@ void DoPermutationStatistics(ranopts& opts, const volume<float> &mask, Matrix &d
              sumclusters(x,y,z,t)/=sumcluster_samples(x,y,z,t);
  }
 
- if (opts.tfce_height.value()>0.0 && tstatnum>=0 )
+ if (opts.tfce.value() && tstatnum>=0 )
+ {
+   OutputStat(tstat_ce_orig,maxdistCE,mask,n_perms,"_tfce_tstat",opts,tstatnumber);
+   if (opts.cluster_norm.value())
    {
      volume4D<float> output(mask.xsize(),mask.ysize(),mask.zsize(),1);
      output.setmatrix(tstat_ceav,mask);
-     save_volume4D(output,opts.out_fileroot.value()+"_ceavnum"+tstatnumber);
+     save_volume4D(output,opts.out_fileroot.value()+"_tfceavnum"+tstatnumber);
      tstat_ceav=SD(tstat_ceav,tstat_cenorm);
      output.setmatrix(tstat_ceav,mask);
      float min=output.percentile(0.02,mask);     
      for(int t=1;t<=tstat_ceav.Ncols();t++)
-      {
-	if(tstat_ceav(1,t)<min)
-	{
-	  cerr << tstat_ceav(1,t) << " " << min << endl;
-          tstat_ceav(1,t)=min;
-	}
-      }
+     {
+       if(tstat_ceav(1,t)<min)
+       {
+	 //cerr << tstat_ceav(1,t) << " " << min << endl;
+	 tstat_ceav(1,t)=min;
+       }
+     }
      output.setmatrix(tstat_ceav,mask);
-     save_volume4D(output,opts.out_fileroot.value()+"_ceavnorm"+tstatnumber);
+     save_volume4D(output,opts.out_fileroot.value()+"_tfceavnorm"+tstatnumber);
      output.setmatrix(tstat_cenorm,mask);
-     save_volume4D(output,opts.out_fileroot.value()+"_ceavdenom"+tstatnumber);
-     OutputStat(tstat_ce_orig,maxdistCE,mask,n_perms,"_ce_tstat",opts,tstatnumber);
+     save_volume4D(output,opts.out_fileroot.value()+"_tfceavdenom"+tstatnumber);
    }
+ }
+    
 
    //Rerun perms for clusternorm
- if ((opts.cluster_norm.value() > 0 || opts.tfce_height.value()>0.0) && tstatnum>=0){ 
-  for(int perm=1; perm<=n_perms; perm++){
-
-    if (opts.verbose.value()) cout << "starting second-pass permutation " << perm << endl;
-    if (opts.cluster_norm.value() <= 0 && !lowram)
-    {
-       tstat_ce=oldtstatce->Row(perm);
+ if (opts.cluster_norm.value() && tstatnum>=0)
+ { 
+   for(int perm=1; perm<=n_perms; perm++)
+   {
+     if (opts.verbose.value()) cout << "starting second-pass permutation " << perm << endl;
+     if ( opts.cluster_thresh.value()>0 || ( opts.tfce.value() && lowram ) ) //Regenerate stats
+     {
+       if(!permbl.onesample) dm_permute(dm,dmperm,oldperms.at(perm-1));
+       else dm_mult(dm,dmperm,oldperms.at(perm-1));
+       if(opts.var_sm_sig.value()==0) ols(datam,dmperm,tc,cope,varcope,dof);   
+       else ols_var_sm(datam,dmperm,tc,cope,varcope,mask,mask_sm,opts.var_sm_sig.value(),dof);   
+      tstat=SD(cope,sqrt(varcope));
+     }
+     if ( opts.tfce.value() )
+     {
+       if (!lowram) tstat_ce=oldtstatce->Row(perm);
+       else tstat_ce=tfce(tstat,mask,tfce_delta,opts.tfce_height.value(),opts.tfce_size.value(),opts.tfce_connectivity.value());
        tstat_ce=SD(tstat_ce,tstat_ceav); 
        maxdistCE.Column(perm)<<max(tstat_ce.t()).t();
-    }
-    else
-    {
-      if(!permbl.onesample) dm_permute(dm,dmperm,oldperms.at(perm-1));
-      else dm_mult(dm,dmperm,oldperms.at(perm-1));
-      if(opts.var_sm_sig.value()==0) ols(datam,dmperm,tc,cope,varcope,dof);   
-      else ols_var_sm(datam,dmperm,tc,cope,varcope,mask,mask_sm,opts.var_sm_sig.value(),dof);   
-      tstat=SD(cope,sqrt(varcope));
-
-
-      if (opts.tfce_height.value()>0.0){ 
-         tstat_ce=tfce(tstat,mask,tfce_delta,opts.tfce_height.value(),opts.tfce_size.value(),opts.tfce_connectivity.value());
-         tstat_ce=SD(tstat_ce,tstat_ceav); 
-         maxdistCE.Column(perm)<<max(tstat_ce.t()).t();
-      }
-    
-    if (opts.cluster_norm.value() > 0 ){ 
-      tstat4D.setmatrix(tstat,mask);
-      tstat4D.binarise(opts.cluster_thresh.value());
-      for(int t=0;t<tstat4D.tsize();t++)
-      {	
+     }
+     if ( opts.cluster_thresh.value()>0 )
+     { 
+       tstat4D.setmatrix(tstat,mask);
+       tstat4D.binarise(opts.cluster_thresh.value());
+       for(int t=0;t<tstat4D.tsize();t++)
+       {	
          clust_label=connected_components(tstat4D[t],clustersizes,26);
          ColumnVector entries,cluster(clustersizes.Nrows());
          cluster=0;
@@ -773,17 +775,16 @@ void DoPermutationStatistics(ranopts& opts, const volume<float> &mask, Matrix &d
 	       }
          for(int i=1;i<=clustersizes.Nrows();i++) clustersizes(i)/=(cluster(i)/entries(i));
          if ( clustersizes.Nrows() > 0 ) maxdistCN(t+1,perm)=clustersizes.MaximumAbsoluteValue();
-      }
-    }
-
-    }
-  }
+       }
+     }
+   }
  }
+   
 
   //OUTPUT Routines 
   if (tstatnum>=0) OutputStat(tstat_orig,maxdist,mask,n_perms,"_tstat",opts,tstatnumber);
-  if (tstatnum>=0 && opts.tfce_height.value()>0.0) tstat_ce_orig=SD(tstat_ce_orig,tstat_ceav); 
-  if (tstatnum>=0 && opts.tfce_height.value()>0.0) OutputStat(tstat_ce_orig,maxdistCE,mask,n_perms,"_ceav_tstat",opts,tstatnumber);
+  if (tstatnum>=0 && opts.tfce.value() && opts.cluster_norm.value() ) tstat_ce_orig=SD(tstat_ce_orig,tstat_ceav); 
+  if (tstatnum>=0 && opts.tfce.value() && opts.cluster_norm.value() ) OutputStat(tstat_ce_orig,maxdistCE,mask,n_perms,"_tfceav_tstat",opts,tstatnumber);
   if (tstatnum<0) OutputStat(tstat_orig,maxdist,mask,n_perms,"_fstat",opts,tstatnumber);
 
     volume4D<float> output(mask.xsize(),mask.ysize(),mask.zsize(),1);
@@ -798,7 +799,7 @@ void DoPermutationStatistics(ranopts& opts, const volume<float> &mask, Matrix &d
     if ( opts.cluster_thresh.value() > 0  && tstatnum >=0 ) OutputClusterStat(tstat_orig,maxdistC,mask,n_perms,"_maxc",opts,tstatnumber,opts.cluster_thresh.value(),sumclusters,"_tstat");
     if ( opts.f_thresh.value() > 0  && tstatnum <0 ) OutputClusterStat(tstat_orig,maxdistC,mask,n_perms,"_maxc",opts,tstatnumber,opts.cluster_thresh.value(),sumclusters,"_fstat");
 
-  if (opts.cluster_norm.value()>0  && tstatnum >=0 ) 
+  if ( opts.cluster_thresh.value() > 0 && opts.cluster_norm.value() && tstatnum >=0 ) 
   {
     OutputClusterStat(tstat_orig,maxdistCN,mask,n_perms,"_maxcn",opts,tstatnumber,opts.cluster_thresh.value(),sumclusters,"_tstat");
     save_volume4D(sumclusters,opts.out_fileroot.value()+"_clusternorm");
@@ -806,7 +807,7 @@ void DoPermutationStatistics(ranopts& opts, const volume<float> &mask, Matrix &d
   if ( opts.clustermass_thresh.value() > 0 && tstatnum >=0 )  OutputClusterStat(tstat_orig,maxdistCmass,mask,n_perms,"_maxcmass",opts,tstatnumber,opts.clustermass_thresh.value(),sumclusters,"_tstat");
   if ( opts.fmass_thresh.value() > 0 && tstatnum <0 )  OutputClusterStat(tstat_orig,maxdistCmass,mask,n_perms,"_maxcmass",opts,tstatnumber,opts.clustermass_thresh.value(),sumclusters,"_fstat");
 
-  if (opts.tfce_height.value()>0.0 && !lowram) delete oldtstatce;
+  if (opts.cluster_norm.value() && opts.tfce.value() && !lowram) delete oldtstatce;
 }
 
 void Convertcontrast(const Matrix &input_x,const Matrix &input_c1,const Matrix &input_datam,Matrix &NewModel,Matrix &NewCon, Matrix &NewDataM, Matrix &NewW2 )
@@ -854,10 +855,11 @@ void doit(Matrix &tc,Matrix &dm,Matrix &datam,volume<float> &mask, Matrix &gp,co
   int  nonzero=0;
   for (int i=1;i<=tc2.Ncols();i++) if (tc2(1,i)) nonzero++;
   permbl.initpermblocks((num>0 && nonzero==1 && labels.Sum() == labels.Nrows()),labels);
+  if(permbl.onesample) cout << "One-sample design detected; sign-flipping instead of permuting." << endl;
   if(opts.verbose.value() || opts.how_many_perms.value()) 
   {
     if(!permbl.onesample) cout << permbl.exhaust_perms << " permutations required for exhaustive test";
-    else cout << permbl.exhaust_perms << " inversion permutations required for exhaustive test";
+    else cout << permbl.exhaust_perms << " sign-flipping permutations required for exhaustive test";
     if (num>0)  cout << " of t-test " << num << endl;
     if (num==0) cout << " of all t-tests " << endl;
     if (num<0)  cout << " of f-test " << abs(num) << endl;
@@ -891,6 +893,9 @@ int main(int argc,char *argv[]){
   Matrix model, tstat_con, fstat_con, data,grp_lab;
   volume<float> mask;
   if (Initialise(opts,mask,data,tstat_con,model,fstat_con,grp_lab)==-1) return -1;
+  bool needsdemean=true;
+  for (int i=1;i<=model.Ncols();i++) if ( fabs( (model.Column(i)).Sum() ) > 0.0001 ) needsdemean=false;
+  if (needsdemean && !opts.demean_data.value()) cerr << "Warning: All design columns have zero mean - consider using the -D option to demean your data" << endl;
   if(opts.fc_file.value()!="") fparse(fstat_con,tstat_con,model,data,mask,grp_lab,opts); 
   for (int tstat=1; tstat<=tstat_con.Nrows() ; tstat++ )  doit(tstat_con,model,data,mask,grp_lab,tstat,opts); 
 return 0;
@@ -900,7 +905,7 @@ void permblock::createpermblocks(const Matrix &dmr,const Matrix &groups)
 {
   int current=0;
   num_blocks=int(groups.Maximum())+1;
-  num_perms.ReSize(groups.Maximum());
+  num_perms.ReSize((int)groups.Maximum());
   num_elements=dmr.Nrows();
   original_locations = new ColumnVector[num_blocks];
   permuted_locations = new ColumnVector[num_blocks];
@@ -931,7 +936,7 @@ double permblock::initpermblocks(bool onesample_input,ColumnVector labels)
    { 
      for(int j=1;j<=permuted_locations[i].Nrows();j++) 
      {
-       if(!onesample) permuted_locations[i](j)=labels(original_locations[i](j));
+       if(!onesample) permuted_locations[i](j)=labels((int)original_locations[i](j));
        else permuted_locations[i](j)=1;
      }
      if (i>0) 
@@ -949,7 +954,7 @@ ColumnVector permblock::buildfullperm()
 ColumnVector newvec(num_elements); 
    for(int i=0;i<num_blocks;i++)
      for(int j=1;j<=permuted_locations[i].Nrows();j++) 
-       newvec(original_locations[i](j))=permuted_locations[i](j);
+       newvec((int)original_locations[i](j))=permuted_locations[i](j);
    return newvec;
 }
 
@@ -957,8 +962,8 @@ ColumnVector permblock::next_perm(int perm,bool exhaustive)
 {
   for(int i=1;i<num_blocks;i++)
   {
-    int interval = 1;
-    for(int j=i+1;j<num_blocks;j++) interval*=num_perms(j);
+    long int interval = 1;
+    for(int j=i+1;j<num_blocks;j++) interval*=(long int)num_perms(j);
     if ( (perm-1)%interval==0) 
     { 
       if(!onesample) next_perm_vec(permuted_locations[i],exhaustive);
