@@ -1,6 +1,6 @@
-/*  fwdmodel_q2tips.cc - Implements the Q2TIPS ASL model
+/*  fwdmodel_q2tips.cc - Implements a Q2TIPS dual-echo ASL model
 
-    Michael Chappell, FMRIB Image Analysis Group
+    Adrian Groves, FMRIB Image Analysis Group
 
     Copyright (C) 2007 University of Oxford  */
 
@@ -79,7 +79,7 @@ using namespace NEWIMAGE;
 
 string Q2tipsFwdModel::ModelVersion() const
 {
-  return "$Id: fwdmodel_q2tips.cc,v 1.1 2007/08/01 15:55:35 adriang Exp $ and "
+  return "$Id: fwdmodel_q2tips.cc,v 1.2 2007/08/02 15:14:11 adriang Exp $ and "
 	+ Quipss2FwdModel::ModelVersion();
 }
 

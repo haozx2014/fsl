@@ -79,7 +79,7 @@ void SpatialVariationalBayes::Setup(ArgsType& args)
     
     try {
         spatialDims = convertTo<int>(
-            args.ReadWithDefault("spatial-dims", "3"));
+            args.ReadWithDefault("spatial-dims", "2"));
     } catch (invalid_argument&){
         throw Invalid_option("--spatial-dims= must have an integer parameter");
     }

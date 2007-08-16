@@ -124,10 +124,10 @@ if { [ string compare [ lindex $argv $pm ] -p ] == 0 } {
     incr pm 1
 }
 
-set threshcommand ""
+set threshstat ""
 if { [ string compare [ lindex $argv $pm ] -t ] == 0 } {
     incr pm 1
-    set threshcommand "-l [ lindex $argv $pm ]"
+    set threshstat [ lindex $argv $pm ]
     incr pm 1
 }
 
@@ -157,6 +157,10 @@ if { [ string compare [ lindex $argv $pm ] -b ] == 0 } {
 }
 
 set origmask [ lindex $argv $pm ]
+set maskname ""
+if { [ file exists ${origmask}.name ] } {
+    set maskname [ exec sh -c "cat ${origmask}.name" ]
+}
 
 #}}}
 
@@ -185,7 +189,7 @@ fsl:echo $fq "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file
 <TITLE>FSL</TITLE></HEAD><BODY>
 <STYLE TYPE=\"text/css\">BODY { font-size: small }</STYLE>
 <STYLE TYPE=\"text/css\">TABLE { font-size: x-small }</STYLE>
-<CENTER><H2>Featquery output</H2><p>${fqroot}<hr>
+<CENTER><br><br><H2>Featquery output</H2><p>${fqroot}<hr>
 "
 
 #}}}
@@ -250,7 +254,11 @@ if { $spaces == "" } {
     fq_exit "Error - mask size doesn't match any of the images in the FEAT directory"
 }
 
-fsl:echo $fq "Mask $origmask is in space of $spaces. Image of mask in native space:<br><IMG SRC=\"mask.png\">"
+set themaskname $origmask
+if { $maskname != "" } {
+    set themaskname $maskname
+}
+fsl:echo $fq "Mask <em>${themaskname}</em> is in space of $spaces.<br>Image of mask in native space:<br><IMG SRC=\"mask.png\">"
 
 #}}}
     #{{{ make mask
@@ -268,7 +276,9 @@ if { [ string compare $spaces example_func ] != 0 } {
 	catch { exec sh -c "${FSLDIR}/bin/fslstats $mask -x" } themax
 	fsl:exec "${FSLDIR}/bin/fslmaths $mask -roi [ lindex $themax 0 ] 1 [ lindex $themax 1 ] 1 [ lindex $themax 2 ] 1 0 1 -bin $mask"
     } else {
-	fsl:exec "${FSLDIR}/bin/fslmaths $mask -thr $interpthresh $mask"
+	if { ! $maskweight } {
+	    fsl:exec "${FSLDIR}/bin/fslmaths $mask -thr $interpthresh $mask"
+	}
     }
 
 }
@@ -288,24 +298,24 @@ if { $percent } {
     if { ! [ imtest mean_func ] } {
 	fsl:exec "${FSLDIR}/bin/fslmaths filtered_func_data -Tmean mean_func"
     }
-    fsl:echo $fq "PE/COPE values converted into %."
+    fsl:echo $fq "<p>PE/COPE values converted into %."
 }
 
 #}}}
     #{{{ run tsplot
 
-fsl:echo $fq "<p>"
-
 if { [ imtest filtered_func_data ] } {
-    fsl:exec "${FSLDIR}/bin/fslmeants -i filtered_func_data -o ${fqroot}/mean_mask_ts.txt -m ${fqroot}/mask"
-    fsl:echo $fq "<a href=\"mean_mask_ts.txt\">Mean time series (masked/weighted)</a>. "
-}
+    fsl:exec "${FSLDIR}/bin/fslmaths filtered_func_data -mul ${fqroot}/mask ${fqroot}/tmpts"
+    fsl:exec "${FSLDIR}/bin/fslmeants -i ${fqroot}/tmpts -o ${fqroot}/mean_mask_ts.txt -m ${fqroot}/mask"
+    imrm ${fqroot}/tmpts
+    fsl:echo $fq "<p><a href=\"mean_mask_ts.txt\">Mean time series (masked/weighted)</a>. &nbsp;&nbsp;&nbsp;"
 
-if { $tsplot } {
-    fsl:exec "mkdir ${fqroot}/tsplot"
-    fsl:exec "${FSLDIR}/bin/tsplot ${featdir} -m ${fqroot}/mask -o ${fqroot}/tsplot"
-    fsl:echo $fq "<a href=\"tsplot/tsplot_index.html\">Masked time series plots.</a><br>
+    if { $tsplot } {
+	fsl:exec "mkdir ${fqroot}/tsplot"
+	fsl:exec "${FSLDIR}/bin/tsplot ${featdir} -m ${fqroot}/mask -o ${fqroot}/tsplot"
+	fsl:echo $fq "<a href=\"tsplot/tsplot_index.html\">Masked time series plots.</a><br>
 "
+    }
 }
 
 #}}}
@@ -317,7 +327,7 @@ if { $atlas > 0 } {
 
 fsl:echo $fq "<p><table border=1 cellspacing=3>
 <tr><th>stats image<th> # voxels <th colspan=6> image statistics <th colspan=7> position of max </tr>
-<tr><th><th><th> min <th> 10% <th> mean <th> median <th> 90% <th> max <th colspan=3> vox (FMRI space) <th colspan=3> mm (standard space) <th>atlas results</tr>
+<tr><th><th><th> min <th> 10% <th> mean <th> median <th> 90% <th> max <th colspan=3> vox (FMRI space) <th colspan=3> mm (standard space) <th>max voxel atlas results</tr>
 "
 
 #}}}
@@ -369,47 +379,53 @@ if { $percent } {
 #}}}
 	#{{{ apply mask, run fslstats and convert max vox coords to standard space
 
-    fsl:exec "${FSLDIR}/bin/fslmaths $statsimage $percentcommand -mul ${fqroot}/mask ${fqroot}/tmp"
+fsl:exec "${FSLDIR}/bin/fslmaths $statsimage $percentcommand ${fqroot}/tmp"
 
-    catch { exec sh -c "${FSLDIR}/bin/fslstats ${fqroot}/tmp $threshcommand -M -R -V -P 10 -P 50 -P 90 -x" } thevals
+if { $threshstat == "" } {
+    fsl:exec "${FSLDIR}/bin/imcp ${fqroot}/mask ${fqroot}/tmpmask"
+} else {
+    fsl:exec "${FSLDIR}/bin/fslmaths $statsimage -thr $threshstat -bin -mul ${fqroot}/mask ${fqroot}/tmpmask"
+}
 
-    set themean  [ format %.2f [ lindex $thevals 0 ] ]
-    set themin   [ format %.2f [ lindex $thevals 1 ] ]
-    set themax   [ format %.2f [ lindex $thevals 2 ] ]
-    set thecount [ lindex $thevals 3 ]
-    set perc10   [ format %.2f [ lindex $thevals 5 ] ]
-    set perc50   [ format %.2f [ lindex $thevals 6 ] ]
-    set perc90   [ format %.2f [ lindex $thevals 7 ] ]
-    set maxx     [ lindex $thevals 8 ]
-    set maxy     [ lindex $thevals 9 ]
-    set maxz     [ lindex $thevals 10 ]
+catch { exec sh -c "${FSLDIR}/bin/fslstats ${fqroot}/tmp -k ${fqroot}/tmpmask -m -R -V -p 10 -p 50 -p 90 -x" } thevals
 
-    set SSmaxx ""
-    set SSmaxy ""
-    set SSmaxz ""
-    set atlasstring ""
-    if { $higherlevel || ( [ imtest reg/standard ] && [ file exists reg/example_func2standard.mat ] ) && $maxx != 0  && $maxy != 0  && $maxz != 0 } {
-	if { $higherlevel } {
-	    set SSmax [ fsl:exec "echo $maxx $maxy $maxz | ${FSLDIR}/bin/img2stdcoord -img example_func -vox -" ]	    
-	    # 	    set atlasx $maxx
-	    # 	    set atlasy $maxy
-	    # 	    set atlasz $maxz
-	} else {
-	    set SSmax [ fsl:exec "echo $maxx $maxy $maxz | ${FSLDIR}/bin/img2stdcoord -img example_func -std reg/standard -xfm reg/example_func2standard.mat -vox -" ]
-	    # 	    fsl:echo ${fqroot}/.coords "$maxx $maxy $maxz" -o
-	    # 	    set AtlasSSmax [ fsl:exec "${FSLDIR}/bin/img2imgcoord -src example_func -dest reg/standard -xfm reg/example_func2standard.mat ${fqroot}/.coords" ]
-	    # 	    set atlasx [ expr round ( [ lindex $AtlasSSmax 0 ] ) ]
-	    # 	    set atlasy [ expr round ( [ lindex $AtlasSSmax 1 ] ) ]
-	    # 	    set atlasz [ expr round ( [ lindex $AtlasSSmax 2 ] ) ]
-	}
-	set SSmaxx [ format %.2f [ lindex $SSmax 0 ] ]
-	set SSmaxy [ format %.2f [ lindex $SSmax 1 ] ]
-	set SSmaxz [ format %.2f [ lindex $SSmax 2 ] ]
+set themean  [ format %.4g [ lindex $thevals 0 ] ]
+set themin   [ format %.4g [ lindex $thevals 1 ] ]
+set themax   [ format %.4g [ lindex $thevals 2 ] ]
+set thecount [ lindex $thevals 3 ]
+set perc10   [ format %.4g [ lindex $thevals 5 ] ]
+set perc50   [ format %.4g [ lindex $thevals 6 ] ]
+set perc90   [ format %.4g [ lindex $thevals 7 ] ]
+set maxx     [ lindex $thevals 8 ]
+set maxy     [ lindex $thevals 9 ]
+set maxz     [ lindex $thevals 10 ]
 
-	if { $atlas > 0 } {
-	    set atlasstring [ fsl:exec "export DYLD_LIBRARY_PATH=/Applications/fslview.app/Contents/Frameworks; ${FSLDIR}/bin/atlasquery -a \"$atlasname($atlas)\" -c ${SSmaxx},${SSmaxy},${SSmaxz} | awk -F \"<br>\" '{print \$2}' " -n ]
-	}
+set SSmaxx ""
+set SSmaxy ""
+set SSmaxz ""
+set atlasstring ""
+if { $higherlevel || ( [ imtest reg/standard ] && [ file exists reg/example_func2standard.mat ] ) && $maxx != 0  && $maxy != 0  && $maxz != 0 } {
+    if { $higherlevel } {
+	set SSmax [ fsl:exec "echo $maxx $maxy $maxz | ${FSLDIR}/bin/img2stdcoord -img example_func -vox -" ]	    
+	# 	    set atlasx $maxx
+	# 	    set atlasy $maxy
+	# 	    set atlasz $maxz
+    } else {
+	set SSmax [ fsl:exec "echo $maxx $maxy $maxz | ${FSLDIR}/bin/img2stdcoord -img example_func -std reg/standard -xfm reg/example_func2standard.mat -vox -" ]
+	# 	    fsl:echo ${fqroot}/.coords "$maxx $maxy $maxz" -o
+	# 	    set AtlasSSmax [ fsl:exec "${FSLDIR}/bin/img2imgcoord -src example_func -dest reg/standard -xfm reg/example_func2standard.mat ${fqroot}/.coords" ]
+	# 	    set atlasx [ expr round ( [ lindex $AtlasSSmax 0 ] ) ]
+	# 	    set atlasy [ expr round ( [ lindex $AtlasSSmax 1 ] ) ]
+	# 	    set atlasz [ expr round ( [ lindex $AtlasSSmax 2 ] ) ]
     }
+    set SSmaxx [ format %.1f [ lindex $SSmax 0 ] ]
+    set SSmaxy [ format %.1f [ lindex $SSmax 1 ] ]
+    set SSmaxz [ format %.1f [ lindex $SSmax 2 ] ]
+    
+    if { $atlas > 0 } {
+	set atlasstring [ fsl:exec "export DYLD_LIBRARY_PATH=/Applications/fslview.app/Contents/Frameworks; ${FSLDIR}/bin/atlasquery -a \"$atlasname($atlas)\" -c ${SSmaxx},${SSmaxy},${SSmaxz} | awk -F \"<br>\" '{print \$2}' " -n ]
+    }
+}
 
 #}}}
 	#{{{ save max-vox, masked-mean and weighted-mask-mean timeseries text files to file

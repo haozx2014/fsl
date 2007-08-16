@@ -147,8 +147,8 @@ int applywarp()
   volumeinfo vinfo;
   volume4D<float> warpvol;
 
-  read_rad_volume4D(invol,inname.value(),vinfo);
-  read_rad_volume4D(warpvol,warpname.value());
+  read_volume4D(invol,inname.value(),vinfo);
+  read_volume4D(warpvol,warpname.value());
   if (warpvol.tsize()<3) {
     cerr << "Warp volume does not have the correct dimensions (min. 3 volumes)"
 	 << endl;
@@ -174,10 +174,10 @@ int applywarp()
   }
 
 
-  if (maskname.set()) { read_rad_volume(mask,maskname.value()); }
+  if (maskname.set()) { read_volume(mask,maskname.value()); }
 
   if (refname.set()) {
-    read_rad_volume(refvol,refname.value());
+    read_volume(refvol,refname.value());
   } else {
     refvol = warpvol[0];
   }

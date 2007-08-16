@@ -69,13 +69,15 @@
 
 /* fwdmodel.h
  * Class declaration for generic forward models and related classes.
- * Copyright Adrian Groves, 2007
+ * Written by Adrian Groves, 2007
  * FMRIB Centre, University of Oxford
  *
- * Last modified: $Date: 2007/07/27 21:58:30 $ $Author: adriang $ $Revision: 1.10 $
+ * Last modified: $Date: 2007/08/02 11:16:47 $ $Author: adriang $ $Revision: 1.11 $
  */
 
-#pragma once // prevent multiple includes
+//#pragma once // prevent multiple includes
+#ifndef __FABBER_FWDMODEL_H
+#define __FABBER_FWDMODEL_H 1
 
 #include "assert.h"
 #include "newmatap.h"
@@ -139,4 +141,6 @@ public:
   // that are assumed to take known values, and basis functions.  Given these
   // constants, NumParams() should have a fixed value.
 };
+
+#endif /* __FABBER_FWDMODEL_H */
 

@@ -87,31 +87,32 @@ class ranopts {
   static ranopts& getInstance();
   ~ranopts() { delete gopt; }
   
-  Option<bool> verbose;
-  Option<bool> help;
   Option<bool> demean_data;
+  Option<bool> one_samp;
   Option<bool> low_ram;
   Option<string> in_fileroot;
   Option<string> maskname;
   Option<string> out_fileroot;
   Option<string> dm_file;
-  Option<string> confound_file;
   Option<string> tc_file;
   Option<string> fc_file;
   Option<string> gp_file;
-  Option<string> logdir;
   Option<bool> how_many_perms;
   Option<int> n_perm;
-  Option<float> f_thresh;
-  Option<float> fmass_thresh;
   Option<float> cluster_thresh;
   Option<float> clustermass_thresh;
-  //  Option<float> p_thresh;
-  Option<float> var_sm_sig;
-  Option<float> cluster_norm;
+  Option<float> f_thresh;
+  Option<float> fmass_thresh;
+  Option<bool> tfce;
   Option<float> tfce_height;
   Option<float> tfce_size;
   Option<int> tfce_connectivity;
+  Option<float> var_sm_sig;
+  Option<bool> help;
+  Option<bool> verbose;
+  Option<bool> cluster_norm;
+  Option<string> logdir;
+  Option<string> confound_file;
   void parse_command_line(int argc, char** argv,Log& logger);
   
  private:
@@ -133,20 +134,17 @@ class ranopts {
  }
 
  inline ranopts::ranopts() :
-   verbose(string("-V"), false, 
-	   string("switch on diagnostic messages"), 
-	   false, no_argument),
-   help(string("-h,--help"), false,
-	string("display this message"),
-	false, no_argument),
    demean_data(string("-D"), false,
-	string("demean data temporally before model fitting"),
+	string("\tdemean data temporally before model fitting"),
 	false, no_argument),
+   one_samp(string("-1"), false,
+	    string("\tperform 1-sample group-mean test instead of generic permutation test"),
+	    false, no_argument),
    low_ram(string("-M"), false,
-	string("Minimise memory usage during load"),
+	string("\tminimise memory usage during load (uses less total RAM but is slower)"),
 	false, no_argument),
    in_fileroot(string("-i"), "",
-       string("~<in_root>\tinput file root"),
+       string("~<in_root>\t4D input image"),
        true, requires_argument),
    maskname(string("-m"), "",
        string("~<mask>\tmask image"),
@@ -155,83 +153,92 @@ class ranopts {
 	    string("~<out_root>\toutput file root"),
 	    true, requires_argument),  
    dm_file(string("-d"), string(""),
-	    string("~<design_matrix>\tdesign matrix file"),
+	    string("~<design.mat>\tdesign matrix file"),
 	    false, requires_argument),  
-   confound_file(string("-x"), string(""),
-	    string("~<con_file>\tconfound matrix file"),
-		 false, requires_argument,false),  
    tc_file(string("-t"), string(""),
-	    string("~<t_contrasts>\tt contrasts file"),
+	    string("~<design.con>\tt contrasts file"),
 	    false, requires_argument),  
    fc_file(string("-f"), string(""),
-            string("~<f_contrasts>\tf contrasts file"),
+            string("~<design.fts>\tf contrasts file"),
 	   false, requires_argument),  
    gp_file(string("-g"), string(""),
-            string("~<group_labels>\tgroup labels file"),
+            string("~<design.grp>\tgroup labels file"),
 	   false, requires_argument),  
-   logdir(string("-l"), string("logdir"),
-	    string("~<logdir>\tlog directory"),
-	    false, requires_argument),  
    how_many_perms(string("-q"), false,
-	    string("print out how many unique permutations would be generated and exit"),
+	    string("\tprint out how many unique permutations would be generated and exit"),
 	    false, no_argument),  
    n_perm(string("-n"), 5000,
 	    string("~<n_perm>\tnumber of permutations (default 5000, set to 0 for exhaustive)"),
 	    false, requires_argument),  
-   f_thresh(string("-F"), -1,
-	  string("~<f_thresh>\tcarry out f cluster thresholding (as well as max and voxelwise)"),
-	  false, requires_argument),
-   fmass_thresh(string("-S"), -1,
-	  string("~<fmass_thresh>\tcarry out f cluster-mass thresholding (as well as max and voxelwise)"),
-	  false, requires_argument),
    cluster_thresh(string("-c"), -1,
-	  string("~<c_thresh>\tcarry out cluster-based thresholding (as well as max and voxelwise)"),
+	  string("~<thresh>\tcarry out cluster-based thresholding (as well as max and voxelwise)"),
 	  false, requires_argument),
    clustermass_thresh(string("-C"), -1,
-	  string("~<cmass_thresh>\tcarry out cluster-mass-based thresholding (as well as max and voxelwise)"),
+	  string("~<thresh>\tcarry out cluster-mass-based thresholding (as well as max and voxelwise)"),
 	  false, requires_argument),
-   //p_thresh(string("-p"), 0.05,
-   //    string("~<p_thresh>\tp threshold (default 0.05)"),
-   //     false, requires_argument),
+   f_thresh(string("-F"), -1,
+	  string("~<thresh>\tcarry out f cluster thresholding (as well as max and voxelwise)"),
+	  false, requires_argument),
+   fmass_thresh(string("-S"), -1,
+	  string("~<thresh>\tcarry out f cluster-mass thresholding (as well as max and voxelwise)"),
+	  false, requires_argument),
+   tfce(string("-T"), false, 
+	   string("\tcarry out Threshold-Free Cluster Enhancement"), 
+	   false, no_argument),
+   tfce_height(string("--tfce_H"), 2, string("~<H>\tTFCE height parameter (default=2)"), false, requires_argument),
+   tfce_size(string("--tfce_E"), 0.5, string("~<E>\tTFCE extent parameter (default=0.5)"), false, requires_argument),
+   tfce_connectivity(string("--tfce_C"), 26, string("~<C>\tTFCE connectivity (6 or 26; default=26)"), false, requires_argument),
    var_sm_sig(string("-v"), 0,
 	    string("~<std>\tuse variance smoothing (std is in mm)"),
 	     false, requires_argument),
-   cluster_norm(string("-N"), -1, 
-	   string("~<cn_thresh>\tcarry out cluster normalisation thresholding"), 
-	   false, requires_argument),
-   tfce_height(string("--tfce_height"), -1, string(""), false, requires_argument),
-   tfce_size(string("--tfce_size"), -1, string(""), false, requires_argument),
-   tfce_connectivity(string("--tfce_connectivity"), 26, string(""), false, requires_argument),
-  options("randomise v1.1 - Matthew Webster, Tim Behrens & Steve Smith (FMRIB) & Tom Nichols (UMich)", "randomise -i data -o output -d design.mat")
-{
-     
+   help(string("-h,--help"), false,
+	string("display this message"),
+	false, no_argument),
+   verbose(string("-V"), false, 
+	   string("\tswitch on diagnostic messages and null distribution text files"),
+	   false, no_argument),
+   cluster_norm(string("-N"), false, 
+	   string("carry out cluster normalisation thresholding"), 
+		false, no_argument,false),
+   logdir(string("-l"), string("logdir"),
+	    string("~<logdir>\tlog directory"),
+	  false, requires_argument,false),  
+   confound_file(string("-x"), string(""),
+	    string("~<xdesign.mat>\tconfound matrix file"),
+		 false, requires_argument,false),  
+
+
+
+   options("randomise v2.0", "randomise -i <input> -o <output> -d <design.mat> -t <design.con> [options]")
+     {
     
      try {
-       options.add(verbose);
-       options.add(help);
        options.add(demean_data);
+       options.add(one_samp);
        options.add(low_ram);
        options.add(in_fileroot);
        options.add(maskname);
        options.add(out_fileroot);
        options.add(dm_file);
-       options.add(confound_file);
        options.add(tc_file);
        options.add(fc_file);
        options.add(gp_file);
-       options.add(logdir);
        options.add(how_many_perms);
-       options.add(n_perm); 
-       options.add(tfce_height);     
-       options.add(tfce_size);     
-       options.add(tfce_connectivity);     
-       options.add(f_thresh);     
-       options.add(fmass_thresh);     
+       options.add(n_perm);    
        options.add(cluster_thresh);
        options.add(clustermass_thresh);
-       //options.add(p_thresh);
+       options.add(f_thresh);     
+       options.add(fmass_thresh);     
+       options.add(tfce);
+       options.add(tfce_height);     
+       options.add(tfce_size);     
+       options.add(tfce_connectivity);  
        options.add(var_sm_sig);
+       options.add(help);
+       options.add(verbose);
        options.add(cluster_norm);
+       options.add(logdir);
+       options.add(confound_file);
      }
      catch(X_OptionError& e) {
        options.usage();

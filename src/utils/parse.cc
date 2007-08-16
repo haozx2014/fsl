@@ -82,11 +82,12 @@ namespace Utilities {
     throw(X_OptionError)
   {
     BaseOption * theOption = 0;
+    bool spasMode = true;
 
     if((theOption = find_matching_option(optstr)) == 0)
       throw X_OptionError(optstr, "Option doesn't exist");
 
-    if(theOption->unset()) 
+    if(theOption->unset() || spasMode) 
       {
 	if(theOption->has_arg()) {
 	  if(valstr.length() > 0) {
@@ -107,7 +108,7 @@ namespace Utilities {
       } 
     else 
       {
-	throw X_OptionError(optstr);
+	throw X_OptionError(optstr, "Option already set");
       }
 
     throw X_OptionError(optstr);

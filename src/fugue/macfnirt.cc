@@ -214,10 +214,10 @@ volume<float> param_derivative(volume4D<float>& dv, const volume<float>& vin,
 int do_work(int argc, char* argv[]) 
 {
   volume4D<float> vin;
-  read_rad_volume4D(vin,inname.value());
+  read_volume4D(vin,inname.value());
   if (basiswarpname.set()) {
     volume<float> shiftmap;
-    read_rad_volume(shiftmap,basiswarpname.value());
+    read_volume(shiftmap,basiswarpname.value());
     shift2warp(shiftmap,basiswarp,"y");
   } else {
     // construct a null basis (which should be ignored)

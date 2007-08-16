@@ -74,22 +74,24 @@ and some help text provided).  Note that
 the default text editor used is pico, but other editors can be
 specified by the second argument.
 
-<br><br><LI><b>fslfill</b> - fill non-brain parts of a 4D data set
-with data copied from inside the brain and adjust time series
-accordingly - useful for programs which need a complete rectangular
-matrix filled with usable but null data.
+<br><br><LI><b>fslfft</b> - Outputs the Fast-Fourier Transform ( or inverse )
+for a complex input volume.
 
 <br><br><LI><b>fslhd</b> - report every field of an Analyze or
 Nifti header (note that the fields are different although some
 are common, e.g. pixdims).  The option "-x" produces an xml-style
 output which can be used in conjunction with <kbd>fslcreatehd</kbd>.
 
+<br><br><LI><b>fslinfo</b> - report a basic subset of an Analyze or
+Nifti header.
 
 <br><br><LI><b>fslinterleave</b> - interleave two inputs to form a
 combined image.
 
 <br><br><LI><b>fslmaths</b> - simple but powerful program to allow
 mathematical manipulation of images.
+
+<br><br><LI><b>fslmeants</b> - output the average timeseries of a set of voxels.
 
 <br><br><LI><b>fslmerge</b> - concatenate image files into a single
 output. This concatenation can be in time, or in X, Y or Z. All image
@@ -101,11 +103,16 @@ file.
 <br><br><LI><b>fslnvols</b> - report how many time points are in the
 input 4D data set.
 
+<br><br><LI><b>fslspec</b> - Outputs the spectral power density of an
+input 4D data set.
+
 <br><br><LI><b>fslroi</b> - extract region of interest (ROI) from an
 image. You can a) take a 3D ROI from a 3D data set (or if it is
 4D, the same ROI is taken from each time point and a new 4D data set
 is created), b) extract just some time points from a 4D data set, or
 c) control time and space limits to the ROI.
+
+<br><br><LI><b>fslslice</b> - split a 3D file into lots of 2D files (along z-axis).
 
 <br><br><LI><b>fslsplit</b> - split a 4D file into lots of 3D files
 (eg for inputting to SPM).
@@ -198,10 +205,12 @@ fslswapdim that does not swap the left-right order.  Note that
 whenever a left-right order swap would occur, fslswapdim will issue a
 warning message.
 
+<br><br><LI><b>fslswapdim2</b> - wrapper script for fslswapdim, with increased input parameters and some additional logic checks.
+
 </UL>
 
 
-<p><HR><FONT SIZE=1>Copyright &copy; 2000-2006, University of
+<p><HR><FONT SIZE=1>Copyright &copy; 2000-2007, University of
 Oxford. Written by <A
 HREF="http://www.fmrib.ox.ac.uk/~steve/index.html">S. Smith</A> and M. Jenkinson.</FONT>
 

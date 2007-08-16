@@ -1,7 +1,68 @@
-/*
- Brian Patenaude, parts taken from bet2
- FMRIB Image Analysis Group
- */
+/*  first_utils.cc
+    Brian Patenaude
+    Copyright (C) 2006-2007 University of Oxford  */
+
+/*  Part of FSL - FMRIB's Software Library
+    http://www.fmrib.ox.ac.uk/fsl
+    fsl@fmrib.ox.ac.uk
+    
+    Developed at FMRIB (Oxford Centre for Functional Magnetic Resonance
+    Imaging of the Brain), Department of Clinical Neurology, Oxford
+    University, Oxford, UK
+    
+    
+    LICENCE
+    
+    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    Oxford (the "Software")
+    
+    The Software remains the property of the University of Oxford ("the
+    University").
+    
+    The Software is distributed "AS IS" under this Licence solely for
+    non-commercial use in the hope that it will be useful, but in order
+    that the University as a charitable foundation protects its assets for
+    the benefit of its educational and research purposes, the University
+    makes clear that no condition is made or to be implied, nor is any
+    warranty given or to be implied, as to the accuracy of the Software,
+    or that it will be suitable for any particular purpose or for use
+    under any specific conditions. Furthermore, the University disclaims
+    all responsibility for the use which is made of the Software. It
+    further disclaims any liability for the outcomes arising from using
+    the Software.
+    
+    The Licensee agrees to indemnify the University and hold the
+    University harmless from and against any and all claims, damages and
+    liabilities asserted by third parties (including claims for
+    negligence) which arise directly or indirectly from the use of the
+    Software or the sale of any products based on the Software.
+    
+    No part of the Software may be reproduced, modified, transmitted or
+    transferred in any form or by any means, electronic or mechanical,
+    without the express permission of the University. The permission of
+    the University is not required if the said reproduction, modification,
+    transmission or transference is done without financial return, the
+    conditions of this Licence are imposed upon the receiver of the
+    product, and all original and amended source code is included in any
+    transmitted product. You may be held legally responsible for any
+    copyright infringement that is caused or encouraged by your failure to
+    abide by these terms and conditions.
+    
+    You are not permitted under this Licence to use this Software
+    commercially. Use for which any financial return is received shall be
+    defined as commercial use, and includes (1) integration of all or part
+    of the source code or the Software into a product for sale or license
+    by or on behalf of Licensee to third parties or (2) use of the
+    Software or any derivative of it for research with the final aim of
+    developing software products for sale or license to a third party or
+    (3) use of the Software or any derivative of it for research with the
+    final aim of developing non-software products for sale or license to a
+    third party, or (4) use of the Software to provide any service to an
+    external organisation for which payment is received. If you are
+    interested in using the Software commercially, please contact Isis
+    Innovation Limited ("Isis"), the technology transfer company of the
+    University, to negotiate a licence. Contact details are:
+    innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
 
 //#include <math.h>
@@ -27,109 +88,96 @@ using namespace shapemodel;
 using namespace MISCMATHS;
 
 string title="firt_utils (Version 1.0) University of Oxford (Brian Patenaude)";
-string examples="first_utils [options] -i segImage -l goldStandard -k output.txt ";
+string examples="first_utils [options] -i input -o output ";
 
 
 Option<bool> verbose(string("-v,--verbose"), false, 
-					 string("switch on diagnostic messages"), 
+					 string("output F-stats to standard out"), 
 					 false, no_argument);
 Option<bool> help(string("-h,--help"), false,
 				  string("display this message"),
 				  false, no_argument);
-Option<bool> inputprob(string("--inputprob"), false,
-					   string("Input image is probability - do not do any thresholding or smoothing"),
-					   false, no_argument);
 Option<bool> overlap(string("--overlap"), false,
-					 string("calculates overlap"),
+					 string("Calculates Dice overlap."),
 					 false, no_argument);
 
 Option<bool> useScale(string("--useScale"), false,
 					   string("do stats"),
 					   false, no_argument);
 Option<bool> vertexAnalysis(string("--vertexAnalysis"), false,
-					   string("operate on vertices from bvars"),
+					   string("Perform vertex-wise stats from bvars."),
 					   false, no_argument);
 Option<bool> singleBoundaryCorr(string("--singleBoundaryCorr"), false,
-					   string("correct boundary voxels of a single structue"),
+					   string("Correct boundary voxels of a single structue."),
 					   false, no_argument);
-Option<bool> bcd(string("--bcd"), false,
-			 string("use boundary corrected Dice"),
-				 false, no_argument);
+
 Option<bool> usePCAfilter(string("--usePCAfilter"), false,
-						   string("pca filter set number of modes to retain"),
+						   string("Smooths the surface my truncating the mode parameters."),
 						   false, no_argument);
 Option<bool> usebvars(string("--usebvars"), false,
-						 string("make image from bavrs"),
+						 string("Operate using the mode parameters output from FIRST."),
 						 false, no_argument);
 Option<bool> useWilks(string("--useWilks"), false,
-					   string("generate mesh with vertex wise t-stat vectors"),
+					   string("Use Wilks' Lambda"),
 					   false, no_argument);
 
 Option<bool> useReconMNI(string("--useReconMNI"), false,
-						 string("reconstruct meshes into MNI space"),
+						 string("Reconstruct meshes in MNI space."),
 						 false, no_argument);
 
 Option<bool> useReconNative(string("--useReconNative"), false,
-							string("recomnstruct meshes in native space"),
+							string("Reconstruct meshes in native space."),
 							false, no_argument);
 Option<bool> useRigidAlign(string("--useRigidAlign"), false,
-						   string("register meshes using rigid registration"),
+						   string("Register meshes using 6 degree of freedom (7 if useScale is used)."),
 						   false, no_argument);
 
 Option<bool> useNorm(string("--useNorm"), false,
-					string("use normalization"),
+					string("Normalize volumes measurements."),
 					false, no_argument);
-
-Option<bool> univariateT(string("--univariateT"), false,
-						  string("use univariate T in vertex Analysis Mode"),
-						  false, no_argument);
-Option<bool> useVolumes(string("--useVolumes"), false,
-						string("use volume discriminant"),
-						false, no_argument);
 
 
 Option<bool> meshToVol(string("--meshToVol"), false,
-					string("convert mesh to a vloume"),
+					string("Convert mesh to an image."),
 					false, no_argument);
 Option<bool> centreOrigin(string("--centreOrigin"), false,
-					string("places origin of mesh at the cnere of the image"),
+					string("Places origin of mesh at the centre of the image"),
 					false, no_argument);
-
 Option<string> inname(string("-i,--in"), string(""),
 					  string("filename of input image/mesh/bvars"),
 					  true, requires_argument);
 Option<string> pathname(string("-a,--in"), string(""),
-					  string("path to iimage"),
+					  string("Specifies extra path to image in .bvars file"),
 					  false, requires_argument);
 Option<string> flirtmatsname(string("-f,--in"), string(""),
-							 string("filename of flirt matrices"),
+							 string("Text of flirt matrix names."),
 							 false, requires_argument);
-Option<string> modelname(string("-m,--in"), string(""),
-						 string("filename of input model, if overiding .bvars"),
+Option<string> meshname(string("-m,--in"), string(""),
+						 string("Filename of input mesh"),
 						 false, requires_argument);
 Option<string> normname(string("-g,--in"), string(""),
-						string("filename of gold standard image"),
+						string("Filename of normalization factors."),
 						false, requires_argument);
 Option<string> designname(string("-d,--in"), string(""),
-						string("filename of fsl design matrix"),
+						string("Filename of fsl design matrix"),
 						false, requires_argument);
 
 Option<string> refname(string("-r,--in"), string(""),
-						string("filename of reference image "),
+						string("Filename of reference image "),
 						false, requires_argument);
 
 Option<int> meshLabel(string("-l,--meshlabel"), 1,
-					  string("If loading a vtk mesh, specify label used."),
+					  string("Specifies the label used to fill the mesh."),
 					  false, requires_argument);
 
-Option<float> thresh(string("-p,--thrsh"), 4,
-					 string("threshhold for clean up."),
+Option<float> thresh(string("-p,--thresh"), 4,
+					 string("Threshhold for clean up."),
 					 false, requires_argument);
 Option<int> numModes(string("-n,--numModes"), 0,
-					 string("number of modes to retaon per structure."),
+					 string("Number of modes to retain per structure."),
 					 false, requires_argument);
 Option<string> outname(string("-o,--out"), string(""),
-					   string("filename of output mesh"),
+					   string("Output name"),
 					   true, requires_argument);
 
 int nonoptarg;
@@ -844,8 +892,10 @@ float MVGLM_fit(Matrix G, Matrix D, Matrix contrast){
 				F=( (1-powf(wilk,1/b)) / powf(wilk,1/b)  )*((a*b-c)/(p*(g-1)));
 				df2=(a*b-c);//denominator
 					df1=(p*(g-1));//numeraotr
-						cout<<"Wilk's "<<wilk<<" "<<F<<" "<<df1<<" "<<df2<<endl;
-			}else{
+					if (verbose.value()){
+				cout<<"Wilk's "<<wilk<<" "<<F<<" "<<df1<<" "<<df2<<endl;
+					}
+}else{
 				
 				float pillai=(H*(H+E).i()).Trace();
 				
@@ -857,9 +907,11 @@ float MVGLM_fit(Matrix G, Matrix D, Matrix contrast){
 				F=((2*u+s+1)/(2*t+s+1))*(pillai/(s-pillai));
 				df1=s*(2*t+s+1);
 				df2=s*(2*u+s+1);
-				cout<<"Pillai F "<<pillai<<" "<<F<<" "<<df1<<" "<<df2<<endl;
-			}
-				
+				if (verbose.value()){
+				  cout<<"Pillai F "<<pillai<<" "<<F<<" "<<df1<<" "<<df2<<endl;
+			
+				}
+					}
 	return F;
 }
 //******************************EXECUTION FUNCTIONS******************************
@@ -1027,11 +1079,11 @@ Matrix rigid_linear_xfm(Matrix Data,ColumnVector meanm, Mesh mesh, bool writeToF
 			}	
 			m.update();
 				
-			string snum;
-			stringstream ssnum;
-			ssnum<<subject;
-			ssnum>>snum;
-			m.save(snum+"reg.vtk",3);
+			//	string snum;
+			//stringstream ssnum;
+			//	ssnum<<subject;
+			//ssnum>>snum;
+			//m.save(snum+"reg.vtk",3);
 	}
 	
 	return DataNew;			
@@ -1321,26 +1373,8 @@ void do_work_bvars(){
 						fvol_all.open((outname.value()+".vols").c_str());
 						for (int subject=0;subject<bvars.Ncols();subject++){
 							//this conditions allows you to loads volumes
-							if (useVolumes.value()){
-								ifstream volIn;
-								volIn.open(refname.value().c_str());
-								for (int subject=0;subject<bvars.Ncols();subject++){
-									float voltemp;
-									string stemp;
-									volIn>>stemp>>voltemp>>voltemp;
-									cout<<"read vol "<<voltemp<<endl;
-									
-									if (useNorm.value()){
-										Volumes.element(subject,0)=voltemp*vnorm.at(subject);
-										
-									}else{
-										Volumes.element(subject,0)=voltemp;
-									}
-								}
-								break;
-							}
-							//if volumes are load the loop is broken
-							read_volume(t1im,pathname.value()+subjectnames.at(subject));
+														//if volumes are load the loop is broken
+							read_volume(t1im,subjectnames.at(subject));
 							Mesh m = vMeshes.at(subject);
 							
 							//fill mesh
@@ -1551,7 +1585,7 @@ void do_work_meshToVol(){
 
 	shapeModel* mesh1 = new shapeModel;
 	mesh1->setImageParameters(ref.xsize(), ref.ysize(), ref.zsize(), ref.xdim(), ref.ydim(), ref.zdim());
-	mesh1->load_vtk(modelname.value(),1);
+	mesh1->load_vtk(meshname.value(),1);
 	Mesh m1;
 	if (centreOrigin.value()){
 	  m1=mesh1->getTranslatedMesh(0);
@@ -1562,26 +1596,6 @@ void do_work_meshToVol(){
 	int label=meshLabel.value();	
 	
 	segim=make_mask_from_meshInOut(ref,m1,label,bounds);
-	
-	for (int i=bounds[0];i<bounds[1];i++){
-		for (int j=bounds[2];j<bounds[3];j++){
-			for (int k=bounds[4];k<bounds[5];k++){
-				
-				if (segim.value(i,j,k)==(label+100  )){
-					if (bcd.value()){
-						if (ref.value(i,j,k)==label){
-							segim.value(i,j,k)=label;
-						}else{
-							segim.value(i,j,k)=0;
-						}
-					}else{
-						segim.value(i,j,k)=label;
-					}
-					
-				}
-			}
-		}
-	}
 
 	save_volume(segim,outname.value());
 
@@ -1616,9 +1630,8 @@ int main(int argc,char *argv[])
 		options.add(flirtmatsname);
 		options.add(useScale);
 		options.add(overlap);
-		options.add(univariateT);
-		options.add(bcd);
-		options.add(modelname);
+		options.add(meshname);
+		options.add(useNorm);
 		options.add(outname);
 		options.add(thresh);
 		options.add(meshLabel);
@@ -1629,11 +1642,9 @@ int main(int argc,char *argv[])
 		options.add(useRigidAlign);
 			options.add(designname);
 
-		options.add(useVolumes);
 		options.add(meshToVol);
 		options.add(centreOrigin);
 		options.add(useWilks);
-		options.add(inputprob);
 		options.add(verbose);
 		options.add(usePCAfilter);
 		options.add(numModes);

@@ -126,9 +126,9 @@ int nonoptarg;
 int do_work(int argc, char* argv[]) 
 {
   volume<float> vin, mask;
-  read_rad_volume(vin,inname.value());
+  read_volume(vin,inname.value());
   if (maskname.set()) {
-    read_rad_volume(mask,maskname.value());
+    read_volume(mask,maskname.value());
   } else {
     mask = vin * 0.0f + 1.0f;
   }

@@ -17,11 +17,9 @@ XFILES = fslorient fslstats fslmerge \
          fslhd fslcpgeom fslcreatehd fslmaths \
          fslcomplex fslfft fslmeants fslcheck fslslice fslswapdim
 
-SCRIPTS = fslval fslchpixdim fslanimate fslsize sliceanimate fslinfo fsledithd fslchfiletype 
+SCRIPTS = fslval fslchpixdim fslanimate fslsize sliceanimate fslinfo fsledithd fslchfiletype avw2fsl
 
 FSCRIPTS = fmriborient fslswapdim2
-
-RUNAVWS = avw2ascii avwmaths avwcc avwroi avwfill avwinterleave
 
 all: ${XFILES}
 

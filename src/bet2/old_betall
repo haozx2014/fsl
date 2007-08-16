@@ -85,7 +85,7 @@ A2=`${FSLDIR}/bin/remove_ext $2`
 ${FSLDIR}/bin/flirt -ref ${A1} -in ${A2} -out ${A2}_to_${A1} -interp sinc
 
 # register T1 to standard space
-${FSLDIR}/bin/flirt -ref ${FSLDIR}/data/standard/avg152T1 -in ${A1} -omat ${A1}_to_tal.mat
+${FSLDIR}/bin/flirt -ref ${FSLDIR}/data/standard/MNI152_T1_2mm -in ${A1} -omat ${A1}_to_tal.mat
 
 # run brain extraction and save brain mesh
 ${FSLDIR}/bin/bet2 ${A1} ${A1}_brain -e

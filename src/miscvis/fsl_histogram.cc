@@ -87,7 +87,7 @@ using namespace std;
 // The two strings below specify the title and example usage that is
 //  printed out as the help or usage message
 
-string title="fsl_histogram (Version 1.0)\nCopyright(c) 2006, University of Oxford (Christian F. Beckmann)";
+string title="fsl_histogram (Version 1.0)\nCopyright(c) 2007, University of Oxford (Christian F. Beckmann)";
 string examples="fsl_histogram [options] "; 
 
 // Each (global) object below specificies as option and can be accessed
@@ -104,7 +104,7 @@ Option<bool> help(string("--help"), false,
 		  string("display this message"),
 		  false, no_argument);
 Option<string> inname(string("-i,--in"), string(""),
-		  string("input file name"),
+		  string("        input file name"),
 		  true, requires_argument);
 Option<string> maskname(string("-m,--mask"), string(""),
 		  string("mask file name"),
@@ -140,7 +140,7 @@ Option<float> detail(string("-d,--detail"), 0.0,
 		  string("zoom factor for y-range (e.g. 2.0)"),
 		  false, requires_argument);
 Option<bool> ggmfit(string("--gmm"), true,
-		  string("use Gaussian MM instead of Gaussian/Gamma MM"),
+		  string("        use Gaussian MM instead of Gaussian/Gamma MM"),
 		  false, no_argument);
 int nonoptarg;
 

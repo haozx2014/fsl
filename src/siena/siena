@@ -103,8 +103,8 @@ sdo="-m"
 dostd=0
 stdmask=0
 stdroi=""
-origin3=37 # `fslval ${FSLDIR}/data/standard/avg152T1 origin3`
-pixdim3=2  # `fslval ${FSLDIR}/data/standard/avg152T1 pixdim3`
+origin3=37 # `fslval ${FSLDIR}/data/standard/MNI152_T1_2mm origin3`
+pixdim3=2  # `fslval ${FSLDIR}/data/standard/MNI152_T1_2mm pixdim3`
 
 while [ _$1 != _ ] ; do
 
@@ -204,12 +204,12 @@ ${FSLDIR}/bin/fslmaths ${B}_valid_mask -mul ${A}_valid_mask_to_${B} ${B}_valid_m
 if [ $dostd = 1 ] ; then
     echo ""                                                                        >> report.siena
     echo "----------  standard space masking  ----------------------------------" >> report.siena
-    ${FSLDIR}/bin/flirt -ref ${FSLDIR}/data/standard/avg152T1_brain -in ${A}_brain -o ${A}_to_std -omat ${A}_to_std.mat >> report.siena
-    ${FSLDIR}/bin/flirt -ref ${FSLDIR}/data/standard/avg152T1_brain -in ${B}_brain -o ${B}_to_std -omat ${B}_to_std.mat >> report.siena
+    ${FSLDIR}/bin/flirt -ref ${FSLDIR}/data/standard/MNI152_T1_2mm_brain -in ${A}_brain -o ${A}_to_std -omat ${A}_to_std.mat >> report.siena
+    ${FSLDIR}/bin/flirt -ref ${FSLDIR}/data/standard/MNI152_T1_2mm_brain -in ${B}_brain -o ${B}_to_std -omat ${B}_to_std.mat >> report.siena
     ${FSLDIR}/bin/convert_xfm -inverse -omat ${A}_to_std_inv.mat ${A}_to_std.mat
     ${FSLDIR}/bin/convert_xfm -inverse -omat ${B}_to_std_inv.mat ${B}_to_std.mat
-    ${FSLDIR}/bin/slicer ${A}_to_std ${FSLDIR}/data/standard/avg152T1_brain -a ${A}_to_std.png
-    ${FSLDIR}/bin/slicer ${B}_to_std ${FSLDIR}/data/standard/avg152T1_brain -a ${B}_to_std.png
+    ${FSLDIR}/bin/slicer ${A}_to_std ${FSLDIR}/data/standard/MNI152_T1_2mm_brain -a ${A}_to_std.png
+    ${FSLDIR}/bin/slicer ${B}_to_std ${FSLDIR}/data/standard/MNI152_T1_2mm_brain -a ${B}_to_std.png
     echo "<hr><p><b>FLIRT standard space registration results</b><p>${Ao}<br><IMG BORDER=0 SRC=\"${A}_to_std.png\"><p>${Bo}<br><IMG BORDER=0 SRC=\"${B}_to_std.png\">" >> report.html
 
     ${FSLDIR}/bin/convert_xfm -concat ${B}_to_std_inv.mat -omat ${A}_to_${B}_tmp.mat ${A}_to_std.mat
@@ -221,8 +221,8 @@ if [ $dostd = 1 ] ; then
     fi
 
     if [ $stdmask = 1 ] ; then
-	${FSLDIR}/bin/flirt -in ${FSLDIR}/data/standard/avg152T1_brain_mask_dil2 -ref $A -out ${A}_stdmask -applyxfm -init ${A}_to_std_inv.mat
-	${FSLDIR}/bin/flirt -in ${FSLDIR}/data/standard/avg152T1_brain_mask_dil2 -ref $B -out ${B}_stdmask -applyxfm -init ${B}_to_std_inv.mat
+	${FSLDIR}/bin/flirt -in ${FSLDIR}/data/standard/MNI152_T1_2mm_brain_mask_dil -ref $A -out ${A}_stdmask -applyxfm -init ${A}_to_std_inv.mat
+	${FSLDIR}/bin/flirt -in ${FSLDIR}/data/standard/MNI152_T1_2mm_brain_mask_dil -ref $B -out ${B}_stdmask -applyxfm -init ${B}_to_std_inv.mat
 	${FSLDIR}/bin/fslmaths ${A}_stdmask -thr 0.5 -bin ${A}_stdmask
 	${FSLDIR}/bin/fslmaths ${B}_stdmask -thr 0.5 -bin ${B}_stdmask
 	${FSLDIR}/bin/fslmaths ${A}_brain_mask -mas ${A}_stdmask ${A}_brain_mask
@@ -230,7 +230,7 @@ if [ $dostd = 1 ] ; then
     fi
 
     if [ "$stdroi" != "" ] ; then
-	${FSLDIR}/bin/fslmaths ${FSLDIR}/data/standard/avg152T1_brain_mask -mul 0 -add 1 $stdroi ${A}_and_${B}_stdmask
+	${FSLDIR}/bin/fslmaths ${FSLDIR}/data/standard/MNIs152_T1_2mm_brain_mask -mul 0 -add 1 $stdroi ${A}_and_${B}_stdmask
 	${FSLDIR}/bin/flirt -in ${A}_and_${B}_stdmask -ref $A -out ${A}_stdmask -applyxfm -init ${A}_to_std_inv.mat
 	${FSLDIR}/bin/flirt -in ${A}_and_${B}_stdmask -ref $B -out ${B}_stdmask -applyxfm -init ${B}_to_std_inv.mat
 	${FSLDIR}/bin/fslmaths ${A}_stdmask -thr 0.5 -bin ${A}_stdmask

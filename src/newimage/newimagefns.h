@@ -1954,7 +1954,7 @@ template <class T, class S>
 	     for (int mx=kernel.minx(); mx<=kernel.maxx(); mx++) 
              {
                 int x2=x3+mx,y2=y3+my,z2=z3+mz;
- 		if (x2<=ux && x2>=lx && y2<=uy && y2>=ly && z2<=uz && z2>=lz && (kernel.value(mx,my,mz) >= 0) ) 
+ 		if (x2<=ux && x2>=lx && y2<=uy && y2>=ly && z2<=uz && z2>=lz && (kernel.value(mx,my,mz) != 0) ) 
                 {    
 		   float factor=0;
 		   if (num_usan==0) factor= lut[(int)((source.value(x2,y2,z2)-center_val)/range)]; 
@@ -1972,11 +1972,10 @@ template <class T, class S>
 	     if (use_median && denom<1.5)
              {	  
                int count=1;
-               cerr << "x " << x << " y " << y << " z " << z << endl;
                for (int x2=x-1;x2<=x+1;x2++)
 		 for (int y2=y-1;y2<=y+1;y2++)
 		   for (int z2=z-1;z2<=z+1;z2++)
-		     if (x2<=ux && x2>=lx && y2<=uy && y2>=ly && z2<=uz && z2>=lz && abs(x2-x)<2 && abs(y2-y)<2 && abs(z2-z)<2 && ( (x2-x) || (y2-y) || (z2-z) ) ) {cerr << count << " " <<  x2 << " " << y2 << " " << z2 << endl ; vals(count++)=source.value(x2,y2,z2);}
+		     if (x2<=ux && x2>=lx && y2<=uy && y2>=ly && z2<=uz && z2>=lz && abs(x2-x)<2 && abs(y2-y)<2 && abs(z2-z)<2 && ( (x2-x) || (y2-y) || (z2-z) ) ) vals(count++)=source.value(x2,y2,z2);
 	       ColumnVector littlevals = vals.SubMatrix(1,count-1,1,1);
 	       SortAscending(littlevals);               
 	       result(x,y,z) = (T)((littlevals(count/2)+littlevals((count+1)/2))/2.0);    

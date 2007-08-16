@@ -455,7 +455,7 @@ namespace FILM {
 	volume<float> usan_vol;
 	read_volume(usan_vol,usanfname);
 	volume<float> kernel;
-	kernel = kernel=gaussian_kernel3D(masksize,xdata.getInfo().vx,xdata.getInfo().vy,xdata.getInfo().vz);	
+	kernel = gaussian_kernel3D(masksize,xdata.getInfo().vx,xdata.getInfo().vy,xdata.getInfo().vz);	
 	
 	// Setup volume for reading and writing volumes:
 	Volume vol(acEst.getNumSeries(), xdata.getInfo(), xdata.getPreThresholdPositions());

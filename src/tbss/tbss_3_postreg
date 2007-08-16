@@ -139,7 +139,7 @@ echo $best > best.msf
 mkdir -p ../stats
 
 # create NIFTI-format MNI152 at 1x1x1mm for later usage
-$FSLDIR/bin/flirt -in $FSLDIR/data/standard/avg152T1_brain -ref $FSLDIR/data/standard/avg152T1 -out ../stats/MNI152 -applyisoxfm 1
+$FSLDIR/bin/imcp $FSLDIR/data/standard/MNI152_T1_1mm ../stats/MNI152
 
 # is target already in MNI152 space?
 if [ `$FSLDIR/bin/fslval $best dim1` = 182 -a `$FSLDIR/bin/fslval $best dim2` = 218 -a `$FSLDIR/bin/fslval $best dim3` = 182 ] ; then

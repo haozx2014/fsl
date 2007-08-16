@@ -95,6 +95,17 @@ proc runregfiles { filename } {
 }
 
 #}}}
+#{{{ proc runflirt
+
+proc runflirt { flirtcommand output } {
+    global FSLDIR
+    set TMPNAM [ fsl:exec "${FSLDIR}/bin/tmpnam frgrot" -n ]
+    fsl:exec "$flirtcommand -o $TMPNAM"
+    immv $TMPNAM $output
+    fsl:exec "/bin/rm $TMPNAM" -n
+}
+
+#}}}
 #{{{ process options
 
 if { [ lindex $argv 0 ] == "" } {
@@ -171,28 +182,28 @@ if { [ info exists fmri(inmelodic) ] && $fmri(inmelodic) } {
     if { $fmri(regstandard_res)>0.0001 } {
 	set FL "${FSLDIR}/bin/flirt -ref reg/standard -applyisoxfm $fmri(regstandard_res)"
     }
-    fsl:exec "$FL -in reg/$BGIMAGE -out reg_standard/bg_image $BGMAT -interp sinc -datatype float"
-    fsl:exec "$FL -in filtered_func_data -out reg_standard/filtered_func_data -init reg/example_func2standard.mat -datatype float"
+    runflirt "$FL -in reg/$BGIMAGE $BGMAT -interp sinc -datatype float" reg_standard/bg_image
+    runflirt "$FL -in filtered_func_data -init reg/example_func2standard.mat -datatype float" reg_standard/filtered_func_data
     fsl:exec "${FSLDIR}/bin/fslmaths reg_standard/filtered_func_data -Tstd -bin reg_standard/mask -odt char"
 } else {
     # sinc interpolated lowres images
     foreach input [ imglob -oneperimage example_func.* ] {
 	if { [ runregfiles $input ] } {
-	    fsl:exec "$FL -in $input -out reg_standard/$input -init reg/example_func2standard.mat -interp sinc -datatype float"
+	    runflirt "$FL -in $input -init reg/example_func2standard.mat -interp sinc -datatype float" reg_standard/$input
 	}
     }
 
     # nearestneighbour interpolated lowres images
     foreach input [ imglob -oneperimage mask.* ] {
 	if { [ runregfiles $input ] } {
-	    fsl:exec "$FL -in $input -out reg_standard/$input -init reg/example_func2standard.mat -interp nearestneighbour"
+	    runflirt "$FL -in $input -init reg/example_func2standard.mat -interp nearestneighbour" reg_standard/$input
 	}
     }
 
     # trilinear interpolated lowres images
     foreach input [ imglob -oneperimage mean_func* stats/cope* stats/varcope* stats/tdof_t* ] {
 	if { [ runregfiles $input ] } {
-	    fsl:exec "$FL -in $input -out reg_standard/$input -init reg/example_func2standard.mat"
+	    runflirt "$FL -in $input -init reg/example_func2standard.mat" reg_standard/$input
 	}
     }
 
@@ -200,7 +211,7 @@ if { [ info exists fmri(inmelodic) ] && $fmri(inmelodic) } {
     if { [ file exists reg/highres2standard.mat ] } {
 	foreach input [ imglob -oneperimage reg/highres.* ] {
 	    if { [ runregfiles $input ] } {
-		fsl:exec "$FL -in $input -out reg_standard/$input -init reg/highres2standard.mat -interp sinc -datatype float"
+		runflirt "$FL -in $input -init reg/highres2standard.mat -interp sinc -datatype float" reg_standard/$input
 	    }
 	}
     }

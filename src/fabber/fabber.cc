@@ -92,7 +92,7 @@ int main(int argc, char** argv)
   try
     {
       cout << "------------------\n";
-      cout << "Welcome to FABBER v1.0" << endl;
+      cout << "Welcome to FABBER v0.1 (beta release)" << endl;
 
       EasyOptions args(argc, argv);
 
@@ -118,8 +118,8 @@ int main(int argc, char** argv)
 
       // Diagnostic information: software versions
       // This only versions this file... should really use all.
-//      LOG_ERR("FABBER development revision: $Id: fabber.cc,v 1.6 2007/08/01 15:55:35 adriang Exp $\n");
-      LOG_ERR("FABBER release v1.0\n");
+//      LOG_ERR("FABBER development revision: $Id: fabber.cc,v 1.9 2007/08/13 17:24:55 adriang Exp $\n");
+      LOG_ERR("FABBER release v0.1\n");
       LOG << "Command line and effective options:\n" << args.Read("") << endl;
       LOG << "--output='" << EasyLog::GetOutputDirectory() << "'" << endl;
       LOG << args << "--------------------" << endl;
@@ -220,8 +220,8 @@ void Usage(const string& errorString)
      << "be interleaved (e.g. TE1/TE2) or left in order? (default: interleave)\n"
      << "  --data1=file1, [--data2=file2]. (use --data=file instead if --data-order=singlefile)\n"
      << "  --mask=maskfile : inference will only be performed where mask value > 0\n"
-     << "  --model={quipss2|q2tips|grase} : forward model to use. "
-//     << "  --model={quipss2|simple|grase|eagle} : forward model to use. "
+     << "  --model={quipss2|q2tips-dualecho|grase} : forward model to use. "
+//     << "  --model={quipss2|simple|grase} : forward model to use. "
      << "For model parameters use fabber --help --model=<model_of_interest>\n"
      << "  --noise={ar1|white} : Noise model to use\n"
      << "    ar1: two AR(1) models (optional cross-linking between TE1 & TE2)\n"

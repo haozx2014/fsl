@@ -1,0 +1,60 @@
+<!DOCTYPE html
+PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type"
+content="text/html;charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="../fsl.css" />
+<link rel="stylesheet" type="text/css" href="install.css" />
+<title>FSL</title></head><body><object data="top.html"></object>
+
+<h1>Installing on Linux/Unix</h1>
+
+<h2>The Easy Way</h2>
+<p>
+The <a href="fsl_installer.sh">FSL Installer</a> can be used to automate the process of installing FSL. Download the installer and place it in the same folder as the downloaded FSL distribution, then run with:
+</p>
+<pre>sh fsl_installer.sh</pre>
+<p>
+By default it installs the FSL tarfile located in the current directory into <i>/usr/local</i> and configures your shell's environment to enable you to run FSL. Run it with the <i>-h</i> option to see what other install options are available.
+</p>
+<h2>The Traditional Way</h2>
+<h3>Unpacking</h3>
+<p>
+To unpack a distribution, you need the UNIX <i>tar</i> utility. First <i>cd</i> to the directory where you want FSL installed (for example <i>/usr/local</i>). Then uncompress and untar the distribution - for example, if you have downloaded the Cent OS 5 32bit distribution to your home directory, type
+</p>
+<pre>tar zxvf ~/fsl-*-centos5-32.tar.gz</pre>
+<h3>Configuring</h3>
+<p>
+Put the following somewhere in your shell setup file (<i>.bashrc</i>, <i>.profile</i>, <i>.cshrc</i> etc., depending on what shell you use), replacing &quot;/usr/local/fsl&quot; with a path appropriate for where you have installed FSL:
+</p>
+<ul>
+<li>bash / sh / ksh:
+<pre>FSLDIR=/usr/local/fsl
+. ${FSLDIR}/etc/fslconf/fsl.sh
+PATH=${FSLDIR}/bin:${PATH}
+export FSLDIR PATH</pre>
+</li>
+<li>tcsh / csh
+<pre>setenv FSLDIR /usr/local/fsl
+source ${FSLDIR}/etc/fslconf/fsl.csh
+setenv PATH ${FSLDIR}/bin:${PATH}</pre>
+</li>
+</ul>
+<p>
+The FSL command line tools are located in <i>$FSLDIR/bin</i>. In general command-line programs are lower case (e.g. <i>bet</i>); the GUI version capitalised (e.g. <i>Bet</i>).
+</p>
+<p>
+To bring up a simple GUI which is just a menu of the main individual FSL GUI tools, just type <i>fsl</i>.
+</p>
+<h2>Linux System-wide Configuration</h2>
+<p>
+If you are administering a multi-user Linux system you can ensure that FSL is configured for all users by creating the files <i>/etc/profile.d/fsl.sh</i> and <i>/etc/profile.d/fsl.csh</i> with the contents specified above. This has been tested on Cent OS 5, but should work on other RedHat-like and SuSE distributions. 
+</p>
+<h2>Customising</h2>
+<p>
+To customise FSL for particular ouput datatypes etc., see <a href="downloading.html#custom">here</a>.
+</p>
+</body>
+</html>
+

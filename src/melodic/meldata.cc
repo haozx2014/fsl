@@ -105,7 +105,7 @@ namespace Melodic{
     tmpData = RawData.matrix(Mask);
     
     //estimate smoothness
-    if(Resels == 0)
+    if((Resels == 0)&&(!opts.filtermode))
       Resels = est_resels(RawData,Mask);
         
     //convert to percent BOLD signal change
@@ -122,7 +122,7 @@ namespace Melodic{
       message(" done" << endl);
     }
 
-    meanC = mean(tmpData,2);
+   // meanC = mean(tmpData,2);
 	//	tmpData = remmean(tmpData,2);
 
     //convert to power spectra
@@ -194,15 +194,24 @@ namespace Melodic{
 
   void MelodicData::set_TSmode()
   {
-    Matrix tmp, tmpT, tmpS, tmpT2, tmpS2;
+    Matrix tmp, tmpT, tmpS, tmpT2, tmpS2, tmpT3;
     tmp = expand_dimred(mixMatrix);
     tmpT = zeros(tmp.Nrows()/numfiles, tmp.Ncols());
     tmpS = zeros(numfiles, tmp.Ncols());
-    krfact(tmp,tmpT,tmpS);
+    explained_var = krfact(tmp,tmpT,tmpS);
+		outMsize("tmp",tmp);
+		outMsize("tmpT",tmpT);
+		outMsize("tmpS",tmpS);
+		
     Tmodes.clear(); Smodes.clear();
     for(int ctr = 1; ctr <= tmp.Ncols(); ctr++){
+			tmpT3 << reshape(tmp.Column(ctr),tmpT.Nrows(),numfiles);
+			outMsize("tmpT3", tmpT3);
       tmpT2 << tmpT.Column(ctr);
       tmpS2 << tmpS.Column(ctr);
+			tmpT3 << SP(tmpT3,pow(ones(tmpT3.Nrows(),1)*tmpS2.t(),-1));
+			if(numfiles>1)
+				tmpT2 |= tmpT3;
 			if(mean(tmpS2,1).AsScalar()<0){
 				tmpT2*=-1.0;
 				tmpS2*=-1.0;
@@ -213,23 +222,31 @@ namespace Melodic{
 
 		//add GLM OLS fit
 		if(Tdes.Storage()){
-			Matrix alltcs = Tmodes.at(0);
+			Matrix alltcs = Tmodes.at(0).Column(1);
 			for(int ctr=1; ctr < (int)Tmodes.size();ctr++)
-				alltcs|=Tmodes.at(ctr);
-			glmT.olsfit(alltcs,Tdes,Tcon);
+				alltcs|=Tmodes.at(ctr).Column(1);
+			if((alltcs.Nrows()==Tdes.Nrows())&&(Tdes.Nrows()>Tdes.Ncols()))
+				glmT.olsfit(alltcs,Tdes,Tcon);
 		}
 		if(Sdes.Storage()){
 			Matrix alltcs = Smodes.at(0);
 			for(int ctr=1; ctr < (int)Smodes.size();ctr++)
 				alltcs|=Smodes.at(ctr);
-			glmS.olsfit(alltcs,Sdes,Scon);
+			if((alltcs.Nrows()==Sdes.Nrows())&&(Sdes.Nrows()>Sdes.Ncols()))
+				glmS.olsfit(alltcs,Sdes,Scon);
 		}
   }
 
   void MelodicData::setup()
   { 
-    setup_misc();
     numfiles = (int)opts.inputfname.value().size();
+    setup_misc();
+
+		if(opts.filtermode){ // basic setup for filtering only
+			Data = process_file(opts.inputfname.value().at(0));
+		}
+		else{
+
     if((numfiles > 1) && (opts.approach.value()==string("defl") || opts.approach.value()==string("symm")))
       opts.approach.set_T("tica");
 
@@ -240,13 +257,22 @@ namespace Melodic{
 			opts.varnorm.set_T(false);
 		}
     alldat = process_file(opts.inputfname.value().at(0), numfiles) / numfiles;
+
+		if(opts.pca_dim.value() > alldat.Nrows()-2){
+			cerr << "ERROR:: too many components selected \n\n";
+			exit(2);
+		}
+		
  		if(opts.debug.value())
 			save4D(alldat,string("preproc_dat") + num2str(1));   
 		for(int ctr = 1; ctr < numfiles; ctr++){
     	tmpData = process_file(opts.inputfname.value().at(ctr), numfiles);
 			if(opts.debug.value())
 				save4D(tmpData /numfiles,string("preproc_dat") + num2str(ctr+1));
-      alldat += tmpData / numfiles;
+			if(tmpData.Ncols() == alldat.Ncols() && tmpData.Nrows() == alldat.Nrows())
+      	alldat += tmpData / numfiles;	
+			else
+				message("Data dimensions do not match - ignoring "+opts.inputfname.value().at(ctr) << endl);
     }
 
     //update mask
@@ -270,7 +296,7 @@ namespace Melodic{
 		if(opts.debug.value())
 			save4D(alldat,"alldat");
     //estimate model order
-    ColumnVector tmpPPCA;
+    Matrix tmpPPCA;
     RowVector AdjEV, PercEV;
     Matrix Corr, tmpE;
     int order;
@@ -340,15 +366,15 @@ namespace Melodic{
     message(endl << "  Data size : "<<Data.Nrows()<<" x "<<Data.Ncols()<<endl<<endl);
  		outMsize("stdDev",stdDev);
    
-    meanC=mean(Data,2);
+    //meanC=mean(Data,2);
 		if(opts.debug.value())
 			save4D(Data,"concat_data");    
     //save the mean & mask
     save_volume(Mask,logger.appendDir("mask"));
     save_volume(Mean,logger.appendDir("mean"));
-    
+    }
   } // void setup()
-
+	
   void MelodicData::setup_misc()
   {
 
@@ -400,6 +426,13 @@ namespace Melodic{
 		if(opts.fn_SconF.value().length()>0)
 			SconF = read_ascii_matrix(opts.fn_SconF.value());
 		
+		if(numfiles>1 && Sdes.Storage() == 0){
+			Sdes = ones(numfiles,1);
+			if(Scon.Storage() == 0){
+				Scon = ones(1,1);
+				Scon &= -1*Scon;
+			}
+		}
 		Tdes = remmean(Tdes,1);
   }
 
@@ -430,7 +463,6 @@ namespace Melodic{
     if((IC.Storage()>0)&&(opts.output_origIC.value())&&(after_mm==false))
       save4D(IC,opts.outputfname.value() + "_oIC");
       
-
     //Output IC -- adjusted for noise	
       if(IC.Storage()>0){
 				volume4D<float> tempVol;	
@@ -441,16 +473,21 @@ namespace Melodic{
 	  			// ICadjust = IC;
 				}	
 				else{
+					
 					Matrix resids = stdev(Data - mixMatrix * IC);
 					for(int ctr=1;ctr<=resids.Ncols();ctr++)
 						if(resids(1,ctr) < 0.05)
 							resids(1,ctr)=1;
-	  			stdNoisei = pow(stdev(Data - mixMatrix * IC)*
+	  //			stdNoisei = pow(stdev(Data - mixMatrix * IC)*
+		//				std::sqrt((float)(Data.Nrows()-1))/
+		//				std::sqrt((float)(Data.Nrows()-IC.Nrows())),-1);
+	  			stdNoisei = pow(resids*
 						std::sqrt((float)(Data.Nrows()-1))/
 						std::sqrt((float)(Data.Nrows()-IC.Nrows())),-1);
-	  
+	  	
 	  			ColumnVector diagvals;
 	  			diagvals=pow(diag(unmixMatrix*unmixMatrix.t()),-0.5);
+	
 	  			save4D(SP(IC,diagvals*stdNoisei),opts.outputfname.value() + "_IC");
 				}
 
@@ -464,11 +501,15 @@ namespace Melodic{
 
     //Output mixMatrix
     if(mixMatrix.Storage()>0){
-      saveascii(mixMatrix, opts.outputfname.value() + "_mix");
+      saveascii(expand_mix(), opts.outputfname.value() + "_mix");
       mixFFT=calc_FFT(expand_mix(), opts.logPower.value());
       saveascii(mixFFT,opts.outputfname.value() + "_FTmix");      
     }
 
+    //Output PPCA
+    if(PPCA.Storage()>0)
+      saveascii(PPCA, opts.outputfname.value() + "_PPCA");
+  
     //Output ICstats
     if(ICstats.Storage()>0)
       saveascii(ICstats,opts.outputfname.value() + "_ICstats"); 
@@ -573,12 +614,10 @@ namespace Melodic{
 		outMsize("meanC",meanC);
 
     newData = Data - noiseMix * noiseIC.t();
-		if(meanC.Storage()>0)
-    	newData = newData + meanC*ones(1,newData.Ncols());
+
 		if(meanR.Storage()>0)
     	newData = newData + ones(newData.Nrows(),1)*meanR;
     
-		cerr << " HERE REMOVE " << endl;
     volume4D<float> tmp;
     read_volume4D(tmp,opts.inputfname.value().at(0)); 
     tmp.setmatrix(newData,Mask);

@@ -1,3 +1,70 @@
+
+/*  POSSUM
+    Ivana Drobnjak & Mark Jenkinson
+    Copyright (C) 2005-2007 University of Oxford  */
+
+/*  Part of FSL - FMRIB's Software Library
+    http://www.fmrib.ox.ac.uk/fsl
+    fsl@fmrib.ox.ac.uk
+    
+    Developed at FMRIB (Oxford Centre for Functional Magnetic Resonance
+    Imaging of the Brain), Department of Clinical Neurology, Oxford
+    University, Oxford, UK
+    
+    
+    LICENCE
+    
+    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    Oxford (the "Software")
+    
+    The Software remains the property of the University of Oxford ("the
+    University").
+    
+    The Software is distributed "AS IS" under this Licence solely for
+    non-commercial use in the hope that it will be useful, but in order
+    that the University as a charitable foundation protects its assets for
+    the benefit of its educational and research purposes, the University
+    makes clear that no condition is made or to be implied, nor is any
+    warranty given or to be implied, as to the accuracy of the Software,
+    or that it will be suitable for any particular purpose or for use
+    under any specific conditions. Furthermore, the University disclaims
+    all responsibility for the use which is made of the Software. It
+    further disclaims any liability for the outcomes arising from using
+    the Software.
+    
+    The Licensee agrees to indemnify the University and hold the
+    University harmless from and against any and all claims, damages and
+    liabilities asserted by third parties (including claims for
+    negligence) which arise directly or indirectly from the use of the
+    Software or the sale of any products based on the Software.
+    
+    No part of the Software may be reproduced, modified, transmitted or
+    transferred in any form or by any means, electronic or mechanical,
+    without the express permission of the University. The permission of
+    the University is not required if the said reproduction, modification,
+    transmission or transference is done without financial return, the
+    conditions of this Licence are imposed upon the receiver of the
+    product, and all original and amended source code is included in any
+    transmitted product. You may be held legally responsible for any
+    copyright infringement that is caused or encouraged by your failure to
+    abide by these terms and conditions.
+    
+    You are not permitted under this Licence to use this Software
+    commercially. Use for which any financial return is received shall be
+    defined as commercial use, and includes (1) integration of all or part
+    of the source code or the Software into a product for sale or license
+    by or on behalf of Licensee to third parties or (2) use of the
+    Software or any derivative of it for research with the final aim of
+    developing software products for sale or license to a third party or
+    (3) use of the Software or any derivative of it for research with the
+    final aim of developing non-software products for sale or license to a
+    third party, or (4) use of the Software to provide any service to an
+    external organisation for which payment is received. If you are
+    interested in using the Software commercially, please contact Isis
+    Innovation Limited ("Isis"), the technology transfer company of the
+    University, to negotiate a licence. Contact details are:
+    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+
 // POSSUM
 
 #include <iostream>
@@ -28,8 +95,8 @@ using namespace MISCMATHS;
 using namespace Utilities;
 //using namespace std;
 
-string title="possum (Version 2.0)\nCopyright(c) 2003, University of Oxford (Ivana Drobnjak)";
-string examples="possum -i <input phantom volume> -x <tissue matrix> -r <RFrec> -s <RFtrans> -p <pulse> -f <rf slice profile> -o <output signal matrix> [optional options]";
+string title="possum (Version 2.0)\nCopyright(c) 2007, University of Oxford (Ivana Drobnjak)";
+string examples="possum -i <input phantom volume> -x <MR parameters matrix> -p <pulse> -f <RF slice profile> -m <motion file> -o <output signal matrix> [optional arguments]";
 
 Option<bool> verbose(string("-v,--verbose"), false, 
 		     string("switch on diagnostic messages"), 
@@ -40,56 +107,56 @@ Option<bool> help(string("-h,--help"), false,
 
 //INPUT object and its characteristics (including susc effects on B0 and the RF inhomogeneities)
 Option<string> opt_object(string("-i,--inp"), string(""),
-		  string("4D phantom volume, amounts of tissue for each voxel (x,y,z) and for each tissue type (4th dimension) (percentage 0to1). Resolution can be any."),
+		  string("<input4Dvol-filename> (Input object)"),
 		  true, requires_argument);
-Option<string> opt_tissue(string("-x,--t2*"),string("") ,
-		  string("matrix with which you specify the tissue properties (T1(s) T2/T2*(s) PD)"),
+Option<string> opt_tissue(string("-x,--mrpar"),string("") ,
+		  string("<inputmatrix-filename> (MR parameters)"),
 		  true,requires_argument);
 Option<string> opt_b0(string("-b,--b0p"), string(""),
-		  string("3D volume, B0 perturbation due to susceptibility for each voxel (x,y,z) (units in T),in case when rotation Rx or Ry present you need the whole dir"),
+		  string("<input3Dvol-basename> (B0 inhomogeneities due to the susceptibility differences - base name, without extras z_dz, z_dx etc)"),
                   false, requires_argument);
 Option<string> opt_b0extra(string("--b0extra"), string(""),
-		 string("3D volume, B0 perturbation extra (in T): due to an extra field which is changing as directed by b0timecourse."),
+		 string("<input3Dvol-filename> (B0 inhomogeneities due to an extra field - see b0time)"),
 		  false, requires_argument);
 Option<string> opt_b0timecourse4D(string("--b0time"),string(""),
-	          string("1 column b0_timecourse [time(s)]"),
+	          string("<inputmatrix-filename> (B0inhomogeneities_timecourse [time(s) multiply_factor(perc 0 to 1)] - see b0extra) "),
 	          false,requires_argument);
 Option<string> opt_RFrec(string("-r,--rfr"), string(""),
-		  string("3D volume, receive RF field inhomogeneity, given for each voxel, (val 0 to 1, 1 for perfectly homog) signal=signal*RFr "),
+		  string("<input3Dvol-filename> ( RF inhomogeneity - receive. NOTE: not yet to be used ) "),
 		  false, requires_argument);
 Option<string> opt_RFtrans(string("-s,--rft"), string(""),
-		  string("3D volume, transmit RF field inhomogeneity, given for each voxel, (val  0 to 1, 1 is for perfectly homog) flip_angle=flip_angle*RFt"),
+		  string("<input3Dvol-filename> ( RF inhomogeneity - transmit. NOTE: not yet to be used )"),
 		  false, requires_argument);
 
 //INPUT motion and activation
 Option<string> opt_activation4D(string("-q,--activ4D"),string(""),
-				string("4D activation volume,  dT2*, (in s), for each voxel (x,y,z) in time (4th dimension) "),
+				string("<input4Dvol-filename> (Activation volume) "),
 	          false,requires_argument);
 Option<string> opt_timecourse4D(string("-u,--activt4D"),string(""),
-	          string("1 column activation4D_timecourse [time(s)]"),
+	          string("<inputmatrix-filename> (Activation4D_timecourse [time(s)])"),
 	          false,requires_argument);
 Option<string> opt_activation(string("-a,--activ"),string(""),
-	          string("3D activation_spatial volume, dT2* for each voxel (Gaussian blobs where the activations are), used only for testing things "),
+	          string("<input3Dvol-filename> (Activation volume)"),
 	          false,requires_argument);
 Option<string> opt_timecourse(string("-t,--activt"),string(""),
-	          string("2-col activation_timecourse matrix [time(s) multiply factor(perc 0to1)],used only for testing things"),
+	          string("<inputmatrix-filename> (Activation_timecourse [time(s) multiply_factor(perc 0 to 1)])"),
 	          false,requires_argument);
 Option<string> opt_motion(string("-m,--motion"), string(""),
-		  string("7-col motion matrix [time(s) Tx(m) Ty(m) Tz(m) Rx(rad) Ry(rad) Rz(rad)] "),
+		  string("<inputmatrix-filename> (Motion matrix [time(s) Tx(m) Ty(m) Tz(m) Rx(rad) Ry(rad) Rz(rad)]) "),
 		  true, requires_argument);
 
 //INPUT for the pulse sequence
 Option<string> opt_pulse(string("-p,--pulse"), string(""),
-		  string("8-column pulse_sequence matrix [time(s) rf_angle(rad) rf_freq_band(Hz) rf_center_freq(Hz) readout(1/0) Gx(T/m) Gy(T/m) Gz(T/m)] & a pulse.info file in the same directory: pulse.info is a raw vector with 17 elements in this order:seqtype(1 for EPI, 2 for GE);TE;TRvol(between volumes);TR(between RF pulses);Nx;Ny;dx;dy;maxGrad*;risetime*;BWrec*;numvol;numslc;slcthk;slcdir(put 1);gap;zstart. Elements with a * you can fill in with zeros if you don't know them."),
+		  string("<inputmatrix-basename> (Pulse sequence - all additional files .posx,.posy, etc,  expected to be in the same directory)"),
 		  true, requires_argument);
 
 Option<string> opt_slcprof(string("-f,--slcprof"), string(""),
-		  string("row vector describing the slice profile"),
+		  string("<inputmatrix-filename> (RF slice profile)"),
 		  true, requires_argument);
 
 //INPUT for the computational efficiency 
 Option<int>    opt_level(string("-l,--lev"), 1,
-		  string("levels: 1.no motion//basic B0 2.motion//basic B0, 3.motion//full B0, 4.no motion//time changing B0"),
+		  string("{1,2,3,4} (Levels: 1.no motion//basic B0 2.motion//basic B0, 3.motion//full B0, 4.no motion//time changing B0)"),
 		  false,requires_argument);
 Option<bool> opt_nospeedup(string("--nospeedup"), false, 
 		     string("If this option is ON it will NOT do the speedup but will do signal for all the slices for each voxel."), 
@@ -97,25 +164,25 @@ Option<bool> opt_nospeedup(string("--nospeedup"), false,
 
 //INPUT for the manual paralelisation -- used with sge_possum
 Option<int>    opt_nproc(string("--nproc"), 1,
-		  string("INPUT for the manual paralelisation -- used with sge_possum: Number of processors we have available."),
+		  string("<int> (INPUT for the paralelisation -- Number of processors we have available)"),
 		  false,requires_argument);
 Option<int>    opt_procid(string("--procid"), 0,
-		  string("INPUT for the manual paralelisation -- used with sge_possum: ID of the processor we are on."),
+		  string("<int> (INPUT for the paralelisation -- ID of the processor we are on)"),
 		  false,requires_argument);
 
 //OUTPUT signal
 Option<string> opt_signal(string("-o,--out"), string(""),
-		  string("2-row signal matrix, [sreal, simag]"),
+		  string("<outputmatrix-filename> (Signal - [sreal, simag])"),
 		  true, requires_argument);
 
 //OUTPUT main event matrix
 Option<string> opt_mainmatrix(string("-e,--mainmatx"), string(""),
-		  string("19-col main event matrix [t(s),rf_ang(rad),rf_freq_band(Hz),(4)=rf_cent_freq(Hz),read(1/0),Gx,Gy,Gz(T/m),Tx,Ty,Tz(m),angle_of_rot B(rad),rot_axis Bx,By,Bz(m),angle_of_rot A(rad),rot_axis Ax,Ay,Az(m)] A is the control motion point, B is the diff between the last control point and the actual point"),
+		  string("<outputmatrix-filename> (Main event matrix [t(s),rf_ang(rad),rf_freq_band(Hz),(4)=rf_cent_freq(Hz),read(1/0),Gx,Gy,Gz(T/m),Tx,Ty,Tz(m),angle_of_rot B(rad),rot_axis Bx,By,Bz(m),angle_of_rot A(rad),rot_axis Ax,Ay,Az(m)]) "),
 		  false, requires_argument);
 
 //OUTPUT kcoord if needed
 Option<bool> opt_kcoord(string("-k,--kcoord"), false,
-		  string("kspace coordinates"),
+		  string("If this option is ON it will save the kspace coordinates"),
 		  false, no_argument);
 
 int nonoptarg;

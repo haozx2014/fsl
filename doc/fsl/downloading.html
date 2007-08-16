@@ -8,7 +8,7 @@
 <p><br><H3>Downloading</H3>
 
 <P> FSL is available precompiled for various different operating
-systems (Linux, Mac OS X, Windows, SunOS). The sources are also
+systems (Linux, Mac OS X, Windows). The sources are also
 available if you want to compile it yourself.
 
 <P> <B><A HREF="http://www.fmrib.ox.ac.uk/fsldownloads/"
@@ -31,7 +31,9 @@ tar xvf ~/fsl-3.2-redhat9.tar
 
 <LI><a href="macosx.html">You are installing on Mac OS X</a>
 
-<LI><a href="windowsxp.html">You are installing on Windows XP</a>
+<LI><a href="linux.html">You are installing on Linux</a>
+
+<LI><a href="windows.html">You are installing on Windows</a>
 
 <LI><a href="compiling.html">You are compiling the source distribution
 instead of taking a binary distribution</a>
@@ -59,7 +61,7 @@ setenv PATH ${FSLDIR}/bin:${PATH}</code>
 <P>To run the FSL tools from the command line, you can find the
 tools in $FSLDIR/bin. In general command-line programs are lower case
 (e.g. '<b>bet</b>'). In general the GUI version is capitalised
-(e.g. '<b>Bet</b>'), except on Mac/Windows, where '_gui' is appended
+(e.g. '<b>Bet</b>'), except on Mac, where '_gui' is appended
 because those file systems can't tell the difference between upper and
 lower case (e.g. '<b>Bet_gui</b>').
 
@@ -67,7 +69,7 @@ lower case (e.g. '<b>Bet_gui</b>').
 individual FSL GUI tools, just type <b>fsl</b>.
 
 
-<br><br><H3>Customising (for different output datatypes, etc.) </H3>
+<br><br><a name="custom"></a><br><br><H3>Customising (for different output datatypes, etc.) </H3>
 
 <p>There are several environment variables which FSL uses to determine
 certain user preferences, such as the output file format (NIFTI,
@@ -94,5 +96,55 @@ It is recommended that the files <kbd>~/.fslconf/fsl.sh</kbd> or
 and nothing more.  Note that whoever installs FSL can also edit the
 central files in <kbd>$FSLDIR/etc/fslconf</kbd> to change the
 preferences for all users.
+
+
+<br><br><a name="sge"></a><br><br><H3>Setting up FSL to use a
+  SunGridEngine (or similar) computing cluster</H3>
+
+Several of the more compute-intensive tools can now take advantage of
+cluster computing, via SunGridEngine (SGE):
+
+<UL>
+
+<LI>FEAT will run multiple first-level analyses in parallel if they are setup
+  all together in one GUI setup. At second level, if full FLAME
+  (stages 1+2) is selected then all the slices are processed in
+  parallel.
+
+<LI>MELODIC will run multiple single-session analyses (or
+  single-session preprocessing if a multi-session/subject analysis is
+  being done) in parallel if they are setup all together in one GUI
+  setup.
+
+<LI>TBSS will run all registrations in parallel.
+
+<LI>BEDPOST (FDT) low-level diffusion processing will run all slices
+  in parallel. 
+
+<LI>FSL-VBM will run all registrations in parallel, both at the
+  template-creation stage and at the final registrations stage.
+
+<LI>POSSUM will process all slices in parallel.
+
+</UL>
+
+All the above tools interact with a compute cluster via a single
+central script <b>fsl_sub</b>; if no cluster is available then this
+script silently runs all the requested jobs in series.
+
+To customise FSL for your local compute cluster and clustering
+software, simply edit ${FSLDIR}/bin/fsl_sub - hopefully the comments
+in this file are sufficient to make this fairly painless, particularly
+for labs using SGE. For other clustering software than SGE, note that
+fsl_sub makes use of an SGE feature allowing the submission of a text
+file containing a list of commands (one per line) to be run in
+parallel.
+
+
+
+<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+
 
 </BODY></HTML>

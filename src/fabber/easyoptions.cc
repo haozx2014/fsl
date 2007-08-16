@@ -105,7 +105,7 @@ EasyOptions::EasyOptions(int argc, char** argv)
             ifstream is(argv[++a]);
             if (!is.good()) {
                 cout << "Couldn't read -@ input file: '" << string(argv[a]) << "'";
-                throw Invalid_option("Couldn't read -@ input file!");
+                throw Invalid_option("Couldn't read input file: -@ " + string(argv[a]));
             }
             char c;
             string param;
@@ -127,6 +127,10 @@ EasyOptions::EasyOptions(int argc, char** argv)
                     param = "";
                     while (is.good() && c != '\n') 
                         is.get(c);
+                }
+                else if (string(param, 0, 2) == "-@")
+                {
+                    throw Invalid_option("Sorry, at the moment you can only use -@ on the command line (no recursion).\n");
                 }
                 else
                 {
@@ -214,8 +218,12 @@ void EasyOptions::CheckEmpty()
 ostream& operator<<(ostream& out, const EasyOptions& opts)
 {
   for (map<string,string>::const_iterator i = opts.args.begin(); i != opts.args.end(); i++)
-    out << "--" << i->first << "='" << i->second << "'" << endl;
-
+    {
+      if (i->second == "")
+        out << "--" << i->first << endl;
+      else
+        out << "--" << i->first << "='" << i->second << "'" << endl;
+    }
   return out;
 }
 

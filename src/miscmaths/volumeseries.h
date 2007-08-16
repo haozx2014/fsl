@@ -155,10 +155,10 @@ namespace MISCMATHS {
       void setVolume(const ColumnVector& in, int i) { Row(i) = in.AsRow(); }
       void setVolume(const RowVector& in, int i) { Row(i) = in; }
 
-	  void read(const std::string& fname);
-	  void writeAsInt(const std::string& fname);
-	  void writeAsFloat(const std::string& fname);
-	  void writeThresholdedSeriesAsFloat(const VolumeInfo& pvolinfo,const ColumnVector& in,const std::string& fname);
+      void read(const std::string& fname);
+      void writeAsInt(const std::string& fname);
+      void writeAsFloat(const std::string& fname);
+      void writeThresholdedSeriesAsFloat(const VolumeInfo& pvolinfo,const ColumnVector& in,const std::string& fname);
       
       void replaceMeans();
 

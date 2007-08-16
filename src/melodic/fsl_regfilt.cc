@@ -96,7 +96,7 @@ using namespace std;
 		string("output file name for the filtered data"),
 		true, requires_argument);
   Option<string> fndesign(string("-d,--design"), string(""),
-		string("file name of the GLM design matrix (time courses)"),
+		string("file name of the matrix with time courses (e.g. GLM design or MELODIC mixing matrix)"),
 		true, requires_argument);
   Option<string> fnmask(string("-m,--mask"), string(""),
 		string("mask image file name"),
@@ -104,9 +104,12 @@ using namespace std;
 	Option<string> filter(string("-f,--filter"),string(""),
 		string("filter out part of the regression model, e.g. -f \"1,2,3\""),
 		true, requires_argument);
+	Option<bool> verbose(string("-v"),FALSE,
+		string("        switch on diagnostic messages"),
+		false, no_argument);
 	Option<bool> perfvn(string("--vn"),FALSE,
 		string("        perfrom variance-normalisation on data"),
-		false, requires_argument);
+		false, no_argument);
 	Option<int> help(string("-h,--help"), 0,
 		string("display this help text"),
 		false,no_argument);
@@ -127,6 +130,7 @@ using namespace std;
 	Matrix meanR;
 	RowVector vnscales;
 	volume<float> mask;
+	volume<float> Mean;
 	volumeinfo volinf;  /*
 }
 */
@@ -163,7 +167,9 @@ int dofilter(){
 		cerr << "ERROR: need to specify 4D input to use filtering" << endl;
 		return 1;
 	}
-  Matrix unmixMatrix = pinv(design);
+	if(verbose.value())
+		cout << "  Calculating maps " << endl;  
+	Matrix unmixMatrix = pinv(design);
   Matrix maps = unmixMatrix * data;
 
   Matrix noisedes;
@@ -193,7 +199,9 @@ int dofilter(){
     }
   }while(p);
   Matrix newData;
-  newData = data - noisedes * noisemaps.t();
+	if(verbose.value())
+		cout << "  Calculating filtered data " << endl;
+ 	newData = data - noisedes * noisemaps.t();
   newData = newData + ones(newData.Nrows(),1)*meanR;
   
 	save4D(newData,fnout.value());
@@ -214,11 +222,19 @@ int setup(){
 				return 1;
 			};
 		}else{
-			mask = tmpdata[0]*0.0+1.0;	
+			if(verbose.value())
+				cout << "  Creating mask image "  << endl;
+			Mean = meanvol(tmpdata);
+			float Mmin, Mmax;
+			Mmin = Mean.min(); Mmax = Mean.max();
+			mask = binarise(Mean,float(Mmin + 0.01* (Mmax-Mmin)),Mmax);
 		}
 		
 		data = tmpdata.matrix(mask);
 		voxels = data.Ncols();
+		if(verbose.value())
+			cout << " Data matrix size : " << data.Nrows() << " x " << voxels << endl;
+		
 	}else{
 		cerr << "ERROR: cannot read input image " << fnin.value()<<endl;
 		return 1;
@@ -265,6 +281,7 @@ int main(int argc,char *argv[]){
 			options.add(fnmask);
 			options.add(filter);
 			options.add(perfvn);
+			options.add(verbose);
 			options.add(help);
 			options.add(outdata);
 			options.add(outvnscales);
@@ -286,5 +303,5 @@ int main(int argc,char *argv[]){
 	  }catch(std::exception &e) {
 	    cerr << e.what() << endl;
 	  } 
-	}
+}
 

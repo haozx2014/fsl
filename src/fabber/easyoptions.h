@@ -125,8 +125,8 @@ public:
   Invalid_option(const string& s) : Runtime_error(s.c_str()) { return; }
 };
 
-// Convert a string into almost anything -- from
-// http://www.parashift.com/c++-faq-lite/misc-technical-issues.html
+// Convert a string into almost anything, using operator>>. See the C++ FAQ-Lite: 
+// http://www.parashift.com/c++-faq-lite/misc-technical-issues.html#faq-39.3
 template<typename T>
 inline T convertTo(const std::string& s)
 {

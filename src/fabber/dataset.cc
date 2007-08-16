@@ -101,7 +101,7 @@ void DataSet::LoadData(ArgsType& args)
       DumpVolumeInfo(data.getInfo(), "      ");
 
       LOG_ERR("    Loading mask data from '" + maskFile << "'" << endl);
-      mask.read(maskFile);
+      mask.read(maskFile); // This just crashes if data is multi-volume.
       DumpVolumeInfo(mask.getInfo(), "      ");
 
       LOG << "    Applying mask to data..." << endl;
@@ -110,6 +110,7 @@ void DataSet::LoadData(ArgsType& args)
       try {
         data.setPreThresholdPositions(mask.getPreThresholdPositions());
         data.thresholdSeries();
+
       } catch (Exception) {
         LOG_ERR("\n*** NEWMAT error while thresholding time-series... "
                 << "Most likely a dimension mismatch. ***\n");
@@ -165,6 +166,18 @@ void DataSet::LoadData(ArgsType& args)
 	  try {
 	    dataSets.at(i).setPreThresholdPositions(mask.getPreThresholdPositions());
 	    dataSets.at(i).thresholdSeries();
+
+            // Note that the above doesn't catch all dimension mismatches..
+            // If the mask is smaller (in the z-dir, at least) than the data,
+            // it doesn't seem to raise any exception.
+
+            if (dataSets[i].getInfo().x != mask.getInfo().x)
+              LOG_ERR("Warning: nonfatal dimension mismatch in x!\n");
+            if (dataSets[i].getInfo().y != mask.getInfo().y)
+              LOG_ERR("Warning: nonfatal dimension mismatch in y!\n");
+            if (dataSets[i].getInfo().z != mask.getInfo().z)
+              LOG_ERR("Warning: nonfatal dimension mismatch in z!\n");
+
 	  } catch (Exception) {
 	    LOG_ERR("\n*** NEWMAT error while thresholding time-series... "
 		    << "Most likely a dimension mismatch (more details in logfile) ***\n");

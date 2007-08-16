@@ -222,7 +222,7 @@ set fmri(reghighres_search) 90
 set fmri(reghighres_dof) 12
 
 # Standard image
-set fmri(regstandard) "${FSLDIR}/data/standard/avg152T1_brain.hdr"
+set fmri(regstandard) "${FSLDIR}/data/standard/MNI152_T1_2mm_brain"
 
 # Search space for registration to standard space
 set fmri(regstandard_search) 90

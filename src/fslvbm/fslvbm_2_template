@@ -93,7 +93,7 @@ cd FAi
 D=${FSLDIR}/bin/DR
 export FSLOUTPUTTYPE=ANALYZE
 
-$FSLDIR/bin/fslmaths ${FSLDIR}/etc/standard/avg152T1_gray T
+$FSLDIR/bin/fslmaths ${FSLDIR}/data/standard/tissuepriors/avg152T1_gray T
 $FSLDIR/bin/fslhd -x T | sed "s/sform_code .*/sform_code = \'0\'/g" > grot.xml
 $FSLDIR/bin/fslcreatehd grot.xml T.hdr
 /bin/rm grot.xml

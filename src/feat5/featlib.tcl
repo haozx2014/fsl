@@ -74,7 +74,9 @@
 #{{{ feat5:write
 
 proc feat5:write { w feat_model write_image_filenames exitoncheckfail filename } {
+
     global fmri FSLDIR feat_files unwarp_files unwarp_files_mag initial_highres_files highres_files
+
     if { ! $fmri(inmelodic) && $fmri(level) == 1 && $fmri(analysis) > 0 && $fmri(con_mode) == "orig" && [ feat5:setup_model_update_contrasts_mode $w 0] == -1 } {
 	return -1
     }
@@ -727,7 +729,7 @@ set fmri(dim) $fmri(dim)
 
 # 1 : Single-session ICA
 # 2 : Multi-session temporal concatenation
-# 3 : Multi-session tensor ICA
+# 3 : Multi-session tensor TICA
 set fmri(icaopt) $fmri(icaopt)
 
 # Threshold IC maps
@@ -775,11 +777,13 @@ set fmri(init_standard) \"$fmri(init_standard)\""
     
     if { $w != -1 } {
 	set result 0
+	set fmri(donemodel) 1
 	if { $feat_model } {
 
 	    set result [ catch { exec sh -c "${FSLDIR}/bin/feat_model $filename" } ErrMsg ]
 	    if {$result != 0 || [ string length $ErrMsg ] > 0 } {
-		    MxPause "Problem with processing the model: $ErrMsg"
+		MxPause "Problem with processing the model: $ErrMsg"
+		set fmri(donemodel) 0
 	    }
 	}
 
@@ -844,12 +848,18 @@ proc feat5:load { w full filename } {
 
 	} else {
 	    MxPause "FEAT setup file is too old to load - sorry!"
+	    return 1
 	}
     } else {
 	source ${filename}
+	if { $w != -1 } {
+	    melodic:updatelevel $w
+	    feat5:updateanalysis $w
+	}
     }
     
     set fmri(version) $FEATVERSION
+    set fmri(donemodel) 1
 }
 
 #}}}
@@ -1329,6 +1339,11 @@ if { $fmri(level) > 1 || $fmri(stats_yn) || $fmri(poststats_yn) } {
     set createthemodel 1
 } else {
     set createthemodel 0
+}
+
+if { $fmri(donemodel) == 0 } {
+    MxPause "Please setup model before running."
+    return 1
 }
 
 if { [ feat5:write $w $createthemodel 1 1 $fmri(feat_filename) ] } {
@@ -4747,7 +4762,7 @@ proc feat5:proc_prestats { session } {
     cd $fmri(outputdir)
     set FD [ pwd ]
 
-    set logout ${FD}/.logB
+    set logout ${FD}/logs/feat2_pre
     fsl:echo $logout "</pre><hr>Prestats<br><pre>"
 
     if { $fmri(filtering_yn) } {
@@ -4812,7 +4827,7 @@ if { $fmri(mc) != 0 } {
     }
 
     new_file mc
-    fsl:exec "/bin/mkdir mc ; /bin/mv -f prefiltered_func_data_mcf.mat prefiltered_func_data_mcf.par prefiltered_func_data_mcf_abs.rms prefiltered_func_data_mcf_abs_mean.rms prefiltered_func_data_mcf_rel.rms prefiltered_func_data_mcf_rel_mean.rms mc"
+    fsl:exec "/bin/mkdir -p mc ; /bin/mv -f prefiltered_func_data_mcf.mat prefiltered_func_data_mcf.par prefiltered_func_data_mcf_abs.rms prefiltered_func_data_mcf_abs_mean.rms prefiltered_func_data_mcf_rel.rms prefiltered_func_data_mcf_rel_mean.rms mc"
     cd mc
     
     #{{{ make plots
@@ -4865,7 +4880,7 @@ if { $fmri(regunwarp_yn) } {
     #{{{ setup stuff
 
 new_file unwarp
-fsl:exec "/bin/mkdir unwarp"
+fsl:exec "/bin/mkdir -p unwarp"
 cd unwarp
 
 set ps "$ps; fieldmap-based EPI unwarping using PRELUDE+FUGUE \[Jenkinson 2003, 2004\]"
@@ -5147,7 +5162,7 @@ if { $fmri(melodic_yn) } {
 
     fsl:echo report_prestats.html "<hr><a href=\"filtered_func_data.ica/report/00index.html\">MELODIC data exploration report</a>"
 
-    fsl:exec "${FSLDIR}/bin/melodic -i filtered_func_data -o filtered_func_data.ica -v --nobet --bgthreshold=1 --tr=$fmri(tr) -d 0 --mmthresh=\"0.5\" --report"
+    fsl:exec "${FSLDIR}/bin/melodic -i filtered_func_data -o filtered_func_data.ica -v --nobet --bgthreshold=1 --tr=$fmri(tr) -d 0 --mmthresh=\"0.5\" --report --guireport=../../report.html "
 }
 
 #}}}
@@ -5202,7 +5217,7 @@ proc feat5:proc_film { } {
 
     cd $fmri(outputdir)
 
-    set logout .logC
+    set logout logs/feat3_film
     fsl:echo $logout "</pre><hr>Stats<br><pre>"
 
     fsl:echo report_stats.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
@@ -5297,7 +5312,7 @@ global FSLDIR FSLSLASH PWD HOME HOSTNAME OSFLAVOUR logout fmri feat_files unwarp
 cd $fmri(outputdir)
 set FD [ pwd ]
 
-set logout .logD
+set logout ${FD}/logs/feat4_post
 
 if { ! $rerunning } {
     fsl:echo $logout "</pre><hr>Post-stats<br><pre>"
@@ -5460,7 +5475,7 @@ fsl:exec "$FSLDIR/bin/cluster2html . cluster_$rawstats $STDOPT"
 
 if { $fmri(conmask1_1) } {
 
-    fsl:exec "mkdir conmask"
+    fsl:exec "mkdir -p conmask"
 
     foreach rawstats $rawstatslist {
 
@@ -5684,7 +5699,7 @@ if { ! $rerunning } {
     }
 
     new_file tsplot
-    fsl:exec "mkdir tsplot ; ${FSLDIR}/bin/tsplot . -f $fmrifile -o tsplot"
+    fsl:exec "mkdir -p tsplot ; ${FSLDIR}/bin/tsplot . -f $fmrifile -o tsplot"
 
     catch { exec sh -c "cat tsplot/tsplot_index" } errmsg
     regsub -all "tsplot" $errmsg "tsplot/tsplot" errmsg
@@ -5700,8 +5715,6 @@ if { ! $rerunning } {
     feat5:report_insert report_poststats.html poststatsps $ps
     feat5:report_insert report_poststats.html poststatsrs $rs
     fsl:echo report_poststats.html "</BODY></HTML>"
-} else {
-    feat5:report_insert .logA refresh ""
 }
 
 return 0
@@ -5721,7 +5734,7 @@ global FSLDIR FSLSLASH PWD HOME HOSTNAME OSFLAVOUR logout fmri feat_files unwarp
 cd $fmri(outputdir)
 set FD [ pwd ]
 
-set logout ${FD}/.logE
+set logout ${FD}/logs/feat5_reg
 fsl:echo $logout "</pre><hr>Registration<br><pre>"
 
 fsl:echo report_reg.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
@@ -5744,7 +5757,7 @@ FMRI data processing was carried out using FEAT (FMRI Expert Analysis Tool) Vers
 set existing_mats 0
 
 new_file reg
-fsl:exec "/bin/mkdir reg"
+fsl:exec "/bin/mkdir -p reg"
 cd reg
 
 imcp ../example_func example_func
@@ -5899,8 +5912,6 @@ if { [ file exists ${FD}/reg/example_func2standard1.png ] } {
 
 fsl:echo report_reg.html "</BODY></HTML>"
 
-feat5:report_insert .logA refresh ""
-
 return 0
 
 #}}}
@@ -5918,7 +5929,7 @@ global FSLDIR FSLSLASH PWD HOME HOSTNAME OSFLAVOUR logout fmri feat_files unwarp
 cd $fmri(outputdir)
 set FD [ pwd ]
 
-set logout ${FD}/.logB
+set logout ${FD}/logs/feat2_pre
 fsl:echo $logout "</pre><hr>Higher-level input files preparation<br><pre>"
 
 #}}}
@@ -6002,7 +6013,7 @@ fsl:exec "${FSLDIR}/bin/fslmerge -t mask $mask_list"
 if { ! [ file exists $feat_files(1)/design.lev ] } {
     #{{{ create reg images
 
-fsl:exec "mkdir inputreg"
+fsl:exec "mkdir -p inputreg"
 
 cd inputreg
 
@@ -6239,7 +6250,7 @@ global FSLDIR FSLSLASH PWD HOME HOSTNAME OSFLAVOUR logout fmri feat_files unwarp
 cd $fmri(outputdir)
 set FD [ pwd ]
 
-set logout ${FD}/.logB
+set logout ${FD}/logs/feat3a_flame
 fsl:echo $logout "</pre><hr>Higher-level stats<br><pre>"
 
 fsl:echo report_stats.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
@@ -6354,6 +6365,8 @@ if { $NumPoints < 30 && $fmri(mixed_yn) != 1 } {
     }
 }
 
+fsl:echo $logout [ exec sh -c "cat .flame | head -n 1" ]
+
 fsl:echo dof "[ expr $NumPoints - $NumWaves ]"
 new_file stats
 
@@ -6378,7 +6391,7 @@ global FSLDIR FSLSLASH PWD HOME HOSTNAME OSFLAVOUR logout fmri feat_files unwarp
 cd $fmri(outputdir)
 set FD [ pwd ]
 
-set logout ${FD}/.logB
+set logout ${FD}/logs/feat3b_flame
 
 #}}}
     fsl:exec "sh ./.flame"
@@ -6393,7 +6406,7 @@ global FSLDIR FSLSLASH PWD HOME HOSTNAME OSFLAVOUR logout fmri feat_files unwarp
 cd $fmri(outputdir)
 set FD [ pwd ]
 
-set logout ${FD}/.logB
+set logout ${FD}/logs/feat3c_flame
 
 #}}}
     #{{{ FLAME3
@@ -6429,7 +6442,7 @@ global FSLDIR FSLSLASH PWD HOME HOSTNAME OSFLAVOUR logout fmri feat_files unwarp
 cd $fmri(outputdir)
 set FD [ pwd ]
 
-set logout ${FD}/.logC
+set logout ${FD}/logs/gica
 fsl:echo $logout "</pre><hr>Higher-level MELODIC<br><pre>"
 
 #}}}
@@ -6461,7 +6474,7 @@ fsl:exec "${FSLDIR}/bin/fslmerge -t mask $mask_list"
 
 #{{{ create reg images
 
-fsl:exec "mkdir inputreg"
+fsl:exec "mkdir -p inputreg"
 
 cd inputreg
 
@@ -6521,7 +6534,7 @@ fsl:exec "${FSLDIR}/bin/fslmaths mask -Tmin -bin mask -odt char"
 #}}}
     #{{{ MELODIC
 
-set thecommand "${FSLDIR}/bin/melodic -i .filelist -o groupmelodic.ica -v --nobet --bgthreshold=$fmri(thresh) --tr=$fmri(tr) --report --bgimage=bg_image"
+set thecommand "${FSLDIR}/bin/melodic -i .filelist -o groupmelodic.ica -v --nobet --bgthreshold=$fmri(thresh) --tr=$fmri(tr) --report --guireport=../../report.html --bgimage=bg_image"
 
 if { $fmri(varnorm) == 0 } {
     set thecommand "$thecommand --vn"
@@ -6554,6 +6567,26 @@ if { [ file exists $fmri(subject_model_mat) ] && [ file exists $fmri(subject_mod
 fsl:exec "$thecommand"
 
 #}}}
+
+    return 0
+}
+
+#}}}
+#{{{ feat5:proc_stop
+
+proc feat5:proc_stop { } {
+    
+    global fmri
+
+    cd $fmri(outputdir)
+
+    cd logs
+    feat5:report_insert feat0 refresh ""
+
+    cd $fmri(outputdir)
+    catch { exec sh -c "cat logs/* > report_log.html" } putserr
+
+    feat5:report_insert report.html running "Finished at [exec date]"
 
     return 0
 }

@@ -38,7 +38,7 @@ int main(int argc,char *argv[])
   if (!FslFileExists(argv[1])) 
   { 
     cout << "0" << endl;
-    return 1; 
+    return 0; // the intended usage is to return "0" and not show an error
   }
   else 
   { 

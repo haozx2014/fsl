@@ -79,7 +79,6 @@
 #include "miscmaths/miscprob.h"
 #include "miscmaths/t2z.h"
 #include "libprob.h"
-#include "libss/libss.h"
 
 #include <cstring>
 
@@ -1290,26 +1289,20 @@ if ( (templp_yn) || (temphp_yn) )
     for(i=0; i<orig_ev_nreal[orig_ev]; i++, real_ev++)
       if (tempfiltyn)
 	{
-	  image_struct im;
+	  volume4D <float> im(1,1,1,npts);
 	  double hp_sigma=-1, lp_sigma=-1;
 
-	  im.x=im.y=im.z=1;
-	  im.t=npts;
-	  im.i=(float*)malloc(sizeof(float)*npts);
-
-	  im.dt=16; im.dtmin=-1e10; im.dtmax=1e10;
-      
 	  if (templp_yn) lp_sigma=2.8/tr;
 	  if (temphp_yn) hp_sigma=0.5*nltffwhm/tr;
 	  /*printf("%f %f\n",hp_sigma,lp_sigma);*/
 
 	  for(t=0;t<npts;t++)
-	    im.i[t] = real_X(t+1,real_ev+1);
+	    im.value(0,0,0,t) = real_X(t+1,real_ev+1);
 
-	  tempfilt(im, hp_sigma, lp_sigma, 0);
+	  im=bandpass_temporal_filter(im, hp_sigma, lp_sigma);
 
 	  for(t=0;t<npts;t++)
-	    real_X(t+1,real_ev+1) = im.i[t];
+	    real_X(t+1,real_ev+1) = im.value(0,0,0,t);
 	}
   }
 
@@ -1623,18 +1616,18 @@ if (level==1)
 	{
 	  if ( (shape[orig_ev]!=4) && (triggers[orig_evs+orig_ev]>-1e6) ) /* check for at least one trigger pair */
 	    {
-	      float *diffs_list=(float *)malloc(sizeof(float)*2*npts);
+	      ColumnVector diffs_list(2*npts);
 	      int j;
 
 	      for(j=0;triggers[j*orig_evs+orig_ev]>-1e6;j+=2)
 		{
 		  fprintf(ofp,"%e ",triggers[j*orig_evs+orig_ev]);
 		  if (triggers[(j+1)*orig_evs+orig_ev]>-1e6)
-		    diffs_list[j/2]=triggers[(j+1)*orig_evs+orig_ev]-triggers[j*orig_evs+orig_ev];
+		    diffs_list(j/2+1)=triggers[(j+1)*orig_evs+orig_ev]-triggers[j*orig_evs+orig_ev];
 		}
-	      
-	      fprintf(ofp,"%f\n",median(0.5,diffs_list,j/2) + maxconvwin/trmult);
-	      free(diffs_list);
+
+	      diffs_list=diffs_list.Rows(1,j/2);
+	      fprintf(ofp,"%f\n",median(diffs_list) + maxconvwin/trmult);
 	    }
 	  else
 	    fprintf(ofp,"0\n");
@@ -1841,7 +1834,7 @@ for(evx=0; evx<real_evs; evx++)
     if (tmpf<=0)
       cov[evy*real_evs+evx]=0;
     else
-      cov[evy*real_evs+evx]=ABS(cov[evy*real_evs+evx])/sqrt(tmpf);
+      cov[evy*real_evs+evx]=abs(cov[evy*real_evs+evx])/sqrt(tmpf);
   }
 
 for(evx=0; evx<real_evs; evx++)
@@ -2199,3 +2192,4 @@ system(filename);
 
   return(0);
 }
+
