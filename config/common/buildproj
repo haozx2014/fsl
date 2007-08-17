@@ -86,7 +86,7 @@ for projname in $PROJECTS; do
 	  echo "Making project src/$projname" ;
 	  echo " " ;
 	  cd $FSLDIR/src/$projname ;
-	  if [ "${FSL_CLEAN_SRC}" == "1" ]; then ${MAKE} distclean ;
+	  if [ "${FSL_CLEAN_SRC}" = "1" ]; then ${MAKE} distclean ;
 	  else # do the regular build job
 	  if [ -x fslconfig ] ; then
 	    ./fslconfig ;
