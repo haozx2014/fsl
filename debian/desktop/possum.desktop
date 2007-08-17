@@ -1,10 +1,10 @@
 [Desktop Entry]
 Encoding=UTF-8
-GenericName=Upsample FEAT Results for high-resolution Overlays
-GenericName[de]=Hochskalieren von FEAT-Ergebnissen für Overlays
-Name=Renderhighres
-Exec=Renderhighres
-TryExec=Renderhighres
+GenericName=fMRI-Sequence Simulator
+GenericName[de]=Simulator für fMRI-Sequenzen
+Name=POSSUM
+Exec=Possum
+TryExec=Possum
 Icon=fsl.xpm
 Type=Application
 Terminal=false

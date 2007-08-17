@@ -8,4 +8,4 @@ TryExec=fsl
 Icon=fsl.xpm
 Type=Application
 Terminal=false
-Categories=Science;MedicalSoftware;
+Categories=Utility;Science;MedicalSoftware;
