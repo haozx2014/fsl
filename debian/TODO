@@ -1,3 +1,0 @@
-* Catch exception in FSL GUI when fsl-data package is missing.
-* Update desktop files for new GUIs.
-* Obey menu transition.

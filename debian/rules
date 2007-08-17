@@ -48,7 +48,7 @@ clean:
 	find $(CURDIR) -name '*.so' -exec rm {} \;
 	-rm src/fdt/{xfibres,fdt_matrix_ops,indexer,replacevols,probtrackx,reord_OM,sausages,probtrack_old}
 	-rm src/feat5/doc/{feat.tcl,top.html}
-	-rm -r etc/standard
+	-rm -r etc/standard lib
 
 	# clean the remaining temp dir
 	rm -rf include
@@ -114,9 +114,6 @@ binary-arch: install
 
 	# remove previous link to make repeated builds work
 	-rm debian/fsl/usr/share/fsl/etc/fslconf/{feat.tcl,fsl.sh}
-	# remove the empty standard space directory which is to be replaced by a
-	# softlink
-	-rm -r debian/tmp/etc/standard
 
 	# set execute permission for GUI application wrapper
 	chmod +x debian/fsl_gui_app_wrapper

@@ -1,4 +1,3 @@
-/usr/share/fsl/data/standard /usr/share/fsl/etc/standard
 /etc/fsl/fsl.sh /usr/share/fsl/etc/fslconf/fsl.sh
 /etc/fsl/feat.tcl /usr/share/fsl/etc/fslconf/feat.tcl
 /usr/share/fsl/etc/matlab /usr/share/octave/site/m/fsl
@@ -17,6 +16,7 @@
 /usr/lib/fsl/fsl_gui_app_wrapper /usr/bin/Make_flobs
 /usr/lib/fsl/fsl_gui_app_wrapper /usr/bin/Melodic
 /usr/lib/fsl/fsl_gui_app_wrapper /usr/bin/Nudge
+/usr/lib/fsl/fsl_gui_app_wrapper /usr/bin/Possum
 /usr/lib/fsl/fsl_gui_app_wrapper /usr/bin/Renderhighres
 /usr/lib/fsl/fsl_gui_app_wrapper /usr/bin/Susan
 /usr/share/man/man1/fsl.1.gz /usr/share/man/man1/ApplyXFM.1.gz
@@ -33,8 +33,10 @@
 /usr/share/man/man1/fsl.1.gz /usr/share/man/man1/Melodic.1.gz
 /usr/share/man/man1/fsl.1.gz /usr/share/man/man1/Nudge.1.gz
 /usr/share/man/man1/fsl.1.gz /usr/share/man/man1/Renderhighres.1.gz
+/usr/share/man/man1/fsl.1.gz /usr/share/man/man1/Possum.1.gz
 /usr/share/man/man1/fsl.1.gz /usr/share/man/man1/Susan.1.gz
 /usr/bin/fslview /usr/lib/fsl/fslview
+/usr/bin/atlasquery /usr/lib/fsl/atlasquery
 /usr/share/nifti/bin/imtest /usr/lib/fsl/imtest
 /usr/share/nifti/bin/imcp /usr/lib/fsl/imcp
 /usr/share/nifti/bin/imglob /usr/lib/fsl/imglob

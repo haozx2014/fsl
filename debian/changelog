@@ -1,11 +1,11 @@
-fsl (4.0~pre2) unstable; urgency=low
+fsl (4.0.0-1) unstable; urgency=low
 
   * New upstream release.
   * Repackaged the FSL source tarball due to its size and the mixture of
     licenses and split it into three independent source packages: 'fsl' contains
     all non-free source code, 'fslview' contains FSLView and all other
     DFSG-compliant sources and 'fsldata' contains the arch-independent datasets
-    (>800MB).
+    (>900MB).
   * Conflict with old fsl-fslview package and depend on the successor
     'fslview'.
   * Debian diff is now handled with a GIT repository. Build-dependency to
@@ -19,7 +19,7 @@ fsl (4.0~pre2) unstable; urgency=low
   * Added 'dicomnifti' to the list of the suggested packages.
   * Removed obsolete runtime dependency to tix, imagemagick and gnuplot.
 
- -- Michael Hanke <michael.hanke@gmail.com>  Fri,  3 Aug 2007 08:29:47 +0200
+ -- Michael Hanke <michael.hanke@gmail.com>  Fri, 17 Aug 2007 14:38:14 +0200
 
 fsl (3.3.11-2) unstable; urgency=low
 
