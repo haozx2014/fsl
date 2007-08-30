@@ -1,3 +1,11 @@
+fsl (4.0.0-2) unstable; urgency=low
+
+  * Bugfix: fsl_sub made use of non-POSIX operator while interpreter was set
+    to /bin/sh. This caused the script to fail on Ubuntu systems that have
+    dash as their default shell.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Thu, 30 Aug 2007 08:44:46 +0200
+
 fsl (4.0.0-1) unstable; urgency=low
 
   * New upstream release.
