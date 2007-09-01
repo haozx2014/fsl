@@ -230,7 +230,7 @@ if [ $dostd = 1 ] ; then
     fi
 
     if [ "$stdroi" != "" ] ; then
-	${FSLDIR}/bin/fslmaths ${FSLDIR}/data/standard/MNIs152_T1_2mm_brain_mask -mul 0 -add 1 $stdroi ${A}_and_${B}_stdmask
+	${FSLDIR}/bin/fslmaths ${FSLDIR}/data/standard/MNI152_T1_2mm_brain_mask -mul 0 -add 1 $stdroi ${A}_and_${B}_stdmask
 	${FSLDIR}/bin/flirt -in ${A}_and_${B}_stdmask -ref $A -out ${A}_stdmask -applyxfm -init ${A}_to_std_inv.mat
 	${FSLDIR}/bin/flirt -in ${A}_and_${B}_stdmask -ref $B -out ${B}_stdmask -applyxfm -init ${B}_to_std_inv.mat
 	${FSLDIR}/bin/fslmaths ${A}_stdmask -thr 0.5 -bin ${A}_stdmask
@@ -266,7 +266,7 @@ ${FSLDIR}/bin/overlay 1 0 -c ${A}_halfwayto_${B} -a ${A}_halfwayto_${B}_brain_se
 ${FSLDIR}/bin/slicer ${A}_halfwayto_${B}_brain_seg_grot -a ${A}_halfwayto_${B}_brain_seg.png
 ${FSLDIR}/bin/imrm ${A}_halfwayto_${B}_brain_seg_grot
 pbvc_forward=`grep PBVC report.siena | tail -n 1 | awk '{print $2}' | sed 's/-/_/g'`
-echo "<hr><p><b>FAST tissue segmentation</b><br>These images show the tissue segmentation used to find the brain/non-brain boundary. The exact segmentaiton of grey matter vs. white matter is not important.<p>${Ao}<br><IMG BORDER=0 SRC=\"${A}_halfwayto_${B}_brain_seg.png\"><p>${Bo}<br><IMG BORDER=0 SRC=\"${B}_halfwayto_${A}_brain_seg.png\">" >> report.html
+echo "<hr><p><b>FAST tissue segmentation</b><br>These images show the tissue segmentation used to find the brain/non-brain boundary. The exact segmentation of grey matter vs. white matter is not important.<p>${Ao}<br><IMG BORDER=0 SRC=\"${A}_halfwayto_${B}_brain_seg.png\"><p>${Bo}<br><IMG BORDER=0 SRC=\"${B}_halfwayto_${A}_brain_seg.png\">" >> report.html
 
 echo "" >> report.siena
 pbvc_average=`echo "10 k $pbvc_forward $pbvc_backward - 2.0 / p" | dc -`
@@ -277,8 +277,8 @@ ${FSLDIR}/bin/overlay 0 0 ${A}_halfwayto_${B} -a ${A}_to_${B}_flow 0.01 1 ${A}_t
 ${FSLDIR}/bin/slicer ${A}_halfwayto_${B}_render -s 1 -x 0.4 gr${A}_halfwayto_${B}a.png -x 0.5 gr${A}_halfwayto_${B}b.png -x 0.6 gr${A}_halfwayto_${B}c.png -y 0.4 gr${A}_halfwayto_${B}d.png -y 0.5 gr${A}_halfwayto_${B}e.png -y 0.6 gr${A}_halfwayto_${B}f.png -z 0.4 gr${A}_halfwayto_${B}g.png -z 0.5 gr${A}_halfwayto_${B}h.png -z 0.6 gr${A}_halfwayto_${B}i.png
 ${FSLDIR}/bin/pngappend gr${A}_halfwayto_${B}a.png + gr${A}_halfwayto_${B}b.png + gr${A}_halfwayto_${B}c.png + gr${A}_halfwayto_${B}d.png + gr${A}_halfwayto_${B}e.png + gr${A}_halfwayto_${B}f.png + gr${A}_halfwayto_${B}g.png + gr${A}_halfwayto_${B}h.png + gr${A}_halfwayto_${B}i.png ${A}_halfwayto_${B}_render.png
 /bin/rm gr${A}_halfwayto_${B}?.???
-/bin/cp ${FSLDIR}/data/luts/ramp.gif .ramp.gif
-/bin/cp ${FSLDIR}/data/luts/ramp2.gif .ramp2.gif
+/bin/cp ${FSLDIR}/etc/luts/ramp.gif .ramp.gif
+/bin/cp ${FSLDIR}/etc/luts/ramp2.gif .ramp2.gif
 echo "<hr><p><b>Final brain edge movement image</b><p>atrophy <IMG SRC=\".ramp2.gif\"> 0 <IMG SRC=\".ramp.gif\"> \"growth\"<p><IMG BORDER=0 SRC=\"${A}_halfwayto_${B}_render.png\"><p><b>Estimated PBVC: $pbvc_average</b>" >> report.html
 
 if [ $debug = 0 ] ; then

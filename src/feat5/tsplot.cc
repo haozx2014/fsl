@@ -799,7 +799,7 @@ ymin-=(ymax-ymin)/20;
       newplot.add_label("full model fit");
       newplot.add_label("");
       newplot.add_label("data");
-      newplot.timeseries((TS_data | blank | TS_model).t(),string(gpname),title,1,GRPHSIZE,4,2,false);
+      newplot.timeseries((TS_model|blank|TS_data).t(),string(gpname),title,1,GRPHSIZE,4,2,false);
       newplot.remove_labels(3);
       sprintf(rofpF,"%sFull model fit - <a href=\"%s.txt\">Raw data</a><br>\n<IMG BORDER=0 SRC=\"%s.png\"><br><br>\n",rofpF,gprootname,gprootname);
     }

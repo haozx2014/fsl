@@ -75,7 +75,7 @@ nproc=$2
 #$ -V
 #$ -N p_possum
 #$ -m ae
-
+POSSUMDIR=~/fsldev
 run(){
  echo "$1" >> $2/possum.log
  $1 >> $2/possum.log 2>&1
@@ -83,10 +83,10 @@ run(){
 }
 
 echo Summing all signal from different proccesses into one total signal
-run "${FSLDIR}/bin/possum_sum -i ${subjdir}/diff_proc/signal_proc_ -o ${subjdir}/signal -n $nproc " ${subjdir}
+run "${POSSUMDIR}/bin/possum_sum -i ${subjdir}/diff_proc/signal_proc_ -o ${subjdir}/signal -n $nproc " ${subjdir}
 
 echo Converting the signal into the image
-run "${FSLDIR}/bin/signal2image -i ${subjdir}/signal -o ${subjdir}/image -p ${subjdir}/pulse -a " ${subjdir}
+run "${POSSUMDIR}/bin/signal2image -i ${subjdir}/signal -o ${subjdir}/image -p ${subjdir}/pulse -a " ${subjdir}
 
 echo Removing intermediate files
 if [ `imtest ${subjdir}/image_abs` -eq 1 ];then
@@ -103,7 +103,7 @@ tresh=`echo "0.1 * $P98 + 0.9 * $P02 "|bc -l`
 fslmaths ${subjdir}/image_mean -thr $tresh ${subjdir}/image_mean
 medint=`fslstats ${subjdir}/image_mean -P 50`
 dim1=`fslval ${subjdir}/image_abs dim1`
-if [ $n == "snr" ]; then
+if [ $n = "snr" ]; then
   snr=$m
   if [ $snr != 0 ]; then
      sigma=`echo " ${medint} / ( 2 * ${dim1} * ${snr} ) "| bc -l` #I worked this out ages ago.
@@ -121,8 +121,8 @@ else
 fi
 if [ $sigma != 0 ]; then
    mv ${subjdir}/signal ${subjdir}/signal_nonoise
-   run "${FSLDIR}/bin/systemnoise --in=${subjdir}/signal_nonoise --out=${subjdir}/signal --sigma=${sigma} " $subjdir
+   run "${POSSUMDIR}/bin/systemnoise --in=${subjdir}/signal_nonoise --out=${subjdir}/signal --sigma=${sigma} " $subjdir
 fi
-run "${FSLDIR}/bin/signal2image -i ${subjdir}/signal -o ${subjdir}/image -p ${subjdir}/pulse -a " $subjdir
+run "${POSSUMDIR}/bin/signal2image -i ${subjdir}/signal -o ${subjdir}/image -p ${subjdir}/pulse -a " $subjdir
 rm ${subjdir}/image_mean.nii.gz
 

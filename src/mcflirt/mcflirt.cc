@@ -630,7 +630,7 @@ int main (int argc,char** argv)
 
   globalopts.parse_command_line(argc, argv);
   if (!globalopts. no_reporting) cerr << endl << "McFLIRT v 2.0 - FMRI motion correction" << endl << endl;
-
+  int original_refvol=globalopts.refnum;
   if (!globalopts. no_reporting) cerr <<"Reading time series... " << endl;
   volumeinfo vinfo;
   read_volume4D(timeseries, globalopts.inputfname, vinfo);
@@ -800,6 +800,7 @@ int main (int argc,char** argv)
     if (globalopts. reffileflag) {
       decompose_mats(mat_index, mat_array0, extrefvol);
     } else {
+      if (globalopts.refnum<0) globalopts.refnum=original_refvol;
       decompose_mats(mat_index, mat_array0, timeseries[globalopts. refnum]);
     }
   }

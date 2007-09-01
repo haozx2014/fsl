@@ -104,6 +104,34 @@ for s in $@ ; do
 $w"
     fi
 
+    # warn about "-ero2"
+    w=`cat $s | grep fslmaths | grep " -ero2 "`
+    if [ "$w" != "" ] ; then
+	echo "--- Warning - hand-editing may be required in file ${s}; in the following line, probably change \"-ero2\" to \"-kernel 2D -ero\"
+$w"
+    fi
+
+    # warn about "-dil2"
+    w=`cat $s | grep fslmaths | grep " -dil2 "`
+    if [ "$w" != "" ] ; then
+	echo "--- Warning - hand-editing may be required in file ${s}; in the following line, probably change \"-dil2\" to \"-kernel 2D -dilF\"
+$w"
+    fi
+
+    # warn about "-dil"
+    w=`cat $s | grep fslmaths | grep " -dil "`
+    if [ "$w" != "" ] ; then
+	echo "--- Warning - hand-editing may be required in file ${s}; in the following line, probably change \"-dil\" to \"-dilF\"
+$w"
+    fi
+
+    # warn about "susan_smooth"
+    w=`cat $s | grep susan_smooth`
+    if [ "$w" != "" ] ; then
+	echo "--- Warning - hand-editing may be required in file ${s}; in the following line, probably change \"susan_smooth\" to \"susan\" note that argument order has changed
+$w"
+    fi
+
     # warn about datatype changing in avwmaths_*
     for p in fsl2ascii fslcc fslinterleave fslmaths fslroi bet ; do
 	w=`cat $s | grep ${p}_8UI`

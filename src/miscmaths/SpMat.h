@@ -1,3 +1,7 @@
+//  
+//  Declarations/template-bodies for sparse matrix class SpMat
+//
+//  SpMat.h
 //
 //  Implements bare-bones sparse matrix class. 
 //  Main considerations has been efficiency when constructing
@@ -15,6 +19,10 @@
 //  believe that when a matrix is unwieldily enough to warrant
 //  the use of a sparse matrix class, then one should not attempt
 //  to represent both the matrix and its transpose.
+//
+// Jesper Andersson, FMRIB Image Analysis Group
+//
+// Copyright (C) 2007 University of Oxford 
 //
 
 #ifndef SpMat_h
@@ -106,7 +114,7 @@ public:
 
   SpMat<T>& operator+=(const SpMat& M) 
   {
-    if (same_sparsity(M)) return(add_same_sparsity_mat_to_me(M,1)); 
+    if (same_sparsity(M)) return(add_same_sparsity_mat_to_me(M,1));
     else return(add_diff_sparsity_mat_to_me(M,1));
   }
   SpMat<T>& operator-=(const SpMat& M) 
@@ -983,7 +991,7 @@ template<class T>
 T& Accumulator<T>::operator()(unsigned int i)
 {
   if (!_occ[i]) {
-    if (_sorted && i < _occi[_no-1]) _sorted = false;
+    if (_sorted && _no && i < _occi[_no-1]) _sorted = false;
     _occ[i] = true;
     _occi[_no++] = i;
   }

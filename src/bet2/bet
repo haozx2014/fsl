@@ -86,7 +86,7 @@ Main bet2 options:
   -r <r>      head radius (mm not voxels); initial surface sphere is set to half of this
   -c <x y z>  centre-of-gravity (voxels not mm) of initial mesh surface.
   -t          apply thresholding to segmented brain image and mask
-  -e          generates brain surface as mesh in .off format
+  -e          generates brain surface as mesh in .vtk format
 
 Variations on default bet2 functionality (mutually exclusive options):
   (default)   just run bet2
@@ -339,7 +339,7 @@ ${FSLDIR}/bin/flirt -ref ${FSLDIR}/data/standard/MNI152_T1_2mm -in $IN -omat ${O
 ${FSLDIR}/bin/bet2 $IN $OUT -e $bet2opts
 
 # find other surfaces
-${FSLDIR}/bin/betsurf --t1only -o -m -s $IN ${OUT}_mesh.off ${OUT}_tmp_T1_to_std.mat $OUT
+${FSLDIR}/bin/betsurf --t1only -o -m -s $IN ${OUT}_mesh.vtk ${OUT}_tmp_T1_to_std.mat $OUT
 
 # }}}
 elif [ $variation = 6 ] ; then
@@ -355,7 +355,7 @@ ${FSLDIR}/bin/flirt -ref ${FSLDIR}/data/standard/MNI152_T1_2mm -in $IN -omat ${O
 ${FSLDIR}/bin/bet2 $IN $OUT -e $bet2opts
 
 # find other surfaces
-${FSLDIR}/bin/betsurf -o -m -s $IN ${OUT}_tmp_T2_to_T1 ${OUT}_mesh.off ${OUT}_tmp_T1_to_std.mat $OUT
+${FSLDIR}/bin/betsurf -o -m -s $IN ${OUT}_tmp_T2_to_T1 ${OUT}_mesh.vtk ${OUT}_tmp_T1_to_std.mat $OUT
 
 # }}}
 elif [ $variation = 7 ] ; then

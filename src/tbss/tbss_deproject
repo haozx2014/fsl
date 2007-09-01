@@ -1,4 +1,4 @@
-sl#!/bin/sh
+#!/bin/sh
 
 #   tbss_deproject - take skeleton-space voxels back to all_FA space and then, optionally, native space
 #

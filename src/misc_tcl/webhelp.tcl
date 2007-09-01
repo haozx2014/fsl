@@ -16,7 +16,7 @@ proc FmribWebHelp { prefix file } {
 
     } else {
 
-	foreach executable {mozilla netscape iexplorer opera lynx w3m links galeon konquerer mosaic firefox amaya browsex elinks} {
+	foreach executable {firefox mozilla netscape iexplorer opera konquerer galeon amaya mosaic lynx w3m links browsex elinks} {
 	    set executable [auto_execok $executable]
 	    if [string length $executable] {
 		catch { exec sh -c "$executable -remote \"openURL(${prefix}//${file},new-window)\" || $executable ${prefix}//${file} " 2> /dev/null & }

@@ -110,7 +110,7 @@ Option<bool> verbose(string("-v,--verbose"), false,
 		     string("switch on diagnostic messages"), 
 		     false, no_argument);
 Option<bool> generate_mesh(string("-e,--mesh"), false, 
-		     string("generates brain surface as mesh in off format"), 
+		     string("generates brain surface as mesh in vtk format"), 
 		     false, no_argument);
 Option<bool> help(string("-h,--help"), false, 
 		     string("displays this help, then exits"), 
@@ -874,8 +874,8 @@ int main(int argc, char *argv[]) {
 
   if (generate_mesh.value())
     {
-      string meshstr = out+"_mesh.off";
-      m.save(meshstr.c_str());
+      string meshstr = out+"_mesh.vtk";
+      m.save(meshstr.c_str(),3);
     }
 
   if (skull.value())

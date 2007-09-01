@@ -103,18 +103,18 @@ while [ _$1 != _ ] ; do
     fi
 done
 
-${FSLDIR}/bin/flirt -in $A -out ${B}grot -ref ${FSLDIR}/data/standard/${refim} -omat ${B}grot.mat $inweightCom
+${FSLDIR}/bin/flirt -in $A -out ${B}_tmp_stage1 -ref ${FSLDIR}/data/standard/${refim} -omat ${B}_tmp_stage1.mat $inweightCom
 
 #do subcortical alignment
-${FSLDIR}/bin/flirt -in ${B}grot -out ${B}grot2 -ref ${FSLDIR}/data/standard/${refim} -omat ${B}grot2.mat -nosearch -refweight ${FSLDIR}/data/standard/MNI152lin_T1_1mm_subbr_mask
-${FSLDIR}/bin/convert_xfm -omat ${B}.mat -concat ${B}grot2.mat ${B}grot.mat 
+${FSLDIR}/bin/flirt -in ${B}_tmp_stage1 -out ${B}_tmp_stage2 -ref ${FSLDIR}/data/standard/${refim} -omat ${B}_tmp_stage2.mat -nosearch -refweight ${FSLDIR}/data/standard/MNI152lin_T1_1mm_subbr_mask
+${FSLDIR}/bin/convert_xfm -omat ${B}.mat -concat ${B}_tmp_stage2.mat ${B}_tmp_stage1.mat 
 
 #generate registered images
 ${FSLDIR}/bin/flirt -in ${A} -out ${B} -ref ${FSLDIR}/data/standard/${refim} -applyxfm -init ${B}.mat
 
 
 if [ $debug = 0 ] ; then
-  /bin/rm ${B}grot*
+  /bin/rm ${B}_tmp_stage*
 fi
 
 exit 0
