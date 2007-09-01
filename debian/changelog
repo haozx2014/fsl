@@ -1,3 +1,10 @@
+fsl (4.0.1-1) unstable; urgency=low
+
+  * New upstream bugfix release.
+  * BET can now store the brain surface in VTK format.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Sat, 01 Sep 2007 10:53:23 +0200
+
 fsl (4.0.0-2) unstable; urgency=low
 
   * Bugfix: fsl_sub made use of non-POSIX operator while interpreter was set
