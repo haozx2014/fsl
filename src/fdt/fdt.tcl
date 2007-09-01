@@ -1,4 +1,3 @@
-
 #   FSL interface for FDT (BEDPOSTX and PROBTRACKX)
 #
 #   Timothy Behrens, Heidi Johansen-Berg, Dave Flitney, Matthew Webster and Saad Jbabdi FMRIB Image Analysis Group
@@ -276,7 +275,10 @@ proc fdt:dialog { w tclstartupfile } {
     FileEntry $w.data.directory -textvariable probtrack(bedpost_dir) -label "BEDPOSTX directory" -title "Choose BEDPOSTX directory" -filetypes * -command "probtrack_update_files $w"
 
     TitleFrame  $w.data.seed -text "Seed Space"
+ 
     optionMenu2 $w.data.seed.menu probtrack(mode) -command "fdt:probtrack_mode $w" simple "Single voxel" seedmask "Single mask" network "Multiple masks"
+    pack $w.data.seed.menu -in $w.data.seed.f -side top -anchor w -pady 2
+
     set probtrack(x) 0
     set probtrack(y) 0
     set probtrack(z) 0
@@ -288,13 +290,16 @@ proc fdt:dialog { w tclstartupfile } {
     LabelSpinBox $w.data.seed.voxel.z -label "Z" -textvariable probtrack(z) -range {-1000000 1000000 1 } 
     radiobutton $w.data.seed.voxel.vox -text "vox" -value vox -variable probtrack(units)
     radiobutton $w.data.seed.voxel.mm  -text "mm"  -value mm  -variable probtrack(units)
-    FileEntry $w.data.seed.reference -textvariable probtrack(reference) -label "Seed reference image:" -title "Choose reference image" -filetypes IMAGE 
-
+    
+   
+ 
     option add *seed*FileEntry*labf*width 24
 
     frame  $w.data.seed.ssf
-    checkbutton $w.data.seed.ssf.ssd -text "Seed space is not diffusion" -variable probtrack(usereference_yn)  -command " pack forget $w.data.seed.ssf.xfm  ; if { \$probtrack(usereference_yn) } { pack $w.data.seed.ssf.xfm } ; $w.probtrack compute_size"
+    set probtrack(mode) simple
+    checkbutton $w.data.seed.ssf.ssd -text "Seed space is not diffusion" -variable probtrack(usereference_yn)  -command " fdt:probtrack_mode $w "
     FileEntry $w.data.seed.ssf.xfm -textvariable probtrack(xfm)  -label "Select Seed to diff transform" -title "Select seed-space to DTI-space transformation matrix" -filetypes *
+    FileEntry $w.data.seed.ssf.reference -textvariable probtrack(reference) -label "Seed reference image:" -title "Choose reference image" -filetypes IMAGE 
     pack $w.data.seed.ssf.ssd -side top -anchor nw
 
     if { [ file exists /usr/local/fsl/bin/reord_OM ] } {
@@ -304,10 +309,10 @@ proc fdt:dialog { w tclstartupfile } {
 	LabelSpinBox $w.data.seed.bcf.w -label "Low resolution rescaling factor" -textvariable probtrack(scale) -range {1 1000000 1 } 
 	pack $w.data.seed.bcf.bc -side left -anchor w
     }
-
     pack $w.data.seed.voxel.x $w.data.seed.voxel.y $w.data.seed.voxel.z $w.data.seed.voxel.vox $w.data.seed.voxel.mm -side left -padx 2
-    pack $w.data.seed.voxel $w.data.seed.ssf -in $w.data.seed.f -side bottom -anchor w -pady 2
-    pack $w.data.seed.menu $w.data.seed.reference -in $w.data.seed.f -side left -anchor w -pady 2
+    pack $w.data.seed.voxel $w.data.seed.ssf -in $w.data.seed.f -side left -anchor w -pady 2
+    
+
 
     TitleFrame $w.data.seed.target -text "Masks list"    
     listbox $w.data.seed.targets -height 6 -width 50 -yscrollcommand "$w.data.seed.sb set"
@@ -502,7 +507,7 @@ proc fdt:dialog { w tclstartupfile } {
 
     $w.probtrack raise data 
     fdt:select_tool $w 
-    set probtrack(mode) simple
+    
     fdt:probtrack_mode $w
 
     update idletasks
@@ -517,28 +522,33 @@ proc fdt:dialog { w tclstartupfile } {
 proc fdt:probtrack_mode { w } {
     global probtrack
 
-    pack forget $w.data.seed.voxel $w.data.seed.ssf $w.data.seed.menu $w.data.seed.reference $w.data.seed.bcf $w.data.seed.target $w.data.targets.cf
+    pack forget $w.data.seed.voxel $w.data.seed.ssf  $w.data.seed.ssf.xfm $w.data.seed.ssf.reference $w.data.seed.bcf $w.data.seed.target $w.data.targets.cf
     $w.data.dir configure -label  "Output directory:" -title  "Name the output directory" -filetypes *
     switch -- $probtrack(mode) {
   	simple {
                      pack $w.data.seed.ssf $w.data.seed.voxel -in $w.data.seed.f -side bottom -anchor w -pady 2
-                     pack $w.data.seed.menu $w.data.seed.reference -in $w.data.seed.f -side left -anchor w -pady 2
-                     $w.data.seed.reference configure -label "Seed reference image:" -title "Choose reference image" 
+	             if { $probtrack(usereference_yn) } { pack $w.data.seed.ssf.reference -side bottom -anchor w -pady 2 }
+                     $w.data.seed.ssf.reference configure -label "Seed reference image:" -title "Choose reference image" 
                      $w.data.dir configure -label  "Output file:" -title  "Name the output file" -filetypes IMAGE
     	}
 	seedmask {
 	    pack $w.data.seed.ssf -in $w.data.seed.f -side bottom -anchor w -pady 2
+            pack forget $w.data.seed.ssf.ssd
 	    if { [ file exists /usr/local/fsl/bin/reord_OM ] } {
 		pack $w.data.seed.bcf -in $w.data.seed.f -side bottom -anchor w -pady 2
 	    }
-	    pack $w.data.seed.menu $w.data.seed.reference -in $w.data.seed.f -side left -anchor w -pady 2
 	    pack $w.data.targets.cf -in $w.data.targets.f -anchor w
-	    $w.data.seed.reference configure -label "Mask image:" -title "Choose mask image" 
+	    $w.data.seed.ssf.reference configure -label "Mask image:" -title "Choose mask image" 
+            pack $w.data.seed.ssf.reference  $w.data.seed.ssf.ssd -side top -anchor w -pady 2
+
   	}
 	network {
-                     pack  $w.data.seed.target $w.data.seed.ssf $w.data.seed.menu -in $w.data.seed.f -side bottom -anchor w -pady 2
+                     pack  $w.data.seed.target $w.data.seed.ssf -in $w.data.seed.f -side bottom -anchor w -pady 2
 	}
     }
+    if { $probtrack(waypoint_yn) } { pack $w.data.targets.wf.tf } 
+    if { $probtrack(classify_yn) } { pack $w.data.targets.cf.tf }
+    if { $probtrack(usereference_yn) } { pack $w.data.seed.ssf.xfm   -side bottom -anchor w -pady 2 }
     $w.probtrack compute_size
 }
 
@@ -721,7 +731,8 @@ proc fdt:apply { w dialog } {
             set FSLPARALLEL 0
             if { [ info exists env(SGE_ROOT) ] && $env(SGE_ROOT) != "" } { set FSLPARALLEL 1 }
 	    if { $probtrack(bedpost_dir) == ""  } { set errorStr "You must specify the bedpostX directory!" }
-	    if { $probtrack(mode) != "network" && $probtrack(reference) == "" } { set errorStr "$errorStr You must specify a reference image" } 
+	    if { $probtrack(mode) == "simple" && $probtrack(usereference_yn) && $probtrack(reference) == "" } { set errorStr "$errorStr You must specify a reference image" } 
+	    if { $probtrack(mode) == "seedmask" && $probtrack(reference) == "" } { set errorStr "$errorStr You must specify a mask image" } 
 	    if { $probtrack(exclude_yn) && $probtrack(exclude) == "" } { set errorStr "$errorStr You must specify the exclusion mask!" }
             if { $probtrack(terminate_yn) && $probtrack(stop) == ""} { set errorStr "$errorStr You must specify the termination mask!" }
 	    if { $probtrack(output) == ""  } { set errorStr "$errorStr You must specify the output basename!" }
@@ -756,16 +767,19 @@ proc fdt:apply { w dialog } {
 
 	    if { $probtrack(usereference_yn) } {
 		set flags "$flags --xfm=$probtrack(xfm)"
+      		puts $log "set probtrack(usereference_yn) $probtrack(usereference_yn)"
       		puts $log "set probtrack(xfm) $probtrack(xfm)"
 	    }
 
 	    if { $probtrack(exclude_yn) == 1 } {
 		set flags "$flags --avoid=$probtrack(exclude)"
+		puts $log "set probtrack(exclude_yn) $probtrack(exclude_yn)"
 		puts $log "set probtrack(exclude) $probtrack(exclude)"
 	    }
 
 	    if { $probtrack(terminate_yn) == 1 } {
 		set flags "$flags --stop=$probtrack(stop)"
+		puts $log "set probtrack(terminate_yn) $probtrack(terminate_yn)"
 		puts $log "set probtrack(stop) $probtrack(stop)"
 	    }
 
@@ -779,6 +793,9 @@ proc fdt:apply { w dialog } {
 		    set x $probtrack(x)
 		    set y $probtrack(y)
 		    set z $probtrack(z)
+		   if { ! $probtrack(usereference_yn) } {
+                       set probtrack(reference) [ file join $probtrack(bedpost_dir) nodif_brain_mask ]
+		   }
 		    if { $probtrack(units) == "mm" } {
 			if { $probtrack(reference) != "" } {
 			    mm_to_voxels x y z $probtrack(reference)
@@ -814,23 +831,26 @@ proc fdt:apply { w dialog } {
 	       network {
                    fdt_exp w $w.data.seed.targets $probtrack(output)/masks.txt
 		   set flags "--network --mode=seedmask -x $probtrack(output)/masks.txt $flags"
+		   puts $log  " $w.data.seed.targets insert end [  $w.data.seed.targets get 0 end ]"
 	       }
 	    }
-
+	    puts $log "set probtrack(reference) $probtrack(reference)"
+	    puts $log "set probtrack(output) $probtrack(output)"
        	    if { $canwrite } {
        		set copylog "fdt.log"
 
 	        if { $probtrack(waypoint_yn) == 1 } {
                     fdt_exp w $w.data.targets.wf.tf.targets $probtrack(output)/waypoints.txt
+		    puts $log "set probtrack(waypoint_yn) $probtrack(waypoint_yn)"
+                    puts $log " $w.data.targets.wf.tf.targets insert end [  $w.data.targets.wf.tf.targets get 0 end ]"
                     set flags "$flags --waypoints=$probtrack(output)/waypoints.txt "
 	        } 
 	        if { $probtrack(classify_yn) == 1 } {
                     fdt_exp w $w.data.targets.cf.tf.targets $probtrack(output)/targets.txt
+		    puts $log "set probtrack(classify_yn) $probtrack(classify_yn)"
+		    puts $log " $w.data.targets.cf.tf.targets insert end [  $w.data.targets.cf.tf.targets get 0 end ]"
                     set flags "$flags --targetmasks=$probtrack(output)/targets.txt --os2t "
                 }
-                
-                #TODO
-
 	    
 		if { $FSLPARALLEL } {
                     set script [open "${filebase}_script.sh" w]
@@ -853,21 +873,9 @@ proc fdt:apply { w dialog } {
 
 		    fdt_monitor_short $w "$FSLDIR/bin/probtrackx $flags"
 		    if { $probtrack(classify_yn) == 1 } {
-			fdt_monitor_short $w "$FSLDIR/bin/find_the_biggest ${logdir}/seeds_to_* biggest >> ${logdir}/fdt_seed_classification.txt"
+			exec sh -c "$FSLDIR/bin/find_the_biggest $probtrack(output)/seeds_to_* biggest >> $probtrack(output)/fdt_seed_classification.txt"
 		    }
-		    set script [open "${filebase}_script.sh" w]
-                    puts "${filebase}_script.sh"
-                    exec chmod 777 ${filebase}_script.sh
-                    puts $script "#!/bin/sh"
-                    puts $script "$FSLDIR/bin/probtrackx $flags"
-		    if { $probtrack(classify_yn) == 1 } {
-			puts $script "$FSLDIR/bin/find_the_biggest ${logdir}/seeds_to_* biggest >> ${logdir}/fdt_seed_classification.txt"
-		    }
-                    puts $script "rm ${filebase}_coordinates.txt"
-                    puts $script "mv $logfile $copylog"
-                    puts $script "rm ${filebase}_script.sh"
-		    close $script
-		    }
+		}
        	    }
             if { !$FSLPARALLEL } {
 		if { $probtrack(mode) == "simple" } {

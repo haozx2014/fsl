@@ -212,8 +212,9 @@ if { $fmri(analysis) == 0 || $fmri(analysis) == 4 } {
 set FD $feat_files($session)
 
 if { $fmri(newdir_yn) } {
-    new_file $FD
-    file copy ${FD}- $FD
+    set oldFD $FD
+    set FD [ new_filename $oldFD ]
+    file copy $oldFD $FD
 }
 
 cd $FD

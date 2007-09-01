@@ -386,8 +386,11 @@ while [ _$1 != _ ]; do
 	shift
     elif [ $1 = '-h' ]; then
 	Usage
+    elif [ $1 = '-f' ]; then
+	fsl_tarball=$2
+	shift 2
     else
-	fsl_tarball=$1
+	Usage
     fi
 done
 
@@ -448,14 +451,6 @@ if [ "X${no_install}" = 'X-NO-' ]; then
 	    choice=${default_location}
 	fi
 	if [ -d ${choice} ]; then
-	    writeable=`touch ${choice}/.fsl-test 2>&1 | grep "Permission denied"`
-	    if [ -z "${writeable}" ]; then
-		rm ${choice}/.fsl-test
-	    else
-		echo "Will require Administrator priviledges to write to '${choice}'"
-		echo "Enter a password to elevate to Administrator rights when prompted"
-		n_sudo='-YES-'
-	    fi
 	    install_location=${choice}
 	else
 	    echo "'${choice}' doesn't appear to be a directory."
@@ -469,23 +464,35 @@ if [ "X${no_install}" = 'X-NO-' ]; then
 	Usage
     fi
     
-    if [ "X$is_patch" = "X-NO-" ]; then
-	read -p "'${install_location}/fsl' exists - would you like to remove it? [yes] " choice
-	choice=`to_lower $choice`
-	if [  -z "${choice}" -o "X${choice}" = "Xyes" ]; then
-	    echo "Deleting '${install_location}/fsl'..."
-	    delete_cmd="rm -rf ${install_location}/fsl"
-	    if [ "X${n_sudo}" = "X-YES-" ]; then
-		delete_cmd="sudo ${delete_cmd}"
-	    fi
-	    $delete_cmd
-	    if [ $? -ne 0 ]; then
-		echo "Unable to delete. Aborting"
-		exit 1
-	    fi
-	fi
+  # Check it is writeable, and if not request Sudo
+    writeable=`touch ${install_location}/.fsl-test 2>&1 | grep "Permission denied"`
+    if [ -z "${writeable}" ]; then
+	rm ${install_location}/.fsl-test
     else
-	echo "Patching ${install_location}/fsl with contents of ${install_from}/${fsl_tarball}"
+	echo "Will require Administrator priviledges to write to '${install_location}'"
+	echo "Enter a password to elevate to Administrator rights when prompted"
+	n_sudo='-YES-'
+    fi
+
+    if [ -d ${install_location}/fsl ]; then
+	if [ "X$is_patch" = "X-NO-" ]; then
+	    read -p "'${install_location}/fsl' exists - would you like to remove it? [yes] " choice
+	    choice=`to_lower $choice`
+	    if [  -z "${choice}" -o "X${choice}" = "Xyes" ]; then
+		echo "Deleting '${install_location}/fsl'..."
+		delete_cmd="rm -rf ${install_location}/fsl"
+		if [ "X${n_sudo}" = "X-YES-" ]; then
+		    delete_cmd="sudo ${delete_cmd}"
+		fi
+		$delete_cmd
+		if [ $? -ne 0 ]; then
+		    echo "Unable to delete. Aborting"
+		    exit 1
+		fi
+	    fi
+	else
+	    echo "Patching ${install_location}/fsl with contents of ${install_from}/${fsl_tarball}"
+	fi
     fi
     
 # Install FSL

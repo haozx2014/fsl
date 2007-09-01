@@ -8,8 +8,8 @@ else
 newimage libhfunc libss libvis meshclass misc_tcl bint \
 avwutils bet2 cluster fast fdt feat5 film filmbabe flame flirt fabber \
 fslpres fslvbm fugue mcflirt melodic misc_c miscvis mm \
-randomise siena slicetimer susan tbss \
-ifit load_varian misc_scripts fast4 shapeModel first possum sgeutils";
+randomise siena slicetimer susan tbss basisfield \
+ifit load_varian misc_scripts fast4 shapeModel first fnirt possum sgeutils";
 fi
 
 # don't write to a file, but print to the console

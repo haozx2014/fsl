@@ -1,4 +1,4 @@
-/*  Copyright (C) 2004 University of Oxford  */
+/*  Copyright (C) 2007 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -62,10 +62,15 @@
     University, to negotiate a licence. Contact details are:
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
+#include <fstream>
+#include "newimage/newimageall.h"
+#include "utils/log.h"
+#include "meshclass/meshclass.h"
 #include "probtrackxOptions.h"
 #include "particle.h"
-#include "ptx_simple.h"
-#include "ptx_seedmask.h"
-#include "ptx_twomasks.h"
-#include "ptx_nmasks.h"
-#include "ptx_meshmask.h"
+
+
+
+
+
+void meshmask();

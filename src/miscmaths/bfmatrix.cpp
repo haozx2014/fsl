@@ -1,5 +1,9 @@
 //
-// Definitions for class BFMatrix
+//    Definitions for class BFMatrix
+//
+//    Jesper Andersson, FMRIB Image Analysis Group
+//
+//    Copyright (C) 2007 University of Oxford 
 //
 
 #include <iostream>

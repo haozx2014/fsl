@@ -92,7 +92,7 @@ int main(int argc, char** argv)
   try
     {
       cout << "------------------\n";
-      cout << "Welcome to FABBER v0.1 (beta release)" << endl;
+      cout << "Welcome to FABBER v1.0 (beta release)" << endl;
 
       EasyOptions args(argc, argv);
 
@@ -118,8 +118,8 @@ int main(int argc, char** argv)
 
       // Diagnostic information: software versions
       // This only versions this file... should really use all.
-//      LOG_ERR("FABBER development revision: $Id: fabber.cc,v 1.9 2007/08/13 17:24:55 adriang Exp $\n");
-      LOG_ERR("FABBER release v0.1\n");
+//      LOG_ERR("FABBER development revision: $Id: fabber.cc,v 1.8 2007/08/06 13:52:16 adriang Exp $\n");
+      LOG_ERR("FABBER release v1.0\n");
       LOG << "Command line and effective options:\n" << args.Read("") << endl;
       LOG << "--output='" << EasyLog::GetOutputDirectory() << "'" << endl;
       LOG << args << "--------------------" << endl;

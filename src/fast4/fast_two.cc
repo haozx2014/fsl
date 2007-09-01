@@ -155,7 +155,7 @@ Option<bool> biasrem(string("-N, --nobias"), false,
 		  string("do not remove bias field"),
 		  false, no_argument);
 Option<bool> out_bias(string("-b, --outbias"), false,
-		  string("output bias field image"),
+		  string("output bias field correction image"),
 		  false, no_argument);
 
 Option<string> bapriori(string("-a"), "",

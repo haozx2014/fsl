@@ -69,7 +69,7 @@ namespace TRACT{
 	pop_waymasks();
     }
 
-
+    const Tractvolsx& get_vols() const {return vols;}
     inline int nfibres() const {return vols.nfibres();}
     inline const float get_x_seed() const {return m_x_s_init;}
     inline const float get_y_seed() const {return m_y_s_init;}
@@ -82,7 +82,7 @@ namespace TRACT{
     inline void reverse(){
       m_part.restart_reverse();
     }
-    bool streamline(const float& x_init,const float& y_init, const float& z_init,const ColumnVector& dim_seeds,const int& fibst);
+    bool streamline(const float& x_init,const float& y_init, const float& z_init,const ColumnVector& dim_seeds,const int& fibst,const ColumnVector& dir);
 
   };
 
@@ -206,6 +206,7 @@ namespace TRACT{
       m_seeddims<<m_seeds.xdim()<<m_seeds.ydim()<<m_seeds.zdim();
     }
     int run(const float& x,const float& y,const float& z,bool onewayonly=false, int fibst=-1);
+    int run(const float& x,const float& y,const float& z,bool onewayonly, int fibst,const ColumnVector& dir);
   };
 
 }

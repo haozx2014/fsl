@@ -911,7 +911,7 @@ proc parseatlases { } {
 proc feat5:setupdefaults { } {
     global fmri FSLDIR HOME
 
-    set fmri(version) 5.90
+    set fmri(version) 5.91
 
     set fmri(inmelodic) 0
 
@@ -1341,7 +1341,7 @@ if { $fmri(level) > 1 || $fmri(stats_yn) || $fmri(poststats_yn) } {
     set createthemodel 0
 }
 
-if { $fmri(donemodel) == 0 } {
+if { $createthemodel == 1 && $fmri(donemodel) == 0 } {
     MxPause "Please setup model before running."
     return 1
 }
@@ -4652,6 +4652,10 @@ proc feat5:find_std { featdir image } {
     if {  [ file exists ${featdir}/design.lev ] } {
 	if { [ imtest ${featdir}/$image ] } {
 	    return ${featdir}/$image
+	} elseif { [ imtest ${featdir}/bg_image ] } {
+	    return ${featdir}/bg_image
+	} elseif { [ imtest ${featdir}/example_func ] } {
+	    return ${featdir}/example_func
 	} else {
 	    return 0
 	}
@@ -5037,7 +5041,11 @@ if { $fmri(st) > 0 } {
 	}
     }
 
-    fsl:exec "${FSLDIR}/bin/slicetimer -i $funcdata --out=prefiltered_func_data_st -r $fmri(tr) $st_opts"
+    if { [exec whoami] == "mhough" && [ info exists fmri(st_opts_d) ] } { 
+	fsl:exec "${FSLDIR}/bin/slicetimer -i $funcdata --out=prefiltered_func_data_st -r $fmri(tr) $st_opts -d $fmri(st_opts_d)"
+    } else {
+	fsl:exec "${FSLDIR}/bin/slicetimer -i $funcdata --out=prefiltered_func_data_st -r $fmri(tr) $st_opts"
+    }
     set funcdata prefiltered_func_data_st
 }
 
