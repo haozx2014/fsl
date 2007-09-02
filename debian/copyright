@@ -127,59 +127,64 @@ published by O'Reilly and Associates.
 
 
 
-src/susan/susan_smooth.c
-------------------------
-
-Oxford Centre for Functional Magnetic Resonance Imaging of the Brain
-Department of Clinical Neurology, Oxford University, Oxford, UK
-(Previously in Computer Vision and Image Processing Group - now
-Computer Vision and Electro Optics Group - DERA Chertsey, UK)
-Email:    steve@fmrib.ox.ac.uk
-WWW:      http://www.fmrib.ox.ac.uk/~steve
-
-(C) Crown Copyright (1995-1999), Defence Evaluation and Research Agency,
-Farnborough, Hampshire, GU14 6TD, UK
-DERA WWW site:
-http://www.dera.gov.uk/
-DERA Computer Vision and Electro Optics Group WWW site:
-http://www.dera.gov.uk/imageprocessing/dera/group_home.html
-DERA Computer Vision and Electro Optics Group point of contact:
-Dr. John Savage, jtsavage@dera.gov.uk, +44 1344 633203
-
-A UK patent has been granted: "Method for digitally processing
-images to determine the position of edges and/or corners therein for
-guidance of unmanned vehicle", UK Patent 2272285. Proprietor:
-Secretary of State for Defence, UK. 15 January 1997
-
-This code is issued for research purposes only and remains the
-property of the UK Secretary of State for Defence. This code must
-not be passed on without this header information being kept
-intact. This code must not be sold.
-
-
-Package maintainer comment:
-
-As this license looks very restrictive the Debian package maintainer asked
-upstream for clarification. Steve Smith answered:
-
-"1. Only the SUSAN corner and edge detection are patented, not SUSAN
-    smoothing, which is what we are using in FSL.
- 2. We didn't derive the FSL smoothing code from the publically
-    available SUSAN code (I wrote it and hence effectively sourced it
-    independently) so it's not covered by the copyright on the 
-    available SUSAN code."
-
-
-extras/libprob
+extras/src/cprob
 --------------
-This code comes from the CEPHES library which does not have a proper license.
-
-Debian already include code from CEPHES library. Please see
+This code comes from the CEPHES library. Although the library sources itself
+contains no proper license statement, the copyright holder previously agreed
+to release it under the terms of the GPL. This is documented in the Debian
+packaging of the labplot package. Please see
 
 http://packages.debian.org/changelogs/pool/main/l/labplot/labplot_1.5.1-1/labplot.copyright
 
 for references.
 
+Here is a verbatim copy of the statement:
+
+  This email from Steve Moshier, the copyright owner of cephes, to Helen 
+  Faulkner (Debian maintainer of labplot), and other interested parties 
+  (labplot and grace authors, grace maintainer and labplot sponsor), confirms 
+  that we may release labplot with cephes licensed under the GPL.
+ 
+
+  -------- Original Message --------
+  Subject: Re: licensing of cephes
+  Date: Sun, 2 Jan 2005 21:48:02 -0500 (EST)
+  From: Steve Moshier <steve@moshier.net>
+  To: Helen Faulkner <helen_ml_faulkner@yahoo.co.uk>
+  CC: twerner@debian.org, Ben Burton <bab@debian.org>, evgeny@stambulchik.net,
+  Stefan Gerlach <gerlach@mbi-berlin.de>
+  References: <41D14354.4040506@yahoo.co.uk> 
+  <Pine.LNX.4.58.0412280836250.9987@moshier.net> 
+  <41D17BE3.3020708@yahoo.co.uk>
+  <Pine.LNX.4.58.0412281219420.10873@moshier.net> 
+  <41D1FB8D.6030002@yahoo.co.uk> 
+  <Pine.LNX.4.58.0412291032190.15474@moshier.net> 
+  <41D2D8EF.9010702@yahoo.co.uk> 
+  <Pine.LNX.4.58.0412291632540.17032@moshier.net> 
+  <41D41B2E.80508@yahoo.co.uk>
+
+
+
+  On Thu, 30 Dec 2004, Helen Faulkner wrote:
+
+  >   http://www.debian.org/social_contract#guidelines
+
+  This is fine with me.  To acknowedge your terms explicily,
+  how about augmenting the permission to read something like
+  the following --
+
+    This software is derived from the Cephes Math Library. It is
+    incorporated herein, and licensed in accordance with DFSG,
+    by permission of the author.
+
+
+  If you are trying to get me to suggest a specific form for your
+  license, then from looking at Debian programs such as dpkg it seems to
+  me that you would find the GPL to be appropriate and the permission
+  statement could reference one of the GPL documents instead of DFSG.
+  Alternatively, the packages you have been talking about distributing
+  with Debian presumably come with some sort of licenses and it would
+  make sense to propose those licenses.
 
 
 Debian packaging
@@ -203,4 +208,3 @@ The Debian packaging is (C) 2005-2007, Michael Hanke <michael.hanke@gmail.com>
 
 On Debian systems, the complete text of the GNU General
 Public License can be found in `/usr/share/common-licenses/GPL-2'.
-
