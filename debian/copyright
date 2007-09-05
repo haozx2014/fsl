@@ -77,24 +77,6 @@ General Electric makes no representations about the suitability of
 this software for any purpose.  It is provided ``as is''
 without express or implied warranty.
 
-This work was supported in part by the DARPA Initiative in Concurrent
-Engineering (DICE) through DARPA Contracts MDA972-88-C-0047 and
-MDA972-92-C-0027.
-
-This work was supported in part by the Tri-Services Microwave and
-Millimeter-Wave Advanced Computational Environment (MMACE) program
-under Naval Research Laboratory contract N00014-92-C-2044.
-
-
-
-src/misc_tcl/FSLFileDirBox.tcl
-src/misc_tcl/FSLFileDirDlg.tcl
-------------------------------
-
-Copyright (c) 1996, Expert Interface Technologies
-
-LICENSE is missing.
-
 
 
 src/miscvis/readpng.(h|c)
@@ -185,6 +167,7 @@ Here is a verbatim copy of the statement:
   Alternatively, the packages you have been talking about distributing
   with Debian presumably come with some sort of licenses and it would
   make sense to propose those licenses.
+
 
 
 Debian packaging
