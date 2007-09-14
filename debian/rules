@@ -29,12 +29,19 @@ build:
 
 	# fix permissions
 	find debian/tmp/tcl/BWidget -type f -exec chmod -x {} \;
-	chmod 644 debian/tmp/tcl/*.tcl
-	chmod 644 debian/tmp/tcl/*.xbm
-	chmod 644 debian/tmp/tcl/*.ppm
-	chmod 644 debian/tmp/tcl/*.ico
-	chmod -x debian/tmp/etc/flirtsch/*
-	chmod -x debian/tmp/etc/fslpres/*
+	chmod 644 debian/tmp/tcl/*.{tcl,xbm,ppm,ico}
+	chmod -x debian/tmp/etc/{flirtsch,fslpres}/*
+
+	# cleanup TCL stuff
+	rm -r debian/tmp/tcl/BWidget/BWMan/
+	find debian/tmp/tcl/BWidget/ -name '*.txt' -exec rm {} \;
+
+	# remove FSL internal binary and scripts
+	rm debian/tmp/bin/{fslpres,eqn2gif,makehtmeqns}
+
+	# silence lintian warning about a script which is actually documentation
+	let "RES = $$(wc -l < src/possum/doc/readme) -1" \
+		&& tail -n$${RES} src/possum/doc/readme > debian/tmp/doc/possum/readme
 
 
 clean:
@@ -55,6 +62,9 @@ clean:
 
 	# finally clean package
 	dh_clean
+
+	# fix permissions in the source
+	find src/ -name '*.fig' -exec chmod -x {} \;
 
 
 # checks that the included desktop files are ok
@@ -117,6 +127,10 @@ binary-arch: install
 
 	# set execute permission for GUI application wrapper
 	chmod +x debian/fsl_gui_app_wrapper
+
+	# install the lintian override
+	if [ ! -d debian/tmp/lintian ]; then mkdir debian/tmp/lintian; fi
+	cp debian/lintian.overrides debian/tmp/lintian/fsl
 
 	$(MAKE) -f debian/rules DH_OPTIONS=-a binary-common
 

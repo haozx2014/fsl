@@ -1,3 +1,10 @@
+fsl (4.0.1-2) unstable; urgency=low
+
+  * Added a lintian override for the Runtcl syntax warning. This file is
+    actually a mixed sh and tclsh script.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Wed,  5 Sep 2007 22:28:01 +0200
+
 fsl (4.0.1-1) unstable; urgency=low
 
   * New upstream bugfix release.

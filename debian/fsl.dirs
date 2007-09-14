@@ -3,3 +3,5 @@ usr/lib/fsl
 usr/share/fsl/doc/images
 usr/share/fsl/etc/fslconf
 usr/share/fsl/tcl
+
+usr/share/lintian/overrides
