@@ -16,10 +16,10 @@ XFILES=drawmesh selfintersection
 
 DBGFLAGS=-g
 
-all: meshclass ${XFILES}
+all: meshclass.a ${XFILES}
 
-meshclass: ${MESHOBJS}
-	${CXX} -shared -o libmeshclass.so ${MESHOBJS} ${LDFLAGS} -fPIC
+meshclass.a: ${MESHOBJS}
+	${AR} -r libmeshclass.a ${MESHOBJS}
 
 drawmesh:${DRAWOBJS} 
 	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${DRAWOBJS} ${LIBS} 

@@ -1,8 +1,5 @@
 #!/bin/sh
 
-# Set TCLTKSHELL \
-TCLTKSHELL=wish ; export TCLTKSHELL
-
 # Check for display being set \
 if [ _`uname | grep CYGWIN` = _ -a _$DISPLAY = _ ] ; then echo "DISPLAY is not set. Please set your DISPLAY environment variable!" ; exit 1 ; fi
 # Check for FSLDIR being set \

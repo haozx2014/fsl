@@ -14,10 +14,10 @@ MODELOBJS=mshape.o shapeModel.o
 
 DBGFLAGS=-g
 
-all: shapeModel
+all: shapeModel.a 
 
-shapeModel: ${SHAPEOBJS}
-	${CXX} -shared -o libshapeModel.so ${SHAPEOBJS} ${LDFLAGS} -fPIC -lmeshclass -lnewimage -lnewmat
+shapeModel.a: ${SHAPEOBJS}
+	${AR} -r libshapeModel.a ${SHAPEOBJS}
 
 
 

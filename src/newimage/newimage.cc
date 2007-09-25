@@ -73,7 +73,7 @@
 #include <iostream>
 #include "newmatio.h"
 #include "newimage.h"
-#include <fslio.h>
+#include "fslio/fslio.h"
 
 using namespace NEWMAT;
 using namespace LAZY;

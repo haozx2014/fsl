@@ -21,33 +21,9 @@ buildmessages="" ; export buildmessages ;
 
 if [ $strict = false ] ; then
 
-  # if we're under Debian use Debian specific configuration
-  if [ -e /etc/debian_version ] ; then
-    echo "Using debian specific configuration."
-    # nothing specific yet, but exclude all software already 
-    # available under Debian from compilation
-  
-  # if not under Debian behave as usual
-  else 
-
   # If this machine doesn't exist in standard config, link to the generic form
   if [ ! -d ${FSLCONFDIR}/${FSLMACHTYPE} ] ; then
      ( cd ${FSLCONFDIR} ; ln -s generic ${FSLMACHTYPE} ; buildmessages="WARNING: Did not find specific configuration for ${FSLMACHTYPE} - trying generic version instead";  echo "$buildmessages" ; )
-  fi
-
-  # Make freeware if it exists
-  if [ -d ${FSLDIR}/src/freeware ] ; then
-      ( cd ${FSLDIR}/src/freeware ; make FSLDIR=${FSLDIR} FSLCONFDIR=${FSLCONFDIR} )
-  fi
-
-  fi # end of Debian specific conf
-
-  # Make the extras if they are installed in the same fsl tree
-  if [ -d ${FSLDIR}/extras ] ; then
-      ( cd ${FSLDIR}/extras ; ./build ) ;
-# We don't need special make options for the extra librarys since they are all set in the Debian build
-# config setup files in config/debian/*
-#      MAKEOPTIONS="${MAKEOPTIONS} FSLEXTLIB=${FSLDIR}/extras/lib FSLEXTINC=${FSLDIR}/extras/include" ;
   fi
 
 fi
@@ -86,8 +62,7 @@ for projname in $PROJECTS; do
 	  echo "Making project src/$projname" ;
 	  echo " " ;
 	  cd $FSLDIR/src/$projname ;
-	  if [ "${FSL_CLEAN_SRC}" = "1" ]; then ${MAKE} distclean ;
-	  else # do the regular build job
+	  ${MAKE} distclean ;
 	  if [ -x fslconfig ] ; then
 	    ./fslconfig ;
 	  fi
@@ -95,7 +70,7 @@ for projname in $PROJECTS; do
 	    if ${MAKE} install ; then
 	      installok=true;
 	      # Clean up after ourselves
-#	      ${MAKE} distclean ;
+	      ${MAKE} distclean ;
 	    else 
 	      installok=false;
 	      errorinstall="$errorinstall $projname" ; export errorinstall ;
@@ -106,8 +81,6 @@ for projname in $PROJECTS; do
 	    if [ $installok = false ]  ; then
 	      echo " "
 	      echo "ERROR::Could not install $projname successfully" ;
-# Report every error immediately
-	      exit 1
 	    fi
 	  else
 	    echo " "
@@ -116,12 +89,7 @@ for projname in $PROJECTS; do
 	    echo " "
 	    echo " "
 	    errorprojs="$errorprojs $projname" ; export errorprojs ;
-# Report every error immediately
-	      exit 1
 	  fi
-	  
-	  fi # end of cleaning switch
-
     fi
 done
 

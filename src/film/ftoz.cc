@@ -70,7 +70,7 @@
 #include <fstream>
 #define WANT_STREAM
 #define WANT_MATH
-#include <fslio.h>
+#include "fslio/fslio.h"
 
 #include "newmatap.h"
 #include "newmatio.h"
