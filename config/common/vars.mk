@@ -37,7 +37,8 @@ CXXFLAGS = ${ANSI_FLAGS} ${DBGFLAGS} ${USEDCXXSTATICFLAGS} ${USRCXXFLAGS} ${ARCH
 	${AccumulatedIncFlags}
 
 HFILES = *.h
-AFILES = *.a
+# install the shared libs as well
+AFILES = *.a *.so
 XFILES = 
 SCRIPTS =
 TCLFILES = *.tcl
