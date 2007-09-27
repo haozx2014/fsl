@@ -7,7 +7,7 @@ Standards-Version: 3.7.2
 
 Package: fsl
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, mozilla-firefox | www-browser, tcsh | c-shell, tk8.4 (>=8.4.7), tcl8.4 (>=8.4.7), nifti-bin (>> 0.5-2), fslview
+Depends: ${shlibs:Depends}, ${misc:Depends}, mozilla-firefox | www-browser, tcsh | c-shell, tk8.4 (>=8.4.7), tcl8.4 (>=8.4.7), nifti-bin (>> 0.5-2), fslview, bc, dc
 Recommends: fsl-doc (= ${Source-Version}), fsl-atlases
 Suggests: fsl-feeds, ${octave:Depends}, dicomnifti, fsl-possum-data, fsl-first-data
 Conflicts: fsl-fslview
