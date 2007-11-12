@@ -52,10 +52,8 @@ for projname in $PROJECTS; do
 	echo "Making project $projname" ;
 	echo " " ;
 	cd $FSLESRCDIR/$projname ;
-	if [ X"$projname" = "Xtcl" -o X"$projname" = "Xtk" ] ; then
-	    cd unix ;
-	fi
-        ${MAKE} distclean ;
+    if [ "${FSL_CLEAN_SRC}" = "1" ]; then ${MAKE} distclean ;
+	else
 	
 	if [ -x fslconfigure ] ; then
 	  echo "Running configure with FSL options" ;
@@ -83,7 +81,8 @@ for projname in $PROJECTS; do
 	    echo " "
 	    errorprojs="$errorprojs $projname" ; export errorprojs ;
 	fi
-    fi
+    fi # end of clean switch
+	fi
 done
 
 echo " ";

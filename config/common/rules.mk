@@ -32,7 +32,7 @@ clean:
 	${RM} -f /tmp/fslgrot *.o *.a *.exe core depend.mk
 
 install:
-	@${MAKE} "DESTDIR=${FSLDEVDIR}" master-install-script
+	@${MAKE} "DESTDIR=${DEB_DESTDIR}" master-install-script
 
 install-fmrib: 
 	@numunst=`cvs status | grep "Sticky Tag" | grep -v -i stable | wc -l` ; export numunst ; \
@@ -308,13 +308,7 @@ depend:
 	${MAKE} depend.mk
 
 depend.mk:
-	@echo Building dependency file depend.mk
-	@for srcfile in *.c *.cc *.cpp *.inc *.hpp verylongdummyname ; do \
-		if [ -f $$srcfile ] ; then \
-			${CC} ${DEPENDFLAGS} ${AccumulatedIncFlags} $$srcfile >> depend.mk ; \
-		else \
-			touch depend.mk; \
-		fi \
-	done
+# disable the whole thing for the Debian package
+	touch depend.mk
 
-include depend.mk
+#include depend.mk
