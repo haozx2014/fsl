@@ -13,10 +13,10 @@ OBJS = mmoptions.o mixture_model.o
 
 #OPTFLAGS =
 
-all:	${XFILES} libmm.a
+all:	${XFILES} libmm
 
-libmm.a: ${OBJS}
-	${AR} -r libmm.a ${OBJS}
+libmm: ${OBJS}
+	${CXX} -shared -o libmm.so ${OBJS} ${LDFLAGS} -fPIC -lmiscpic -lnewmat -lnewimage -lmiscmaths -lfslio -lutils -lprob -lmiscplot -lgd
 
 mm:${OBJS} mm.o
 	${CXX}  ${CXXFLAGS} ${LDFLAGS} -o $@ ${OBJS} mm.o ${LIBS}
