@@ -77,6 +77,7 @@ extern "C" {
  #include "gd.h"
  #include "gdc.h"
  #include "gdchart.h"
+ #include "gdcpie.h"
 }
 
 namespace MISCPLOT{
