@@ -10,8 +10,11 @@ fsl (4.0.2-1) unstable; urgency=low
     - Fdt: minor changes and fixes
     - Miscvis: fixed Renderstats gui
   * Use new-style Homepage field in debian/control.
+  * Replace deprecated 'Source-Version' substvar with 'source:Version' in
+    debian/control.
+  * Removed executable permissions from all '.gif' files.
 
- -- Michael Hanke <michael.hanke@gmail.com>  Wed, 14 Nov 2007 21:51:48 +0100
+ -- Michael Hanke <michael.hanke@gmail.com>  Fri, 16 Nov 2007 10:13:17 +0100
 
 fsl (4.0.1-3) unstable; urgency=low
 
