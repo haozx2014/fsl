@@ -199,7 +199,7 @@ int ZMRISegmentation::TanakaMain(NEWIMAGE::volume<float>& pcsf, NEWIMAGE::volume
   BiasRemoval();
 
   for (int n=1; n<noclasses+1; n++)
-    if(isnan(m_mean[n]) || isnan(m_variance[n])  ) cout << "Monkey!" << endl;
+    if(isnan(m_mean[n]) || isnan(m_variance[n])  ) cout << "MeaNsK variance nan" << endl;
 
   for(int iter=0;iter<m_nbIter;iter++)
     {
@@ -350,7 +350,7 @@ double inner=0.0f;
     for(int n=-1;n<=1;n++)
 	for(int m=-1;m<=1;m++)
 	     for(int l=-1;l<=1;l++)
-		if((m_mask.value(x+l, y+m, z+n)==1))
+		if((m_mask(x+l, y+m, z+n)==1))
 		  inner+=MRFWeightsAM(l,m,n)*m_post.value(x+l, y+m, z+n, c);
    return inner;
 }
@@ -1485,7 +1485,7 @@ void ZMRISegmentation::WeightedKMeans()
   float perc=1.0/((float)(noclasses+1.0));     
   for(int c=1;c<noclasses+1;c++)
     {
-      if ( input_c == noclasses+1 ) m_mean[c]=input_mean[c];
+      if ( input_c == noclasses+1 ) m_mean[c]=log(input_mean[c]);
       else m_mean[c]=m_Mricopy.percentile((float)(perc*c), m_maskc);
       if (verboseusage) cout << c << " " << m_mean[c] << endl;
     }

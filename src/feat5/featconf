@@ -249,5 +249,8 @@ set fmri(init_highres) ""
 # Standard space registration initialisation transform
 set fmri(init_standard) ""
 
+# For full FEAT analysis: overwrite existing .feat output dir?
+set fmri(overwrite_yn) 0
+
 #########################################################################
 

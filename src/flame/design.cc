@@ -89,52 +89,62 @@ namespace Gs {
     nevs = dm.Ncols();
     ntpts = dm.Nrows();
 
-    covsplit = read_vest(GsOptions::getInstance().covsplitfile.value());
-    //write_ascii_matrix(covsplit,"covsplit"); 
+    gind = read_vest(GsOptions::getInstance().covsplitfile.value());
     nevs = dm.Ncols();
     ntpts = dm.Nrows();
-    ngs = covsplit.Ncols();
+    ngs = int(gind.Maximum());
 
     if(nevs == 0 || ntpts == 0)
 	throw Exception(string(GsOptions::getInstance().designfile.value() + " is an invalid design matrix file").data());
 
-    if(ngs == 0 || covsplit.Nrows() == 0)
+    if(ngs == 0 || gind.Nrows() == 0)
       throw Exception(string(GsOptions::getInstance().covsplitfile.value() + " is an invalid covariance split file").data());
 
-    if(ntpts != covsplit.Nrows())
+    if(ntpts != gind.Nrows())
       {
 	cerr << "design matrix has ntpts=" <<  ntpts << endl;
-	cerr << "cov split file has ntpts=" << covsplit.Nrows() << endl;
+	cerr << "cov split file has ntpts=" << gind.Nrows() << endl;
 	throw Exception("The ntpts needs to be the same for both");
       }
 
     // fill gind:
-    gind.ReSize(ntpts);
-    gind = 0;
+    covsplit.ReSize(ntpts,ngs);
+    covsplit = 0;
     ntptsing.ReSize(ngs);
     ntptsing = 0;
 
     for(int t = 1; t <= ntpts; t++)
       {
-	for(int g = 1; g <= ngs; g++)
-	  {
-	    if(covsplit(t,g))
+	covsplit(t,int(gind(t)))=1;
+	ntptsing(int(gind(t)))++;
+      }
+
+    cout << "ntptsing=" << ntptsing << endl;
+//     cout << "gind=" << gind << endl;
+
+    // assign each EV to a group
+    evs_group.ReSize(nevs);
+    evs_group=0;
+    for(int e=1; e <=nevs; e++)
+      {	  
+	for(int t = 1; t <= ntpts; t++)
+	  {	
+	    if(dm(t,e)!=0)
 	      {
-		if(gind(t)==0)
+		if(evs_group(e)==0)
 		  {
-		    gind(t) = g;
-		    ntptsing(g)++;
+		    evs_group(e) = gind(t);
 		  }
-		else
+		else if(evs_group(e)!=gind(t))
 		  {
-		    cerr << "t=" << t << endl;
-		    throw Exception("t belongs to more than one group");
+		    cerr << "nonseparable design matrix and variance groups" << endl;
+		    throw Exception("nonseparable design matrix and variance groups");
 		  }
 	      }
 	  }
       }
-//     cout << "ntptsing=" << ntptsing << endl;
-//     cout << "gind=" << gind << endl;
+
+    //    OUT(evs_group);
 
     // load contrasts:
     if(loadcontrasts)
@@ -164,7 +174,7 @@ namespace Gs {
 	catch(Exception exp)
 	  {
 	    numFcontrasts = 0;
-		cout << "No f contrasts" << endl;
+	    cout << "No f contrasts" << endl;
 	  }
 
 	if(numFcontrasts > 0)
@@ -177,11 +187,10 @@ namespace Gs {
 		throw Exception("size of tcontrasts does not match fcontrasts\n");
 	      }
 	    
-if(numFcontrasts > 0)
-	    setupfcontrasts();
+	    if(numFcontrasts > 0)
+	      setupfcontrasts();
 	  }    	
       }    
-
     
   }
 
