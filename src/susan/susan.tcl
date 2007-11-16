@@ -143,7 +143,7 @@ pack $w.f.op $w.f.bt $w.f.dt -in $w.f.top -side left -padx 5 -pady 3 -expand yes
 #}}}
     #{{{ help text
 
-label $w.f.label -wraplength 550 -text "SUSAN filtering works on 16 bit signed integer data.\nMask SD (approx HWHM) is in current length units (e.g. mm), not voxels.\nSet Mask SD to 0 for a (much faster) flat 3x3 voxels or 3x3x3 voxels mask." -fg "#303030"
+label $w.f.label -wraplength 550 -text "Mask SD (approx HWHM) is in current length units (e.g. mm), not voxels.\nSet Mask SD to 0 for a (much faster) flat 3x3 voxels or 3x3x3 voxels mask." -fg "#303030"
 
 pack $w.f.label -in $w.f -side top -anchor s
 

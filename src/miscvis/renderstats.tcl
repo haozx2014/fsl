@@ -1,9 +1,9 @@
 #
 #   renderstats - colour rendering of two or more images
 #
-#   Stephen Smith, FMRIB Image Analysis Group
+#   Stephen Smith and Matthew Webster, FMRIB Image Analysis Group
 #
-#   Copyright (C) 1999-2004 University of Oxford
+#   Copyright (C) 1999-2007 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -71,13 +71,11 @@
 
 source [ file dirname [ info script ] ]/fslstart.tcl
 
-set VARS(history) {}
-
 #}}}
 #{{{ render
 
 proc render { w } {
-    global entries fentries vars FSLDIR INMEDX argc argv PWD USER
+    global entries fentries vars FSLDIR argc argv PWD USER
  
     #{{{ setup main window
 
@@ -95,8 +93,8 @@ frame $w.f
 set vars($w,maxstatss) 2
 set vars($w,statss) 1
 
-tixControl $w.f.statss -label " Number of stats images " \
-	-variable vars($w,statss) -step 1 -min 1 -max $vars($w,maxstatss) -selectmode immediate -command "render:updatestats $w"
+LabelSpinBox $w.f.statss -label " Number of stats images " -textvariable  vars($w,statss) -range "1 $vars($w,maxstatss) 1" -modifycmd "render:updatestats $w" -command "$w.f.stass.spin.e validate;render:updatestats $w"
+#tixControl $w.f.statss -label " Number of stats images " -variable vars($w,statss) -step 1 -min 1 -max $vars($w,maxstatss) -selectmode immediate -command "render:updatestats $w"
 
 pack $w.f.statss -in $w.f -anchor w -pady 5
 
@@ -105,22 +103,10 @@ while { $i <= $vars($w,maxstatss) } {
     set vars($w,statsmax,$i) "max"
     frame $w.f.statsentries($i)
 
-    if { $INMEDX } {
-	label $w.f.uel($i) -width 17 -text "Stats image ${i} "
-	entry $w.f.uee($i) -textvariable entries($w,$i) -width 35
-	button $w.f.sel$i -text "Select" -command "SelectPage:Dialog $w $i 0 2 entries"
-	pack $w.f.uel($i) $w.f.uee($i) -in $w.f.statsentries($i) -padx 3 -pady 3 -side left
-    } else {
-	FSLFileEntry $w.f.sel$i \
-                -variable fentries($w,$i) \
-                -pattern "IMAGE" \
-                -directory $PWD \
-                -label " Stats image ${i} " \
-                -labelwidth 17 \
-                -title "Select" \
-                -width 35 \
-                -filterhist VARS(history)
-    }
+FileEntry $w.f.sel$i -textvariable fentries($w,$i) -label " Stats image ${i} " -title "Select" -width 35 -filetypes IMAGE
+$w.f.sel$i.labf configure -width 15
+#FSLFileEntry $w.f.sel$i -variable fentries($w,$i)-pattern "IMAGE"-directory $PWD-label " Stats image ${i} "-labelwidth 17 -title "Select"-width 35 -filterhist VARS(history)
+    
 
     label $w.f.uelmin($i) -text " Min"
     entry $w.f.uemin($i) -textvariable vars($w,statsmin,$i) -width 7
@@ -130,7 +116,7 @@ while { $i <= $vars($w,maxstatss) } {
     incr i 1
 }
 
-render:updatestats $w 1
+render:updatestats $w 
 
 $w.f.uelmin(1) configure -fg "red"
 $w.f.uelmax(1) configure -fg "yellow"
@@ -145,22 +131,10 @@ set vars($w,statsmax,0) "max"
 
 frame $w.f.statsentries(0)
 
-if { $INMEDX } {
-    label $w.f.uel(0) -width 17 -text "Background image "
-    entry $w.f.uee(0) -textvariable entries($w,0) -width 35
-    button $w.f.sel0 -text "Select" -command "SelectPage:Dialog $w 0 0 2 entries"
-    pack $w.f.uel(0) $w.f.uee(0) -in $w.f.statsentries(0) -padx 3 -pady 3 -side left
-} else {
-	FSLFileEntry $w.f.sel0 \
-                -variable fentries($w,0) \
-                -pattern "IMAGE" \
-                -directory $PWD \
-                -label " Background image " \
-                -labelwidth 17 \
-                -title "Select" \
-                -width 35 \
-                -filterhist VARS(history)
-    }
+FileEntry $w.f.sel0 -textvariable fentries($w,0) -label " Background image " -title "Select" -width 35 -filetypes IMAGE
+$w.f.sel0.labf configure -width 15
+#FSLFileEntry $w.f.sel0 -variable fentries($w,0) -pattern "IMAGE" -directory $PWD -label " Background image " -labelwidth 17 -title "Select" -width 35 -filterhist VARS(history)
+    
 
 label $w.f.uelmin(0) -text " Min"
 entry $w.f.uemin(0) -textvariable vars($w,statsmin,0) -width 7
@@ -173,31 +147,24 @@ $w.f.uelmax(0) configure -fg "white"
 #}}}
     #{{{ Output image
 
-if { ! $INMEDX } {
-
     frame $w.f.statsentries(3)
 
-    FSLFileEntry $w.f.sel3 \
-	    -variable fentries($w,3) \
-	    -pattern "IMAGE" \
-	    -directory $PWD \
-	    -label " Output image " \
-	    -labelwidth 17 \
-	    -title "Select" \
-	    -width 35 \
-	    -filterhist VARS(history)
+FileEntry $w.f.sel3 -textvariable fentries($w,3) -label " Output image " -title "Select" -width 35 -filetypes IMAGE
+$w.f.sel3.labf configure -width 15
+#FSLFileEntry $w.f.sel3 -variable fentries($w,3) -pattern "IMAGE" -directory $PWD -label " Output image " -labelwidth 17 -title "Select" -width 35 -filterhist VARS(history)
 
     pack $w.f.sel3 -in $w.f.statsentries(3) -padx 3 -pady 3 -side left
-}
+
 
 #}}}
     #{{{ Colourmap type
 
 frame $w.f.types
 
-tixOptionMenu $w.f.type -label " Colourmap type:  " -variable vars($w,type)
-$w.f.type add command 0 -label "Solid colours"
-$w.f.type add command 1 -label "Transparent colours"
+optionMenu2 $w.f.type vars($w,type) 0 "Solid colours" 1 "Transparent colours"
+#tixOptionMenu $w.f.type -label " Colourmap type:  " -variable vars($w,type)
+#$w.f.type add command 0 -label "Solid colours"
+#$w.f.type add command 1 -label "Transparent colours"
 set vars($w,type) 1
 
 set vars($w,checker) 0
@@ -211,16 +178,14 @@ pack $w.f.type $w.f.checkerlabel $w.f.checker -in $w.f.types -padx 3 -pady 3 -si
 
 set vars($w,output) 0
 
-tixOptionMenu $w.f.output -label "  Output data type:  " \
-        -variable vars($w,output)
-
-$w.f.output add command 0 -label "Floating point"
-$w.f.output add command 1 -label "Integer (required for 3D rendering in MEDx)"
+optionMenu2 $w.f.output vars($w,output) 0 "Floating point" 1 "Integer (required for 3D rendering in MEDx)"
+#tixOptionMenu $w.f.output -label "  Output data type:  " -variable vars($w,output)
+#$w.f.output add command 0 -label "Floating point"
+#$w.f.output add command 1 -label "Integer (required for 3D rendering in MEDx)"
 
 pack $w.f.output $w.f.types -anchor w -side bottom
-if { ! $INMEDX } {
     pack $w.f.statsentries(3) -anchor w -side bottom
-}
+
 pack $w.f.statsentries(0) -anchor w -side bottom
 
 #}}}
@@ -237,10 +202,7 @@ pack $w.f.statsentries(0) -anchor w -side bottom
     pack $w.apply -in $w.btns.b -side left -expand yes -padx 3 -pady 3 -fill y
 	    
     set vars($w,cmap) 0
-    if { $INMEDX } {
-	button $w.loadcmap    -command "set vars($w,cmap) 1; render:apply $w; set vars($w,cmap) 0" -text "Load Colour LUT"
-	pack $w.loadcmap -in $w.btns.b -side left -expand yes -padx 3 -pady 3 -fill y
-    }
+
 
     button $w.cancel    -command "render:destroy $w" \
 	    -text "Exit" -width 5
@@ -264,18 +226,8 @@ pack $w.f.statsentries(0) -anchor w -side bottom
 #{{{ render:apply
 
 proc render:apply { w } {
-    global vars entries fentries INMEDX FSLDIR
+    global vars entries fentries FSLDIR
 
-    #{{{ MEDx setups
-
-if { $INMEDX } {
-    set IsStats 0
-    set finalname "Rendered "
-    set OV [ exec sh -c "${FSLDIR}/bin/tmpnam /tmp/ov" ]
-    MxGetCurrentFolder Folder
-}
-
-#}}}
 
     if {  $vars($w,cmap) } {
 	#{{{ setup display range for current image, if CALmin/max are set
@@ -307,29 +259,7 @@ while { $i <= $vars($w,statss) } {
 
     #{{{ if INMEDX save pages to file
 
-    if { $INMEDX } {
-    
-	if { [ MxGetPageByName $Folder $entries($w,$i) statspage($i) ] } {
-	    MxPause "Not all of the images are valid"
-	    return
-	}
 
-	FSLSaveAs $statspage($i) AVW ${OV}_s${i}.hdr true
-	set fentries($w,$i) ${OV}_s${i}
-
-	if { $i == 1 && [ exec sh -c "$FSLDIR/bin/fslval $fentries($w,$i) pitbix" ] == 32 && $vars($w,output) == 0 } {
-	    set IsStats 1
-	}
-
-	if { $i > 1 } {
-	    append finalname " and "
-	}
-
-	if { $i > 0 } {
-	    MxGetImageProperties $statspage($i) pl
-	    append finalname "[ keylget pl Name ]"
-	}
-    }
 
 #}}}
     #{{{ check dimensions are consistent
@@ -377,17 +307,10 @@ while { $i <= $vars($w,statss) } {
 #}}}
 	#{{{ run the program
 
-if { $INMEDX } {
-    if { $IsStats } {
-	MxDupPage $statspage(1) OUT
-    }
-    set fentries($w,3) ${OV}_out
-} else {
     if { $fentries($w,3) == "" || ! [ file writable [ file dirname $fentries($w,3) ] ] } {
 	MxPause "Please select writable output image"
 	return
     }
-}
 
 set thecommand "$thecommand [ remove_ext $fentries($w,3) ]"
 
@@ -397,44 +320,12 @@ if {$result != 0} {
     puts "$ErrMsg"
 }
 
-if { $INMEDX } {
-    MxOpenImage $Folder ${OV}_out.hdr tmp
-
-    MxGetHeaderInfo $tmp 0 OP
-
-    if { $IsStats } {
-	MxExpr $OUT = $tmp
-	MxDeletePage $tmp
-    } else {
-	set OUT $tmp
-    }
-
-    if { [ keylget OP AVWDsr.Value.IDCalMin.Value dmin ] && [ keylget OP AVWDsr.Value.IDCalMax.Value dmax ] } {
-	puts "Display range $dmin $dmax"
-	MxSetDisplayRange $OUT V $dmin $dmax
-    }
-
-    keylset OProps Name "$finalname"
-    MxSetImageProperties $OUT $OProps
-
-    exec sh -c "rm -f ${OV}*"
-}
-
 #}}}
-    }
+}
 
     #{{{ load LUTS
 
-if { $INMEDX } {
 
-    set typeflag ""
-    if { $vars($w,type) } {
-	set typeflag "t"
-    }
-
-    MxLoadMaterialMap $OUT ${FSLDIR}/etc/luts/render$vars($w,statss)${typeflag}.map
-    MxLoadLUT $OUT ${FSLDIR}/etc/luts/render$vars($w,statss)${typeflag}.lut
-}
 
 #}}}
     
@@ -453,7 +344,7 @@ proc render:destroy { w } {
 #}}}
 #{{{ render:updatestats
 
-proc render:updatestats { w val } {
+proc render:updatestats { w } {
     global vars
 
     set i 1
