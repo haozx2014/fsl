@@ -325,7 +325,7 @@ int fmrib_main(int argc, char *argv[], short output_dt)
     else if (string(argv[i])=="-add"){
       i++;
       if (isNumber(string(argv[i]))) input_volume+=(T)atof(argv[i]); 
-      else if (FslFileExists(argv[i])) 
+      else 
       {  
 	read_volume4D(temp_volume,string(argv[i]));
         for (int t=0;t<input_volume.tsize();t++) input_volume[t]+=temp_volume[t%temp_volume.tsize()]; 
@@ -334,7 +334,7 @@ int fmrib_main(int argc, char *argv[], short output_dt)
     else if (string(argv[i])=="-sub"){
       i++;
       if (isNumber(string(argv[i]))) input_volume-=(T)atof(argv[i]);
-      else if (FslFileExists(argv[i])) 
+      else 
       {  
 	read_volume4D(temp_volume,string(argv[i]));
         for (int t=0;t<input_volume.tsize();t++) input_volume[t]-=temp_volume[t%temp_volume.tsize()]; 
@@ -343,7 +343,7 @@ int fmrib_main(int argc, char *argv[], short output_dt)
     else if (string(argv[i])=="-mul"){
       i++;
       if (isNumber(string(argv[i]))) input_volume*=(T)atof(argv[i]);
-      else if (FslFileExists(argv[i])) 
+      else  
       {  
 	read_volume4D(temp_volume,string(argv[i]));
         for (int t=0;t<input_volume.tsize();t++) input_volume[t]*=temp_volume[t%temp_volume.tsize()]; 
@@ -360,7 +360,7 @@ int fmrib_main(int argc, char *argv[], short output_dt)
 	      for(int x=0;x<input_volume.xsize();x++)
 		input_volume(x,y,z,t)=(int)input_volume(x,y,z,t)%denom;
       }
-      else if (FslFileExists(argv[i])) 
+      else 
       {  
 	read_volume4D(temp_volume,string(argv[i]));
         for(int t=0;t<input_volume.tsize();t++) 
@@ -377,7 +377,7 @@ int fmrib_main(int argc, char *argv[], short output_dt)
     else if (string(argv[i])=="-div"){
       i++;
       if (isNumber(string(argv[i]))) {if (atof(argv[i])!=0) input_volume/=(T)atof(argv[i]);}
-      else if (FslFileExists(argv[i])) 
+      else 
       {  
         read_volume4D(temp_volume,string(argv[i]));
         for(int t=0;t<input_volume.tsize();t++)      
@@ -399,7 +399,7 @@ int fmrib_main(int argc, char *argv[], short output_dt)
       if (string(argv[i])=="-max") max=true;
       i++;
       if (isNumber(string(argv[i]))) param=(T)atof(argv[i]);
-      else if (FslFileExists(argv[i])) 
+      else 
       {                           
 	read_volume4D(temp_volume,string(argv[i]));
         file=true;
@@ -608,7 +608,9 @@ FPim*=invtruth;
       // {{{ get FP from separate noise image
 
 {
-  float aroc=0, FP=0, TP=0, TPprev=0, FPprev=0;
+  float aroc=0, FP=0, TP=0, TPprev=0, FPprev=0; // note that all the aroc calculations could be removed and replaced at the end with:   mean(arocT).AsScalar()/aroc_thresh
+  ColumnVector TPvals(loginput.tsize()), TPprevvals(loginput.tsize()), FPuncorrected(loginput.tsize()), arocT(loginput.tsize());
+  TPvals=0; TPprevvals=0; FPuncorrected=0; arocT=0;
   float maxlogval=loginput.max();
   if (separatenoise)
     maxlogval=max(maxlogval,noise.max());
@@ -631,9 +633,14 @@ if (!separatenoise)
   }
 
 // truth
+int invtruecount=0;
 for(int z=0;z<loginput.zsize();z++) for(int y=0;y<loginput.ysize();y++) for(int x=0;x<loginput.xsize();x++)
-  if ((x<border)||(x>=loginput.xsize()-border)||(y<border)||(y>=loginput.ysize()-border)||(z<border)||(z>=loginput.zsize()-border))
-    truth.value(x,y,z)=0;
+  {
+    if ((x<border)||(x>=loginput.xsize()-border)||(y<border)||(y>=loginput.ysize()-border)||(z<border)||(z>=loginput.zsize()-border))
+      truth.value(x,y,z)=0;
+    else
+      invtruecount++;
+  }
 truth.binarise(truth.max() * 0.05);
 int truecount=(int)truth.sum();
 
@@ -644,7 +651,6 @@ for(int t=0;t<loginput.tsize();t++)
   TPim[t]*=truth;
 
 // noise
-int invtruecount=1;
 if (!separatenoise)
   {
     volume<float> invtruth = ((truth*-1.0)+1)*maskim;
@@ -663,8 +669,6 @@ if (!separatenoise)
     {
       TP=FP=0;
       float FPfwe=0;
-      ColumnVector TPvals(loginput.tsize()), FPuncorrected(loginput.tsize());
-      TPvals=0; FPuncorrected=0;
       for(int t=0;t<loginput.tsize();t++)           
 	{
 	  float sigTP=0, sigFP=0;
@@ -689,11 +693,18 @@ if (!separatenoise)
 	FP = mean(FPuncorrected).AsScalar();
 
       if (FP<aroc_thresh)
-	aroc += (TP+TPprev)/2 * (FP-FPprev);
+	{
+	  aroc += (TP+TPprev)/2 * (FP-FPprev);
+	  arocT += (TPvals+TPprevvals)/2 * (FP-FPprev);
+	}
       else  // case for when the latest update straddles the FP threshold
-	aroc += (TPprev + (TP-TPprev)*0.5*((aroc_thresh-FPprev)/(FP-FPprev))) * (aroc_thresh-FPprev);
+	{
+	  aroc += (TPprev + (TP-TPprev)*0.5*((aroc_thresh-FPprev)/(FP-FPprev))) * (aroc_thresh-FPprev);
+	  arocT += (TPprevvals + (TPvals-TPprevvals)*0.5*((aroc_thresh-FPprev)/(FP-FPprev))) * (aroc_thresh-FPprev);
+	}
 	      
       TPprev=TP;
+      TPprevvals=TPvals;
       FPprev=FP;
       
       if (separatenoise)
@@ -701,10 +712,13 @@ if (!separatenoise)
     }
   
   if (FP<aroc_thresh) // deal with case of when FP never reached aroc_thresh
-    aroc += TP*(aroc_thresh-FP);
+    {
+      aroc += TP*(aroc_thresh-FP);
+      arocT += TPvals*(aroc_thresh-FP);
+    }
   
   ofs.close();
-  cout << aroc / aroc_thresh << endl;
+  cout << aroc / aroc_thresh << " " << quantile(arocT,1) / aroc_thresh << " " << quantile(arocT,3) / aroc_thresh << endl;
 }
 
 // }}}
@@ -801,6 +815,8 @@ if (!separatenoise)
     else if (string(argv[i])=="-edge")
        input_volume=edge_strengthen(input_volume);
     else if (string(argv[i])=="-tfce")
+      // {{{ TFCE option
+
       {
 	float height_power = atof(argv[++i]);
 	float size_power = atof(argv[++i]);
@@ -835,6 +851,8 @@ if (!separatenoise)
 	    copyconvert(clusterenhance,input_volume[t]);
 	  }
       }
+
+// }}}
     /******************************************************/
     else if (string(argv[i])=="-nanm")
      {   

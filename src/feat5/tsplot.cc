@@ -550,14 +550,6 @@ if (!modelfree)
 
 use_triggers=read_triggers(featdir,&triggers,nevs,npts);
 
-
-/*for(ev=0;ev<nevs;ev++)
-{
-  for(int i=0;i<=triggers[ev]+1;i++) printf("%f ",triggers[i*nevs+ev]);
-  printf("\n");
-}
-*/
-
 /* }}} */
   /* {{{ check analysis level */
 
@@ -759,6 +751,7 @@ if (textfiles) output_file.close();
 ymax+=(ymax-ymin)/5;
 ymin-=(ymax-ymin)/20;
 
+if (ymin==ymax) { ymin-=1; }
 /* }}} */
 	  /* {{{ create graphs */
 
@@ -890,7 +883,6 @@ ymin-=(ymax-ymin)/20;
       {
         ps_compact=ps_full.SubMatrix(1,ps_full.Nrows(),1,2);
         ps_compact.Column(1)*=10;
-
         newplot.setscatter(ps_compact,(int)(10*(ps_period+3)));  //12+2
         newplot.add_label("full model fit");
 	newplot.add_label("EV "+num2str(ev+1)+" model fit");

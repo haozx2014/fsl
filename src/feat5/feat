@@ -239,7 +239,10 @@ if { $fmri(outputdir) != "" } {
 } else {
     set FD [ feat5:strip [ remove_ext $feat_files($session) ] ].feat
 }
-set FD [ new_filename $FD ]
+
+if { ! [ info exists fmri(overwrite_yn) ] || $fmri(overwrite_yn) == 0 } {
+    set FD [ new_filename $FD ]
+}
 fsl:exec "/bin/mkdir -p $FD" -n
 
 #}}}
@@ -347,6 +350,9 @@ if { $fmri(featwatcher_yn) } {
 
     if { $fmri(filtering_yn) ||  $fmri(stats_yn) } {
 	set howlong [ expr int( $fmri(npts) / 10 ) ]
+	if { $fmri(regunwarp_yn) } {
+	    set howlong [ expr int( $fmri(npts) / 3 ) ]
+	}
 	if { $fmri(melodic_yn) } {
 	    set howlong 300
 	}
@@ -354,7 +360,7 @@ if { $fmri(featwatcher_yn) } {
     }
 
     if { $fmri(stats_yn) } {
-	set howlong [ expr int( $fmri(npts) * $fmri(evs_real) / 20 ) ]
+	set howlong [ expr int( $fmri(npts) * $fmri(evs_real) / 10 ) ]
 	set filmID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -film" -b $howlong -h $prestatsID -N feat3_film -l logs ]
     }
 
@@ -385,8 +391,12 @@ if { $fmri(outputdir) != "" } {
 } else {
     set FD [ feat5:strip [ remove_ext $feat_files(1) ] ].gfeat
 }
-set FD [ new_filename $FD ]
+
+if { ! [ info exists fmri(overwrite_yn) ] || $fmri(overwrite_yn) == 0 } {
+    set FD [ new_filename $FD ]
+}
 fsl:exec "mkdir -p ${FD}/logs" -n
+
 cd $FD
 set FD [ pwd ]
 set GFD $FD

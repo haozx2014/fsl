@@ -361,10 +361,10 @@ volume4D<float> sqrt(const volume4D<char>& vol4)
 
 
 
-  volume<float> gaussian_kernel3D(float sigma, float xdim, float ydim, float zdim) {
-  int sx = ((int) ceil(sigma*4.0/xdim))*2 + 1;
-  int sy = ((int) ceil(sigma*4.0/ydim))*2 + 1;
-  int sz = ((int) ceil(sigma*4.0/zdim))*2 + 1;
+  volume<float> gaussian_kernel3D(float sigma, float xdim, float ydim, float zdim,float cutoff) {
+  int sx = ((int) ceil(sigma*cutoff/xdim))*2 + 1;
+  int sy = ((int) ceil(sigma*cutoff/ydim))*2 + 1;
+  int sz = ((int) ceil(sigma*cutoff/zdim))*2 + 1;
   volume<float> vker(sx,sy,sz);
   float dx2=Sqr(xdim);
   float dy2=Sqr(ydim);

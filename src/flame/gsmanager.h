@@ -130,9 +130,9 @@ namespace Gs {
 
       void em_contrasts(const ColumnVector& gammean, const Matrix& gamS, int vox);
 
-      void t_ols_contrast(const ColumnVector& gammean, const Matrix& gamS, const RowVector& tcontrast, double& cope, double& varcope, double& t, double& dof, double& z, bool lookupdof, int vox);
+      void t_ols_contrast(const ColumnVector& gammean, const Matrix& gamS, const RowVector& tcontrast, double& cope, double& varcope, double& t, double& dof, double& z, bool lookupdof, bool using_vargroups, int vox);
 	
-      void f_ols_contrast(const ColumnVector& gammean, const Matrix& gamS, const Matrix& fcontrast, double& f, double& dof1, double& dof2, double& z, bool lookupdof, int vox);
+      void f_ols_contrast(const ColumnVector& gammean, const Matrix& gamS, const Matrix& fcontrast, double& f, double& dof1, double& dof2, double& z, bool lookupdo, bool using_vargroupsf, int vox);
 	
       void mcmc_contrasts(const Matrix& gamsamples, int vox);
 	

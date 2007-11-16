@@ -64,7 +64,7 @@ clean:
 	dh_clean
 
 	# fix permissions in the source
-	find src/ -name '*.fig' -exec chmod -x {} \;
+	find src/ -name '*.fig' -or -name '*.gif' -exec chmod -x {} \;
 
 
 # checks that the included desktop files are ok
