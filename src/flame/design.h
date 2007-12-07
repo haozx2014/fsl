@@ -76,8 +76,10 @@
 #include <vector>
 #include "newmatap.h"
 #include "newmatio.h"
+#include "miscmaths/miscmaths.h"
 
 using namespace NEWMAT;
+using namespace MISCMATHS;
 
 namespace Gs{
 
@@ -113,6 +115,29 @@ namespace Gs{
       int getgroup(int t) const { return int(gind(t)); } 
       int getntptsingroup(int g) const { return int(ntptsing(g)); }
 
+      bool is_group_in_tcontrast(int g, const RowVector& tcontrast)
+      {
+	bool in=false;
+	for(int e=1; e<=tcontrast.Ncols() && !in; e++)
+	  {	    
+	    in = (tcontrast(e)!=0 && evs_group(e)==g);
+	  }
+	return in;
+      }
+
+      bool is_group_in_fcontrast(int g, const Matrix& fcontrast)
+      {
+	bool in=false;
+	for(int f=1; f<=fcontrast.Nrows() && !in; f++)
+	  {
+	    for(int e=1; e<=fcontrast.Ncols() && !in; e++)
+	      {	    
+		in = (fcontrast(f,e)!=0 && evs_group(e)==g);
+	      }	    	    
+	  }
+	return in;
+      } 
+
       int getnumfcontrasts() const { return numFcontrasts; }
       int getnumtcontrasts() const { return numTcontrasts; }
       //const Matrix& getfreduceddm(const int p_num) const { return reduceddms[p_num-1]; }
@@ -141,6 +166,8 @@ namespace Gs{
 
       int numFcontrasts;
       int numTcontrasts;
+
+      ColumnVector evs_group;
     };
 } 
 #endif

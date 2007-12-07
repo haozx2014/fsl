@@ -88,10 +88,18 @@ void ZMRIMULTISegmentation::TanakaCreate(const NEWIMAGE::volume<float>* images, 
   numberofchannels=nchan;
   m_nWidth=images[0].xsize();
   m_nHeight=images[0].ysize();
+  m_mean.ReSize(nclasses,numberofchannels);
   m_nDepth=images[0].zsize();
   m_nxdim=images[0].xdim();
   m_nydim=images[0].ydim();
   m_nzdim=images[0].zdim();
+  m_co_variance=new Matrix[nclasses+1];
+    for(int i=1;i<=nclasses;i++)
+  m_co_variance[i].ReSize(numberofchannels,numberofchannels);
+  m_inv_co_variance=new Matrix[nclasses+1];
+    for(int i=1;i<=nclasses;i++)
+  m_inv_co_variance[i].ReSize(numberofchannels,numberofchannels);
+
   m_Mricopy=new volume<float>[numberofchannels+1];
   imagetype=typeoffile;
   for(int i=1;i<=numberofchannels;i++)
@@ -347,7 +355,7 @@ double inner=0.0f;
     for(int n=-1;n<=1;n++)
 	for(int m=-1;m<=1;m++)
 	     for(int l=-1;l<=1;l++)
-		if((m_mask.value(x+l, y+m, z+n)==1))
+		if((m_mask(x+l, y+m, z+n)==1))
 		  inner+=MRFWeightsAM(l,m,n)*m_post.value(x+l, y+m, z+n, c);
    return inner;
 }
@@ -1572,7 +1580,7 @@ ifstream inputfile;
       float perc=1.0/((float)(noclasses+1.0));
       for(int c=1;c<noclasses+1;c++)
 	{
-          if ( input_c == ((noclasses*numberofchannels)+1) ) m_mean(c, n)=input_mean[c+noclasses*(n-1)]; 
+          if ( input_c == ((noclasses*numberofchannels)+1) ) m_mean(c, n)=log(input_mean[c+noclasses*(n-1)]); 
 	  else m_mean(c, n)=m_Mricopy[n].percentile((float)(perc*c), m_maskc);
            if (verboseusage) cout << n << " " << c << " " << m_mean(c, n) << endl ;
 	}
@@ -1622,6 +1630,7 @@ ifstream inputfile;
 	cout<<"KMeans Iteration "<<initfiter<<"\n";
       m_post=m_prob=Initclass(noclasses);
     }
+  delete [] input_mean;
 }
 
 int ZMRIMULTISegmentation::qsort()

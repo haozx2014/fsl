@@ -303,7 +303,7 @@ int main(int argc, char *argv[])
     int cutoff = sizeTS/2;
     if(globalopts.tukey)
       cutoff = globalopts.tukeysize;
-    cutoff = MISCMATHS::Max(3,cutoff);
+    cutoff = MISCMATHS::Max(1,cutoff);
     threshac = threshac.Rows(1,cutoff);
     VolumeInfo volinfo = x.getInfo();
     volinfo.v = cutoff;
