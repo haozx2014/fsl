@@ -11,14 +11,17 @@ include /usr/share/octave/debian/defs.make
 # This has to be exported to make some magic below work.
 export DH_OPTIONS
 
+# specify all FSL projects that shall be built
 PROJECTS = utils miscmaths newimage libhfunc libvis meshclass misc_tcl \
            bint avwutils bet2 cluster fast fdt feat5 film filmbabe flame \
            flirt fabber fslpres fslvbm fugue mcflirt melodic misc_c miscvis \
            mm randomise siena slicetimer susan tbss \
            fast4 shapeModel first possum sgeutils
 
+# specify FSL extras to be built
 EXTRAS = libprob libcprob cprob
 
+# set essential config vars for FSL build process
 FSLDIR=$(CURDIR)
 FSLCONFDIR=$(FSLDIR)/config
 
@@ -28,16 +31,22 @@ else
 	OPTFLAGS = -O3 -fexpensive-optimizations
 endif
 
-# apply as ANSI_FLAGS
+# default compiler flags
+# apply to FSL as 'ANSI_FLAGS'
 CFLAGS = -Wall -g -ansi -pedantic -DHAVE_LIBFREETYPE -fPIC \
          -I/usr/include/nifti \
          -I/usr/include/newmat \
          -I$(FSLDIR)/extras/src/libprob -I$(FSLDIR)/extras/src/libcprob \
          -I$(FSLDIR)/src
 
-# apply as ARCHLDFLAGS
+# default linker flags
+# apply to FSL as 'ARCHLDFLAGS'
 LDFLAGS = -Wl,--no-undefined -Wl,--as-needed
+
+# where are the internal libs
 FSL_LIBRARY_PATH=$(CURDIR)/lib
+
+# install into this directory
 DEB_DESTDIR=$(CURDIR)/debian/tmp
 
 # define common environment setup for all make calls
