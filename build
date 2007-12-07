@@ -3,8 +3,7 @@
 if [ $# -ge 1 ] ; then
   PROJECTS="$@";
 else
-# only build really necessary subprojects
-  PROJECTS="utils miscmaths \
+  PROJECTS="extras utils znzlib niftiio fslio miscmaths \
 newimage libhfunc libss libvis meshclass misc_tcl bint \
 avwutils bet2 cluster fast fdt feat5 film filmbabe flame flirt fabber \
 fslpres fslvbm fugue mcflirt melodic misc_c miscvis mm \
@@ -12,7 +11,8 @@ randomise siena slicetimer susan tbss basisfield \
 ifit load_varian misc_scripts fast4 shapeModel first fnirt possum sgeutils";
 fi
 
-# don't write to a file, but print to the console
-echo "Building projects..."
-./config/common/buildproj $PROJECTS
+echo "Building projects - see build.log file for progress..."
+./config/common/buildproj $PROJECTS > ./build.log 2>&1
+echo "Finished build : end of log file shows ..."
+tail -10 build.log
 
