@@ -90,12 +90,6 @@ for projname in $PROJECTS; do
 	    echo " "
 	    errorprojs="$errorprojs $projname" ; export errorprojs ;
 	  fi
-<<<<<<< HEAD:config/common/buildproj
-	  
-	  fi # end of cleaning switch
-
-=======
->>>>>>> deb/debbuild+sharedlibs:config/common/buildproj
     fi
 done
 
