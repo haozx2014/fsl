@@ -99,9 +99,11 @@ float Gsmanager::marg_posterior_energy(float x, const ColumnVector& y, const Mat
       return ret;
     }
 
-  DiagonalMatrix iU(ntpts);
+  int nts=y.Nrows();
+
+  DiagonalMatrix iU(nts);
   iU = 0;
-  for(int t=1;t<=ntpts;t++)
+  for(int t=1;t<=nts;t++)
     { 
       if(ex+S(t) == 0) return 1e32;
       iU(t) = 1.0/(S(t)+ex);
@@ -1096,9 +1098,20 @@ void Gsmanager::save()
 	      }
 	  }	
 
+	// remove non-zero columns
+	Matrix tmp=zg[g-1];
+	int e2=1;
+	for(int e = 1; e<= tmp.Ncols(); e++)
+	  {	
+	    if(abs(tmp.Column(e)).Sum()>0)
+	      zg[g-1].Column(e2++) = tmp.Column(e);
+	  }
+	zg[g-1]=zg[g-1].Columns(1,e2-1);
+
 	traceRg[g-1] = (Identity(design.getntptsingroup(g))-zg[g-1]*pinv(zg[g-1])).Trace();
-//  	OUT(zg[g-1]);
-//  	OUT(traceRg[g-1]);
+
+	//  	OUT(zg[g-1]);
+	//  	OUT(traceRg[g-1]);
 
 	zzg[g-1] = zg[g-1].t()*zg[g-1];
 
@@ -1454,13 +1467,13 @@ void Gsmanager::save()
     for(int t = 0; t < design.getnumtcontrasts(); t++)
       {
 	RowVector tcon = design.gettcontrast(t+1);
-	t_ols_contrast(mn,covariance,tcon,tcopes[t](vox), tvarcopes[t](vox), ts[t](vox), tdofs[t](vox), zts[t](vox), false, vox);
+	t_ols_contrast(mn,covariance,tcon,tcopes[t](vox), tvarcopes[t](vox), ts[t](vox), tdofs[t](vox), zts[t](vox), false, false, vox);
 	zolsts[t](vox) = zts[t](vox);
       }
 
     for(int f = 0; f < design.getnumfcontrasts(); f++)
       {
-	f_ols_contrast(mn,covariance,design.getfcontrast(f+1),fs[f](vox), fdof1s[f](vox), fdof2s[f](vox), zfs[f](vox), false, vox);
+	f_ols_contrast(mn,covariance,design.getfcontrast(f+1),fs[f](vox), fdof1s[f](vox), fdof2s[f](vox), zfs[f](vox), false, false, vox);
 	zolsfs[f](vox) = zfs[f](vox);
       }    
   }
@@ -1477,11 +1490,11 @@ void Gsmanager::save()
 	double tdoflower;
 
 	// call first with highest possible DOF
-	t_ols_contrast(mn,covariance,tcon,tcopes[t](vox), tvarcopes[t](vox), ts[t](vox), tdofupper, zemupperts[t](vox), true, vox);
+	t_ols_contrast(mn,covariance,tcon,tcopes[t](vox), tvarcopes[t](vox), ts[t](vox), tdofupper, zemupperts[t](vox), true, true, vox);
 	
 	// call with OLS DOF
 	if(!opts.fixed.value())
-	  t_ols_contrast(mn,covariance,tcon,tcopes[t](vox), tvarcopes[t](vox), ts[t](vox), tdoflower, zemlowerts[t](vox), false, vox);
+	  t_ols_contrast(mn,covariance,tcon,tcopes[t](vox), tvarcopes[t](vox), ts[t](vox), tdoflower, zemlowerts[t](vox), false, true, vox);
 
 	if(opts.fixed.value())
 	  {
@@ -1503,10 +1516,10 @@ void Gsmanager::save()
 	double fdof2lower;
 
 	// call first with highest possible DOF
-	f_ols_contrast(mn,covariance,design.getfcontrast(f+1),fs[f](vox), fdof1s[f](vox), fdof2upper, zemupperfs[f](vox), true, vox);
+	f_ols_contrast(mn,covariance,design.getfcontrast(f+1),fs[f](vox), fdof1s[f](vox), fdof2upper, zemupperfs[f](vox), true, true, vox);
 
 	// call with OLS DOF
-	f_ols_contrast(mn,covariance,design.getfcontrast(f+1),fs[f](vox), fdof1s[f](vox), fdof2lower, zemlowerfs[f](vox), false, vox);
+	f_ols_contrast(mn,covariance,design.getfcontrast(f+1),fs[f](vox), fdof1s[f](vox), fdof2lower, zemlowerfs[f](vox), false, true, vox);
 
 	if(opts.fixed.value())
 	  {
@@ -1550,7 +1563,7 @@ void Gsmanager::save()
     return ret;
   }
 
-  void Gsmanager::t_ols_contrast(const ColumnVector& mn, const Matrix& covariance, const RowVector& tcontrast, double& cope, double& varcope, double& t, double& dof, double& z, bool lookupdof, int vox)
+  void Gsmanager::t_ols_contrast(const ColumnVector& mn, const Matrix& covariance, const RowVector& tcontrast, double& cope, double& varcope, double& t, double& dof, double& z, bool lookupdof, bool using_vargroups, int vox)
   {
     Tracer_Plus trace("Gsmanager::t_ols_contrast");
 
@@ -1564,8 +1577,7 @@ void Gsmanager::save()
 	    dof = dofvarcopedata.getSeries(vox).Sum() - nevs;
 //  	    OUT(dofvarcopedata.getSeries(vox).Sum());
 //  	    OUT(nevs);
-//  	    OUT(dofvarcopedata.getSeries(vox));
-//  	    OUT(dof);
+// 	    OUT(dofvarcopedata.getSeries(vox));
 	  }
 	
 	else
@@ -1574,10 +1586,25 @@ void Gsmanager::save()
       }
     else
       {
-	dof = float(ntpts - nevs);
+	if(!using_vargroups)
+	  {
+	    dof = float(ntpts - nevs);
+	  }
+	else
+	  {
+	    // eventually work out effective DOF based on which variance groups interact with the contrast
+	    // for now just take dof from variance group with fewest members (to be conservative)
+	    dof = 1e10;
+	    
+	    for(int g=0; g<ngs; g++)
+	      {
+		float tmpdof = design.getntptsingroup(g+1) - nevs/float(ngs);
+		if(design.is_group_in_tcontrast(g+1, tcontrast) && tmpdof>0 && tmpdof<dof)
+		  dof=tmpdof;
+	      }
+	  }
       }
 
-//      OUT(dof);
 //      OUT(varcope);
 //      OUT(cope);
     t = cope/sqrt(varcope);
@@ -1587,7 +1614,7 @@ void Gsmanager::save()
 //      OUT(z);
   }
 
-  void Gsmanager::f_ols_contrast(const ColumnVector& mn, const Matrix& covariance, const Matrix& fcontrast, double& f, double& dof1, double& dof2, double& z, bool lookupdof, int vox)
+  void Gsmanager::f_ols_contrast(const ColumnVector& mn, const Matrix& covariance, const Matrix& fcontrast, double& f, double& dof1, double& dof2, double& z, bool lookupdof, bool using_vargroups, int vox)
   {
     Tracer_Plus trace("Gsmanager::f_ols_contrast");
 
@@ -1604,9 +1631,24 @@ void Gsmanager::save()
       }
     else
       {
-	dof2 = float(ntpts - nevs);
+	if(!using_vargroups)
+	  {
+	    dof2 = float(ntpts - nevs);
+	  }
+	else
+	  {
+	    // eventually work out effective DOF based on which variance groups interact with the contrast
+	    // for now just take dof from variance group with fewest members (to be conservative)
+	    dof2 = 1e10;
+	    for(int g=0; g<ngs; g++)
+	      {
+		float tmpdof = design.getntptsingroup(g+1) - nevs/float(ngs);
+		if(design.is_group_in_fcontrast(g+1, fcontrast) && tmpdof>0 && tmpdof<dof2)
+		  dof2=tmpdof;
+	      }
+	  }
       }
-    
+   
     f = (mn.t()*fcontrast.t()*(fcontrast*covariance*fcontrast.t()).i()*fcontrast*mn/dof1).AsScalar();
 
     z = F2z::getInstance().convert(f,int(dof1),int(dof2));

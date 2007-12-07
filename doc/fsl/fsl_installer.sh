@@ -2,6 +2,8 @@
 
 # A Simple script to install FSL and set up the environment
 
+VERSION="1.0.2"
+
 function Usage {
     cat <<USAGE
 
@@ -11,11 +13,12 @@ fsl_installer.sh [-f <fsl tar ball> [-d <install folder>] [-x] [-e] [-p] [-h]]
  =======
     -f <fsl tar ball>      - the FSL distribution tar file
     -d <install folder> - where to install to
-    -x                  - (Mac OS only) do NOT set up the Apple Terminal.app
+    -x                  - (Mac OS 10.4 only) do NOT set up the Apple Terminal.app
                           application to be able to launch X11 applications.
-    -e                  - only setup the environment
+    -e                  - only setup/update the environment
     -p                  - don't setup the enviroment
     -h                  - display these instructions
+    -v                  - print version number and exit without doing anything
 
  Example usage:
  =============
@@ -45,7 +48,8 @@ Script will ask for install location, hit return to accept the default location
  to install to /opt.
 
  fsl_installer.sh -e
-    Will setup your environment only.
+    Will setup your environment only, updating any existing configuration files
+to the currently recommended settings.
 
  In all cases the script will attempt to modify your environment to setup the FSLDIR
 variable and configure FSL for use.
@@ -118,11 +122,14 @@ SH
 }
 
 function patch_for_terminal {
+    # This is only necessary on Mac OS X 10.4 and lower
     apple_profile=$1
 
-    if [ `grep DISPLAY ${apple_profile} | wc -l` -gt 0 ]; then
-	echo "DISPLAY is already being configured in your '${apple_profile}' - not changing"
-        return 1
+    if [ -f ${apple_profile} ]; then
+	if [ `grep DISPLAY ${apple_profile} | wc -l` -gt 0 ]; then
+	    echo "DISPLAY is already being configured in your '${apple_profile}' - not changing"
+            return 1
+	fi
     fi
 
     if [ `is_csh ${apple_profile}` ]; then
@@ -142,7 +149,6 @@ function patch_for_terminal {
       echo "Warning: DISPLAY not configured as X11 is not running"
     endif   
   endif
-
 CSH_TERM
     elif [ `is_sh ${apple_profile}` ]; then
 	cat <<SH_TERM >>${apple_profile}
@@ -168,6 +174,39 @@ SH_TERM
 	return 1
     fi
     return 0
+}
+
+function remove_display {
+    # This function will remove the DISPLAY setup configured by our installer in the past
+    # Mac OS X 10.5 no longer requires this.
+    display_profile=$1
+    if [ `is_sh ${display_profile}` ]; then
+	remove='if \[ -z "\$DISPLAY" -a "X\$TERM_PROGRAM" = "XApple_Terminal" \]; then'
+    elif [ `is_csh ${display_profile}` ]; then
+	remove='if ( "X\$DISPLAY" == "X" && "X\$TERM_PROGRAM" == "XApple_Terminal" )  then'
+    else
+	echo "This is an unsupported shell."
+	return 1
+    fi
+    if [ -n "`grep \"${remove}\" ${display_profile}`" ]; then
+	# Remove the section
+	echo "Attempting to remove the DISPLAY settings for Leopard compatability..."
+	cat ${display_profile} | sed "/${remove}/{N;N;N;N;N;N;N;N;N;N;N;N;N;N;N;d;}" > ${display_profile}.bak
+	# Checking the removal succeeded without removing extra lines
+	test_file="${display_profile}.$$"
+	patch_for_terminal ${test_file}
+
+	diff ${display_profile}.bak ${display_profile}  | sed -e '1d' -e 's/^> //' | sed -e :a -e '/^\n*$/{$d;N;};/\n$/ba' >  ${test_file}.bak
+	if [ -n "`diff \"${test_file}\" \"${test_file}.bak\"`" ]; then
+	    echo "Remove failed (maybe you added DISPLAY settings yourself) - please update your ${display_profile} by hand"
+       	else
+	    mv ${display_profile} ${display_profile}.old
+	    mv ${display_profile}.bak ${display_profile}
+	    echo "Removed"
+	fi
+	exit
+	rm ${test_file} ${test_file}.bak
+    fi
 }
 
 function configure_matlab {
@@ -225,22 +264,19 @@ function patch_environment {
 set FSLDIR and modify the PATH environment variable yourself."
 	    return 1
 	fi
-	
-	if [ `is_csh ${my_home}/${profile}` ]; then
-	    search_string="setenv FSLDIR ${install_location}/fsl$"
-	else 
-	    search_string="FSLDIR=${install_location}/fsl$"
-	fi
-	
 	if [ -f ${my_home}/${profile} ]; then
+	    if [ `is_csh ${my_home}/${profile}` ]; then
+		search_string="setenv FSLDIR ${install_location}/fsl\$"
+	    else 
+		search_string="FSLDIR=${install_location}/fsl\$"
+	    fi
 	    fsldir_defs=`cat ${my_home}/${profile} | grep "FSLDIR" | wc -l`
 	    if [ $fsldir_defs -gt 0 ]; then
-		echo -n "'${profile}' already contains a FSLDIR definition"
-		if [ `cat ${my_home}/${profile} | grep "${search_string}"` ]; then
-		    echo " which is correctly configured, not changing."
+                output="${profile} already contains a FSLDIR definition"
+		if [ -n "`cat ${my_home}/${profile} | grep \"${search_string}\"`" ]; then
+		    echo "${output} which is correctly configured, not changing."
 		else
-		    echo " which is wrong.
-Fixing FSLDIR configuration..."
+		    echo "${output} which is wrong.\nFixing FSLDIR configuration..."
 		    fix_fsldir ${install_location}/fsl ${my_home}/${profile}
 		    if [ $? -eq 0 ]; then
 			modified_shell=${profile}
@@ -256,9 +292,9 @@ Fixing FSLDIR configuration..."
 	else
 	    if [ "Z${my_shell}" = 'Ztcsh' -a "Z${profile}" = 'Z.cshrc' ]; then
 		# Special case, skip the .cshrc and create a .tcshrc
-		echo ''
+		echo ""
 	    else
-		echo "Adding FSL configuration to '${profile}'..."
+		echo "Creating '${profile}' and adding FSL configuration..."
 		add_fsldir ${install_location}/fsl ${my_home}/${profile}
 		if [ $? -eq 0 ]; then
 		    modified_shell=${profile}
@@ -273,6 +309,13 @@ Fixing FSLDIR configuration..."
 	        # Setup the Apple Terminal.app
 		echo "Setting up Apple terminal..."
 		patch_for_terminal ${my_home}/${profile}
+	    fi
+	elif [ -n "`uname -s | grep Darwin`" -a -n "`uname -r | grep '^9.'`" ]; then
+	    if [ -f ${my_home}/${profile} ]; then
+		if [ -n "`grep 'DISPLAY' ${my_home}/${profile}`" ]; then
+		    echo "You are running Mac OS X 10.5 and have DISPLAY configured in your ${profile} file."
+		    remove_display ${my_home}/${profile}
+		fi
 	    fi
 	fi
     done
@@ -352,7 +395,8 @@ function x11_not_installed {
 # Find out what platform we are on
 here=`pwd`
 platform=`uname -s`
-
+release=`uname -r`
+darwin_release=`echo ${release} | awk -F. '{ print $1 }'`
 
 install_from='-NONE-'
 setup_terminal='-NO-'
@@ -363,7 +407,9 @@ install_location='-NONE-'
 default_location='/usr/local'
 is_patch='-NO-'
 
-if [ "X${platform}" = "XDarwin" ]; then
+if [ "X${platform}" = "XDarwin" -a "X${darwin_release}" != "X9" ]; then
+    # Mac OS X 10.5 doesn't need the DISPLAY environment setting and even launches X11
+    # on demand
     setup_terminal='-YES-'
     if [ `x11_not_installed` ]; then
 	echo "Warning: X11 is not installed, no GUIs will function"
@@ -389,23 +435,33 @@ while [ _$1 != _ ]; do
     elif [ $1 = '-f' ]; then
 	fsl_tarball=$2
 	shift 2
+    elif [ $1 = '-v' ]; then
+	echo "$VERSION"
+	exit 0;
     else
 	Usage
     fi
 done
 
-if [ -z "${fsl_tarball}" ]; then
-    echo "Looking for FSL tarball in the current directory..."
-    tarballs=`ls ${here} | grep '^fsl-.*.tar\(.gz\)*$' | wc -l`
 
-    if [ ${tarballs} -gt 1 ]; then
-	echo "Too many FSL tarballs found in the current directory!"
-    elif [ ${tarballs} -eq 0 ]; then
-	echo "No FSL tarball found in the current directory."
-	Usage
-    else
-	fsl_tarball="${here}/`ls ${here} | grep '^fsl-.*.tar\(.gz\)*$'`"
-	cat <<EOF 
+echo "FSL install script
+==================
+"  
+# Split up the tarball location and set install_from to current directory
+# if no path is specified
+if [ "X${no_install}" = 'X-NO-' ]; then
+    if [ -z "${fsl_tarball}" ]; then
+	echo "Looking for FSL tarball in the current directory..."
+	tarballs=`ls ${here} | grep '^fsl-.*.tar\(.gz\)*$' | wc -l`
+	
+	if [ ${tarballs} -gt 1 ]; then
+	    echo "Too many FSL tarballs found in the current directory!"
+	elif [ ${tarballs} -eq 0 ]; then
+	    echo "No FSL tarball found in the current directory."
+	    Usage
+	else
+	    fsl_tarball="${here}/`ls ${here} | grep '^fsl-.*.tar\(.gz\)*$'`"
+	    cat <<EOF 
 ***************************************************************
 No FSL tarball specified, assuming you want me to install 
 ${fsl_tarball} 
@@ -413,15 +469,9 @@ from the current directory.
 ***************************************************************
 
 EOF
+	fi
     fi
-fi
 
-echo "FSL instal script
-=================
-"  
-# Split up the tarball location and set install_from to current directory
-# if no path is specified
-if [ "X${no_install}" = 'X-NO-' ]; then
     install_from=`dirname ${fsl_tarball}`
     if [ -z "${install_from}" ]; then
 	install_from=${here}
@@ -472,6 +522,14 @@ if [ "X${no_install}" = 'X-NO-' ]; then
 	echo "Will require Administrator priviledges to write to '${install_location}'"
 	echo "Enter a password to elevate to Administrator rights when prompted"
 	n_sudo='-YES-'
+	sudo touch ${install_location}/.fsl-test 2>&1
+	if [ $? -ne 0 ]; then
+	    echo "Sorry, you cannot install FSL as this user, either install as the root user"
+	    echo "or as a user with sudo rights."
+	    echo "You can then re-run fsl_installer.sh with the -e option to setup your user"
+	    echo "account for running FSL."
+	    exit 1
+	fi
     fi
 
     if [ -d ${install_location}/fsl ]; then

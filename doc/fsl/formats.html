@@ -44,13 +44,13 @@ FSLMULTIFILEQUIT to FALSE (see above on FSL setup files).
 
 <p>NIFTI allows the left-right orientation of your data to be
 specified <b>but we do not recommend using anything but radiologically
-ordered images with this release</b>. Note that <b>avworient
+ordered images with this release</b>. Note that <b>fslorient
 -getorient</b> allows you to see the orientation stored in the header
-(as does <b>avwhd</b>). FSL treats </b>all</b> Analyze images as being
+(as does <b>fslhd</b>). FSL treats </b>all</b> Analyze images as being
 radiologically ordered.
 
-<p> You can change orientation by re-ordering the data with <b>avwswapdim</b>
-or by changing the header info with <b>avworient</b>.
+<p> You can change orientation by re-ordering the data with <b>fslswapdim</b>
+or by changing the header info with <b>fslorient</b>.
 
 <p> FSLView always shows images in radiological convention.
 
@@ -76,7 +76,7 @@ image and not copied from the reference image.
 (or arbitrarily take it from one input if it is a process that
 combines many inputs)
 
-<p> avwcpgeom can be used to copy this info (plus voxel dims) from one
+<p> fslcpgeom can be used to copy this info (plus voxel dims) from one
 image to another.
 
 </BODY></HTML>

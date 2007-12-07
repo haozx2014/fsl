@@ -82,8 +82,14 @@
 #include "miscmaths/miscmaths.h"
 #include "complexvolume.h"
 #include "imfft.h"
+
+#ifndef MAX
 #define MAX(a,b) (((a)>(b))?(a):(b))
+#endif
+
+#ifndef MIN
 #define MIN(a,b) (((a)<(b))?(a):(b))
+#endif
 
 using namespace std;
 using namespace NEWMAT;
@@ -257,138 +263,6 @@ namespace NEWIMAGE {
 
   // IMAGE PROCESSING ROUTINES
 
-  // A set of routines for "general" (affine + displacement-field)
-  // transformations. The "actual routine" is raw_general_transform,
-  // and the others are mainly alternative interfaces for certain
-  // special cases.
-
-  template<class T>
-  void raw_general_transform(// Input
-                             const volume<T>&         vin,        // Input volume
-                             const Matrix&            aff,        // 4x4 affine transformation matrix
-                             const volume4D<float>&   df,         // Displacement fields
-                             const vector<int>&       defdir,     // Directions of displacements. 
-                             const vector<int>&       derivdir,   // Directions of derivatives
-                             // Output
-                             volume<T>&               vout,       // Output volume
-                             volume4D<T>&             deriv);     // Partial derivative directions
-
-  template <class T>
-  void raw_general_transform(// Input
-                             const volume<T>&         vin,        // Input volume
-                             const Matrix&            aff,        // 4x4 affine transformation matrix
-                             const volume4D<float>&   df,         // Displacement fields
-                             const vector<int>&       defdir,     // Directions of displacements. 
-                             const vector<int>&       derivdir,   // Directions of derivatives
-                             // Output
-                             volume<T>&               vout,       // Output volume
-                             volume4D<T>&             deriv,      // Partial derivative directions
-                             volume<char>&            invol);     // Mask indicating what voxels fell inside original volume
-
-  template <class T>    
-  void raw_general_transform(// Input
-                             const volume<T>&         vin,        // Input volume
-                             const Matrix&            aff,        // 4x4 affine transformation matrix
-                             const volume4D<float>&   df,         // Displacement fields
-                             const vector<int>&       defdir,     // Directions of displacements. 
-                             const vector<int>&       derivdir,   // Directions of derivatives
-                             // Output
-                             volume<T>&               vout,       // Output volume
-                             volume4D<T>&             deriv,      // Partial derivative directions
-                             volume<char>             *invol);    // Mask indicating what voxels fell inside original volume
-
-  template <class T>
-  void affine_transform_3partial(// Input
-                                 const volume<T>&     vin,
-                                 const Matrix&        aff,
-                                 // Output
-                                 volume<T>&           vout,
-                                 volume4D<T>&         deriv);
-
-  template <class T>
-  void affine_transform_3partial(// Input
-                                 const volume<T>&     vin,
-                                 const Matrix&        aff,
-                                 // Output
-                                 volume<T>&           vout,
-                                 volume4D<T>&         deriv,
-                                 volume<char>&        invol);
-  template <class T>
-  void displacement_transform_1D(// Input
-                                 const volume<T>&       vin,
-                                 const Matrix&          aff,
-                                 const volume<float>&   df,
-                                 int                    defdir,
-                                 // Output
-                                 volume<T>&             vout);
-
-  template <class T>
-  void displacement_transform_1D(// Input
-                                 const volume<T>&       vin,
-                                 const Matrix&          aff,
-                                 const volume<float>&   df,
-                                 int                    defdir,
-                                 // Output
-                                 volume<T>&             vout,
-                                 volume<char>&          invol);
-
-  template <class T>
-  void displacement_transform_1D_3partial(// Input
-                                          const volume<T>&       vin,
-                                          const Matrix&          aff,
-                                          const volume<float>&   df,
-                                          int                    dir,
-                                          // Output
-                                          volume<T>&             vout,
-                                          volume4D<T>&           deriv);
-
-  template <class T>
-  void displacement_transform_1D_3partial(// Input
-                                          const volume<T>&       vin,
-                                          const Matrix&          aff,
-                                          const volume<float>&   df,
-                                          int                    dir,
-                                          // Output
-                                          volume<T>&             vout,
-                                          volume4D<T>&           deriv,
-                                          volume<char>&          invol);
-
-  template <class T>
-  void general_transform(// Input
-                         const volume<T>&         vin,
-                         const Matrix&            aff,
-                         const volume4D<float>&   df,
-                         // Output
-                         volume<T>&               vout);
-
-  template <class T>	       
-  void general_transform(// Input
-                         const volume<T>&         vin,
-                         const Matrix&            aff,
-                         const volume4D<float>&   df,
-                         // Output
-                         volume<T>&               vout,
-                         volume<char>&            invol);
-
-  template <class T>
-  void general_transform_3partial(// Input
-                                  const volume<T>&         vin,
-                                  const Matrix&            aff,
-                                  const volume4D<float>&   df,
-                                  // Output
-                                  volume<T>&               vout,
-                                  volume4D<T>&             deriv);
-
-  template <class T>
-  void general_transform_3partial(// Input
-                                  const volume<T>&         vin,
-                                  const Matrix&            aff,
-                                  const volume4D<float>&   df,
-                                  // Output
-                                  volume<T>&               vout,
-                                  volume4D<T>&             deriv,
-                                  volume<char>&            invol);
-
   template <class T>
   void affine_transform(const volume<T>& vin, volume<T>& vout,
 			     const Matrix& aff, float paddingsize=0.0);
@@ -429,7 +303,7 @@ namespace NEWIMAGE {
 
   //This implements Professor Smith's SUSAN convolve algorithm, note the number of optional parameters
   template <class T, class S>
-    volume<T> susan_convolve(const volume<T>& source, const volume<S>& kernel, const float sigmabsq, const bool use_median, int num_usan,volume<T>* usan_area = new volume<T>(1,1,1),const volume<T>& usan_vol1=volume<T>(1,1,1),const float sigmab1sq=0,const volume<T>& usan_vol2 = volume<T>(1,1,1),const float sigmab2sq=0);
+    volume<T> susan_convolve(volume<T> source, const volume<S>& kernel, const float sigmabsq, const bool use_median, int num_usan,volume<T>* usan_area = new volume<T>(1,1,1),volume<T> usan_vol1=volume<T>(1,1,1),const float sigmab1sq=0,volume<T> usan_vol2 = volume<T>(1,1,1),const float sigmab2sq=0);
 
   template <class T, class S> 
     volume4D<T> generic_convolve(const volume4D<T>& source, const volume<S>& kernel, bool seperable=false, bool normal=true);
@@ -480,7 +354,7 @@ namespace NEWIMAGE {
   ColumnVector gaussian_kernel1D(float sigma, int radius);
   volume<float> gaussian_kernel2D(float sigma, int radius);
   volume<float> gaussian_kernel3D(float sigma, int radius);
-  volume<float> gaussian_kernel3D(float sigma,float xdim,float ydim,float zdim);
+  volume<float> gaussian_kernel3D(float sigma,float xdim,float ydim,float zdim,float cutoff=4.0);
   volume<float> spherical_kernel(float radius, float xdim, float ydim, float zdim);
   volume<float> box_kernel(float length,float xdim,float ydim,float zdim);  //mm dimensions
   volume<float> box_kernel(int x,int y, int z);                        //voxel dimensions
@@ -1240,418 +1114,6 @@ template <class T, class S>
   }
 
 
-  ///////////////////////////////////////////////////////////////////////////
-  // IMAGE PROCESSING ROUTINES
-  ///////////////////////////////////////////////////////////////////////////
-
-  // General Transform
-  //
-  // The form of a "general" transform is given by an affine matrix
-  // and a displacement-field such that 
-  // [x' y' z' 1]^T = \mathbf{M}*[x y z 1]^T + [d_x(x,y,z) d_y(x,y,z) d_z(x,y,z)]^T
-  // It can be used for non-linear registration of one subject to another (or to
-  // an atlas) or for distortion correction.
-  // The bits pertaining to the affine transform have been copied more or less straight
-  // off from MJ's code, but if we want a single resampling I saw no way to escape
-  // the code copying/multiplication.
-
-  template <class T>
-  void raw_general_transform(// Input
-                             const volume<T>&         vin,        // Input volume
-                             const Matrix&            aff,        // 4x4 affine transformation matrix
-                             const volume4D<float>&   df,         // Displacement fields
-                             const vector<int>&       defdir,     // Directions of displacements. 
-                             const vector<int>&       derivdir,   // Directions of derivatives
-                             // Output
-                             volume<T>&               vout,       // Output volume
-                             volume4D<T>&             deriv)      // Partial derivatives
-  {
-    raw_general_transform(vin,aff,df,defdir,derivdir,vout,deriv,0);
-  }
-
-  template <class T>
-  void raw_general_transform(// Input
-                             const volume<T>&         vin,        // Input volume
-                             const Matrix&            aff,        // 4x4 affine transformation matrix
-                             const volume4D<float>&   df,         // Displacement fields
-                             const vector<int>&       defdir,     // Directions of displacements. 
-                             const vector<int>&       derivdir,   // Directions of derivatives
-                             // Output
-                             volume<T>&               vout,       // Output volume
-                             volume4D<T>&             deriv,      // Partial derivative directions
-                             volume<char>&            invol)      // Mask indicating what voxels fell inside original volume
-  {
-    raw_general_transform(vin,aff,df,defdir,derivdir,vout,deriv,&invol);    
-  }
-
-  template <class T>    
-  void raw_general_transform(// Input
-                             const volume<T>&         vin,        // Input volume
-                             const Matrix&            aff,        // 4x4 affine transformation matrix
-                             const volume4D<float>&   df,         // Displacement fields
-                             const vector<int>&       defdir,     // Directions of displacements. 
-                             const vector<int>&       derivdir,   // Directions of derivatives
-                             // Output
-                             volume<T>&               vout,       // Output volume
-                             volume4D<T>&             deriv,      // Partial derivative directions
-                             volume<char>             *invol)     // Mask indicating what voxels fell inside original volume
-  {
-    if (int(defdir.size()) != df.tsize()) {imthrow("NEWIMAGE::raw_general_transform: Mismatch in input.",11);}
-    for (int i=0; i<int(defdir.size()); i++) {
-      if (defdir[i] < 0 || defdir[i] > 2) {imthrow("NEWIMAGE::raw_general_transform: Mismatch in input",11);}
-    }
-    if (int(derivdir.size()) != deriv.tsize()) {imthrow("NEWIMAGE::raw_general_transform: Mismatch in input",11);}
-    for (int i=0; i<int(derivdir.size()); i++) {
-      if (derivdir[i] < 0 || derivdir[i] > 2) {imthrow("NEWIMAGE::raw_general_transform: Mismatch in input",11);}
-    }
-    if (vout.nvoxels() <= 0) {imthrow("NEWIMAGE::raw_general_transform: Size of vout must be set",8);}
-    if (defdir.size() && !samesize(vout,df[0]))  {imthrow("NEWIMAGE::raw_general_transform: vout and df must have same dimensions",11);}
-    if (derivdir.size() && !samesize(vout,deriv[0]))  {imthrow("NEWIMAGE::raw_general_transform: vout and deriv must have same dimensions",11);}
-    if (invol && !samesize(vout,*invol)) {imthrow("NEWIMAGE::raw_general_transform: vout and invol must have same dimensions",11);}
-
-    extrapolation oldex = vin.getextrapolationmethod();
-    if ((oldex==boundsassert) || (oldex==boundsexception)) {vin.setextrapolationmethod(constpad);}
-
-    // Repackage info about displacement directions in more convenient form
-    int xd, yd, zd;
-    xd=yd=zd= -1;
-    for (int i=0; i<int(defdir.size()); i++) {
-      if (defdir[i]==0) {xd=i;} else if (defdir[i]==1) {yd=i;} else {zd=i;}
-    }
-    // Repackage info about derivative directions in more convenient form
-    int xp, yp, zp;
-    xp=yp=zp= -1;
-    for (int i=0; i<int(derivdir.size()); i++) {
-      if (derivdir[i]==0) {xp=i;} else if (derivdir[i]==1) {yp=i;} else {zp=i;}
-    }
-    
-    // Create a matrix M mapping from world-coordinates in output image
-    // to world-coordinates in input image, for the affine part only.
-
-    Matrix iaff = aff.i(); // Inverse world->world matrix
-    if (vin.left_right_order()==FSL_NEUROLOGICAL) {iaff = vin.swapmat(-1,2,3) * iaff;}
-    if (vout.left_right_order()==FSL_NEUROLOGICAL) {iaff = iaff * vout.swapmat(-1,2,3);}
-    iaff = vin.sampling_mat().i() * iaff * vout.sampling_mat(); // Inverse voxel->voxel matrix
-
-    float a11=iaff(1,1), a12=iaff(1,2), a13=iaff(1,3), a14=iaff(1,4);
-    float a21=iaff(2,1), a22=iaff(2,2), a23=iaff(2,3), a24=iaff(2,4);
-    float a31=iaff(3,1), a32=iaff(3,2), a33=iaff(3,3), a34=iaff(3,4); 
-    float o1,o2,o3;
-  
-    // The matrix algebra below has been hand-optimized from
-    // [o1 o2 o3] = a * [x y z]  at each iteration
-    // I have put some "outer if's" leading to code multiplication here.
-    // I have done so to ensure that we don't pay a performance penalty
-    // For example for the cases where we want to use the routine to get
-    // derivatives for the affine only case, or when we want to perform
-    // a general transformation without calculating any derivatives.
-
-    if (!defdir.size()) { // If we have an affine only transform
-      if (!derivdir.size()) { // If we don't need to calculate derivatives
-        for (int z=0; z<vout.zsize(); z++) { 
-          for (int x=0; x<vout.xsize(); x++) { 
-	    o1=x*a11 + z*a13 + a14;  // y=0
-	    o2=x*a21 + z*a23 + a24;  // y=0
-	    o3=x*a31 + z*a33 + a34;  // y=0
- 	    for (int y=0; y<vout.ysize(); y++) {
-	      vout(x,y,z) = ((T) vin.interpolate(o1,o2,o3));
-              if (invol) {invol->operator()(x,y,z) = (vin.in_bounds(o1,o2,o3)) ? 1 : 0;}
-	      o1 += a12;
-	      o2 += a22;
-	      o3 += a32;
-	    }
-          }
-        }
-      }
-      else { // If we need derivatives in at least one direction
-        for (int z=0; z<vout.zsize(); z++) { 
-          for (int x=0; x<vout.xsize(); x++) { 
-	    o1=x*a11 + z*a13 + a14;  // y=0
-	    o2=x*a21 + z*a23 + a24;  // y=0
-	    o3=x*a31 + z*a33 + a34;  // y=0
- 	    for (int y=0; y<vout.ysize(); y++) {
-              if (derivdir.size() == 1) { // If we want a single partial
-                float tmp;
-	        vout(x,y,z) = ((T) vin.interp1partial(o1,o2,o3,derivdir[0],&tmp));
-                deriv(x,y,z,0) = ((T) tmp);
-	      }
-              else { // More than one derivative
-		float tmp1,tmp2,tmp3;
-		vout(x,y,z) = ((T) vin.interp3partial(o1,o2,o3,&tmp1,&tmp2,&tmp3));
-                if (!(xp<0)) {deriv(x,y,z,xp)=((T) tmp1);}
-                if (!(yp<0)) {deriv(x,y,z,yp)=((T) tmp2);}
-                if (!(zp<0)) {deriv(x,y,z,zp)=((T) tmp3);}
-	      }
-              if (invol) {invol->operator()(x,y,z) = (vin.in_bounds(o1,o2,o3)) ? 1 : 0;}
-	      o1 += a12;
-	      o2 += a22;
-	      o3 += a32;
-	    }
-          }
-        }
-      }
-    }
-    else { // We have displacements in at least one direction
-      float oo1,oo2,oo3;
-      if (derivdir.size()) { // If we need to calculate derivatives in at least one direction
-        for (int z=0; z<vout.zsize(); z++) { 
-          for (int x=0; x<vout.xsize(); x++) { 
-	    o1=x*a11 + z*a13 + a14;  // y=0
-	    o2=x*a21 + z*a23 + a24;  // y=0
-	    o3=x*a31 + z*a33 + a34;  // y=0
- 	    for (int y=0; y<vout.ysize(); y++) {
-              if (xd<0) {oo1=o1;} else {oo1=o1+df(x,y,z,xd);}
-              if (yd<0) {oo2=o2;} else {oo2=o2+df(x,y,z,yd);}
-              if (zd<0) {oo3=o3;} else {oo3=o3+df(x,y,z,zd);}
-              if (derivdir.size() == 1) { // If we want a single partial
-                float tmp;
-	        vout(x,y,z) = ((T) vin.interp1partial(oo1,oo2,oo3,derivdir[0],&tmp));
-                deriv(x,y,z,0) = ((T) tmp);
-	      }
-              else { // More than one derivative
-		float tmp1,tmp2,tmp3;
-		vout(x,y,z) = ((T) vin.interp3partial(oo1,oo2,oo3,&tmp1,&tmp2,&tmp3));
-                if (!(xp<0)) {deriv(x,y,z,xp)=((T) tmp1);}
-                if (!(yp<0)) {deriv(x,y,z,yp)=((T) tmp2);}
-                if (!(zp<0)) {deriv(x,y,z,zp)=((T) tmp3);}
-	      }
-              if (invol) {invol->operator()(x,y,z) = (vin.in_bounds(oo1,oo2,oo3)) ? 1 : 0;}
-	      o1 += a12;
-	      o2 += a22;
-	      o3 += a32;
-	    }
-          }
-        }
-      }
-      else { // If we don't need derivatives
-        for (int z=0; z<vout.zsize(); z++) { 
-          for (int x=0; x<vout.xsize(); x++) { 
-	    o1=x*a11 + z*a13 + a14;  // y=0
-	    o2=x*a21 + z*a23 + a24;  // y=0
-	    o3=x*a31 + z*a33 + a34;  // y=0
- 	    for (int y=0; y<vout.ysize(); y++) {
-              if (xd<0) {oo1=o1;} else {oo1=o1+df(x,y,z,xd);}
-              if (yd<0) {oo2=o2;} else {oo2=o2+df(x,y,z,yd);}
-              if (zd<0) {oo3=o3;} else {oo3=o3+df(x,y,z,zd);}
-	      vout(x,y,z) = ((T) vin.interpolate(oo1,oo2,oo3));
-              if (invol) {invol->operator()(x,y,z) = (vin.in_bounds(oo1,oo2,oo3)) ? 1 : 0;}
-	      o1 += a12;
-	      o2 += a22;
-	      o3 += a32;
-	    }
-          }
-        }
-      }
-    }
-
-    // Set the sform and qform appropriately (if set)
-    // That is, copy the sform from vout if it is set, otherwise use
-    // the transformed one from vin
-    // Always copy the transformed qform (if set)
-    Matrix nmat;
-    if ( (vout.sform_code()==NIFTI_XFORM_UNKNOWN) &&
-         (vout.qform_code()!=NIFTI_XFORM_UNKNOWN) ) {
-      vout.set_sform(vout.qform_code(), vout.qform_mat()); // Copy qform->sform
-    }
-    else if ( (vout.qform_code()==NIFTI_XFORM_UNKNOWN) &&
-	      (vout.sform_code()!=NIFTI_XFORM_UNKNOWN) ) {
-      vout.set_qform(vout.sform_code(), vout.sform_mat()); // Copy sform->qform
-    }
-    else if ( (vout.qform_code()==NIFTI_XFORM_UNKNOWN) &&
-	      (vout.sform_code()==NIFTI_XFORM_UNKNOWN) ) {
-      if (vin.sform_code()!=NIFTI_XFORM_UNKNOWN) {
-	nmat = vin.sform_mat() * iaff;
-	vout.set_sform(vin.sform_code(), nmat);
-	vout.set_qform(vin.sform_code(), nmat); // Copy transformed in-sform->(sform & qform)
-      } 
-      else if (vin.qform_code()!=NIFTI_XFORM_UNKNOWN) {
-	nmat = vin.qform_mat() * iaff;
-	vout.set_sform(vin.qform_code(), nmat);
-	vout.set_qform(vin.qform_code(), nmat); // Copy transformed in-qform->(sform & qform)
-      }
-    }
-    
-    // restore settings and return
-    vin.setextrapolationmethod(oldex);
-
-    // All done!  
-  }
-  
-  // The following handful of routines are simplified interfaces to 
-  // raw_general_transform that may be convenient for certain
-  // specific applications.
-
-  template <class T>
-  void affine_transform_3partial(// Input
-                                 const volume<T>&     vin,
-                                 const Matrix&        aff,
-                                 // Output
-                                 volume<T>&           vout,
-                                 volume4D<T>&         deriv)
-  {
-    volume4D<float>  pdf;
-    vector<int>      pdefdir;
-    vector<int>      pderivdir(3);
-    for (int i=0; i<3; i++) {pderivdir[i] = i;}
-    raw_general_transform(vin,aff,pdf,pdefdir,pderivdir,vout,deriv);
-  }
-  
-  template <class T>
-  void affine_transform_3partial(// Input
-                                 const volume<T>&     vin,
-                                 const Matrix&        aff,
-                                 // Output
-                                 volume<T>&           vout,
-                                 volume4D<T>&         deriv,
-                                 volume<char>&        invol)
-  {
-    volume4D<float>  pdf;
-    vector<int>      pdefdir;
-    vector<int>      pderivdir(3);
-    for (int i=0; i<3; i++) {pderivdir[i] = i;}
-    raw_general_transform(vin,aff,pdf,pdefdir,pderivdir,vout,deriv,invol);
-  }
-  
-  template <class T>
-  void displacement_transform_1D(// Input
-                                 const volume<T>&       vin,
-                                 const Matrix&          aff,
-                                 const volume<float>&   df,
-                                 int                    defdir,
-                                 // Output
-                                 volume<T>&             vout)
-  {
-    volume4D<float>  pdf;
-    vector<int>      pdefdir(1,defdir);
-    vector<int>      pderivdir;
-    volume4D<T>      pderiv;
-
-    pdf.addvolume(df);
-    raw_general_transform(vin,aff,pdf,pdefdir,pderivdir,vout,pderiv);
-  }
-
-  template <class T>
-  void displacement_transform_1D(// Input
-                                 const volume<T>&       vin,
-                                 const Matrix&          aff,
-                                 const volume<float>&   df,
-                                 int                    defdir,
-                                 // Output
-                                 volume<T>&             vout,
-                                 volume<char>&          invol)
-  {
-    volume4D<float>  pdf;
-    vector<int>      pdefdir(1,defdir);
-    vector<int>      pderivdir;
-    volume4D<T>      pderiv;
-
-    pdf.addvolume(df);
-    raw_general_transform(vin,aff,pdf,pdefdir,pderivdir,vout,pderiv,invol);
-  }
-  
-  template <class T>
-  void displacement_transform_1D_3partial(// Input
-                                          const volume<T>&       vin,
-                                          const Matrix&          aff,
-                                          const volume<float>&   df,
-                                          int                    dir,
-                                          // Output
-                                          volume<T>&             vout,
-                                          volume4D<T>&           deriv)
-  {
-    volume4D<float>      pdf;
-    vector<int>          pdefdir(1,dir);
-    vector<int>          pderivdir(3);
-    
-    for (int i=0; i<3; i++) {pderivdir[i] = i;}
-    pdf.addvolume(df);
-    raw_general_transform(vin,aff,pdf,pdefdir,pderivdir,vout,deriv);    
-  }
-			
-  template <class T>
-  void displacement_transform_1D_3partial(// Input
-                                          const volume<T>&       vin,
-                                          const Matrix&          aff,
-                                          const volume<float>&   df,
-                                          int                    dir,
-                                          // Output
-                                          volume<T>&             vout,
-                                          volume4D<T>&           deriv,
-                                          volume<char>&          invol)
-  {
-    volume4D<float>      pdf;
-    vector<int>          pdefdir(1,dir);
-    vector<int>          pderivdir(3);
-    
-    for (int i=0; i<3; i++) {pderivdir[i] = i;}
-    pdf.addvolume(df);
-    raw_general_transform(vin,aff,pdf,pdefdir,pderivdir,vout,deriv,invol);    
-  }
-			
-  template <class T>	       
-  void general_transform(// Input
-                         const volume<T>&         vin,
-                         const Matrix&            aff,
-                         const volume4D<float>&   df,
-                         // Output
-                         volume<T>&               vout)
-  {
-    vector<int>       pdefdir(3);
-    vector<int>       pderivdir;
-    volume4D<T>  pderiv;
-
-    for (int i=0; i<3; i++) {pdefdir[i] = i;}
-    raw_general_transform(vin,aff,df,pdefdir,pderivdir,vout,pderiv);
-  }
-
-  template <class T>	       
-  void general_transform(// Input
-                         const volume<T>&         vin,
-                         const Matrix&            aff,
-                         const volume4D<float>&   df,
-                         // Output
-                         volume<T>&               vout,
-                         volume<char>&            invol)
-  {
-    vector<int>       pdefdir(3);
-    vector<int>       pderivdir;
-    volume4D<T>  pderiv;
-
-    for (int i=0; i<3; i++) {pdefdir[i] = i;}
-    raw_general_transform(vin,aff,df,pdefdir,pderivdir,vout,pderiv,invol);
-  }
-
-  template <class T>
-  void general_transform_3partial(// Input
-                                  const volume<T>&         vin,
-                                  const Matrix&            aff,
-                                  const volume4D<float>&   df,
-                                  // Output
-                                  volume<T>&               vout,
-                                  volume4D<T>&             deriv)
-  {
-    vector<int>   dir(3);
-    for (int i=0; i<3; i++) {dir[i] = i;}
-
-    raw_general_transform(vin,aff,df,dir,dir,vout,deriv);
-  }
-                                
-  template <class T>
-  void general_transform_3partial(// Input
-                                  const volume<T>&         vin,
-                                  const Matrix&            aff,
-                                  const volume4D<float>&   df,
-                                  // Output
-                                  volume<T>&               vout,
-                                  volume4D<T>&             deriv,
-                                  volume<char>&            invol)
-  {
-    vector<int>   dir(3);
-    for (int i=0; i<3; i++) {dir[i] = i;}
-
-    raw_general_transform(vin,aff,df,dir,dir,vout,deriv,invol);
-  }
-                                
   // AFFINE TRANSFORM
 
   template <class T>
@@ -1884,7 +1346,7 @@ template <class T, class S>
   ///////////////////////////////////////////////////////////////////////////
   // CONVOLVE
     template <class T, class S>
-    volume<T> susan_convolve(const volume<T>& source, const volume<S>& kernel, const float sigmabsq, const bool use_median, int num_usan,volume<T>* usan_area = new volume<T>(1,1,1),const volume<T>& usan_vol1=volume<T>(1,1,1),const float sigmab1sq=0,const volume<T>& usan_vol2 = volume<T>(1,1,1),const float sigmab2sq=0)
+    volume<T> susan_convolve(const volume<T> source, const volume<S>& kernel, const float sigmabsq, const bool use_median, int num_usan,volume<T>* usan_area = new volume<T>(1,1,1),volume<T> usan_vol1=volume<T>(1,1,1),const float sigmab1sq=0,volume<T> usan_vol2 = volume<T>(1,1,1),const float sigmab2sq=0)
     //template <class T, class S, class U, class V, class W>
     //volume<T> susan_convolve(const volume<T>& source, const volume<S>& kernel, const float sigmabsq, const bool use_median, int num_usan,volume<U>* usan_area = new volume<T>(1,1,1),const volume<V>& usan_vol1=volume<T>(1,1,1),const float sigmab1sq=0,const volume<W>& usan_vol2 = volume<T>(1,1,1),const float sigmab2sq=0)
     //Note that the commented out declaration won't work with the optional arguements (since U,V,W need to be defined in call...). Code is provided for possible
@@ -1892,100 +1354,84 @@ template <class T, class S>
 {
 //need to use a pointer for usan_area as creating a default parameter for a pass-by-reference gives 
 //a "assignment to tempory memory" warning in gcc
-//default values for lut1 etrc
-  extrapolation oldex = source.getextrapolationmethod();
-  if ((oldex==boundsassert) || (oldex==boundsexception)) source.setextrapolationmethod(constpad); 
-  volume<T> result(source);
+//default values for lut1 etc
   if (    (( (kernel.maxz() - kernel.minz()) % 2)==1) || 
 	  (( (kernel.maxy() - kernel.miny()) % 2)==1) ||
 	  (( (kernel.maxx() - kernel.minx()) % 2)==1) ) 
-	  cerr << "WARNING:: Off-centre convolution being performed as kernel" << " has even dimensions" << endl; 
+	  cerr << "WARNING:: Off-centre convolution being performed as kernel has even dimensions" << endl; 
   if ((num_usan>=1 && !samesize(source,usan_vol1)) || (num_usan>=2 && !samesize(source,usan_vol2)) || (num_usan>=1 && !samesize(source,*usan_area))      ) 
   {
     cerr << "Warning: an external usan or output usan is not the same size as the source image, reverting to num_usans=0 mode" << endl;
     num_usan=0;
   }
   int midx, midy, midz,lz,uz,lx,ux,ly,uy,lutsize=16384;
-  lz=result.minz();
-  uz=result.maxz();
-  lx=result.minx();
-  ux=result.maxx();
-  ly=result.miny();
-  uy=result.maxy();
+  lz=source.minz();
+  uz=source.maxz();
+  lx=source.minx();
+  ux=source.maxx();
+  ly=source.miny();
+  uy=source.maxy();
+  volume<T> result(source);
   midz=(kernel.maxz() - kernel.minz())/2;
   midy=(kernel.maxy() - kernel.miny())/2;
   midx=(kernel.maxx() - kernel.minx())/2;
   //generate look up table
   float range1=1,range2=1,range = (source.max() - source.min())/(float)lutsize;
-  
-  float *lut=new float[2*lutsize+1],*lut1=new float,*lut2=new float; //removes "might be used initialised" warning
-  lut+=lutsize;
-  for (int i=0;i<=lutsize;i++) lut[-i]=lut[i]= exp(-pow(i*range,2.0)/sigmabsq);
+  float **lut=new float *[3];
+  for(int i=0;i<=num_usan;i++) lut[i]=new float[2*lutsize+1];
+  for(int i=0;i<=num_usan;i++) lut[i]+=lutsize;
+  for (int i=0;i<=lutsize;i++) lut[0][-i]=lut[0][i]= exp(-pow(i*range,2.0)/sigmabsq);
   if (num_usan>=1) 
   {
-     delete lut1; 
      range1= (usan_vol1.max() - usan_vol1.min())/(float)lutsize;
-     lut1=new float[2*lutsize+1];
-     lut1+=lutsize;
-     for (int i=0;i<=lutsize;i++)   lut1[-i]=lut1[i]= exp(-pow(i*range1,2.0)/sigmab1sq);
+     for (int i=0;i<=lutsize;i++)   lut[1][-i]=lut[1][i]= exp(-pow(i*range1,2.0)/sigmab1sq);
   }
   if (num_usan>=2) 
   {
-     delete lut2;
      range2= (usan_vol2.max() - usan_vol2.min())/(float)lutsize; 
-     lut2=new float[2*lutsize+1];
-     lut2+=lutsize;
-     for (int i=0;i<=lutsize;i++)   lut2[-i]=lut2[i]= exp(-pow(i*range2,2.0)/sigmab2sq);
+     for (int i=0;i<=lutsize;i++)   lut[2][-i]=lut[2][i]= exp(-pow(i*range2,2.0)/sigmab2sq);
   }
-  int size=8;         
-  if (kernel.zsize()>1) size = 26; 
-  ColumnVector vals(size); 
+  ColumnVector mediankernel((kernel.zsize()>1)?26:8); // cube or square, minus central voxel
+  int medoffst=((kernel.zsize()>1)?1:0);
   for (int z=lz; z<=uz; z++) 
     for (int y=ly; y<=uy; y++) 
       for (int x=lx; x<=ux; x++) 
       {
-	 int x3=x-midx,y3=y-midy,z3=z-midz;
-         float num=0, denom=0, center_val,center_val1=0,center_val2=0;
-         center_val=source.value(x,y,z);
+	 int xmin=x-midx,ymin=y-midy,zmin=z-midz;
+	 int xmax=MIN(x+midx,ux),ymax=MIN(y+midy,uy),zmax=MIN(z+midz,uz);
+         float num=0, denom=0,center_val1=0,center_val2=0,factor;
+         float center_val=source.value(x,y,z);
          if (num_usan>=1) center_val1=usan_vol1.value(x,y,z);
          if (num_usan>=2) center_val2=usan_vol2.value(x,y,z);
-	 for (int mz=kernel.minz(); mz<=kernel.maxz(); mz++) 
-	   for (int my=kernel.miny(); my<=kernel.maxy(); my++) 
-	     for (int mx=kernel.minx(); mx<=kernel.maxx(); mx++) 
-             {
-                int x2=x3+mx,y2=y3+my,z2=z3+mz;
- 		if (x2<=ux && x2>=lx && y2<=uy && y2>=ly && z2<=uz && z2>=lz && (kernel.value(mx,my,mz) != 0) ) 
-                {    
-		   float factor=0;
-		   if (num_usan==0) factor= lut[(int)((source.value(x2,y2,z2)-center_val)/range)]; 
-		   if (num_usan>=1) factor= lut1[(int)((usan_vol1.value(x2,y2,z2)-center_val1)/range1)]; 
-		   if (num_usan>=2) factor*=lut2[(int)((usan_vol2.value(x2,y2,z2)-center_val2)/range2)]; 
-                   //if (num_usan==0) factor=  exp(-pow(source.value(x2,y2,z2)-source.value(x,y,z),2.0)/sigmabsq);
-                   //if (num_usan>=1) factor=  exp(-pow(usan_vol1.value(x2,y2,z2)-usan_vol1.value(x,y,z),2.0)/sigmab1sq);
-                   //if (num_usan>=2) factor*= exp(-pow(usan_vol2.value(x2,y2,z2)-usan_vol2.value(x,y,z),2.0)/sigmab2sq);
-		   factor*=kernel.value(mx,my,mz);  
-		   num+=source.value(x2,y2,z2) * factor;
-		   denom+=factor;
-		}
-	     }
-	     if (num_usan>=1) usan_area->value(x,y,z)=(T) denom;
+	 for(int mz=MAX(zmin,lz); mz<=zmax; mz++) 
+	   for(int my=MAX(ymin,ly); my<=ymax; my++) 
+	     for(int mx=MAX(xmin,lx); mx<=xmax; mx++) 
+	       if ((factor=(float)kernel.value(mx-xmin,my-ymin,mz-zmin)))
+	       { 
+		 if (num_usan==0) factor*= lut[0][(int)((source.value(mx,my,mz)-center_val)/range)];
+		 else factor*= lut[1][(int)((usan_vol1.value(mx,my,mz)-center_val1)/range1)]; 
+		 if (num_usan>=2) factor*=lut[2][(int)((usan_vol2.value(mx,my,mz)-center_val2)/range2)]; 
+		 num+=source.value(mx,my,mz) * factor;
+		 denom+=factor;
+	       }
+	 if (num_usan>=1) usan_area->value(x,y,z)=(T) denom;
 	     if (use_median && denom<1.5)
              {	  
                int count=1;
-               for (int x2=x-1;x2<=x+1;x2++)
-		 for (int y2=y-1;y2<=y+1;y2++)
-		   for (int z2=z-1;z2<=z+1;z2++)
-		     if (x2<=ux && x2>=lx && y2<=uy && y2>=ly && z2<=uz && z2>=lz && abs(x2-x)<2 && abs(y2-y)<2 && abs(z2-z)<2 && ( (x2-x) || (y2-y) || (z2-z) ) ) vals(count++)=source.value(x2,y2,z2);
-	       ColumnVector littlevals = vals.SubMatrix(1,count-1,1,1);
-	       SortAscending(littlevals);               
-	       result(x,y,z) = (T)((littlevals(count/2)+littlevals((count+1)/2))/2.0);    
+               for(int x2=MAX(x-1,lx);x2<=MIN(x+1,ux);x2++)
+		 for(int y2=MAX(y-1,ly);y2<=MIN(y+1,uy);y2++)
+		   for(int z2=MAX(z-medoffst,lz);z2<=MIN(z+medoffst,uz);z2++)
+		     if ( (x2-x) || (y2-y) || (z2-z) ) mediankernel(count++)=source.value(x2,y2,z2);
+	       ColumnVector subkernel = mediankernel.SubMatrix(1,count-1,1,1);
+	       SortAscending(subkernel);        
+	       result(x,y,z) = (T)((subkernel(count/2)+subkernel((count+1)/2))/2.0);    
 	     }
              else result.value(x,y,z)=(T) (num/denom);
       }
-  source.setextrapolationmethod(oldex);
+  for(int i=0;i<=num_usan;i++) delete[] (lut[i]-lutsize);
+  delete[] lut;
   return result;
 }
-
 
   template <class T, class S>
   volume<T> convolve(const volume<T>& source, const volume<S>& kernel)

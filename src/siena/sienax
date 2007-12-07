@@ -156,6 +156,10 @@ fi
 
 mkdir -p $outdir
 ${FSLDIR}/bin/imcp $Io ${outdir}/I
+if [ _$lm != _ ] ; then
+    ${FSLDIR}/bin/imcp $lm ${outdir}/lesion_mask
+    lm=lesion_mask
+fi
 cd $outdir
 I=I
 

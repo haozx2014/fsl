@@ -2,7 +2,7 @@
 
 #   FEAT TCL functions library
 #
-#   Stephen Smith, Matthew Webster, FMRIB Image Analysis Group
+#   Stephen Smith & Matthew Webster, FMRIB Analysis Group
 #
 #   Copyright (C) 1999-2007 University of Oxford
 #
@@ -769,7 +769,10 @@ set fmri(init_initial_highres) \"$fmri(init_initial_highres)\"
 set fmri(init_highres) \"$fmri(init_highres)\"
 
 # Standard space registration initialisation transform
-set fmri(init_standard) \"$fmri(init_standard)\""
+set fmri(init_standard) \"$fmri(init_standard)\"
+
+# For full FEAT analysis: overwrite existing .feat output dir?
+set fmri(overwrite_yn) $fmri(overwrite_yn)"
 
 #}}}
 
@@ -783,7 +786,7 @@ set fmri(init_standard) \"$fmri(init_standard)\""
 	    set result [ catch { exec sh -c "${FSLDIR}/bin/feat_model $filename" } ErrMsg ]
 	    if {$result != 0 || [ string length $ErrMsg ] > 0 } {
 		MxPause "Problem with processing the model: $ErrMsg"
-		set fmri(donemodel) 0
+		#set fmri(donemodel) 0
 	    }
 	}
 
@@ -844,6 +847,10 @@ proc feat5:load { w full filename } {
 		feat5:updateanalysis $w
 		feat5:updatehelp $w
 		feat5:updateprestats $w
+	    }
+
+	    if { $fmri(motionevs) > 0 } {
+		set fmri(motionevs) 1
 	    }
 
 	} else {
@@ -911,7 +918,7 @@ proc parseatlases { } {
 proc feat5:setupdefaults { } {
     global fmri FSLDIR HOME
 
-    set fmri(version) 5.91
+    set fmri(version) 5.92
 
     set fmri(inmelodic) 0
 
@@ -4686,7 +4693,7 @@ proc feat5:report_insert_start { pagename sectionlabel } {
 
     catch { exec sh -c "mv ${pagename} tmp${pagename}" } errmsg
     set iptr [ open tmp${pagename} r ]
-    set report [ open ${pagename} w ]
+    #set report [ open ${pagename} w ]
     set foundit 0
 
     while { ! $foundit && [ gets $iptr line ] >= 0 } {
@@ -4785,6 +4792,10 @@ proc feat5:proc_prestats { session } {
 #}}}
 
     #{{{ check npts, delete images, make example_func
+
+# copy data into FEAT dir immediately
+fsl:exec "${FSLDIR}/bin/fslmaths $funcdata prefiltered_func_data"
+set funcdata prefiltered_func_data
 
 # check npts
 set total_volumes [ exec sh -c "${FSLDIR}/bin/fslnvols $funcdata 2> /dev/null" ]
@@ -5001,9 +5012,9 @@ fsl:exec "${FSLDIR}/bin/applywarp -i example_func_orig_distorted -o example_func
 # now either apply unwarping one vol at a time (including applying individual mcflirt transforms at same time),
 # or if mcflirt transforms don't exist, just apply warp to 4D $funcdata
 if { [ file exists mc/prefiltered_func_data_mcf.mat/MAT_0000 ] } {
+    fsl:exec "${FSLDIR}/bin/fslsplit $funcdata grot"
     for { set i 0 } { $i < $total_volumes } { incr i 1 } {
 	set pad [format %04d $i]
-	fsl:exec "${FSLDIR}/bin/fslroi $funcdata grot$pad $i 1"
 	fsl:exec "${FSLDIR}/bin/applywarp -i grot$pad -o grot$pad --premat=mc/prefiltered_func_data_mcf.mat/MAT_$pad -w unwarp/EF_UD_warp -r example_func --abs --mask=unwarp/EF_UD_fmap_mag_brain_mask"
     }
     fsl:exec "${FSLDIR}/bin/fslmerge -t prefiltered_func_data_unwarp [ imglob -oneperimage grot* ]"
@@ -6357,19 +6368,21 @@ if { $NumPoints < 30 && $fmri(mixed_yn) != 1 } {
     fsl:echo .flame "$FSLDIR/bin/flame --cope=filtered_func_data --vc=var_filtered_func_data $DOFS --mask=mask --ld=stats --dm=design.mat --cs=design.grp --tc=design.con $FTESTS $FLAME"
 } else {
 
-    set DIMX [ exec sh -c "$FSLDIR/bin/fslval example_func dim1" ]
-    set DIMY [ exec sh -c "$FSLDIR/bin/fslval example_func dim2" ]
+    fsl:exec "$FSLDIR/bin/fslsplit mask tmpmask -z"
+    fsl:exec "$FSLDIR/bin/fslsplit filtered_func_data tmpcope -z"
+    fsl:exec "$FSLDIR/bin/fslsplit var_filtered_func_data tmpvarcope -z"
+    if { [ imtest tdof_filtered_func_data ] } {
+	fsl:exec "$FSLDIR/bin/fslsplit tdof_filtered_func_data tmptdof -z"
+    }
+
     set DIMZ [ exec sh -c "$FSLDIR/bin/fslval example_func dim3" ]
     for { set slice 0 } { $slice < $DIMZ } { incr slice 1 } {
-	fsl:exec "$FSLDIR/bin/fslroi mask tmpmask$slice 0 $DIMX 0 $DIMY $slice 1"
-	fsl:exec "$FSLDIR/bin/fslroi filtered_func_data tmpcope$slice 0 $DIMX 0 $DIMY $slice 1"
-	fsl:exec "$FSLDIR/bin/fslroi var_filtered_func_data tmpvarcope$slice 0 $DIMX 0 $DIMY $slice 1"
+        set pad [ format %04d $slice ]
 	set DOFS ""
 	if { [ imtest tdof_filtered_func_data ] } {
-	    fsl:exec "$FSLDIR/bin/fslroi tdof_filtered_func_data tmptdof$slice 0 $DIMX 0 $DIMY $slice 1"
-	    set DOFS "--dvc=tmptdof$slice"
+	    set DOFS "--dvc=tmptdof$pad"
 	}
-	fsl:echo .flame "$FSLDIR/bin/flame --cope=tmpcope$slice --vc=tmpvarcope$slice $DOFS --mask=tmpmask$slice --ld=stats$slice --dm=design.mat --cs=design.grp --tc=design.con $FTESTS $FLAME"
+	fsl:echo .flame "$FSLDIR/bin/flame --cope=tmpcope$pad --vc=tmpvarcope$pad $DOFS --mask=tmpmask$pad --ld=stats$pad --dm=design.mat --cs=design.grp --tc=design.con $FTESTS $FLAME"
     }
 }
 
@@ -6419,13 +6432,12 @@ set logout ${FD}/logs/feat3c_flame
 #}}}
     #{{{ FLAME3
 
-if { [ file exists stats0 ] } {
-    foreach f [ imglob -oneperimage stats0/* ] {
+if { [ file exists stats0000 ] } {
+    foreach f [ imglob -oneperimage stats0000/* ] {
 	set froot [ file tail $f ]
-	fsl:exec "$FSLDIR/bin/fslmerge -z stats0/$froot [ lsort -dictionary [ imglob -oneperimage stats*/$froot ] ]"
+	fsl:exec "$FSLDIR/bin/fslmerge -z stats0000/$froot [ lsort -dictionary [ imglob -oneperimage stats*/$froot ] ]"
     }
-    fsl:exec "mv stats0 stats"
-    fsl:exec "/bin/rm -rf stats?* tmp*"
+    fsl:exec "/bin/mv stats0000 stats ; /bin/rm -rf stats?* tmp*"
 }
 
 fsl:exec "/bin/rm -f stats/zem* stats/zols* stats/mask* ; /bin/mv dof stats"

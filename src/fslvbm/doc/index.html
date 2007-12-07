@@ -345,7 +345,7 @@ not careful.
 <p>Once you have chosen the most appropriate smoothing (e.g. sigma = 3.5 mm) and threshold (e.g. t &gt; 2.3) for the cluster-based correction, then feed them into a full run of
 randomise (see <a href="../randomise/index.html">randomise usage</a>), for instance:
 
-<pre>randomise -i GM_mod_merg_s3.5 -m GM_mask -o myfinalresults -d design.mat -t desing.con -c 2.3 -n 5000 -V</pre>
+<pre>randomise -i GM_mod_merg_s3.5 -m GM_mask -o myfinalresults -d design.mat -t design.con -c 2.3 -n 5000 -V</pre>
 
 <p>Then you can threshold your "_maxc_" images (corrected p-values maps) at 0.95 to keep only the significant
 clusters and use it to mask the <b>corresponding</b> tstats map:
