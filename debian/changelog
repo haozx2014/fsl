@@ -1,3 +1,13 @@
+fsl (4.0.2-2) unstable; urgency=low
+
+  * Refurbished debian/rules. Now honours 'noopt' and builds with debugging
+    symbols by default.
+  * Make Debian diff less intrusive by moving more logic into debian/rules.
+  * Build-depend on libniftiio1 >> 0.99 to account for the vanished libfslio
+    package.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Fri, 07 Dec 2007 14:52:10 +0100
+
 fsl (4.0.2-1) unstable; urgency=low
 
   * New upstream bugfix release.
