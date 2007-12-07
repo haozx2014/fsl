@@ -73,14 +73,13 @@ using namespace MISCMATHS;
 void print_usage(const string& progname) 
 {
   cout << endl;
-  cout << "Usage: fslsplit <inputfile.hdr>" << endl;
-  cout << "       fslsplit <inputfile.hdr> [basename] [-t/x/y/z]" << endl;
-  cout << "       -t : seperate images in time (default behaviour)" << endl;
-  cout << "       -x : seperate images in the x direction"  << endl;
-  cout << "       -y : seperate images in the y direction"  << endl;
-  cout << "       -z : seperate images in the z direction" << endl;
+  cout << "Usage: fslsplit <input>" << endl;
+  cout << "       fslsplit <input> [output_basename] [-t/x/y/z]" << endl;
+  cout << "       -t : separate images in time (default behaviour)" << endl;
+  cout << "       -x : separate images in the x direction"  << endl;
+  cout << "       -y : separate images in the y direction"  << endl;
+  cout << "       -z : separate images in the z direction" << endl;
 }
-
 
 template <class T>
 int fmrib_main(int argc, char *argv[])
@@ -128,5 +127,4 @@ int main(int argc,char *argv[])
   string iname=string(argv[1]);
   return call_fmrib_main(dtype(iname),argc,argv); 
 }
-
 
