@@ -102,7 +102,7 @@ int fmrib_main(int argc, char *argv[])
   if (kernel_dim==3)
   {    
     if (three_by_three) kernel = box_kernel(3,3,3);
-    else kernel=gaussian_kernel3D(sigmad,input_vol.xdim(),input_vol.ydim(),input_vol.zdim());
+    else kernel=gaussian_kernel3D(sigmad,input_vol.xdim(),input_vol.ydim(),input_vol.zdim(),2.0);
   }
   else
   { 

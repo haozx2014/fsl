@@ -92,46 +92,46 @@ string examples_multi_channel="fast4 [options] <image> [<image2> ... <imagen>]";
 // 		  string("small positive number for EM convergence; default=0.0"),
 // 		  false, requires_argument);
 
-Option<int> inititer(string("-W, --init"), 15,
+Option<int> inititer(string("-W,--init"), 15,
 		  string("number of segmentation-initialisation iterations; default=15"),
 		  false, requires_argument);
-Option<int> nbiter(string("-I, --iter"), 4,
+Option<int> nbiter(string("-I,--iter"), 4,
 		  string("number of main-loop iterations during bias-field removal; default=4"),
 		  false, requires_argument);
-Option<int> initfixity(string("-O, --fixed"), 4,
+Option<int> initfixity(string("-O,--fixed"), 4,
 		  string("number of main-loop iterations after bias-field removal; default=4"),
 		  false, requires_argument);
 
 
-Option<float> fbeta(string("-f, --fHard"), 0.02,
+Option<float> fbeta(string("-f,--fHard"), 0.02,
 		  string("initial segmentation spatial smoothness (during bias field estimation); default=0.02"),
 		  false, requires_argument);
-Option<float> Hyp(string("-H, --Hyper"), 0.3,
+Option<float> Hyp(string("-H,--Hyper"), 0.3,
 		  string("segmentation spatial smoothness; default=0.3, set < 0 for automatic estimation"),
 		  false, requires_argument);
-Option<float> fpveMRFmixeltype(string("-R, --mixel"), 0.1,
+Option<float> fpveMRFmixeltype(string("-R,--mixel"), 0.1,
 		  string("spatial smoothness for mixeltype; default=0.1"),
 		  false, requires_argument);
-Option<float> nblowpass(string("-l, --lowpass"), 20,
+Option<float> nblowpass(string("-l,--lowpass"), 20,
 		  string("bias field smoothing extent (FWHM) in mm; default=20"),
 		  false, requires_argument);
 
-Option<int> typeofimage(string("-t, --type"), 0,
+Option<int> typeofimage(string("-t,--type"), 0,
 		  string("type of image 0=T1, 1=T2, 2=PD; default=T1"),
 		  false, requires_argument);
-Option<int> nclass(string("-n, --class"), 3,
+Option<int> nclass(string("-n,--class"), 3,
 		  string("number of tissue-type classes; default=3"),
 		  false, requires_argument);
-Option<string> inname1(string("-i, --in1"), string(""),  //not used by user any more but still needed internally
+Option<string> inname1(string("-i,--in1"), string(""),  //not used by user any more but still needed internally
 		  string("first input filename"),
 		  false, requires_argument);
-Option<string> outname(string("-o, --out"), string(""),
+Option<string> outname(string("-o,--out"), string(""),
 		  string("output basename"),
 		  false, requires_argument);
-Option<int> nchannel(string("-S, --channels"), 1,
+Option<int> nchannel(string("-S,--channels"), 1,
 		  string("number of input images (channels); default 1"),
 		  false, requires_argument);
-Option<bool> multichannel(string("-m, --multi"), false, //not used by user any more but still needed internally
+Option<bool> multichannel(string("-m,--multi"), false, //not used by user any more but still needed internally
 		  string("uses multi channel segmentation"),
 		  false, no_argument);
 
@@ -143,25 +143,25 @@ Option<int> pve(string("--pvestep"), 100,
 		  string("discretisation levels of pve values; default=100"),
 		  false, requires_argument);
 
-Option<bool> segments(string("-g, --segments"), false,
+Option<bool> segments(string("-g,--segments"), false,
 		  string("outputs a separate binary image for each tissue type"),
 		  false, no_argument);
 
-Option<bool> out_probs(string("-r, --outprobs"), false, //not used by user any more but still needed internally
+Option<bool> out_probs(string("-r,--outprobs"), false, //not used by user any more but still needed internally
 		  string("outputs individual probability maps"),
 		  false, no_argument);
 
-Option<bool> biasrem(string("-N, --nobias"), false,
+Option<bool> biasrem(string("-N,--nobias"), false,
 		  string("do not remove bias field"),
 		  false, no_argument);
-Option<bool> out_bias(string("-b, --outbias"), false,
+Option<bool> out_bias(string("-b,--outbias"), false,
 		  string("output bias field correction image"),
 		  false, no_argument);
 
 Option<string> bapriori(string("-a"), "",
 		  string("~<standard2input.mat> initialise using priors; you must supply a FLIRT transform"),
 		  false, requires_argument);
-Option<bool> talaraichiterations(string("-P, --Prior"), false,
+Option<bool> talaraichiterations(string("-P,--Prior"), false,
 		  string("use priors throughout; you must also set the -a option"),
 		  false, no_argument);
 Option<string> anotherstdspace(string("-A"), "",
@@ -169,14 +169,14 @@ Option<string> anotherstdspace(string("-A"), "",
 		  false, requires_3_arguments);
 
 
-Option<string> manualsegmentation(string("-s, --manualseg"), "",
+Option<string> manualsegmentation(string("-s,--manualseg"), "",
 		  string("~<filename> Filename containing intensities"),
 		  false, requires_argument);
 
-Option<bool> verbose(string("-v, --verbose"), false, 
+Option<bool> verbose(string("-v,--verbose"), false, 
 		     string("switch on diagnostic messages"), 
 		     false, no_argument);
-Option<bool> help(string("-h, --help"), false,
+Option<bool> help(string("-h,--help"), false,
 		  string("display this message"),
 		  false, no_argument);
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -331,8 +331,13 @@ int do_work(int argc, char* argv[])
   pixdim[0]=inputimage.xdim();
   pixdim[1]=inputimage.ydim();
   pixdim[2]=inputimage.zdim();
+
   if(inputimage.min()<0.0)
-    inputimage-=inputimage.min();
+  {
+    if(inputimage.percentile(0.02)<0.0) inputimage-=inputimage.min();
+    else inputimage.threshold(0,inputimage.max(),inclusive);
+  }
+
   if(verbose.value()) 
     { 
       switch(typeofimage.value())
@@ -565,13 +570,12 @@ int main(int argc,char *argv[])
       options.add(manualsegmentation);
       // line below stops the program if the help was requested or 
       // a compulsory option was not set
+      nonoptarg = options.parse_command_line(argc, argv);
       if ( argc<2 || (help.value()) || (!options.check_compulsory_arguments(true)) )
 	{
 	  options.usage();
 	  exit(EXIT_FAILURE);
 	}
-
-      nonoptarg = options.parse_command_line(argc, argv);
       if (nchannel.value()>1) multichannel.set_value("true");
 
       if (nopve.value()) pve.set_value("0");

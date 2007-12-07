@@ -23,6 +23,7 @@ esac
 
 # Difficult to capture the error message if gcc isn't installed...
 PATH=${PATH}:$FSLDIR/etc/fslconf/
+export PATH
 gcc_version=`gcc -dumpversion`
 if [ $? -eq 0 ]; then
     # GCC is installed
