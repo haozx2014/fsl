@@ -5,8 +5,9 @@ fsl (4.0.2-2) unstable; urgency=low
   * Make Debian diff less intrusive by moving more logic into debian/rules.
   * Build-depend on libniftiio1 >> 0.99 to account for the vanished libfslio
     package.
+  * Improve LD_LIBRARY_PATH handling by preventing trailing colons.
 
- -- Michael Hanke <michael.hanke@gmail.com>  Fri, 07 Dec 2007 14:52:10 +0100
+ -- Michael Hanke <michael.hanke@gmail.com>  Sat, 08 Dec 2007 09:14:34 +0100
 
 fsl (4.0.2-1) unstable; urgency=low
 
