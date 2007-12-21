@@ -11,4 +11,4 @@ debian/fsl.sh etc/fsl
 debian/desktop/*.desktop usr/share/applications
 debian/fsl_gui_app_wrapper usr/lib/fsl
 
-debian/tmp/lintian usr/share/lintian/overrides
+debian/tmp/lintian/* usr/share/lintian/overrides
