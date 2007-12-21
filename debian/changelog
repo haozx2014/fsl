@@ -4,8 +4,10 @@ fsl (4.0.2-2) unstable; urgency=low
     symbols by default.
   * Make Debian diff less intrusive by moving more logic into debian/rules.
   * Improve LD_LIBRARY_PATH handling by preventing trailing colons.
+  * Let fsl-doc depend on fslview-doc to prevent dangling symlink.
+  * Fixed location of lintian override.
 
- -- Michael Hanke <michael.hanke@gmail.com>  Sat, 08 Dec 2007 09:14:34 +0100
+ -- Michael Hanke <michael.hanke@gmail.com>  Fri, 21 Dec 2007 08:34:09 +0100
 
 fsl (4.0.2-1) unstable; urgency=low
 
