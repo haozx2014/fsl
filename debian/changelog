@@ -7,8 +7,11 @@ fsl (4.0.2-2) unstable; urgency=low
   * Let fsl-doc depend on fslview-doc to prevent dangling symlink.
   * Fixed location of lintian override.
   * Updated and completed list of licenses in debian/copyright.
+  * Removed empty directories from the fsl-doc package.
+  * Placed fsl-doc package in section non-free/doc.
+  * Bumped Standard version to 3.7.3 -- no changes necessary.
 
- -- Michael Hanke <michael.hanke@gmail.com>  Fri, 21 Dec 2007 09:23:36 +0100
+ -- Michael Hanke <michael.hanke@gmail.com>  Fri, 21 Dec 2007 10:56:09 +0100
 
 fsl (4.0.2-1) unstable; urgency=low
 

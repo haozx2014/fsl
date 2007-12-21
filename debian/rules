@@ -170,7 +170,8 @@ binary-common:
 	dh_compress
 	dh_fixperms
 	dh_installdeb
-	dh_shlibdeps
+	# dh_shlibdeps needs access to the private libs
+	LD_LIBRARY_PATH=$(FSL_LIBRARY_PATH)$${LD_LIBRARY_PATH:+:$${LD_LIBRARY_PATH}} dh_shlibdeps
 	# get the correct dependency for octave
 	octave-depends
 	dh_gencontrol
@@ -181,13 +182,17 @@ binary-common:
 # Build architecture independent packages using the common target.
 binary-indep: install
 	dh_installdirs -i
-
+	
 	# install docs (except images which are in fsl package)
 	cp -r doc/!(images) debian/fsl-doc/usr/share/fsl/doc
-
+	
 	# cleanup doc path
 	rm debian/tmp/doc/feat5/DO
-
+	
+	# clean empty dirs from doc package
+	find debian/fsl-doc/usr/share/fsl/doc -depth -type d -empty -exec rmdir {} \;
+	find debian/tmp/doc -depth -type d -empty -exec rmdir {} \;
+	
 	$(MAKE) -f debian/rules DH_OPTIONS=-i binary-common
 
 
