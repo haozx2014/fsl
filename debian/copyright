@@ -4,6 +4,11 @@ Sat,  3 Sep 2005 19:56:46 +0200.
 It was downloaded from http://www.fmrib.ox.ac.uk/fsldownloads/
 
 
+This package is autobuildable by the Debian buildd network as it's license
+imposes no restrictions on reproduction, modification, transmission or
+transference as long as there is no financial return (see license below).
+
+
 FSL license
 -----------
 
