@@ -1,0 +1,3 @@
+version=3
+http://pkg-exppsy.alioth.debian.org/watchhelper/fsl.html \
+	.*fsl-(.*)-sources\.tar\.gz
