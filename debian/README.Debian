@@ -1,11 +1,53 @@
 FSL for Debian
---------------
+==============
+
+This document describes the differences between the Debian package of FSL and
+original FSL releases.
+
+
+Configuration
+-------------
 
 Most (if not all) FSL binaries require the presence of some environment 
 variables set properly. To achieve this, one needs to source the FSL config
 script, which is at /etc/fsl/fsl.sh.
 
-The FSL user interface sometimes refers to an 'FSLDIR'. For Debian systems this
-is /usr/share/fsl.
+The FSL user interface sometimes refers to an 'FSLDIR'. For Debian systems
+this is /usr/share/fsl.
 
- -- Michael Hanke <michael.hanke@gmail.com>, Sat, 30 Jul 2007 17:30:02 +0200
+
+User interface
+--------------
+
+The FSL package provides desktop integration via desktop files for all FSL
+GUI applications. The package provides a simple wrapper that allows to start
+the GUI applications without prior sourcing of the FSL config file (as
+described above). Please note, that this is still necessary for the
+commandline tools.
+
+
+Integration with other Debian Packages
+--------------------------------------
+
+Octave
+  Octave users can read and write 3d and 4d datasets by using the `read_avw*`
+  and `save_avw*` functions. No further configuration is necessary, as the FSL
+  package installs the necessary modules into the appropriate locations.
+  Matlab users have to include /usr/share/fsl/etc/matlab into their search path
+  (see the 'addpath' command).
+
+
+Missing Functionality
+---------------------
+
+Unfortunately the TBSS module of FSL [0] is still not immediately useable. The
+reason is that TBSS depends on IRTK [1] and the source code of IRTK is not
+available. Users of the Debian package who need TBSS, have to get the IRTK
+binaries manually from a tarball of a precompiled version of FSL or download
+the binaries separately from [2] (i386 platform only).
+
+[0] http://www.fmrib.ox.ac.uk/fsl/tbss/index.html
+[1] http://www.doc.ic.ac.uk/~dr/software/index.html
+[2] http://wwwhomes.doc.ic.ac.uk/~dr/software/download.html
+
+ -- Michael Hanke <michael.hanke@gmail.com>, Wed, 2 Jan 2008 12:50:18 +0200
