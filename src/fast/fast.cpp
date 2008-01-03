@@ -72,6 +72,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <cstring>
 #include "mriseg.h"
 #include "imageio.h"
 #include "imalgorithm.h"

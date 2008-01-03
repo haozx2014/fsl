@@ -216,7 +216,7 @@ string examples = "\
 \tsmoothest -d <number> -r <filename> -m <filename>\n\
 \tsmoothest -z <filename> -m <filename>";
 
-int main(unsigned int argc, char **argv) {
+int main(int argc, char **argv) {
 
   OptionParser options(title, examples);
 

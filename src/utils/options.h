@@ -69,6 +69,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <cstdlib>
 
 #define POSIX_SOURCE 1
 
