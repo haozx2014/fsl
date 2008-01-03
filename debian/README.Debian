@@ -40,7 +40,7 @@ Octave
 Missing Functionality
 ---------------------
 
-Unfortunately the TBSS module of FSL [0] is still not immediately useable. The
+Unfortunately the TBSS module of FSL [0] is still not immediately usable. The
 reason is that TBSS depends on IRTK [1] and the source code of IRTK is not
 available. Users of the Debian package who need TBSS, have to get the IRTK
 binaries manually from a tarball of a precompiled version of FSL or download
