@@ -63,6 +63,7 @@
 
 #include <vector>
 #include <string>
+#include <cstdlib>
 
 using namespace std;
 
@@ -130,7 +131,7 @@ string examples =
 opttst -d <number> -m <filename> -r <filename>\n\
 opttst --verbose\n";
 
-int main(unsigned int argc, char **argv) {
+int main(int argc, char **argv) {
 
   OptionParser options(title, examples);
 

@@ -9,6 +9,8 @@
 #include <fstream>
 #include <sstream>
 #include <cstdio>
+#include <cstring>
+
 #include "mstring.h"
 using namespace std;
 

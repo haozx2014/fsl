@@ -9,7 +9,8 @@
 // The realization of the ZImageBase class.
 
 #include <fstream>
- 
+#include <cstring>
+
 #include "imagebase.h"
 
 using namespace std;
