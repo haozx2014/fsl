@@ -1,3 +1,10 @@
+fsl (4.0.2-3) unstable; urgency=low
+
+  * Fixed some bugs for GCC 4.3 compatibility.
+  * Updated build-dependencies for libnifti transition.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Sat, 05 Jan 2008 15:26:59 +0100
+
 fsl (4.0.2-2) unstable; urgency=low
 
   * Refurbished debian/rules. Now honours 'noopt' and builds with debugging
