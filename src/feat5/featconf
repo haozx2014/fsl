@@ -213,13 +213,13 @@ set fmri(reginitial_highres_search) 90
 
 # Degrees of Freedom for registration to initial structural
 # options: 3/6/7/9/12
-set fmri(reginitial_highres_dof) 12
+set fmri(reginitial_highres_dof) 3
 
 # Search space for registration to main structural
 set fmri(reghighres_search) 90
 
 # Degrees of Freedom for registration to main structural
-set fmri(reghighres_dof) 12
+set fmri(reghighres_dof) 6
 
 # Standard image
 set fmri(regstandard) "${FSLDIR}/data/standard/MNI152_T1_2mm_brain"
@@ -229,6 +229,13 @@ set fmri(regstandard_search) 90
 
 # Degrees of Freedom for registration to standard space
 set fmri(regstandard_dof) 12
+
+# Do nonlinear registration from structural to standard space?
+set fmri(regstandard_nonlinear_yn) 0
+
+# Control nonlinear warp field resolution
+set fmri(regstandard_nonlinear_warpres) 10
+
 
 #########################################################################
 # Non-GUI options

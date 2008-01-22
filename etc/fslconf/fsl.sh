@@ -29,10 +29,7 @@ FSLMULTIFILEQUIT=TRUE ; export FSLMULTIFILEQUIT
 FSLTCLSH=$FSLDIR/bin/fsltclsh
 FSLWISH=$FSLDIR/bin/fslwish
 
-FSLBROWSER=$FSLDIR/tcl/fslwebbrowser
-
-export FSLTCLSH FSLWISH FSLBROWSER
-
+export FSLTCLSH FSLWISH 
 
 # The following variables are used for running code in parallel across
 #  several machines ( i.e. for FDT )
