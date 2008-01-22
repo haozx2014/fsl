@@ -2,7 +2,7 @@
 
 # A Simple script to install FSL and set up the environment
 
-VERSION="1.0.2"
+VERSION="1.0.5"
 
 function Usage {
     cat <<USAGE
@@ -121,37 +121,83 @@ SH
     return 0
 }
 
-function patch_for_terminal {
-    # This is only necessary on Mac OS X 10.4 and lower
-    apple_profile=$1
 
-    if [ -f ${apple_profile} ]; then
-	if [ `grep DISPLAY ${apple_profile} | wc -l` -gt 0 ]; then
-	    echo "DISPLAY is already being configured in your '${apple_profile}' - not changing"
-            return 1
-	fi
+function remove_display {
+    # This function will remove the DISPLAY setup configured by our installer in the past
+    # Mac OS X 10.5 no longer requires this.
+    display_profile=$1
+    if [ `is_sh ${display_profile}` ]; then
+	remove='if \[ -z \"\$DISPLAY\" -a \"X\$TERM_PROGRAM\" = \"XApple_Terminal\" \]; then'
+    elif [ `is_csh ${display_profile}` ]; then
+	remove='if ( \$?TERM_PROGRAM ) then'
+    else
+	echo "This is an unsupported shell."
+	return 1
     fi
+    if [ -n "`grep \"${remove}\" ${display_profile}`" ]; then
+	# Remove the section
+	echo "Attempting to remove the DISPLAY settings for Leopard compatability..."
+	cat ${display_profile} | sed "/${remove}/{N;N;N;N;N;N;N;N;N;N;N;N;N;N;N;d;}" > ${display_profile}.bak
+	# Checking the removal succeeded without removing extra lines
+	test_file="${display_profile}.$$"
+	patch_for_terminal ${test_file} '-YES-'
 
-    if [ `is_csh ${apple_profile}` ]; then
-	cat <<CSH_TERM >>${apple_profile}
-  if ( "X\$DISPLAY" == "X" && "X\$TERM_PROGRAM" == "XApple_Terminal" )  then
-    set X11_FOLDER=/tmp/.X11-unix
-    set currentUser=\`id -u\`
-    set userX11folder=\`find \$X11_FOLDER -name 'X*' -user \$currentUser -print 2>&1 | tail -n 1\`
-    if ( "X\$userX11folder" != "X" ) then
-      set displaynumber=\`basename \${userX11folder} | grep -o '[[:digit:]]\+'\`
-      if ( "X\$displaynumber" != "X" ) then
-        setenv DISPLAY localhost:\${displaynumber}
+	diff ${display_profile}.bak ${display_profile}  | sed -e '1d' -e 's/^> //' | sed -e :a -e '/^\n*$/{$d;N;};/\n$/ba' >  ${test_file}.bak
+	if [ -n "`diff \"${test_file}\" \"${test_file}.bak\"`" ]; then
+	    echo "Remove failed (maybe you added DISPLAY settings yourself) - please update your ${display_profile} by hand"
+       	else
+	    mv ${display_profile} ${display_profile}.old
+	    mv ${display_profile}.bak ${display_profile}
+	    echo "Removed"
+	fi
+	rm ${test_file} ${test_file}.bak
+    else
+	echo failed to remove display
+    fi
+}
+
+function patch_for_terminal {
+    apple_profile=$1
+    skip_test=$2
+    # This is only necessary on Mac OS X 10.4 and lower
+    if [ -n "`uname -s | grep Darwin`" -a -n "`uname -r | grep '^9.'`" -a "X$skip_test" != "X-YES-" ]; then
+	if [ -f ${apple_profile} ]; then
+	    if [ -n "`grep 'DISPLAY' ${apple_profile}`" ]; then
+		echo "You are running Mac OS X 10.5 and have DISPLAY configured in your ${apple_profile} file."
+		remove_display ${apple_profile}
+	    fi
+	fi
+    else
+	if [ "X$skip_test" != "X-YES-" ]; then
+	    echo "Setting up Apple terminal..."
+	fi
+	if [ -f ${apple_profile} ]; then
+	    if [ `grep DISPLAY ${apple_profile} | wc -l` -gt 0 ]; then
+		echo "DISPLAY is already being configured in your '${apple_profile}' - not changing"
+		return 1
+	    fi
+	fi
+
+	if [ `is_csh ${apple_profile}` ]; then
+	    cat <<CSH_TERM >>${apple_profile}
+if ( \$?TERM_PROGRAM ) then
+ if ( "X\$TERM_PROGRAM" == "XApple_Terminal" ) then; if ( ! \$?DISPLAY ) then
+      set X11_FOLDER=/tmp/.X11-unix; set currentUser=\`id -u\`; set userX11folder=\`find \$X11_FOLDER -name 'X*' -user \$currentUser -print 2>&1 | tail -n 1\`
+      if ( "X\$userX11folder" != "X" ) then
+        set displaynumber=\`basename \${userX11folder} | grep -o '[[:digit:]]\+'\`
+        if ( "X\$displaynumber" != "X" ) then
+          setenv DISPLAY localhost:\${displaynumber}
+        else; echo "Warning: DISPLAY not configured as X11 is not running"
+        endif
       else
         echo "Warning: DISPLAY not configured as X11 is not running"
       endif
-    else
-      echo "Warning: DISPLAY not configured as X11 is not running"
-    endif   
+    endif 
   endif
+endif
 CSH_TERM
-    elif [ `is_sh ${apple_profile}` ]; then
-	cat <<SH_TERM >>${apple_profile}
+	elif [ `is_sh ${apple_profile}` ]; then
+	    cat <<SH_TERM >>${apple_profile}
   if [ -z "\$DISPLAY" -a "X\$TERM_PROGRAM" = "XApple_Terminal" ]; then
     X11_FOLDER=/tmp/.X11-unix
     currentUser=\`id -u\`
@@ -169,44 +215,12 @@ CSH_TERM
     fi
   fi
 SH_TERM
-    else
-	echo "This is an unsupported shell."
-	return 1
+	else
+	    echo "This is an unsupported shell."
+	    return 1
+	fi
     fi
     return 0
-}
-
-function remove_display {
-    # This function will remove the DISPLAY setup configured by our installer in the past
-    # Mac OS X 10.5 no longer requires this.
-    display_profile=$1
-    if [ `is_sh ${display_profile}` ]; then
-	remove='if \[ -z "\$DISPLAY" -a "X\$TERM_PROGRAM" = "XApple_Terminal" \]; then'
-    elif [ `is_csh ${display_profile}` ]; then
-	remove='if ( "X\$DISPLAY" == "X" && "X\$TERM_PROGRAM" == "XApple_Terminal" )  then'
-    else
-	echo "This is an unsupported shell."
-	return 1
-    fi
-    if [ -n "`grep \"${remove}\" ${display_profile}`" ]; then
-	# Remove the section
-	echo "Attempting to remove the DISPLAY settings for Leopard compatability..."
-	cat ${display_profile} | sed "/${remove}/{N;N;N;N;N;N;N;N;N;N;N;N;N;N;N;d;}" > ${display_profile}.bak
-	# Checking the removal succeeded without removing extra lines
-	test_file="${display_profile}.$$"
-	patch_for_terminal ${test_file}
-
-	diff ${display_profile}.bak ${display_profile}  | sed -e '1d' -e 's/^> //' | sed -e :a -e '/^\n*$/{$d;N;};/\n$/ba' >  ${test_file}.bak
-	if [ -n "`diff \"${test_file}\" \"${test_file}.bak\"`" ]; then
-	    echo "Remove failed (maybe you added DISPLAY settings yourself) - please update your ${display_profile} by hand"
-       	else
-	    mv ${display_profile} ${display_profile}.old
-	    mv ${display_profile}.bak ${display_profile}
-	    echo "Removed"
-	fi
-	exit
-	rm ${test_file} ${test_file}.bak
-    fi
 }
 
 function configure_matlab {
@@ -250,8 +264,11 @@ function patch_environment {
 	    source_cmd="source"
 	    ;;	    
 	tcsh )
-	    my_profile=".cshrc .tcshrc"
+	    my_profile=".tcshrc .cshrc"
 	    source_cmd="source"
+	    if [ -f "${my_home}/.cshrc" -a -f "${my_home}/.tcshrc" ]; then
+		echo "Warning you have both a .cshrc and .tcshrc - the .cshrc will never be processed!"
+	    fi
 	    ;;
 	* )
 	    my_profile="-UNKNOWN-"
@@ -264,6 +281,8 @@ function patch_environment {
 set FSLDIR and modify the PATH environment variable yourself."
 	    return 1
 	fi
+	process_shell="-NO-"
+	process_terminal='-YES-'
 	if [ -f ${my_home}/${profile} ]; then
 	    if [ `is_csh ${my_home}/${profile}` ]; then
 		search_string="setenv FSLDIR ${install_location}/fsl\$"
@@ -283,40 +302,26 @@ set FSLDIR and modify the PATH environment variable yourself."
 		    fi
 		fi
 	    else
-		echo "Adding FSL configuration to '${profile}'..."
-		add_fsldir ${install_location}/fsl ${my_home}/${profile}
-		if [ $? -eq 0 ]; then
-		    modified_shell=${profile}
-		fi
+		process_shell='-YES-'
 	    fi
 	else
-	    if [ "Z${my_shell}" = 'Ztcsh' -a "Z${profile}" = 'Z.cshrc' ]; then
-		# Special case, skip the .cshrc and create a .tcshrc
-		echo ""
+	    if [ "Z${my_shell}" = 'Ztcsh' -a "Z${profile}" = 'Z.tcshrc' ]; then
+		# Special case, skip the .tcshrc and create a .cshrc
+		process_terminal='-NO-'
 	    else
-		echo "Creating '${profile}' and adding FSL configuration..."
-		add_fsldir ${install_location}/fsl ${my_home}/${profile}
-		if [ $? -eq 0 ]; then
-		    modified_shell=${profile}
-		fi
+		process_shell="-YES-"
 	    fi
 	fi
-	if [ "Z${setup_terminal}" = 'Z-YES-' ]; then
-	    if [ "Z${my_shell}" = 'Ztcsh' -a "Z${profile}" = 'Z.cshrc' ]; then
-		# Special case, skip the .cshrc and create a .tcshrc
-		echo ''
-	    else
-	        # Setup the Apple Terminal.app
-		echo "Setting up Apple terminal..."
-		patch_for_terminal ${my_home}/${profile}
+	if [ "Z${process_shell}" = 'Z-YES-' ]; then
+	    echo "Modifying '${profile}' for FSL..."
+	    add_fsldir ${install_location}/fsl ${my_home}/${profile}
+	    if [ $? -eq 0 ]; then
+		modified_shell=${profile}
 	    fi
-	elif [ -n "`uname -s | grep Darwin`" -a -n "`uname -r | grep '^9.'`" ]; then
-	    if [ -f ${my_home}/${profile} ]; then
-		if [ -n "`grep 'DISPLAY' ${my_home}/${profile}`" ]; then
-		    echo "You are running Mac OS X 10.5 and have DISPLAY configured in your ${profile} file."
-		    remove_display ${my_home}/${profile}
-		fi
-	    fi
+	fi
+	if [ "Z${setup_terminal}" = 'Z-YES-' -a "Z${process_terminal}" = 'Z-YES-' ]; then
+	    # Setup the Apple Terminal.app
+	    patch_for_terminal ${my_home}/${profile}
 	fi
     done
     if [ -n "`uname -s | grep Darwin`" ]; then
@@ -407,9 +412,7 @@ install_location='-NONE-'
 default_location='/usr/local'
 is_patch='-NO-'
 
-if [ "X${platform}" = "XDarwin" -a "X${darwin_release}" != "X9" ]; then
-    # Mac OS X 10.5 doesn't need the DISPLAY environment setting and even launches X11
-    # on demand
+if [ "X${platform}" = "XDarwin" ]; then
     setup_terminal='-YES-'
     if [ `x11_not_installed` ]; then
 	echo "Warning: X11 is not installed, no GUIs will function"
