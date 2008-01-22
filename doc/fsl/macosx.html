@@ -39,7 +39,7 @@ Thanks to Robert Coghill for sponsoring the Apple port.
 <hr /><a id="autoinst"></a><h2>FSL Install Script</h2>
 <p>An automated installer, <a href="fsl_installer.sh">fsl_installer.sh</a> is available to carry out the installation. In addition it will install FSLView into /Applications, automatically configure your environment to enable you to run FSL and (on Mac OS X 10.4) will configure the Apple Terminal application to allow the launching of X11 applications from it. Finally, if you use <i>Matlab</i> it will configure your <i>startup.m</i> file to allow you to use the FSL Matlab functions.
 </p>
-<ul><li><a href="fsl_installer.sh">fsl_installer.sh</a> - Version 1.0.2 05/11/2007</li></ul>
+<ul><li><a href="fsl_installer.sh">fsl_installer.sh</a> - Version 1.0.5 17/1/2008</li></ul>
 <h3>Running the installer</h3>
 <p>
 Once you have downloaded the installer, open a <i>Terminal</i> (look in the <i>Utilities</i> folder in <i>Applications</i>), change to the folder containing the downloaded file (for example if you downloaded to your Desktop):</p>
@@ -147,21 +147,22 @@ source ${FSLDIR}/etc/fslconf/fsl.csh
 setenv PATH ${FSLDIR}/bin:${PATH}</pre>
 	<p>For Mac OS X 10.4 and earlier (<b>NOT</b> Mac OS X 10.5), also include the following:</p>
 	<pre>
-if ( "X$DISPLAY" == "X" &amp;&amp; "X$TERM_PROGRAM" == "XApple_Terminal" )  then
-  set X11_FOLDER=/tmp/.X11-unix
-  set currentUser=`id -u`
-  set userX11folder=`find $X11_FOLDER -name 'X*' -user $currentUser -print 2>&amp;1 | tail -n 1`
-  if ( "X$userX11folder" != "X" ) then
-    set displaynumber=`basename ${userX11folder} | grep -o '[[:digit:]]\+'`
-    if ( "X$displaynumber" != "X" ) then
-      setenv DISPLAY localhost:${displaynumber}
-    else
-      echo "Warning: DISPLAY not configured as X11 is not running"
-    endif
-  else
-    echo "Warning: DISPLAY not configured as X11 is not running"
-  endif   
-endif</pre>
+if ( $?TERM_PROGRAM ) then
+ if ( "X$TERM_PROGRAM" == "XApple_Terminal" ) then; if ( ! $?DISPLAY ) then
+      set X11_FOLDER=/tmp/.X11-unix; set currentUser=`id -u`; set userX11folder=`find $X11_FOLDER -name 'X*' -user $currentUser -print 2>&amp;1 | tail -n 1`
+      if ( "X$userX11folder" != "X" ) then
+        set displaynumber=`basename ${userX11folder} | grep -o '[[:digit:]]\+'`
+        if ( "X$displaynumber" != "X" ) then
+          setenv DISPLAY localhost:${displaynumber}
+        else; echo "Warning: DISPLAY not configured as X11 is not running"
+        endif
+      else
+        echo "Warning: DISPLAY not configured as X11 is not running"
+      endif
+    endif 
+  endif
+endif
+	</pre>
       </li>
       <li> Change the line <i>setenv FSLDIR /usr/local/fsl</i> and replace <i>/usr/local/fsl</i> with the directory name of the place where you installed FSL.</li>
       </ul>

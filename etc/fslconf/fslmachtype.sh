@@ -21,10 +21,7 @@ case ${system_type} in
 	;;
 esac
 
-# Difficult to capture the error message if gcc isn't installed...
-PATH=${PATH}:$FSLDIR/etc/fslconf/
-export PATH
-gcc_version=`gcc -dumpversion`
+gcc_version=`gcc -dumpversion 2> /dev/null`
 if [ $? -eq 0 ]; then
     # GCC is installed
     gcc_version=`echo $gcc_version | $AWK -F . '{ printf "%s.%s", $1,$2 }'`
