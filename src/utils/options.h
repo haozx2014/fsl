@@ -71,6 +71,7 @@
 #include <iostream>
 #include <sstream>
 #include <iterator>
+#include <cstdlib>
 
 #define POSIX_SOURCE 1
 
