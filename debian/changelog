@@ -26,6 +26,7 @@ fsl (4.0.2-2) unstable; urgency=low
   * Removed empty directories from the fsl-doc package.
   * Placed fsl-doc package in section non-free/doc.
   * Bumped Standard version to 3.7.3 -- no changes necessary.
+  * Fixed some bugs for GCC 4.3 compatibility.
 
  -- Michael Hanke <michael.hanke@gmail.com>  Fri, 21 Dec 2007 10:56:09 +0100
 
