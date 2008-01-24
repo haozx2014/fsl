@@ -1,3 +1,12 @@
+fsl (4.0.3-1) unstable; urgency=low
+
+  * New upstream release. Some bugfixes in bet2 and possum.
+  * Removed all fftw-related stuff from the build-dependencies. Apparently it
+    is not necessary anymore. Thanks to Paul Brossier for reporting
+    (Closes: #460270).
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Wed, 23 Jan 2008 17:09:38 +0100
+
 fsl (4.0.2-3) unstable; urgency=low
 
   * Fixed some bugs for GCC 4.3 compatibility.

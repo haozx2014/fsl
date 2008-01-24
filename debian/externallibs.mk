@@ -13,10 +13,6 @@ FSLEXTINC=${FSLDIR}/extras/include
 LIB_CEPHES = ${FSLEXTLIB}
 INC_CEPHES = ${FSLEXTINC}/cephes
 
-# FFTW library
-LIB_FFTW = ${DEB_LIBPATH}
-INC_FFTW = ${DEB_INCPATH}
-
 # GD library
 LIB_GD = ${DEB_LIBPATH}
 INC_GD = ${DEB_INCPATH}
@@ -44,10 +40,6 @@ INC_NEWMAT = ${DEB_INCPATH}/newmat
 # ZLIB library
 LIB_ZLIB = ${DEB_LIBPATH}
 INC_ZLIB = ${DEB_INCPATH}
-
-# FFTW3 library
-LIB_FFTW3 = ${DEB_LIBPATH}
-INC_FFTW3 = ${DEB_INCPATH}
 
 # BOOST library
 #BOOSTDIR = /usr/local/boost
