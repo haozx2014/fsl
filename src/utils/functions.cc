@@ -39,14 +39,22 @@ namespace Utilities {
 	value_ = false;
 	unset_=false;
       }
-    return unset_;
+    return !unset_;
   }
 
-//   template<typename T> bool Option<T>::set_value(const string& s)
-//   {
-//     cout << "Bummer!" << endl;
-//     return false;
-//   }
+  template<> ostream& Option<bool>::print(ostream& os) const 
+  {
+    os << "# " << help_text() << endl;
+    if(set())
+      os << config_key().substr(0, config_key().find("=")); 
+
+    return os;
+  }
+  
+  ostream& operator<<(ostream& os, const BaseOption& o)
+  {
+    return o.print(os);
+  }
 
   bool string_to_T(bool& b, const string& s) {
     b = false;
@@ -118,14 +126,6 @@ namespace Utilities {
     return true;
   }
 
-  std::ostream& operator<<(std::ostream& os, const BaseOption& o)
-  {
-    os << "# " << o.help_text() << std::endl 
-       << o.config_key() << o.value_string();
-
-    return os;
-  }
-
 //   ostream& operator<<(ostream &os, const BaseOption& o) {
 //     string test=o.help_text();
 //     if ((test.length()>=1) && (test[0]=='~')) {
@@ -136,15 +136,6 @@ namespace Utilities {
 //     }
 //   }
 
-  ostream& operator<<(ostream& os, const Option<bool>& o)
-  {
-    if(o.set())
-      os << "# " << o.help_text() << endl
-	 << o.config_key().substr(0, o.config_key().find("=")); // Lop off any trailing "=" symbol
-
-    return os;
-  }
-  
   void BaseOption::usage(ostream& os) const {
     string test(help_text());
      if ((test.length()>=1) && (test[0]=='~')) {
