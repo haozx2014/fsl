@@ -6,7 +6,7 @@ debian/tmp/fsl.xpm usr/share/pixmaps
 etc usr/share/fsl
 lib/*.so usr/lib/fsl
 doc/images usr/share/fsl/doc
-extras/irtk/* usr/share/bin/DR
+extras/irtk/* usr/lib/fsl/DR
 
 debian/fsl.sh etc/fsl
 debian/desktop/*.desktop usr/share/applications
