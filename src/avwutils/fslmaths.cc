@@ -179,7 +179,7 @@ bool isNumber( const string& x )
 
 
 template <class T>
-int fmrib_main(int argc, char *argv[], short output_dt)
+int inputParser(int argc, char *argv[], short output_dt, bool forceOutputType=false)
 {
   volume4D<T> input_volume;
   volumeinfo vinfo;
@@ -921,6 +921,10 @@ if (!separatenoise)
      /******************************************************/
   } 
 
+  double max(input_volume.max()),min(input_volume.min());
+  if ( !forceOutputType && ((int)max-(int)min)==0 && (max-min)!=0 && (output_dt<DT_FLOAT))
+    output_dt=DT_FLOAT;
+
   if (dtype(input_volume)>=DT_FLOAT && output_dt < DT_FLOAT)
   {
     for(int t=0;t<input_volume.tsize();t++)           
@@ -943,34 +947,34 @@ int main(int argc,char *argv[])
     print_usage(string(argv[0]));
     return 1; 
   }
-  short original_dt;
-  if(string(argv[1]) =="-datatype" || string(argv[1])== "-dt")  original_dt = dtype(string(argv[3]));
-  else original_dt = dtype(string(argv[1]));
-  short output_dt=original_dt;
+  bool forceOutputType(false);
+  short inputType;
+  if(string(argv[1]) =="-datatype" || string(argv[1])== "-dt")  inputType = dtype(string(argv[3]));
+  else inputType = dtype(string(argv[1]));
+  short outputType=inputType;
   if(string(argv[argc-2])=="-output_datatype" || string(argv[argc-2])== "-odt") //output datatype
   {
-    if(string(argv[argc-1])=="char")        output_dt =  DT_UNSIGNED_CHAR;  
-    else if(string(argv[argc-1])=="short")  output_dt =  DT_SIGNED_SHORT;
-    else if(string(argv[argc-1])=="int")    output_dt =  DT_SIGNED_INT;
-    else if(string(argv[argc-1])=="float")  output_dt =  DT_FLOAT;
-    else if(string(argv[argc-1])=="double") output_dt =  DT_DOUBLE;
+    if(string(argv[argc-1])=="char")        outputType =  DT_UNSIGNED_CHAR;  
+    else if(string(argv[argc-1])=="short")  outputType =  DT_SIGNED_SHORT;
+    else if(string(argv[argc-1])=="int")    outputType =  DT_SIGNED_INT;
+    else if(string(argv[argc-1])=="float")  outputType =  DT_FLOAT;
+    else if(string(argv[argc-1])=="double") outputType =  DT_DOUBLE;
     else {cout << "Error: Unknown datatype \"" << argv[argc-1] << "\" - Possible datatypes are: char short int float double" << endl; return 1;}
     argc-=2;
+    forceOutputType=true;
   }
   if(string(argv[1])=="-datatype" || string(argv[1])== "-dt") //input datatype
   {
-    short input_dt=-1;
-     if(string(argv[2])=="input") input_dt=original_dt;
-     else if(string(argv[2])=="char" || input_dt == DT_UNSIGNED_CHAR)     return fmrib_main<char>(argc-2, argv+2,output_dt);
-     else if(string(argv[2])=="short" || input_dt == DT_SIGNED_SHORT)return fmrib_main<short>(argc-2, argv+2,output_dt);
-     else if(string(argv[2])=="int" || input_dt == DT_SIGNED_INT)    return fmrib_main<int>(argc-2, argv+2,output_dt);
-     else if(string(argv[2])=="float" || input_dt == DT_FLOAT)   return fmrib_main<float>(argc-2, argv+2,output_dt); 
-     else if(string(argv[2])=="double" || input_dt == DT_DOUBLE) return fmrib_main<double>(argc-2, argv+2,output_dt); 
-     else {cout << "Error: Unknown datatype \"" << argv[2] <<  "\" - Possible datatypes are: char short int float double input" << endl; return 1;}
+    if(string(argv[2])!="input") inputType=-1;
+    if(string(argv[2])=="char" || inputType == DT_UNSIGNED_CHAR)      return inputParser<char>(argc-2, argv+2,outputType,forceOutputType);
+    else if(string(argv[2])=="short" || inputType == DT_SIGNED_SHORT) return inputParser<short>(argc-2, argv+2,outputType,forceOutputType);
+    else if(string(argv[2])=="int"   || inputType == DT_SIGNED_INT)   return inputParser<int>(argc-2, argv+2,outputType,forceOutputType);
+    else if(string(argv[2])=="float" || inputType == DT_FLOAT)        return inputParser<float>(argc-2, argv+2,outputType,forceOutputType); 
+    else if(string(argv[2])=="double"|| inputType == DT_DOUBLE)       return inputParser<double>(argc-2, argv+2,outputType,forceOutputType); 
+    else if (inputType==-1)
+      { cout << "Error: Unknown datatype \"" << argv[2] <<  "\" - Possible datatypes are: char short int float double input" << endl; return 1;}
   }
-  else if (dtype(string(argv[1]))==DT_DOUBLE) return fmrib_main<double>(argc,argv,output_dt);
-  else return fmrib_main<float>(argc,argv,output_dt);
+  else if (dtype(string(argv[1]))==DT_DOUBLE) return inputParser<double>(argc,argv,outputType,forceOutputType);
+  else return inputParser<float>(argc,argv,outputType,forceOutputType);
 }
-
-
 

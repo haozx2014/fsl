@@ -151,7 +151,7 @@ FIRSTID=`${FSLDIR}/bin/fsl_sub -T 60 -N first -j $FLIRTID -t $COM`
 
 threshnop=`echo ${2} | sed 's/\.//g'`
 
-echo "${FSLDIR}/bin/fslmerge -t ${3}_all_th${threshnop}_first ${imscorr} ; ${FSLDIR}/bin/fslmaths ${3}_all_th${threshnop}_first -Tmean -mul 16 ${3}_all_th${threshnop}_first -odt int ; ${FSLDIR}/bin/fslmerge -t ${3}_all_th${threshnop}_first ${3}_all_th${threshnop}_first  ${imsfirst}" > ${COM}2
+echo "${FSLDIR}/bin/fslmerge -t ${3}_all_th${threshnop}_first ${imscorr} ; ${FSLDIR}/bin/fslmaths ${3}_all_th${threshnop}_first -Tmean -mul 17 ${3}_all_th${threshnop}_first -odt int ; ${FSLDIR}/bin/fslmerge -t ${3}_all_th${threshnop}_first ${3}_all_th${threshnop}_first  ${imsfirst}" > ${COM}2
 
 MERGEID=`fsl_sub -T 15 -N first_post -j $FIRSTID -t ${COM}2`
 
