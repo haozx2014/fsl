@@ -70,6 +70,7 @@
 
 if [ $# -lt 3 ] ; then
   echo "Usage: $0 <hdrfile> <xdim> <ydim> <zdim>       (in mm)"
+  echo "WARNING: This will set default s/q-form values for NIFTI files"
   exit 1;
 fi
 
@@ -87,6 +88,19 @@ xor=`$FSLDIR/bin/fslval $1 origin1`;
 yor=`$FSLDIR/bin/fslval $1 origin2`;
 zor=`$FSLDIR/bin/fslval $1 origin3`;
 tr=`$FSLDIR/bin/fslval $1 pixdim4`;
+
+if [ x$xor = x ] ; then
+xor=0
+fi 
+
+if [ x$yor = x ] ; then
+yor=0
+fi
+
+if [ x$zor = x ] ; then
+zor=0
+fi
+
 
 flag=`$FSLDIR/bin/fslhd $1 | cat -v | grep swapping | wc -w`;
 if [ $flag -eq 0 ] ; then
