@@ -1,3 +1,9 @@
+fsl (4.0.4-1) unstable; urgency=low
+
+  * New bugfix release.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Tue, 01 Apr 2008 08:16:06 +0200
+
 fsl (4.0.3-2) unstable; urgency=low
 
   * Applied upstream patch to fix some problems with boolean commandline
