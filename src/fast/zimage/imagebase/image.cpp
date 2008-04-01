@@ -196,7 +196,7 @@ template <class TPixel>
 void ZImage<TPixel>::operator *= (const ZImageBase& image)
 { 
 	if(image.PixFmt() == PixFmt()) operator *= ((const ZImage<TPixel>&)image);
-	if(isFloat(image))
+	else if(isFloat(image))
 	{
 		if(image.isColor()) operator *= ((const ZRGBFloatImage&)image);
 		else 
@@ -213,7 +213,7 @@ template <class TPixel>
 void ZImage<TPixel>::operator /= (const ZImageBase& image)
 { 
 	if(image.PixFmt() == PixFmt()) operator /= ((const ZImage<TPixel>&)image);
-	if(isFloat(image))
+	else if(isFloat(image))
 	{
 		if(image.isColor()) operator /= ((const ZRGBFloatImage&)image);
 		else 

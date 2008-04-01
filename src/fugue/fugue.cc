@@ -860,6 +860,7 @@ int do_unwarping()
   // regularise the pixshift map if required
   if (verbose.value()) { cout << "Regularising the fieldmap" << endl; }
   regularise_pixshift(pixshift,validmask,filledmask);
+  if (invol.tsize()<1) { invol.addvolume(fmap); }
   fmap = pixshift / fmap2pixshift_factor(invol[0],dwellval,unwarpdir.value());
 
   // pixshift is now fully filtered

@@ -316,6 +316,10 @@ int do_work(int argc, char* argv[])
   if (outname.unset()) {
     outname.set_value(inname1.value());
   }
+  string tempName=outname.value();
+  make_basename(tempName);
+  outname.set_value(tempName);
+
 
   ZMRISegmentation	mri;
   volume<float> inputimage;
@@ -448,6 +452,9 @@ int do_work_multi(int argc, char* argv[])
 	    if (outname.unset()) {
 	      outname.set_value(inname1.value());
 	    }
+	    string tempName=outname.value();
+	    make_basename(tempName);
+	    outname.set_value(tempName);
 	  }
 	  if(read_volume(images[c], argv[argc-c-1], inputinfo)!=0)
 	    {
@@ -457,7 +464,10 @@ int do_work_multi(int argc, char* argv[])
 	  else
 	    {
 	      if(images[c].min()<0.0)
-		 images[c]-=images[c].min();
+	      {
+		if(images[c].percentile(0.02)<0.0) images[c]-=images[c].min();
+		else images[c].threshold(0,images[c].max(),inclusive);
+	      }
 	    }
 	}
       width=images[0].xsize();
