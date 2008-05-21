@@ -1,3 +1,10 @@
+fsl (4.0.4-2) unstable; urgency=low
+
+  * Alternatively use octave3.0-headers (instead of just octave2.1-headers)
+    package to determine octave paths.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Wed, 21 May 2008 09:20:29 +0200
+
 fsl (4.0.4-1) unstable; urgency=low
 
   * New bugfix release.
