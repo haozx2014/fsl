@@ -180,10 +180,6 @@ void FilmGlsOptionsRes::parse_command_line(int argc, char** argv, ofstream& logf
       gopt->ms = atoi(argv[n+1]);
       logfile << argv[n+1] << " ";
       n+=2;
-    } else if ( arg == "-sp" ) {
-      gopt->susanpath = argv[n+1];      
-      logfile << argv[n+1] << " ";
-      n+=2;
     } else if ( arg == "-iters") {
       gopt->numiters = atoi(argv[n+1]);
       logfile << argv[n+1] << " ";

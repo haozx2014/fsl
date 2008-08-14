@@ -113,7 +113,7 @@ int main(int argc, char *argv[])
 //   v1.setinterpolationmethod(userinterpolation);
 //   volume<int> vtr(2*v1.xsize(),2*v1.ysize(),2*v1.zsize());
 //   vtr.setdims(v1.xdim(),v1.ydim(),v1.zdim());
-//   affine_transform(v1,vtr,Identity(4));
+//   affine_transform(v1,vtr,IdentityMatrix(4));
 
 //   save_volume(vtr,argv[2],vinfo);
 

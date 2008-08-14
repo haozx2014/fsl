@@ -315,7 +315,7 @@ ${FSLDIR}/bin/fslmerge -z ${OUT}_tmp $bottomlist $IN $toplist
 
 ${FSLDIR}/bin/bet2 ${OUT}_tmp $OUT $bet2opts
 
-for f in `imglob -oneperimage ${OUT}*` ; do
+for f in `imglob ${OUT}*` ; do
     ${FSLDIR}/bin/fslroi $f $f 0 $xdim 0 $ydim $npad $zdim
 done
 

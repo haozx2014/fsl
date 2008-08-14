@@ -170,12 +170,16 @@ int main(int argc,char *argv[])
     x = coordval.value(0);
     y = coordval.value(1);
     z = coordval.value(2);
+    ColumnVector v(4);
+    v << x << y << z << 1.0;
     if (usemm.value()) {
-      // convert from mm to voxels
-      x /= vin[0].xdim();
-      y /= vin[0].ydim();
-      z /= vin[0].zdim();
+      // convert from mm to newimage voxels
+      v = (vin[0].newimagevox2mm_mat()).i() * v;
+    } else {
+      // convert from nifti voxels (input) to newimage voxels (internal)
+      v = vin[0].niftivox2newimagevox_mat() * v;
     }
+    x = v(1);  y = v(2);  z = v(3);
     mask(MISCMATHS::round(x),MISCMATHS::round(y),MISCMATHS::round(z)) = 1.0;
   }
 
@@ -203,9 +207,12 @@ int main(int argc,char *argv[])
 	if (mask(x,y,z)>0.5) {
 	  num++;
 	  if (showall.value()) {
-	    meants(1,num) = x;
-	    meants(2,num) = y;
-	    meants(3,num) = z;
+	    ColumnVector v(4);
+	    v << x << y << z << 1.0;
+	    v = (vin[0].niftivox2newimagevox_mat()).i() * v;
+	    meants(1,num) = v(1);
+	    meants(2,num) = v(2);
+	    meants(3,num) = v(3);
 	    meants.SubMatrix(4,nt,num,num) = vin.voxelts(x,y,z);
 	  } else {
 	    meants += vin.voxelts(x,y,z);

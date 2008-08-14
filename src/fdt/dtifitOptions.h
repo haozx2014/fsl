@@ -75,7 +75,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "utils/options.h"
+#include "commonopts.h"
 //#include "newmatall.h"
+
 using namespace Utilities;
 
 namespace DTIFIT {
@@ -92,7 +94,9 @@ class dtifitOptions {
   Option<string> maskfile;
   Option<string> bvecsfile;
   Option<string> bvalsfile;
+  Option<string> cni; //confounds of no interest. 
   Option<bool> littlebit;
+  Option<bool> savetensor;
   Option<int> z_min;
   Option<int> z_max;
   Option<int> y_min;
@@ -141,8 +145,14 @@ class dtifitOptions {
    bvalsfile(string("-b,--bvals"), string("bvals"),
 	     string("b values file"),
 	     true, requires_argument), 
+   cni(string("--cni"), string(""),
+	     string("counfound regressors"),
+	     false, requires_argument), 
    littlebit(string("--littlebit"), false, 
 	     string("Only process small area of brain"), 
+	     false, no_argument),
+   savetensor(string("--save_tensor"), false, 
+	     string("Save the elements of the tensor"), 
 	     false, no_argument),
    z_min(string("-z,--zmin"), 0, 
 	 string("min z"), 
@@ -174,7 +184,9 @@ class dtifitOptions {
        options.add(maskfile);
        options.add(bvecsfile);
        options.add(bvalsfile);
+       options.add(cni);
        options.add(littlebit);
+       options.add(savetensor);
        options.add(z_min);
        options.add(z_max);
        options.add(y_min);

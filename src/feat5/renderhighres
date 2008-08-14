@@ -4,7 +4,7 @@
 #
 #   Stephen Smith and Mark Jenkinson, FMRIB Image Analysis Group
 #
-#   Copyright (C) 1999-2005 University of Oxford
+#   Copyright (C) 1999-2008 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -102,14 +102,28 @@ mkdir hr
 cd hr
 
 if [ $background != $space ] ; then
-    ${FSLDIR}/bin/flirt -in ../reg/$background -out background -ref ../reg/$space -applyxfm -init ../reg/${background}2${space}.mat -interp sinc -sincwidth 7 -sincwindow hanning
+    if [ `${FSLDIR}/bin/imtest ../reg/highres2standard_warp` = 1 ] ; then
+	if [ $background = standard ] ; then
+	    ${FSLDIR}/bin/invfeatreg ..
+	    ${FSLDIR}/bin/applywarp --ref=../reg/highres --in=../reg/standard --out=background --warp=../reg/highres2standard_warp_inv --interp=sinc
+	else
+	    ${FSLDIR}/bin/applywarp --ref=../reg/standard --in=../reg/highres --out=background --warp=../reg/highres2standard_warp --interp=sinc
+	fi
+    else
+	${FSLDIR}/bin/flirt -in ../reg/$background -out background -ref ../reg/$space -applyxfm -init ../reg/${background}2${space}.mat -interp sinc -sincwidth 7 -sincwindow hanning
+    fi
 else
     ${FSLDIR}/bin/imcp ../reg/$space background
 fi
 
-for f in `cd .. ; ${FSLDIR}/bin/imglob -oneperimage thresh_*.*` ; do
+for f in `cd .. ; ${FSLDIR}/bin/imglob thresh_*.*` ; do
     f=`${FSLDIR}/bin/remove_ext $f`
-    ${FSLDIR}/bin/flirt -in ../$f -out $f -ref ../reg/$space -applyxfm -init ../reg/example_func2${space}.mat -interp sinc -sincwidth 7 -sincwindow hanning
+
+    if [ $space = standard -a `${FSLDIR}/bin/imtest ../reg/highres2standard_warp` = 1 ] ; then
+	${FSLDIR}/bin/applywarp --ref=../reg/standard --in=../$f --out=$f --warp=../reg/highres2standard_warp --premat=../reg/example_func2highres.mat --interp=sinc
+    else
+	${FSLDIR}/bin/flirt -in ../$f -out $f -ref ../reg/$space -applyxfm -init ../reg/example_func2${space}.mat -interp sinc -sincwidth 7 -sincwindow hanning
+    fi
 
     if [ $autothresh = 1 ] ; then
 	minZ=`${FSLDIR}/bin/fslstats ../$f -l 0.01 -R | awk '{print $1}'`

@@ -2,7 +2,7 @@
 
     Adrian Groves and Michael Chappell, FMRIB Image Analysis Group
 
-    Copyright (C) 2007 University of Oxford  */
+    Copyright (C) 2007-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -89,10 +89,11 @@ ostream& operator<<(ostream& out, const VolumeInfo& info);
 
 int main(int argc, char** argv)
 {
+  bool gzLog = false;
   try
     {
       cout << "------------------\n";
-      cout << "Welcome to FABBER v1.0 (beta release)" << endl;
+      cout << "Welcome to FABBER v1.1 (beta release)" << endl;
 
       EasyOptions args(argc, argv);
 
@@ -118,8 +119,8 @@ int main(int argc, char** argv)
 
       // Diagnostic information: software versions
       // This only versions this file... should really use all.
-//      LOG_ERR("FABBER development revision: $Id: fabber.cc,v 1.8 2007/08/06 13:52:16 adriang Exp $\n");
-      LOG_ERR("FABBER release v1.0\n");
+//      LOG_ERR("FABBER development revision: $Id: fabber.cc,v 1.18 2008/08/01 23:30:54 adriang Exp $\n");
+      LOG_ERR("FABBER release v1.1 (beta)\n");
       LOG << "Command line and effective options:\n" << args.Read("") << endl;
       LOG << "--output='" << EasyLog::GetOutputDirectory() << "'" << endl;
       LOG << args << "--------------------" << endl;
@@ -133,6 +134,7 @@ int main(int argc, char** argv)
         { Tracer_Plus::setinstantstackon(); } // instant stack isn't used?
       if (args.ReadBool("debug-running-stack")) 
         { Tracer_Plus::setrunningstackon(); }
+      gzLog = args.ReadBool("gzip-log");
 
       Tracer_Plus tr("FABBER main (outer)");
       // can't start it before this or it segfaults if an exception is thown with --debug-timings on.
@@ -173,34 +175,44 @@ int main(int argc, char** argv)
 		<< EasyLog::GetOutputDirectory() << "/timings.html" << endl);
       }
 
-      cout << "Logfile was: " << EasyLog::GetOutputDirectory() << "/logfile" << endl;
-      EasyLog::StopLog();
+      Warning::ReissueAll();
+
+      cout << "Logfile was: " << EasyLog::GetOutputDirectory() << (gzLog ? "/logfile.gz" : "/logfile") << endl;
+      EasyLog::StopLog(gzLog);
 
       return 0;
     }
   catch (const Invalid_option& e)
     {
+      Warning::ReissueAll();
       LOG_ERR_SAFE("Invalid_option exception caught in fabber:\n  " << Exception::what() << endl);
       Usage(Exception::what());
     }
   catch (const exception& e)
     {
+      Warning::ReissueAll();
       LOG_ERR_SAFE("STL exception caught in fabber:\n  " << e.what() << endl);
     }
   catch (Exception)
     {
+      Warning::ReissueAll();
       LOG_ERR_SAFE("NEWMAT exception caught in fabber:\n  " 
 	      << Exception::what() << endl);
     }
   catch (...)
     {
+      Warning::ReissueAll();
       LOG_ERR_SAFE("Some other exception caught in fabber!" << endl);
     }
   
   if (EasyLog::LogStarted())
     {
+      // Only gzip the logfile if we exited normally.
       cout << "Logfile was: " << EasyLog::GetOutputDirectory() << "/logfile" << endl;
       EasyLog::StopLog();
+
+      //cout << "Logfile was: " << EasyLog::GetOutputDirectory() << (gzLog ? "/logfile.gz" : "/logfile") << endl;
+      //EasyLog::StopLog(gzLog);
     }
 
   return 1;
@@ -232,6 +244,10 @@ void Usage(const string& errorString)
      << "  [--save-model-fit] and [--save-residuals] : Save model fit/residuals files\n"
      << "  [--print-free-energy] : Calculate & dump F to the logfile after each update\n"
      << "  [--allow-bad-voxels] : Skip to next voxel if a numerical exception occurs (don't stop)\n"
+     << "For spatial priors (using --method=spatialvb):\n"
+     << "  --param-spatial-priors=<choice_of_prior_forms>: Specify a type of prior to use for each"
+     << " forward model parameter.  One letter per parameter.  S=spatial, N=nonspatial, D=Gaussian-process-based combined prior\n"
+     << "  --fwd-initial-prior=<prior_vest_file>: specify the nonspatial prior distributions on the forward model parameters.  The vest file is the covariance matrix supplemented by the prior means; see the documentation for details.  Very important if 'D' prior is used.\n"
      << endl;
 
 

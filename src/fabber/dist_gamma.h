@@ -2,7 +2,7 @@
 
     Adrian Groves, FMRIB Image Analysis Group
 
-    Copyright (C) 2007 University of Oxford  */
+    Copyright (C) 2007-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -78,6 +78,7 @@ public:
   double CalcMean() const { return b*c; }
   double CalcVariance() const { return b*b*c; }
 //  double CalcLogMoment() { return digamma(b) + log(c); }  // where can I get digamma from?
+  void SetMeanVariance( double m, double v ) { b = v/m; c = m/b; }
   void Dump(const string indent = "") const
     { LOG << indent << "Noise stdev == " << 1.0/sqrt(b*c)
           << " (b==" << b << ", c==" << c << ")" << endl; } 

@@ -1,11 +1,11 @@
 /*  MELODIC - Multivariate exploratory linear optimized decomposition into 
     independent components
-    melodat.get_bg()
+   
     melreport.cc - report generation
 
     Christian F. Beckmann, FMRIB Image Analysis Group
     
-    Copyright (C) 1999-2007 University of Oxford */
+    Copyright (C) 1999-2008 University of Oxford */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -110,9 +110,9 @@ namespace Melodic{
 			}
       {//output IC stats
     		if(ICstats.Storage()>0&&ICstats.Nrows()>=cnum){
-	  			IChtml << fixed << setprecision(2) << ICstats(cnum,1) << " % of explained variance";
+	  			IChtml << fixed << setprecision(2) << std::abs(ICstats(cnum,1)) << " % of explained variance";
 	  			if(ICstats.Ncols()>1)
-	    			IChtml << "; &nbsp; &nbsp; " << ICstats(cnum,2) << " % of total variance";
+	    			IChtml << "; &nbsp; &nbsp; " << std::abs(ICstats(cnum,2)) << " % of total variance";
 					if(ICstats.Ncols()>2&&opts.addsigchng.value()){
 	    			IChtml << "<p>" <<endl;
 	    			IChtml << " &nbsp; &nbsp; " << ICstats(cnum,3) << " % signal change (pos peak voxel); &nbsp; &nbsp;" << ICstats(cnum,4) << "% signal change (peak neg. voxel)" << endl ;
@@ -221,7 +221,7 @@ namespace Melodic{
 			if(melodat.get_numfiles()>1 && melodat.explained_var.Storage()>0 
 				&& melodat.explained_var.Ncols()>=cnum && opts.varvals.value())
 				IChtml << "Rank-1 approximation of individual time courses explains " 
-				<< melodat.explained_var(cnum) << "% of variance.<p>" << endl;
+				<< std::abs(melodat.explained_var(cnum)) << "% of variance.<p>" << endl;
 			}//time series plot
 
 	 		if(!opts.pspec.value())
@@ -349,7 +349,7 @@ namespace Melodic{
 
 					newplot.boxplot((Matrix)smode.Column(1),
 			    	report.appendDir(string("b")+num2str(cnum)+".png"),
-			      string("Subject/Session mode"));
+			        string("Subject/Session mode"));
 	      	write_ascii_matrix(report.appendDir(string("s")
 		 				+num2str(cnum)+".txt"),  smode);
 	      	IChtml << "<A HREF=\"" << string("s")
@@ -849,16 +849,18 @@ namespace Melodic{
 			<< "session/subject domain (" << melodat.get_numfiles() 
 			<< " input files). Components have been sorted in decreasing order of "
 			<< " the median response per component. <br><br>";
+			
+		outMsize("Smode.at(0)", melodat.get_Smodes().at(0));
 		Matrix allmodes = melodat.get_Smodes().at(0);
 		for(int ctr = 1; ctr < (int)melodat.get_Smodes().size();++ctr)
 			allmodes |= melodat.get_Smodes().at(ctr);
-		
+	
+		outMsize("allmodes", allmodes);
 		newplot.add_xlabel("Component No.");
 		newplot.add_ylabel("");
 		newplot.set_xysize(100+30*allmodes.Ncols(),300);
 		newplot.boxplot(allmodes,report.appendDir(string("bp_Smodes.png")),
-    string("Subject/Session modes"));
-
-  	report << "<img BORDER=0 SRC=\"bp_Smodes.png\"><p>" << endl;
+  			string("Subject/Session modes"));
+  		report << "<img BORDER=0 SRC=\"bp_Smodes.png\"><p>" << endl;
 	}
 }

@@ -70,17 +70,14 @@
 #include <fstream>
 #define WANT_STREAM
 #define WANT_MATH
-#include <fslio.h>
 
-#include "newmatap.h"
-#include "newmatio.h"
-
+#include "newimage/newimageall.h"
 #include "miscmaths/f2z.h"
-#include "miscmaths/volume.h"
 #include <string>
 
 using namespace NEWMAT;
 using namespace MISCMATHS;
+using namespace NEWIMAGE;
 
 // the real defaults are provided in the function parse_command_line
 
@@ -89,7 +86,6 @@ public:
   string fsfname;
   string doffile1;
   string doffile2;
-
   string zscoresfname;
 public:
   globaloptions();
@@ -178,43 +174,35 @@ void parse_command_line(int argc, char* argv[])
 
 int main(int argc,char *argv[])
 { 
+
   try{
     parse_command_line(argc, argv);
     
-    Volume fs;
-    fs.read(globalopts.fsfname.c_str());
+    volume4D<float> input;
+    volumeinfo vinfo;
+    ColumnVector fs,dof1,dof2;
 
+    read_volume4D(input,globalopts.fsfname.c_str());
+    fs=input.matrix().AsColumn();
     int numTS = fs.Nrows();
     cerr << numTS << endl;
 
+    if(FslFileExists(globalopts.doffile1.c_str())) read_volume4D(input,globalopts.doffile1);
+    else input = atof(globalopts.doffile1.c_str());
+    dof1=input.matrix().AsColumn();
+    if(FslFileExists(globalopts.doffile2.c_str())) read_volume4D(input,globalopts.doffile2);
+    else input = atof(globalopts.doffile2.c_str());
+    dof2=input.matrix().AsColumn();
 
-    Volume dof1, dof2; 
-
-    if(FslFileExists(globalopts.doffile1.c_str())){  //dof1 is avw file
-      dof1.read(globalopts.doffile1); 
-    }
-    else {
-      dof1 = fs;
-      dof1 = atof(globalopts.doffile1.c_str());
-    }
-
- if(FslFileExists(globalopts.doffile2.c_str())){     //dof2 is avw file
-      dof2.read(globalopts.doffile2); 
-    }
-    else {
-      dof2 = fs;
-      dof2 = atof(globalopts.doffile2.c_str());
-    }
-
-    Volume zs(numTS);
+    ColumnVector zs(numTS);
     F2z::ComputeFStats(fs, dof1, dof2, zs);
-   
-    VolumeInfo volinfo = fs.getInfo();
-    volinfo.intent_code = NIFTI_INTENT_ZSCORE;
-    volinfo.intent_p1 = 0.0;    
-    zs.setInfo(volinfo);
-    zs.writeAsFloat(globalopts.zscoresfname.c_str());
+
+    input.setmatrix(zs.AsRow());
+    FslSetCalMinMax(&vinfo,input.min(),input.max());
+    input.set_intent(NIFTI_INTENT_ZSCORE,0,0,0);
+    save_volume4D(input,globalopts.zscoresfname,vinfo);
   }
+
   catch(Exception p_excp) 
     {
       cerr << p_excp.what() << endl;

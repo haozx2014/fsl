@@ -283,11 +283,11 @@ mask.destroy();
 if(1) // always done unless the above uncommented and used instead of this test
   {
     char segtype[100];
-    if (seg2) sprintf(segtype,"-c 2"); else segtype[0]=0;
+    if (seg2) sprintf(segtype,"-n 2"); else segtype[0]=0;
     cout << "saving image 1 to disk prior to segmentation" << endl;
     save_volume(in1,argv1+"_halfwayto_"+argv2+"_brain");
     in1.destroy();
-    sprintf(thestring,"%s/bin/fast1 %s %s %s_halfwayto_%s_brain > %s_halfwayto_%s_brain.vol 2>&1",
+    sprintf(thestring,"%s/bin/fast %s %s %s_halfwayto_%s_brain > %s_halfwayto_%s_brain.vol 2>&1",
 	    fsldir,segtype,segoptions,argv[1],argv[2],argv[1],argv[2]);
     cout << thestring << endl;
     system(thestring);

@@ -132,6 +132,7 @@ namespace NEWIMAGE {
     mutable int StandardSpaceTypeCode;
     mutable int RigidBodyTypeCode;
 
+
     mutable int IntentCode;
     mutable float IntentParam1;
     mutable float IntentParam2;
@@ -143,7 +144,7 @@ namespace NEWIMAGE {
     mutable bool activeROI;
     mutable std::vector<int> Limits;
 
-    mutable long int no_voxels;
+    mutable unsigned long int no_voxels;
     lazy<minmaxstuff<T>, volume<T> > minmax;
     lazy<std::vector<double>, volume<T> > sums;
     lazy<std::vector<T>, volume<T> > robustlimits;
@@ -190,6 +191,24 @@ namespace NEWIMAGE {
     void copybasicproperties(const volume<S>& source, volume<D>& dest);
 
     void basic_swapdimensions(int dim1, int dim2, int dim3, bool keepLRorder);
+    lazy<ColumnVector, volume<T> > lazycog;  // in voxel coordinates
+
+#ifdef EXPOSE_TREACHEROUS
+  public:
+#endif 
+    bool RadiologicalFile;
+    Matrix sampling_mat() const;
+    void set_sform(int sform_code, const Matrix& snewmat) const;
+    void set_qform(int qform_code, const Matrix& qnewmat) const;
+    int  left_right_order() const; // see also newimagevox2mm_mat()
+    void swapLRorder();
+    void setLRorder(int LRorder);
+    void makeradiological();
+    void makeneurological();
+    Matrix sform_mat() const { return StandardSpaceCoordMat; }
+    int sform_code() const { return StandardSpaceTypeCode; }
+    Matrix qform_mat() const { return RigidBodyCoordMat; }
+    int qform_code() const { return RigidBodyTypeCode; }
 
   public:
 
@@ -220,7 +239,7 @@ namespace NEWIMAGE {
     void setzdim(float z) { Zdim = fabs(z); }
     void setdims(float x, float y, float z) 
       { setxdim(x); setydim(y); setzdim(z); }
-    int nvoxels() const { return no_voxels; }
+    unsigned long int nvoxels() const { return no_voxels; }
 
     // ROI FUNCTIONS
     inline const std::vector<int>& limits() const { return Limits; }
@@ -249,21 +268,11 @@ namespace NEWIMAGE {
     void insert_vec(const ColumnVector& pvec);
 
     // SECONDARY PROPERTIES
-    // maps voxel coordinates to mm (consistent with FSLView!)
-    // NB: do not try to determine left-right order from this matrix - instead
-    //     use left_right_order()
-    Matrix vox2mm_mat() const;
-    short vox2mm_code() const;
-    // sampling_mat should now be avoided - use vox2mm_mat instead
-    Matrix sampling_mat() const;
-    // the following give direct nifti interface, but should generally
-    //   be avoided - use vox2mm_mat instead
-    Matrix sform_mat() const { return StandardSpaceCoordMat; }
-    int sform_code() const { return StandardSpaceTypeCode; }
-    void set_sform(int sform_code, const Matrix& snewmat) const;
-    Matrix qform_mat() const { return RigidBodyCoordMat; }
-    int qform_code() const { return RigidBodyTypeCode; }
-    void set_qform(int qform_code, const Matrix& qnewmat) const;
+    // maps *NEWIMAGE* voxel coordinates to mm (consistent with FSLView mm)
+    // NB: do not try to determine left-right order from this matrix
+    // sampling_mat should now be avoided - use newimagevox2mm_mat instead
+    Matrix newimagevox2mm_mat() const;
+    Matrix niftivox2newimagevox_mat() const;
 
     int intent_code() const { return IntentCode; }
     float intent_param(int n) const;
@@ -296,7 +305,7 @@ namespace NEWIMAGE {
     T histmax() const { return HISTmax; }
 
     lazy<T, volume<T> > backgroundval;
-    lazy<ColumnVector, volume<T> > cog;
+    ColumnVector cog(const string& coordtype="voxel") const;
 
     // SECONDARY PROPERTIES (using mask)
     T min(const volume<T>& mask) const;
@@ -431,6 +440,8 @@ namespace NEWIMAGE {
     friend volume<S> operator*(S num, const volume<S>& vol);
     template <class S>
     friend volume<S> operator/(S num, const volume<S>& vol);
+    template <class S>
+    friend volume<S> operator-(const volume<S>& vol);
 
     // GENERAL MANIPULATION
 
@@ -443,11 +454,6 @@ namespace NEWIMAGE {
     void swapdimensions(const string& newx, const string& newy, const string& newz);
     Matrix swapmat(int dim1, int dim2, int dim3) const;
     Matrix swapmat(const string& newx, const string& newy, const string& newz) const;
-    int  left_right_order() const; // see also vox2mm_mat()
-    void swapLRorder();
-    void setLRorder(int LRorder);
-    void makeradiological();
-    void makeneurological();
 
      
     // CONVERSION FUNCTIONS
@@ -469,11 +475,13 @@ namespace NEWIMAGE {
   void convertbuffer(const S* source, D* dest, int len, float slope, float intercept);
 
   template <class S1, class S2>
-  bool samesize(const volume<S1>& vol1, const volume<S2>& vol2);
+  bool samesize(const volume<S1>& vol1, const volume<S2>& vol2, bool checkdim=false);
 
   template <class S1, class S2>
-  bool sameabssize(const volume<S1>& vol1, const volume<S2>& vol2);
+  bool sameabssize(const volume<S1>& vol1, const volume<S2>& vol2, bool checkdim=false);
 
+  template <class S1, class S2>
+  bool samedim(const volume<S1>& vol1, const volume<S2>& vol2);
 
 
   //////////////////////// VOLUME4D CLASS /////////////////////////////
@@ -517,6 +525,22 @@ namespace NEWIMAGE {
     template <class S, class D> friend
     void copybasicproperties(const volume4D<S>& source, volume4D<D>& dest);
 
+#ifdef EXPOSE_TREACHEROUS
+  public:
+#endif 
+    Matrix sampling_mat() const;
+    void set_sform(int sform_code, const Matrix& snewmat) const;
+    void set_qform(int qform_code, const Matrix& qnewmat) const;
+    int  left_right_order() const;
+    void swapLRorder();
+    void setLRorder(int LRorder);
+    void makeradiological();
+    void makeneurological();
+    Matrix sform_mat() const;
+    int sform_code() const;
+    Matrix qform_mat() const;
+    int qform_code() const;
+
   public:
     // CONSTRUCTORS AND DESTRUCTORS (including copy, = and reinitialize)
     volume4D();
@@ -525,6 +549,7 @@ namespace NEWIMAGE {
     ~volume4D();
     void destroy();
     const volume4D<T>& operator=(const volume4D<T>& source); 
+    const volume4D<T>& operator=(const volume<T>& source); 
     int reinitialize(const volume4D<T>& source);
     int reinitialize(int xsize, int ysize, int zsize, int tsize, T *d=0);
     int copyproperties(const volume4D<T>& source);
@@ -534,9 +559,14 @@ namespace NEWIMAGE {
     // DATA ACCESS
     inline bool in_bounds(int x, int y, int z) const
       { return ( (vols.size()>0) && vols[0].in_bounds(x,y,z) ); }
+    bool in_bounds(float x, float y, float z) const
+      { return ( (vols.size()>0) && vols[0].in_bounds(x,y,z) ); }
     inline bool in_bounds(int t) const
       { return ( (t>=0) && (t<this->tsize()) ); }
     inline bool in_bounds(int x, int y, int z, int t) const
+      { return ( (t>=0) && (t<this->tsize()) && 
+		 vols[Limits[3]].in_bounds(x,y,z) ); }
+    bool in_bounds(float x, float y, float z, int t) const
       { return ( (t>=0) && (t<this->tsize()) && 
 		 vols[Limits[3]].in_bounds(x,y,z) ); }
 
@@ -606,7 +636,7 @@ namespace NEWIMAGE {
     void setTR(float tr)   { settdim(tr); }
     void setdims(float x, float y, float z, float tr) 
       { setxdim(x); setydim(y); setzdim(z); settdim(tr); }
-    int nvoxels() const 
+    unsigned long int nvoxels() const 
       { if (vols.size()>0) return vols[0].nvoxels(); else return 0; }
     int ntimepoints() const { return this->tsize(); }
 
@@ -657,21 +687,11 @@ namespace NEWIMAGE {
 
 
     // SECONDARY PROPERTIES
-    // maps voxel coordinates to mm (consistent with FSLView!)
-    // NB: do not try to determine left-right order from this matrix - instead
-    //     use left_right_order()
-    Matrix vox2mm_mat() const;
-    short vox2mm_code() const;
-    // sampling_mat should now be avoided - use vox2mm_mat instead
-    Matrix sampling_mat() const;
-    // the following give direct nifti interface, but should generally
-    //   be avoided - use vox2mm_mat instead
-    Matrix sform_mat() const;
-    int sform_code() const;
-    void set_sform(int sform_code, const Matrix& snewmat) const;
-    Matrix qform_mat() const;
-    int qform_code() const;
-    void set_qform(int qform_code, const Matrix& qnewmat) const;
+    // maps *NEWIMAGE* voxel coordinates to mm (consistent with FSLView mm)
+    // NB: do not try to determine left-right order from this matrix
+    // sampling_mat should now be avoided - use newimagevox2mm_mat instead
+    Matrix newimagevox2mm_mat() const;
+    Matrix niftivox2newimagevox_mat() const;
     
     int intent_code() const;
     float intent_param(int n) const;
@@ -757,11 +777,7 @@ namespace NEWIMAGE {
     void swapdimensions(const string& newx, const string& newy, const string& newz);
     Matrix swapmat(int dim1, int dim2, int dim3) const;
     Matrix swapmat(const string& newx, const string& newy, const string& newz) const;
-    int  left_right_order() const;
-    void swapLRorder();
-    void setLRorder(int LRorder);
-    void makeradiological();
-    void makeneurological();
+
 
     // ARITHMETIC FUNCTIONS
     T operator=(T val); 
@@ -800,6 +816,8 @@ namespace NEWIMAGE {
     template <class S>
     friend volume4D<S> operator/(S num, const volume4D<S>& vol);
     template <class S>
+    friend volume4D<S> operator-(const volume4D<S>& vol);
+    template <class S>
     friend volume4D<S> operator+(const volume<S>& v1, const volume4D<S>& v2);
     template <class S>
     friend volume4D<S> operator-(const volume<S>& v1, const volume4D<S>& v2);
@@ -815,10 +833,13 @@ namespace NEWIMAGE {
   // HELPER FUNCTIONS
 
   template <class S1, class S2>
-  bool samesize(const volume4D<S1>& vol1, const volume4D<S2>& vol2);
+  bool samesize(const volume4D<S1>& vol1, const volume4D<S2>& vol2, bool checkdim=false);
 
   template <class S1, class S2>
-  bool sameabssize(const volume4D<S1>& vol1, const volume4D<S2>& vol2);
+  bool sameabssize(const volume4D<S1>& vol1, const volume4D<S2>& vol2, bool checkdim=false);
+
+  template <class S1, class S2>
+  bool samedim(const volume4D<S1>& vol1, const volume4D<S2>& vol2);
 
 ////////////////////////////////////////////////////////////////////////
 ///////////////////////// DEBUGGING FUNCTIONS //////////////////////////
@@ -1001,37 +1022,56 @@ namespace NEWIMAGE {
 
 
   template <class S1, class S2>
-  bool samesize(const volume<S1>& vol1, const volume<S2>& vol2)
+  bool samesize(const volume<S1>& vol1, const volume<S2>& vol2, bool checkdim)
   {  
-    return ( ( (vol1.maxx()-vol1.minx())==(vol2.maxx()-vol2.minx()) ) && 
-	     ( (vol1.maxy()-vol1.miny())==(vol2.maxy()-vol2.miny()) ) && 
-	     ( (vol1.maxz()-vol1.minz())==(vol2.maxz()-vol2.minz()) ) ); 
+    bool same = ( ( (vol1.maxx()-vol1.minx())==(vol2.maxx()-vol2.minx()) ) && 
+	          ( (vol1.maxy()-vol1.miny())==(vol2.maxy()-vol2.miny()) ) && 
+	          ( (vol1.maxz()-vol1.minz())==(vol2.maxz()-vol2.minz()) ) );
+    if (checkdim) same = same && samedim(vol1,vol2);
+    return(same); 
   }
   
   template <class S1, class S2>
-  bool samesize(const volume4D<S1>& vol1, const volume4D<S2>& vol2)
+  bool samesize(const volume4D<S1>& vol1, const volume4D<S2>& vol2, bool checkdim)
   {  
-    return ( ( (vol1.maxt()-vol1.mint())==(vol2.maxt()-vol2.mint()) ) && 
-	     ((vol1.tsize()<=0) || (vol2.tsize()<=0) 
-	        || samesize(vol1[0],vol2[0]) ) );
+    bool same = ( ( (vol1.maxt()-vol1.mint())==(vol2.maxt()-vol2.mint()) ) && 
+	          ( (vol1.tsize()<=0) || (vol2.tsize()<=0) || samesize(vol1[0],vol2[0]) ) );
+    if (checkdim) same = same && samedim(vol1,vol2);
+    return(same);
   }
   
   template <class S1, class S2>
-  bool sameabssize(const volume<S1>& vol1, const volume<S2>& vol2)
+  bool sameabssize(const volume<S1>& vol1, const volume<S2>& vol2, bool checkdim)
   {  
-    return ( ( (vol1.xsize())==(vol2.xsize()) ) && 
-	     ( (vol1.ysize())==(vol2.ysize()) ) && 
-	     ( (vol1.zsize())==(vol2.zsize()) ) ); 
+    bool same = ( ( (vol1.xsize())==(vol2.xsize()) ) && 
+	          ( (vol1.ysize())==(vol2.ysize()) ) && 
+	          ( (vol1.zsize())==(vol2.zsize()) ) );
+    if (checkdim) same = same && samedim(vol1,vol2);
+    return(same); 
   }
   
   template <class S1, class S2>
-  bool sameabssize(const volume4D<S1>& vol1, const volume4D<S2>& vol2)
+  bool sameabssize(const volume4D<S1>& vol1, const volume4D<S2>& vol2, bool checkdim)
   {  
-    return ( ( (vol1.tsize())==(vol2.tsize()) ) && 
-	     ((vol1.tsize()==0) || samesize(vol1[0],vol2[0]) ) );
+    bool same = ( ( (vol1.tsize())==(vol2.tsize()) ) && 
+	          ( (vol1.tsize()==0) || samesize(vol1[0],vol2[0]) ) );
+    if (checkdim) same = same && samedim(vol1,vol2);
+    return(same);
   }
   
+  template <class S1, class S2>
+  bool samedim(const volume<S1>& vol1, const volume<S2>& vol2)
+  {
+    return(std::abs(vol1.xdim()-vol2.xdim())<1e-6 && 
+           std::abs(vol1.ydim()-vol2.ydim())<1e-6 && 
+           std::abs(vol1.zdim()-vol2.zdim())<1e-6);
+  }
 
+  template <class S1, class S2>
+  bool samedim(const volume4D<S1>& vol1, const volume4D<S2>& vol2)
+  {
+    return(std::abs(vol1.tdim()-vol2.tdim())<1e-6 && samedim(vol1[0],vol2[0]));
+  }
 
 ////////////////////////////////////////////////////////////////////////
 /////////////////////////// FRIEND FUNCTIONS ///////////////////////////
@@ -1049,6 +1089,8 @@ namespace NEWIMAGE {
     dest.RigidBodyCoordMat = source.RigidBodyCoordMat;
     dest.StandardSpaceTypeCode = source.StandardSpaceTypeCode;
     dest.RigidBodyTypeCode = source.RigidBodyTypeCode;
+
+    dest.RadiologicalFile = source.RadiologicalFile;
 
     dest.IntentCode = source.IntentCode;
     dest.IntentParam1 = source.IntentParam1;
@@ -1197,6 +1239,11 @@ namespace NEWIMAGE {
     return tmp;
   }
 
+  template <class S>
+  volume<S> operator-(const volume<S>& vol)
+  {
+    return(vol * (static_cast<S>(-1)));
+  }
 
   template <class S>
   volume4D<S> operator+(S num, const volume4D<S>& vol)
@@ -1222,6 +1269,12 @@ namespace NEWIMAGE {
     tmp=num;
     tmp/=vol;
     return tmp;
+  }
+
+  template <class S>
+  volume4D<S> operator-(const volume4D<S>& vol)
+  {
+    return(vol * (static_cast<S>(-1)));
   }
 
   template <class S>

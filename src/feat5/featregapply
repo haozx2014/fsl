@@ -6,7 +6,7 @@
 #
 #   Stephen Smith, FMRIB Image Analysis Group
 #
-#   Copyright (C) 2002-2007 University of Oxford
+#   Copyright (C) 2002-2008 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -83,11 +83,11 @@ source $env(FSLDIR)/tcl/fslstart.tcl
 #}}}
 #{{{ proc runregfiles
 
-proc runregfiles { filename } {
+proc runregfiles { in out } {
 
-    if { ! [ imtest reg_standard/$filename ] } {
+    if { ! [ imtest reg_standard/$out ] } {
 	return 1
-    } elseif { [ file mtime [ imglob -oneperimage reg_standard/$filename ] ] < [ file mtime $filename ] || [ file mtime [ imglob -oneperimage reg_standard/$filename ] ] < [ file mtime reg/example_func2standard.mat ] } {
+    } elseif { [ file mtime [ imglob -extension reg_standard/$out ] ] < [ file mtime [ imglob -extension $in ] ] || [ file mtime [ imglob -extension reg_standard/$out ] ] < [ file mtime reg/example_func2standard.mat ] } {
 	return 1
     } else {
 	return 0
@@ -97,12 +97,36 @@ proc runregfiles { filename } {
 #}}}
 #{{{ proc runflirt
 
-proc runflirt { flirtcommand output } {
+proc runflirt { in ref out space interp datatype } {
     global FSLDIR
-    set TMPNAM [ fsl:exec "${FSLDIR}/bin/tmpnam frgrot" -n ]
-    fsl:exec "$flirtcommand -o $TMPNAM"
-    immv $TMPNAM $output
-    fsl:exec "/bin/rm $TMPNAM" -n
+
+    if { [ runregfiles $in $out ] } {
+	set TMPNAM [ fsl:exec "${FSLDIR}/bin/tmpnam frgrot" -n ]
+
+	if { [ imtest reg/highres2standard_warp ] && ( $space == "example_func" || $space == "highres" ) } {
+
+	    set PREMAT ""
+	    if { $space == "example_func" } {
+		set PREMAT "--premat=reg/example_func2highres.mat"
+	    }	    
+	    if { $interp == "nearestneighbour" } {
+		set interp nn
+	    }
+	    fsl:exec "${FSLDIR}/bin/applywarp --ref=$ref --in=$in --out=$TMPNAM --warp=reg/highres2standard_warp $PREMAT --interp=$interp"
+
+	} else {
+
+	    set FLIRTINIT ""
+	    if { $space != "standard" } {
+		set FLIRTINIT "-init reg/${space}2standard.mat"
+	    }
+	    fsl:exec "${FSLDIR}/bin/flirt -ref $ref -in $in -out $TMPNAM -applyxfm $FLIRTINIT -interp $interp -datatype $datatype"
+
+	}
+
+	immv $TMPNAM reg_standard/$out
+	fsl:exec "/bin/rm $TMPNAM" -n
+    }
 }
 
 #}}}
@@ -155,67 +179,44 @@ if { ! [ file exists reg/example_func2standard.mat ] } {
 catch { exec sh -c "mkdir -p reg_standard/reg reg_standard/stats" } errmsg
 
 #}}}
-
-
-#{{{ setup background image
-
-set BGIMAGE ""
-set BGMAT ""
-switch $fmri(bgimage) {
-    1 -
-    2 { set BGIMAGE highres ; set BGMAT "-init reg/highres2standard.mat" }
-    3 -
-    4 { set BGIMAGE example_func ; set BGMAT "-init reg/example_func2standard.mat" }
-}
-
-if { ! [ imtest reg/$BGIMAGE ] } {
-    set BGIMAGE standard
-}
-
-#}}}
 #{{{ apply the registration
 
-set FL "${FSLDIR}/bin/flirt -ref reg/standard -applyxfm"
+set REF reg/standard
 
 # MELODIC upsampling
 if { [ info exists fmri(inmelodic) ] && $fmri(inmelodic) } {
     if { $fmri(regstandard_res)>0.0001 } {
-	set FL "${FSLDIR}/bin/flirt -ref reg/standard -applyisoxfm $fmri(regstandard_res)"
+	fsl:exec "${FSLDIR}/bin/flirt -ref reg/standard -in reg/standard -out reg_standard/standard -applyisoxfm $fmri(regstandard_res)"
+	set REF reg_standard/standard
     }
-    runflirt "$FL -in reg/$BGIMAGE $BGMAT -interp sinc -datatype float" reg_standard/bg_image
-    runflirt "$FL -in filtered_func_data -init reg/example_func2standard.mat -datatype float" reg_standard/filtered_func_data
+
+    set BGIMAGE ""
+    switch $fmri(bgimage) {
+	1 -
+	2 { set BGIMAGE highres }
+	3 -
+	4 { set BGIMAGE example_func }
+    }
+    if { [ imtest reg/$BGIMAGE ] } {
+	runflirt reg/$BGIMAGE $REF bg_image $BGIMAGE sinc float
+    } else {
+	imcp reg_standard/standard reg_standard/bg_image
+    }
+
+    runflirt filtered_func_data $REF filtered_func_data example_func trilinear float
     fsl:exec "${FSLDIR}/bin/fslmaths reg_standard/filtered_func_data -Tstd -bin reg_standard/mask -odt char"
 } else {
-    # sinc interpolated lowres images
-    foreach input [ imglob -oneperimage example_func.* ] {
-	if { [ runregfiles $input ] } {
-	    runflirt "$FL -in $input -init reg/example_func2standard.mat -interp sinc -datatype float" reg_standard/$input
-	}
+
+    runflirt example_func $REF example_func example_func sinc float
+    runflirt mask $REF mask example_func nearestneighbour char
+
+    foreach input [ imglob mean_func* stats/cope* stats/varcope* stats/tdof_t* ] {
+	runflirt $input $REF $input example_func trilinear float
     }
 
-    # nearestneighbour interpolated lowres images
-    foreach input [ imglob -oneperimage mask.* ] {
-	if { [ runregfiles $input ] } {
-	    runflirt "$FL -in $input -init reg/example_func2standard.mat -interp nearestneighbour" reg_standard/$input
-	}
-    }
-
-    # trilinear interpolated lowres images
-    foreach input [ imglob -oneperimage mean_func* stats/cope* stats/varcope* stats/tdof_t* ] {
-	if { [ runregfiles $input ] } {
-	    runflirt "$FL -in $input -init reg/example_func2standard.mat" reg_standard/$input
-	}
-    }
-
-    # highres images
     if { [ file exists reg/highres2standard.mat ] } {
-	foreach input [ imglob -oneperimage reg/highres.* ] {
-	    if { [ runregfiles $input ] } {
-		runflirt "$FL -in $input -init reg/highres2standard.mat -interp sinc -datatype float" reg_standard/$input
-	    }
-	}
+	runflirt reg/highres $REF reg/highres highres sinc float
     }
 }
 
 #}}}
-

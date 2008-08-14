@@ -111,11 +111,7 @@ void FilmGlsOptions::parse_command_line(int argc, char** argv, Log& logger)
 	}
       else if(inp == 3 && !ac_only)
 	gopt->thresh = atof(argv[n]);
-      else
-	{
-	  cerr << "Mismatched argument " << arg << endl;
-	  break;
-	}
+      else throw Exception(("Mismatched argument "+arg).c_str());
       n++;
       inp++;
       continue;
@@ -158,18 +154,27 @@ void FilmGlsOptions::parse_command_line(int argc, char** argv, Log& logger)
     } 
 
     if (n+1>=argc) 
-      { 
-	cerr << "Lacking argument to option " << arg << endl;
-	break; 
-      }
+      throw Exception(("Lacking argument to option "+arg).c_str());
 
     // put options with 1 argument here
     if ( arg == "-ms") {
       gopt->ms = atoi(argv[n+1]);
       n+=2;
-    } else if ( arg == "-sp" ) {
-      gopt->susanpath = argv[n+1];      
-      n+=2;
+    } else if ( arg == "-ven" ) {
+      n++;
+      int size=1;
+	while(strspn(argv[n],"0123456789")==strlen(argv[n])) {
+	 voxelwise_ev_numbers.resize(size++,atoi(argv[n++]));      
+	 if (n>=argc) 
+	   throw Exception("Not enough arguments for -ven option");
+      }
+    } else if ( arg == "-vef" ) {
+      n++;
+      if (n+(signed)voxelwise_ev_numbers.size()>=argc)
+	throw Exception("Not enough arguments for -ven option");
+      voxelwiseEvFilenames.resize(voxelwise_ev_numbers.size()); 
+      for (int i=0;i<(int)voxelwise_ev_numbers.size();i++)
+	voxelwiseEvFilenames[i]=argv[n++];
     } else if ( arg == "-rn" ) {
       gopt->datadir = argv[n+1];      
       n+=2;
@@ -186,10 +191,7 @@ void FilmGlsOptions::parse_command_line(int argc, char** argv, Log& logger)
     else if ( arg == "-epith" ) {
       gopt->epith = atoi(argv[n+1]);      
       n+=2;
-    } else { 
-      cerr << "Unrecognised option " << arg << endl;
-      n++;
-    } 
+    } else throw Exception(("Unrecognised option "+arg).c_str());
   }  // while (n<argc)
 
   logger.makeDir(gopt->datadir);
@@ -204,7 +206,7 @@ void FilmGlsOptions::parse_command_line(int argc, char** argv, Log& logger)
   }
   if (gopt->paradigmfname.size()<1 && !ac_only) {
     print_usage(argc,argv);
-    throw Exception("Paradigm filenam needs to be specified");
+    throw Exception("Paradigm filename needs to be specified");
   }
 
 }
@@ -214,10 +216,11 @@ void FilmGlsOptions::print_usage(int argc, char *argv[])
   cout << "Usage: " << argv[0] << " [options] <groupfile> [optional:<paradigmfile>] <thresh>\n\n"
        << "  Available options are:\n"
        << "        -sa                                (smooths auto corr estimates)\n"
-       << "        -sp <path>                         (susan path)\n"
        << "        -ms <num>                          (susan mask size)\n"
        << "        -epith <num>                       (set susan brightness threshold - otherwise it is estimated)\n"
        << "        -v                                 (outputs full data)\n"
+       << "        -ven                               ( List of numbers indicating voxelwise EVs position in the design matrix, list corresponds in order to files in -vef. caution BETA option)\n" 
+       << "        -vef                               ( List of 4D niftii files containing voxelwise EVs, list corresponds in order to numbers in -ven. caution BETA option)\n" 
        << "        -ac                                (perform autocorrelation estimation only)" 
        << "        -ar                                (fits autoregressive model - default " 
        << "is to use tukey with M=sqrt(numvols))\n"

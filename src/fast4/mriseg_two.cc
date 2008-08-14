@@ -1,6 +1,6 @@
 /*  FAST4 - FMRIB's Automated Segmentation Tool v4
 
-    John Vickers, Mark Jenkinson and Steve Smith
+    John Vickers, Mark Jenkinson, Steve Smith and Matthew Webster
     FMRIB Image Analysis Group
 
     Copyright (C) 2005-2007 University of Oxford  */
@@ -102,14 +102,11 @@ void ZMRISegmentation::TanakaCreate(const NEWIMAGE::volume<float>& image, float 
   m_prob.copyproperties(m_Mri);
   p_bias=volume<float>(m_nWidth, m_nHeight, m_nDepth);
   p_bias.copyproperties(m_Mri);
-  m_mask=volume<int>(m_nWidth, m_nHeight, m_nDepth);
-  copybasicproperties(m_Mri, m_mask);
-  p_resmean=volume<float>(m_nWidth, m_nHeight, m_nDepth);
-  p_resmean.copyproperties(m_Mri);
-  p_meaninvcov=volume<float>(m_nWidth, m_nHeight, m_nDepth);
-  p_meaninvcov.copyproperties(m_Mri);
+  m_mask=image;
+  m_mask.binarise(0,m_mask.max()+1,exclusive);  
+  nvoxel=(long)m_mask.sum();
   m_Segment=volume<int>(m_nWidth, m_nHeight, m_nDepth);
-  m_Segment.copyproperties(m_mask);
+  copybasicproperties(m_mask,m_Segment);
   members=volume4D<float>(m_nWidth, m_nHeight, m_nDepth, noclasses);
   iterationspve=biterationspve;
   if(iterationspve>0)
@@ -118,16 +115,11 @@ void ZMRISegmentation::TanakaCreate(const NEWIMAGE::volume<float>& image, float 
       m_pveSegment.copyproperties(m_Segment);
     }
   pveBmixeltype=mixeltypeMRF;
-  m_Finalbias=volume<float>(m_nWidth, m_nHeight, m_nDepth);
-  m_Finalbias.copyproperties(m_Mri);
-  maximum=image.max();
-  minimum=image.min();
   inititerations=winitfixed;
   initfixed=initinitfixed;
   m_nbIter=nbiter;
   biasfieldremoval=bbias;
   beta=fbeta;
-  weightschanged=false;
   m_nbLowpass=nblowpass;
   if(bapusedflag>0) {
     talpriors=volume4D<float>(m_nWidth, m_nHeight, m_nDepth, noclasses+1);
@@ -149,41 +141,29 @@ void ZMRISegmentation::Dimensions()
 
 int ZMRISegmentation::TanakaMain(NEWIMAGE::volume<float>& pcsf, NEWIMAGE::volume<float>& pgm, NEWIMAGE::volume<float>& pwm)
 {
-  m_Finalbias=0.0f;
   for(int z=0;z<m_nDepth;z++)
-    {
-      for(int y=0;y<m_nHeight;y++)
-	{ 
-	  for(int x=0;x<m_nWidth;x++)
-	    {
-	      if(m_Mricopy.value(x, y, z)>0.0)
-		{
-		  m_Mricopy.value(x, y, z)=log(m_Mricopy.value(x, y, z) + 1.0);
-		  m_mask.value(x, y, z)=1;
-		}
-	      else 
-		{
-		  m_Mricopy.value(x, y, z)=0.0f;
-		  m_mask.value(x, y, z)=0;
-		}
-	    }
-	}
-    }
+    for(int y=0;y<m_nHeight;y++)
+      for(int x=0;x<m_nWidth;x++)
+	if(m_Mricopy.value(x, y, z)>0.0) 
+	  m_Mricopy.value(x, y, z)=log(m_Mricopy.value(x, y, z) + 1.0);
+	else 
+	  m_Mricopy.value(x, y, z)=0.0f;
+ 
+  m_Mri=volume<float>(m_Mricopy);
   Dimensions();
+
   long seed=-1;
   srand(seed);
-  rhs=new float[100];
-  m_Mri=volume<float>(m_Mricopy);
-  numberofvoxels();
-  volumequant=new double[noclasses+1];
-  m_mean=new float[noclasses+1];
-  m_variance=new float[noclasses+1];
-  weight=new float[noclasses];
-  InitWeights();
+
+  rhs.resize(100);
+  volumequant.resize(noclasses+1);
+  m_mean.resize(noclasses+1,0);
+  m_variance.resize(noclasses+1,0);
+  weight.resize(noclasses,1);
   if(bapusedflag==0)
   {
     try{Initialise();}
-    catch (kmeansexception& km){cout << km.what() << endl ; return -1;}
+    catch (kmeansexception& km){cout << km.what() << endl ; return 1;}
   }
   else
     {
@@ -225,104 +205,83 @@ int ZMRISegmentation::TanakaMain(NEWIMAGE::volume<float>& pcsf, NEWIMAGE::volume
     }
   Classification();
   qsort();
-  if(iterationspve>0)
-    {
-      if(verboseusage)
-	cout<< " Starting Partial Volume Estimation \n";
-      UpdateMembers(m_post);
-      for(int z=0;z<m_nDepth;z++)
-	{
-	  for(int y=0;y<m_nHeight;y++)
-	    { 
-	      for(int x=0;x<m_nWidth;x++)
-		{
-		  if(m_mask(x, y, z)==1)
-		    m_Mri.value(x, y, z)=exp(m_Mri.value(x, y, z));
-		}
-	    }
-	}
-      MeansVariances(noclasses, m_post);
 
-      PVMoreSophisticated();
-      Volumesquant(m_pve);
-      pveClassification();
-    }
+  if(iterationspve>0) {
+    if(verboseusage)
+      cout<< " Starting Partial Volume Estimation \n";
+    UpdateMembers(m_post);
+    for(int z=0;z<m_nDepth;z++)
+      for(int y=0;y<m_nHeight;y++)
+	for(int x=0;x<m_nWidth;x++)
+	  if(m_mask(x, y, z)==1)
+	    m_Mri.value(x, y, z)=exp(m_Mri.value(x, y, z));
+    MeansVariances(noclasses, m_post);
+
+    PVMoreSophisticated();
+    Volumesquant(m_pve);
+    pveClassification();
+  }
   else
-    {
-      Volumesquant(m_post);
-    }
+    Volumesquant(m_post);
+    
   m_Finalbias=p_bias;
   takeexpo();
-  delete[] m_mean;
-  delete[] m_variance;
-  delete[] volumequant;
-  delete[] rhs;
   return 0;
 }
+
 
 void ZMRISegmentation::Initialise()
 {
   WeightedKMeans();
-  m_prob=Initclass(noclasses);
-  m_post=m_prob;
+  m_post=m_prob=Initclass(noclasses);
   Classification();
 }
+
 
 void ZMRISegmentation::Classification(int x, int y, int z)
 {
   float max=-1e-10;
   m_Segment(x, y, z)=0;
   if(m_mask(x, y, z)==1)
-    {
-      for(int c=1;c<noclasses+1;c++)
-	{
-	  if(m_post(x, y, z, c)>max)
-	    {
-	      max=m_post(x, y, z, c);
-	      m_Segment(x, y, z)=c;
-	    }
-	}
-    }
+    for(int c=1;c<=noclasses;c++)
+       if(m_post(x, y, z, c)>max) {
+	 max=m_post(x, y, z, c);
+	 m_Segment(x, y, z)=c;
+       }
 }
+
 
 void ZMRISegmentation::Classification()
 {
   for(int z=0;z<m_nDepth;z++)
-    {
-      for(int y=0;y<m_nHeight;y++)
-	{
-	  for(int x=0;x<m_nWidth;x++)
-	    {
-	      Classification(x,y,z);
-	    }
-	}
-    }
+    for(int y=0;y<m_nHeight;y++)
+      for(int x=0;x<m_nWidth;x++)
+	Classification(x,y,z);
 }
+
 
 void ZMRISegmentation::pveClassification(int x, int y, int z)
 {
   float max=-1e-10;
   m_pveSegment(x, y, z)=0;
   if(m_mask(x, y, z)==1)
-    {
-      for(int c=1;c<noclasses+1;c++)
-	{
-	  if(max<m_pve(x, y, z, c))
-		{
-		  max=m_pve(x, y, z, c);
-		  m_pveSegment(x, y, z)=c;
-		}
-	}
-    }
+    for(int c=1;c<=noclasses;c++)
+      if(m_pve(x, y, z, c)>max) {
+	max=m_pve(x, y, z, c);
+	m_pveSegment(x, y, z)=c;
+      }
+
 }
+
 
 void ZMRISegmentation::pveClassification()
 {
-  for(int x=1;x<m_nWidth-1;x++)
-    for(int y=1;y<m_nHeight-1;y++)
-      for(int z=1;z<m_nDepth-1;z++)
+  for(int x=0;x<m_nWidth;x++)
+    for(int y=0;y<m_nHeight;y++)
+      for(int z=0;z<m_nDepth;z++)
 	pveClassification(x, y, z);
 }
+
 
 float ZMRISegmentation::logGaussian(float y, float mu, float sigmasq)
 {
@@ -332,28 +291,31 @@ float ZMRISegmentation::logGaussian(float y, float mu, float sigmasq)
   return scaletemp+gausstemp;
 }
 
+
 float ZMRISegmentation::MRFWeightsTotal()
 {
-  double total=0.0f; //Internally a double to avoid truncation when adding small to large (shouldn't happen anyway with this loop style)
+double total=0.0f; //Internally a double to avoid truncation when adding small to large (shouldn't happen anyway with this loop style)
   for(int z=0;z<m_nDepth;z++)
-      for(int y=0;y<m_nHeight;y++)
-	  for(int x=0;x<m_nWidth;x++)
-	      if(m_mask.value(x, y, z)==1)
-		  for(int c=1;c<noclasses+1;c++)
-		    total+=MRFWeightsInner(x,y,z,c)*m_post(x, y, z, c);
+    for(int y=0;y<m_nHeight;y++)
+      for(int x=0;x<m_nWidth;x++)
+	if(m_mask.value(x, y, z)==1)
+	  for(int c=1;c<noclasses+1;c++)
+	    total+=MRFWeightsInner(x,y,z,c)*m_post(x, y, z, c);
   return (float)total;   
 }
+
 
 double ZMRISegmentation::MRFWeightsInner(const int x, const int y, const int z,const int c)
 {
 double inner=0.0f;
-    for(int n=-1;n<=1;n++)
-	for(int m=-1;m<=1;m++)
-	     for(int l=-1;l<=1;l++)
-		if((m_mask(x+l, y+m, z+n)==1))
-		  inner+=MRFWeightsAM(l,m,n)*m_post.value(x+l, y+m, z+n, c);
-   return inner;
+  for(int n=-1;n<=1;n++)
+    for(int m=-1;m<=1;m++)
+      for(int l=-1;l<=1;l++)
+	if((m_mask(x+l, y+m, z+n)==1))
+	  inner+=MRFWeightsAM(l,m,n)*m_post.value(x+l, y+m, z+n, c);
+  return inner;
 }
+
 
 double ZMRISegmentation::MRFWeightsAM(const int l, const int m, const int n)
 {
@@ -391,7 +353,9 @@ void ZMRISegmentation::TanakaHyper()
 
   for(int betahyp=1;betahyp<15;betahyp++)
     {
-      betahtemp+=0.05f;
+      //float betahtemp=(float)(0.05*(float)betahyp);
+      betahtemp+=(float)0.05;
+      cerr <<  betahtemp << " " << betahtemp << endl;
       if(abs(total-rhs[betahyp])<min)
 	{
 	  beta=betahtemp;
@@ -471,71 +435,48 @@ void ZMRISegmentation::TanakaPriorHyper()
 }
 
 
-
 void ZMRISegmentation::TanakaIterations()
-{   
+{  
+  m_post=0;
   for(int z=0;z<m_nDepth;z++)
-	{
-	  for(int y=0;y<m_nHeight;y++)
-	    { 
-	      for(int x=0;x<m_nWidth;x++)
-		{
-		  m_post(x, y, z, 0)=0.0f;
-		  float sum=0.0f;
-		  for(int c=1;c<noclasses+1;c++)
-		    {
-		      if(m_mask(x, y, z)==1)
-			{
-			  sum+=m_post(x, y, z, c)=(float)(rand()/(float)(RAND_MAX));
-			}
-		      else
-			m_post(x, y, z, c)=0.0f;		    
-		    }
-		  for(int c=1;c<noclasses+1;c++)
-		    if(sum>0.0)
-		      m_post(x, y, z, c)/=sum;
-		}
-	    }
+    for(int y=0;y<m_nHeight;y++)
+      for(int x=0;x<m_nWidth;x++) 
+	if(m_mask(x,y,z)==1) {
+	  float sum=0.0f;
+	  for(int c=1;c<=noclasses;c++) 
+	    sum+=m_post(x, y, z, c)=(float)(rand()/(float)(RAND_MAX));	 		    
+	  for(int c=1;c<=noclasses && sum>0;c++)
+	    m_post(x, y, z, c)/=sum;
 	}
   
-  for(int iteration=0;iteration<5;iteration++)
-    {
-      for(int z=0;z<m_nDepth;z++)
-	{
-	  for(int y=0;y<m_nHeight;y++)
-	    {
-	      for(int x=0;x<m_nWidth;x++)
-		{
-		  float sum=0.0f;
-		  if(m_mask.value(x, y, z)==1)
-		    {
-		      for(int c=1;c<noclasses+1;c++)
-			{
-			   float post=MRFWeightsInner(x,y,z,c);
-			  if(bapusedflag<2)
-			    sum+=m_post.value(x, y, z, c)=exp(beta*post-logGaussian(m_Mri.value(x, y, z), m_mean[c], m_variance[c]));
-			  else
-			    sum+=m_post.value(x, y, z, c)=talpriors(x, y, z, c)*exp(beta*post-logGaussian(m_Mri.value(x, y, z), m_mean[c], m_variance[c]));
-		      	}
-		      for(int c=1;c<noclasses+1;c++)
-			{
-			  if(sum>0.0f)
-			    m_post.value(x, y, z, c)/=sum;
-			  else
-			    m_post.value(x, y, z, c)=0.0f;
-			}
-		    }
-		}
+  for(int iteration=0;iteration<5;iteration++) {
+    for(int z=0;z<m_nDepth;z++) 
+      for(int y=0;y<m_nHeight;y++)
+	for(int x=0;x<m_nWidth;x++)
+	  if(m_mask.value(x, y, z)==1) {
+	    double sum=0.0f;       //Very important for sum to be a double for JV's loop ( if sum is a double there as well ) and mine to match results - numerically sensitive
+	    for(int c=1;c<=noclasses;c++) {
+	      m_post.value(x, y, z, c)=exp(beta*MRFWeightsInner(x,y,z,c)-logGaussian(m_Mri.value(x, y, z), m_mean[c], m_variance[c]));
+              if(bapusedflag>=2) 
+		m_post.value(x, y, z, c)*=talpriors(x, y, z, c);
+	      sum+=m_post.value(x, y, z, c);
 	    }
-	}
+	    for(int c=1;c<=noclasses;c++)
+	    {
+	      if(sum>0.0f)
+		m_post.value(x, y, z, c)/=sum;
+	      else
+		m_post.value(x, y, z, c)=0.0f;
+	    }
+	  }
+
       if(verboseusage)
 	cout << "Tanaka-inner-loop-iteration=" << iteration << " MRFWeightsTotal=" << MRFWeightsTotal() << " beta=" << beta << endl;
-      //save_volume4D(m_post,"grotgrot"+num2str(iteration));
-    }
+  }
   if(verboseusage)
     {
       for(int c=1;c<noclasses+1;c++)
-	cout<<" CLASS "<<c<<" MEAN "<<exp(m_mean[c])<<" STDDEV "<<( exp(m_mean[c]+sqrt(m_variance[c])) - exp(m_mean[c]-sqrt(m_variance[c])) )/2;
+	cout<<" CLASS "<<c<<" MEAN "<<exp(m_mean[c])<<" STDDEV "<<( exp(m_mean[c] + sqrt(m_variance[c]) ) - exp(m_mean[c]-sqrt(m_variance[c])) )/2;
       cout<<endl;
     }
 }
@@ -552,100 +493,57 @@ void ZMRISegmentation::PVClassificationStep()
   int mixnum=0;
   if(noclasses==3)
     mixnum=6;
-  if(noclasses==2)
-    mixnum=3;
-  if(noclasses>3)
+  if(noclasses==2 || noclasses>3)
     mixnum=2*noclasses-1;
-  PVprob=volume4D<float>(m_nWidth, m_nHeight, m_nDepth, mixnum);
-  PVprob=0.0f;
-  for(int z=1;z<m_nDepth-1;z++)
-    {
-      for(int y=1;y<m_nHeight-1;y++)
-	{
-	  for(int x=1;x<m_nWidth-1;x++)
-	    { 
-	      if(m_mask.value(x, y, z)==1)
+  PVprob.reinitialize(m_nWidth, m_nHeight, m_nDepth, mixnum);
+  PVprob=0.0;
+  for(int z=0;z<m_nDepth;z++)
+    for(int y=0;y<m_nHeight;y++)
+      for(int x=0;x<m_nWidth;x++)
+	if(m_mask.value(x, y, z)==1) 
+	  for(int type=0;type<mixnum;type++)
+	  {
+	    if(type<noclasses)
+	      PVprob(x, y, z, type)=exp(-1.0*logGaussian(m_Mri(x, y, z), m_mean[type+1], m_variance[type+1]));
+	    else if(noclasses==3)
+	    {
+		float mu=0.0f;
+		float sigsq=0.0f;
+		for(float delta=0.0;delta<=1.0;delta+=0.01)
 		{
-		  for(int type=0;type<mixnum;type++)
-		    {
-		      if(noclasses==3)
-			{
-			  if(type<3)
-			    {
-			      PVprob(x, y, z, type)=exp(-1.0*logGaussian(m_Mri(x, y, z), m_mean[type+1], m_variance[type+1]));
-			    }
-			  else
-			    {
-			      float mu=0.0f;
-			      float sigsq=0.0f;
-			      for(float delta=0.0;delta<=1.0;delta+=0.01)
-				{
-				  if(type==3)
-				    {
-				      mu=delta*m_mean[1]+(1-delta)*m_mean[2];
-				      sigsq=delta*delta*m_variance[1]+(1-delta)*(1-delta)*m_variance[2];
-				    }
-				  if(type==4)
-				    {
-				      mu=delta*m_mean[1]+(1-delta)*m_mean[3];
-				      sigsq=delta*delta*m_variance[1]+(1-delta)*(1-delta)*m_variance[3];
-				    }
-				  if(type==5)
-				    {
-				      mu=delta*m_mean[2]+(1-delta)*m_mean[3];
-				      sigsq=delta*delta*m_variance[2]+(1-delta)*(1-delta)*m_variance[3];
-				    }
-				  PVprob(x, y, z, type)+=exp(-1.0*logGaussian(m_Mri(x, y, z), mu, sigsq))*0.01;
-				}
-			    }
-			}
-		      if(noclasses>3)
-			{
-			  if(type<noclasses)
-			    {
-			      PVprob(x, y, z, type)=exp(-1.0*logGaussian(m_Mri(x, y, z), m_mean[type+1], m_variance[type+1]));
-			    }
-			  else
-			    {
-			      float mu=0.0f;
-			      float sigsq=0.0f;
-			      for(float delta=0.0;delta<=1.0;delta+=0.01)
-				{
-				  mu=delta*m_mean[type-noclasses+1]+(1-delta)*m_mean[type-noclasses+2];
-				  sigsq=delta*delta*m_variance[type-noclasses+1]+(1-delta)*(1-delta)*m_variance[type-noclasses+2];
-				  PVprob(x, y, z, type)+=exp(-1.0*logGaussian(m_Mri(x, y, z), mu, sigsq))*0.01;
-				}
-			    }
-			}
-		      if(noclasses==2)
-			{
-			  if(type<2)
-			    {
-			      PVprob(x, y, z, type)=exp(-1.0*logGaussian(m_Mri(x, y, z), m_mean[type+1], m_variance[type+1]));
-			    }
-			  else
-			    {
-			      float mu=0.0f;
-			      float sigsq=0.0f;
-			      for(float delta=0.0;delta<=1.0;delta+=0.01)
-				{
-				  if(type==2)
-				    {
-				      mu=delta*m_mean[1]+(1-delta)*m_mean[2];
-				      sigsq=delta*delta*m_variance[1]+(1-delta)*(1-delta)*m_variance[2];
-				    }
-
-				  PVprob(x, y, z, type)+=exp(-1.0*logGaussian(m_Mri(x, y, z), mu, sigsq))*0.01;
-				}
-			    }
-			}
-		    }
+		  if(type==3)
+		  {
+		    mu=delta*m_mean[1]+(1-delta)*m_mean[2];
+		    sigsq=delta*delta*m_variance[1]+(1-delta)*(1-delta)*m_variance[2];
+		  }
+		  if(type==4)
+		  {
+		    mu=delta*m_mean[1]+(1-delta)*m_mean[3];
+		    sigsq=delta*delta*m_variance[1]+(1-delta)*(1-delta)*m_variance[3];
+		  }
+		  if(type==5)
+		  {
+		    mu=delta*m_mean[2]+(1-delta)*m_mean[3];
+		    sigsq=delta*delta*m_variance[2]+(1-delta)*(1-delta)*m_variance[3];
+		  }
+		  PVprob(x, y, z, type)+=exp(-1.0*logGaussian(m_Mri(x, y, z), mu, sigsq))*0.01;
 		}
 	    }
-	}
-    }
+	    else if(noclasses==2 || noclasses>3)
+	    {
+		float mu=0.0f;
+		float sigsq=0.0f;
+		for(float delta=0.0;delta<=1.0;delta+=0.01)
+		{
+		  mu=delta*m_mean[type-noclasses+1]+(1-delta)*m_mean[type-noclasses+2];
+		  sigsq=delta*delta*m_variance[type-noclasses+1]+(1-delta)*(1-delta)*m_variance[type-noclasses+2];
+		  PVprob(x, y, z, type)+=exp(-1.0*logGaussian(m_Mri(x, y, z), mu, sigsq))*0.01;
+		}
+	    }
+	  } 
   ICMPV();
 }
+
 
 void ZMRISegmentation::ICMPV()
 {
@@ -659,180 +557,105 @@ void ZMRISegmentation::ICMPV()
   if(noclasses>3)
     mixnum=2*noclasses-1;
   float* clique=new float[mixnum];
-  for(int z=1;z<m_nDepth-1;z++)
-    {
-      for(int y=1;y<m_nHeight-1;y++)
-	{
-	  for(int x=1;x<m_nWidth-1;x++)
-	    { 
-	      if(m_mask.value(x, y, z)==1)
-		{
-		  float max=-1.0;
-		  for(int type=0;type<mixnum;type++)
-		    {
-		      if(max<PVprob(x, y, z, type))
-			{
-			  hardPV(x, y, z)=type;
-			  max=PVprob(x, y, z, type);
-			}
-		    }
-		}
+  for(int z=0;z<m_nDepth;z++)
+    for(int y=0;y<m_nHeight;y++)
+      for(int x=0;x<m_nWidth;x++)
+	if(m_mask.value(x, y, z)==1) {
+	  float max=-1.0;
+	  for(int type=0;type<mixnum;type++)
+	    if(max<PVprob(x, y, z, type)) {
+	      hardPV(x, y, z)=type;
+	      max=PVprob(x, y, z, type);
 	    }
 	}
-    }
-  for(int iter=0;iter<1;iter++)
-    {
-      for(int z=1;z<m_nDepth-1;z++)
-	{
-	  for(int y=1;y<m_nHeight-1;y++)
-	    {
-	      for(int x=1;x<m_nWidth-1;x++)
-		{ 
-		  if(m_mask.value(x, y, z)==1)
-		    {
-		      for(int type=0;type<mixnum;type++)
-		      clique[type]=0.0f;
-		      for(int n=-1;n<=1;n++)
-			{
-			  for(int m=-1;m<=1;m++)
-			    {
-			      for(int l=-1;l<=1;l++)
-				{
-				  if(m_mask(x+l, y+m, z+n)==1)
-				    {
-				      float am=MRFWeightsAM(l, m, n);
 
-				      if(noclasses==3)
-					{
-					  for(int type=0;type<6;type++)
-					    {	
-					      if(type==hardPV(x+l, y+m, z+n))
-						{
-						  clique[type]+=am*2;
-						  continue;
-						}
-					      if((type==0)&&((hardPV(x+l, y+m, z+n)==3)||(hardPV(x+l, y+m, z+n)==4)))
-						{
-						  clique[type]+=am;
-						  continue;
-						}
-					      if((type==1)&&((hardPV(x+l, y+m, z+n)==3)||(hardPV(x+l, y+m, z+n)==5)))
-						{
-						  clique[type]+=am;
-						  continue;
-						}
-					      if((type==2)&&((hardPV(x+l, y+m, z+n)==4)||(hardPV(x+l, y+m, z+n)==5)))
-						{
-						  clique[type]+=am;
-						  continue;
-						}
-					      if((type==3)&&((hardPV(x+l, y+m, z+n)==0)||(hardPV(x+l, y+m, z+n)==1)))
-						{
-						  clique[type]+=am;
-						  continue;
-						}
-					      if((type==4)&&((hardPV(x+l, y+m, z+n)==0)||(hardPV(x+l, y+m, z+n)==2)))
-						{
-						  clique[type]+=am;
-						  continue;
-						}
-					      if((type==5)&&((hardPV(x+l, y+m, z+n)==1)||(hardPV(x+l, y+m, z+n)==2)))
-						{
-						  clique[type]+=am;
-						  continue;
-						}
-					      clique[type]-=am;
-					    }
-					}
-				      if(noclasses>3)
-					{
-					  for(int type=0;type<mixnum;type++)
-					    {	
-					      if(type==hardPV(x+l, y+m, z+n))
-						{
-						  clique[type]+=am*2;
-						  continue;
-						}
-					      if((0<type)&&(type<noclasses-1)&&((hardPV(x+l, y+m, z+n)==(noclasses+type-1))||(hardPV(x+l, y+m, z+n)==(noclasses+type))))
-						{
-						  clique[type]+=am;
-						  continue;
-						}
-					      if((type==0)&&((hardPV(x+l, y+m, z+n)==noclasses)))
-						{
-						  clique[type]+=am;
-						  continue;
-						}
-					      if((type==(noclasses-1))&&((hardPV(x+l, y+m, z+n)==mixnum-1)))
-						{
-						  clique[type]+=am;
-						  continue;
-						}
-					      if((type>(noclasses-1))&&((hardPV(x+l, y+m, z+n)==(type-noclasses))||(hardPV(x+l, y+m, z+n)==(type-noclasses+1))))
-						{
-						  clique[type]+=am;
-						  continue;
-						}
-					
-					      clique[type]-=am;
-					    }
-					}
-				      if(noclasses==2)
-					{
-					  for(int type=0;type<3;type++)
-					    {
-					      if(type==hardPV(x+l, y+m, z+n))
-						{
-						  clique[type]+=am*2;
-						  continue;
-						}
-					      if((type==0)&&((hardPV(x+l, y+m, z+n)==2)))
-						{
-						  clique[type]+=am;
-						  continue;
-						}
-					      if((type==1)&&((hardPV(x+l, y+m, z+n)==2)))
-						{
-						  clique[type]+=am;
-						  continue;
-						}
-					      if((type==2)&&((hardPV(x+l, y+m, z+n)==0)||(hardPV(x+l, y+m, z+n)==1)))
-						{
-						  clique[type]+=am;
-						  continue;
-						}
-					      clique[type]-=am;
-					      
-					    }
-					}
-				    }
-				}
-			    }
+  for(int iter=0;iter<1;iter++)
+    for(int z=0;z<m_nDepth;z++)
+      for(int y=0;y<m_nHeight;y++)
+	for(int x=0;x<m_nWidth;x++)
+	  if(m_mask.value(x, y, z)==1)
+	  {
+	    for(int type=0;type<mixnum;type++)
+	      clique[type]=0.0f;
+	    for(int n=-1;n<=1;n++)
+	      for(int m=-1;m<=1;m++)
+		for(int l=-1;l<=1;l++)	
+		  if(m_mask(x+l, y+m, z+n)==1)
+		  {
+		    float am=MRFWeightsAM(l, m, n);
+		    if(noclasses==3)
+		      for(int type=0;type<6;type++)
+		      {	
+			if(type==hardPV(x+l, y+m, z+n))
+			  clique[type]+=am*2;
+			else if((type==0)&&((hardPV(x+l, y+m, z+n)==3)||(hardPV(x+l, y+m, z+n)==4)))
+			  clique[type]+=am;
+			else if((type==1)&&((hardPV(x+l, y+m, z+n)==3)||(hardPV(x+l, y+m, z+n)==5)))
+			  clique[type]+=am;
+			else if((type==2)&&((hardPV(x+l, y+m, z+n)==4)||(hardPV(x+l, y+m, z+n)==5)))
+			  clique[type]+=am;
+			else if((type==3)&&((hardPV(x+l, y+m, z+n)==0)||(hardPV(x+l, y+m, z+n)==1)))
+			  clique[type]+=am;
+			else if((type==4)&&((hardPV(x+l, y+m, z+n)==0)||(hardPV(x+l, y+m, z+n)==2)))
+			  clique[type]+=am;
+			else if((type==5)&&((hardPV(x+l, y+m, z+n)==1)||(hardPV(x+l, y+m, z+n)==2)))
+			  clique[type]+=am;
+			else
+			  clique[type]-=am;
 			}
-		      float max=-1;
+		    if(noclasses>3)
 		      for(int type=0;type<mixnum;type++)
-			{
-			  float prob=PVprob(x, y, z, type)*exp(pveBmixeltype*clique[type]);
-			  if(max<prob)
-			    {
-			      hardPV(x, y, z)=type;
-			      max=prob;
-			    }
-			}
-		  
-		    }
+		      {	
+			if(type==hardPV(x+l, y+m, z+n))
+			  clique[type]+=am*2;
+			else if((0<type)&&(type<noclasses-1)&&((hardPV(x+l, y+m, z+n)==(noclasses+type-1))||(hardPV(x+l, y+m, z+n)==(noclasses+type))))
+			  clique[type]+=am;
+			else if((type==0)&&((hardPV(x+l, y+m, z+n)==noclasses)))
+			  clique[type]+=am;
+			else if((type==(noclasses-1))&&((hardPV(x+l, y+m, z+n)==mixnum-1)))
+			  clique[type]+=am;
+			else if((type>(noclasses-1))&&((hardPV(x+l, y+m, z+n)==(type-noclasses))||(hardPV(x+l, y+m, z+n)==(type-noclasses+1))))
+			  clique[type]+=am;
+		        else 
+			  clique[type]-=am;
+		      }
+		    if(noclasses==2)
+		      for(int type=0;type<3;type++)
+		      {
+			if(type==hardPV(x+l, y+m, z+n))
+      			  clique[type]+=am*2;
+			else if((type==0)&&((hardPV(x+l, y+m, z+n)==2)))
+			  clique[type]+=am;
+			else if((type==1)&&((hardPV(x+l, y+m, z+n)==2)))
+			  clique[type]+=am;
+			else if((type==2)&&((hardPV(x+l, y+m, z+n)==0)||(hardPV(x+l, y+m, z+n)==1)))
+			  clique[type]+=am;
+			else 
+			  clique[type]-=am;
+		      }
+		  }
+	  
+	    float max=-1;
+	    for(int type=0;type<mixnum;type++)
+	    {
+	      float prob=PVprob(x, y, z, type)*exp(pveBmixeltype*clique[type]);
+	      if(max<prob)
+		{
+		  hardPV(x, y, z)=type;
+		  max=prob;
 		}
-	    }
-	}
-    }
+	    }  
+	  }
   delete[] clique;
 }
+
 
 void ZMRISegmentation::PVMoreSophisticated()
 {
   PVClassificationStep();
   PVestimation();
 }
+
 
 void ZMRISegmentation::PVestimation()
 {
@@ -842,11 +665,11 @@ void ZMRISegmentation::PVestimation()
   float mu=0.0f;
   float sigsq=0.0f;
   double step=(double)(1.0f/(double)(iterationspve));
-  for(int z=1;z<m_nDepth-1;z++)
+  for(int z=0;z<m_nDepth;z++)
     {
-      for(int y=1;y<m_nHeight-1;y++)
+      for(int y=0;y<m_nHeight;y++)
 	{
-	  for(int x=1;x<m_nWidth-1;x++)
+	  for(int x=0;x<m_nWidth;x++)
 	    { 
 	     if(m_mask.value(x, y, z)>0)
 	       {
@@ -992,6 +815,7 @@ void ZMRISegmentation::PVestimation()
     }
 }
 
+
 float ZMRISegmentation::pvmeans(int clas)
 {
      float pvmean=0.0f;
@@ -1016,163 +840,98 @@ float ZMRISegmentation::pvmeans(int clas)
      return tmp;
 }
 
+
 float ZMRISegmentation::pvvar(int clas)
 {
   float sum=0.0f;
   float tmp=0.0f;
   float pvvariance=0.0f;
   for(int z=0;z<m_nDepth;z++)
-    {
-      for(int y=0;y<m_nHeight;y++)
+    for(int y=0;y<m_nHeight;y++)
+      for(int x=0;x<m_nWidth;x++)
+	if(m_mask(x, y, z)==1)
 	{
-	  for(int x=0;x<m_nWidth;x++)
-	    {
-	      if(m_mask(x, y, z)>0)
-		{
-		  sum+=pvprobsinit.value(x, y, z, 1);
-		  tmp=pvprobsinit.value(x, y, z, 1)*(m_Mri.value(x, y, z)-m_mean[clas])*(m_Mri.value(x, y, z)-m_mean[clas]);
-		  pvvariance+=tmp;
-		}
-	    }
-	}
-    }
+	  sum+=pvprobsinit.value(x, y, z, 1);
+	  tmp=pvprobsinit.value(x, y, z, 1)*(m_Mri.value(x, y, z)-m_mean[clas])*(m_Mri.value(x, y, z)-m_mean[clas]);
+	  pvvariance+=tmp;
+	} 
   tmp=pvvariance/sum;
   return tmp;
 }
 
 
-
 void ZMRISegmentation::takeexpo()
 {
   for(int z=0;z<m_nDepth;z++)
-    {
-      for(int y=0;y<m_nHeight;y++)
-	{
-	  for(int x=0;x<m_nWidth;x++)
-	    {
-	      m_Finalbias(x, y, z)=exp(-m_Finalbias(x, y, z));
-	    }
-	}
-    }
+    for(int y=0;y<m_nHeight;y++)
+      for(int x=0;x<m_nWidth;x++)
+	m_Finalbias(x, y, z)=exp(-m_Finalbias(x, y, z));
 }
 
-void ZMRISegmentation::InitWeights()
-{
-  for(int c=0;c<noclasses;c++)
-    {
-      weight[c]=1.0f;
-      m_variance[c+1]=m_mean[c+1]=0.0f;
-    }
-
-
-}
 
 void ZMRISegmentation::InitSimple(const NEWIMAGE::volume<float>& pcsf, const NEWIMAGE::volume<float>& pgm, const NEWIMAGE::volume<float>& pwm)
 {
   if(verboseusage)
     cout<<"Beginning prior-based initialisation"<<endl;
+  m_post=0;
+  m_prob=0;
+  talpriors=0;
   if(noclasses==3)
-    {
-      for(int z=0;z<m_nDepth;z++)
-	{
-	  for(int y=0;y<m_nHeight;y++)
+  {
+    for(int z=0;z<m_nDepth;z++)
+      for(int y=0;y<m_nHeight;y++)
+	for(int x=0;x<m_nWidth;x++)
+	  if(m_mask.value(x, y, z)==1)
+	  {
+	    float norm2=pcsf.value(x, y, z)+pgm.value(x, y, z)+pwm.value(x, y, z);
+	    if(norm2>0.0)
 	    {
-	      for(int x=0;x<m_nWidth;x++)
-		{
-		  if(m_mask.value(x, y, z)==1)
-		    {
-		      talpriors.value(x, y, z, 0)=talpriors(x, y, z, 1)=talpriors(x, y, z, 2)=talpriors(x, y, z, 3)=0.0f;
-		      float norm2=pcsf.value(x, y, z)+pgm.value(x, y, z)+pwm.value(x, y, z);
-		      if(norm2>0.0)
-			{
-			  m_post.value(x, y, z, 1)=m_prob.value(x, y, z, 1)=talpriors.value(x, y, z, 1)=pcsf.value(x, y, z)/norm2;
-			  m_post.value(x, y, z, 2)=m_prob.value(x, y, z, 2)=talpriors.value(x, y, z, 2)=pgm.value(x, y, z)/norm2;
-			  m_post.value(x, y, z, 3)=m_prob.value(x, y, z, 3)=talpriors.value(x, y, z, 3)=pwm.value(x, y, z)/norm2;
-			}
-		      else
-			{
-			  m_post.value(x, y, z, 1)=m_prob.value(x, y, z, 1)=talpriors.value(x, y, z, 1)=1.0/3.0f;
-			  m_post.value(x, y, z, 2)=m_prob.value(x, y, z, 2)=talpriors.value(x, y, z, 2)=1.0/3.0f;
-			  m_post.value(x, y, z, 3)=m_prob.value(x, y, z, 3)=talpriors.value(x, y, z, 3)=1.0/3.0f;
-			}
-		    }
-		  else
-		    {
-		      m_post.value(x, y, z, 1)=m_prob.value(x, y, z, 1)=talpriors.value(x, y, z, 1)=0.0;
-		      m_post.value(x, y, z, 2)=m_prob.value(x, y, z, 2)=talpriors.value(x, y, z, 2)=0.0;
-		      m_post.value(x, y, z, 3)=m_prob.value(x, y, z, 3)=talpriors.value(x, y, z, 3)=0.0;		  
-		    }
-		  Classification(x, y, z);
-		}
+	      m_post.value(x, y, z, 1)=m_prob.value(x, y, z, 1)=talpriors.value(x, y, z, 1)=pcsf.value(x, y, z)/norm2;
+	      m_post.value(x, y, z, 2)=m_prob.value(x, y, z, 2)=talpriors.value(x, y, z, 2)=pgm.value(x, y, z)/norm2;
+	      m_post.value(x, y, z, 3)=m_prob.value(x, y, z, 3)=talpriors.value(x, y, z, 3)=pwm.value(x, y, z)/norm2;
 	    }
-	}
-    }
+	    else for(int c=1;c<=noclasses;c++)
+	      m_post.value(x, y, z, c)=m_prob.value(x, y, z, c)=talpriors.value(x, y, z, c)=1.0/3.0f;	      
+	  }
+    Classification();
+  }
+ 
   if(noclasses==2)
-    {
-      for(int z=0;z<m_nDepth;z++)
-	{
-	  for(int y=0;y<m_nHeight;y++)
+  {
+    for(int z=0;z<m_nDepth;z++)
+      for(int y=0;y<m_nHeight;y++)
+	for(int x=0;x<m_nWidth;x++)
+	  if(m_mask.value(x, y, z)==1)
 	    {
-	      for(int x=0;x<m_nWidth;x++)
-		{
-		  if(m_mask.value(x, y, z)==1)
-		    {
-		      talpriors.value(x, y, z, 0)=talpriors(x, y, z, 1)=talpriors(x, y, z, 2)==0.0f;
-		      float norm2=pcsf.value(x, y, z)+pgm.value(x, y, z)+pwm.value(x, y, z);
-		      if(norm2>0.0)
-			{
-			  m_post.value(x, y, z, 1)=m_prob.value(x, y, z, 1)=talpriors.value(x, y, z, 1)=pcsf.value(x, y, z)/norm2;
-			  m_post.value(x, y, z, 2)=m_prob.value(x, y, z, 2)=talpriors.value(x, y, z, 2)=(pgm.value(x, y, z)+pwm.value(x, y, z))/norm2;
-			}
-		      else
-			{
-			  m_post.value(x, y, z, 1)=m_prob.value(x, y, z, 1)=talpriors.value(x, y, z, 1)=1.0/2.0f;
-			  m_post.value(x, y, z, 2)=m_prob.value(x, y, z, 2)=talpriors.value(x, y, z, 2)=1.0/2.0f;
-			}
-		    }
-		  else
-		    {
-		      m_post.value(x, y, z, 1)=m_prob.value(x, y, z, 1)=talpriors.value(x, y, z, 1)=0.0;
-		      m_post.value(x, y, z, 2)=m_prob.value(x, y, z, 2)=talpriors.value(x, y, z, 2)=0.0;		  
-		    }
-		  Classification(x, y, z);
-		}
+	      float norm2=pcsf.value(x, y, z)+pgm.value(x, y, z)+pwm.value(x, y, z);
+	      if(norm2>0.0)
+	      {
+		m_post.value(x, y, z, 1)=m_prob.value(x, y, z, 1)=talpriors.value(x, y, z, 1)=pcsf.value(x, y, z)/norm2;
+		m_post.value(x, y, z, 2)=m_prob.value(x, y, z, 2)=talpriors.value(x, y, z, 2)=(pgm.value(x, y, z)+pwm.value(x, y, z))/norm2;
+	      }
+	      else for(int c=1;c<=noclasses;c++)
+		m_post.value(x, y, z, c)=m_prob.value(x, y, z, c)=talpriors.value(x, y, z, c)=1.0/2.0f;
 	    }
-	}
-    }
+    Classification();
+  }
   MeansVariances(noclasses, m_post);
 }
+
 
 void ZMRISegmentation::Volumesquant(const NEWIMAGE::volume4D<float>& probs)
 {
   double tot=0.0;
   for(int c=1;c<noclasses+1;c++)
-    {
-      volumequant[c]=0.0;
-      for(int z=0;z<m_nDepth;z++)
-	{
-	  for(int y=0;y<m_nHeight;y++)
-	    {
-	      for(int x=0;x<m_nWidth;x++)
-		{
-		  if(m_mask.value(x, y, z)==1)
-		    {
-		      volumequant[c]+=probs.value(x, y, z, c);
-		    }
-		}
-	    }
-	}
-      volumequant[c]*=m_nxdim;
-      volumequant[c]*=m_nydim;
-      volumequant[c]*=m_nzdim;
-      tot+=volumequant[c];
-      if(verboseusage)
-	cout<<"\n tissue "<<c<<" " << volumequant[c];
-    }
+  {
+    volumequant[c]=probs[c].sum(m_mask);
+    volumequant[c]*=m_nxdim*m_nydim*m_nzdim;
+    tot+=volumequant[c];
+    if(verboseusage)
+      cout<<"\n tissue "<<c<<" " << volumequant[c];
+  }
   if(verboseusage)
     cout<<"\n total tissue "<<tot<<"\n";
 }
-
 
 
 void ZMRISegmentation::InitKernel(float kernalsize)
@@ -1188,282 +947,119 @@ void ZMRISegmentation::InitKernel(float kernalsize)
   kernelz=gaussian_kernel1D(sigma, radius);
 }
 
+
 NEWIMAGE::volume<float> ZMRISegmentation::Convolve(NEWIMAGE::volume<float>& resfieldimage)
 {
   return convolve_separable(resfieldimage, kernelx, kernely, kernelz);
 }
 
 
-
 void ZMRISegmentation::MeansVariances(int numberofclasses, NEWIMAGE::volume4D<float>& probability )
 {
-  for(int c=1;c<numberofclasses+1;c++)
-    {
-      m_mean[c]=0.0f;
-      m_variance[c]=0.0f;
-    }
-  for(int c=1;c<numberofclasses+1;c++)
-   {
-     double normtemp=0.0f;
-     double s=0.0f;
-     double t=0.0f;
-     for(int z=0;z<m_nDepth;z++)
-       {
-	 for(int y=0;y<m_nHeight;y++)
-	   {
-	     for(int x=0;x<m_nWidth;x++)
-	       {
-		 if(m_mask.value(x, y, z)==1)
-		   {
-		     double ppp=probability.value(x, y, z, c);
-		     double val=m_Mri.value(x, y, z);
-		     double temp=val*ppp;
-		     t+=temp;
-		     double tempsqr=temp*val;
-		     s+=tempsqr;
-		     normtemp+=ppp;
-		   }
-	       }
-	    }
-	}
+  volume4D<float> foo=m_Mri*probability;
+  volume4D<float> foo2=m_Mri*m_Mri*probability;
+  for(int c=1;c<=numberofclasses;c++)
+  {
+    m_mean[c] = foo[c].sum(m_mask)/probability[c].sum(m_mask);
+    m_variance[c] = foo2[c].sum(m_mask)/probability[c].sum(m_mask)-m_mean[c]*m_mean[c];
+  }
+
+  for(int c=1;c<=numberofclasses;c++)
+  {
+    double normtemp=0.0f;
+    double s=0.0f;
+    double t=0.0f;
+    for(int z=0;z<m_nDepth;z++)
+      for(int y=0;y<m_nHeight;y++)
+	for(int x=0;x<m_nWidth;x++)
+	  if(m_mask.value(x, y, z)==1)
+	  {
+	    double ppp=probability.value(x, y, z, c);
+	    double val=m_Mri.value(x, y, z);
+	    double temp=val*ppp;
+	    t+=temp;
+	    double tempsqr=temp*val;
+	    s+=tempsqr;
+	    normtemp+=ppp;
+	  }     
      m_mean[c]=t/normtemp;
      m_variance[c]= s/normtemp - m_mean[c]*m_mean[c];
    }
 }
 
+
 void ZMRISegmentation::BiasRemoval()
 { 
-  p_bias=.0f;
-  if(biasfieldremoval)
-    {
-      for(int z=0;z<m_nDepth;z++)
-	{
-	  for(int y=0;y<m_nHeight;y++)
+  p_bias=0;
+
+  if(biasfieldremoval) {
+    volume<float> p_meaninvcov(p_bias),p_resmean(p_bias);
+    for(int z=0;z<m_nDepth;z++)
+      for(int y=0;y<m_nHeight;y++)
+	for(int x=0;x<m_nWidth;x++)
+	  if(m_mask.value(x, y, z)==1)
+	    for(int c=1;c<noclasses+1;c++) 
 	    {
-	      for(int x=0;x<m_nWidth;x++)
-		{
-		  if(m_mask.value(x, y, z)==1)
-		    {
-		      p_meaninvcov.value(x, y, z)=0.0f;
-		      p_resmean.value(x, y, z)=0.0f;
-		      for(int c=1;c<noclasses+1;c++)
-			{
-			  float tempf=m_post(x, y, z, c)/m_variance[c];
-			  p_meaninvcov.value(x, y, z)+=tempf;
-			  p_resmean.value(x, y, z)+=tempf*(m_Mricopy.value(x, y, z)-m_mean[c]);
-			}
-		    }
-		  else
-		    {
-		      p_meaninvcov.value(x, y, z)=0.0f;
-		      p_resmean.value(x, y, z)=0.0f;
-		    }
-		}
+	      float tempf=m_post(x, y, z, c)/m_variance[c];
+	      p_meaninvcov.value(x, y, z)+=tempf;
+	      p_resmean.value(x, y, z)+=tempf*(m_Mricopy.value(x, y, z)-m_mean[c]);
 	    }
-	}
-      p_meaninvcov=Convolve(p_meaninvcov);
-      p_resmean=Convolve(p_resmean);
-      p_bias=p_resmean/p_meaninvcov;
-      volume<float>tmpmask;
-      copyconvert(m_mask,tmpmask);
-      p_bias-=p_bias.mean(tmpmask); // subtract off within-mask mean of p_bias
-      for(int z=0;z<m_nDepth;z++)
-	{
-	  for(int y=0;y<m_nHeight;y++)
-	    {
-	      for(int x=0;x<m_nWidth;x++)
-		{
-		  if(m_mask.value(x, y, z)==0)
-		    p_bias.value(x, y, z)=0.0f;
-		  m_Mri.value(x, y, z)=m_Mricopy.value(x, y, z)-p_bias.value(x, y, z);
-		}
-	    }
-	}
-    }
+    p_meaninvcov=Convolve(p_meaninvcov);
+    p_resmean=Convolve(p_resmean);
+    p_bias=divide(p_resmean,p_meaninvcov,m_mask);
+    p_bias-=p_bias.mean(m_mask); // subtract off within-mask mean of p_bias
+    p_bias*=m_mask;  //Zero out regions outside of mask ( is this needed?)
+    m_Mri=m_Mricopy-p_bias;
+  }
 }
 
 NEWIMAGE::volume4D<float> ZMRISegmentation::pvprobs(int c)
 {
-  volume4D<float> probability;
-  probability=volume4D<float>(m_nWidth, m_nHeight, m_nDepth, 2);
+  volume4D<float> probability(m_nWidth, m_nHeight, m_nDepth, 2);
   probability=0.0;
   for(int z=0;z<m_nDepth;z++)
-    {
-      for(int y=0;y<m_nHeight;y++)
-        {
-          for(int x=0;x<m_nWidth;x++)
-            {
-              if(m_mask.value(x, y, z)==1)
-                {
-
-                  if(members(x, y, z, c-1)>=0.51)//experiment here m_members                                                                                                                                                                
-                    {
-                      probability.value(x, y, z, 1)=exp(-1.0*logGaussian(m_Mri.value(x, y, z), m_mean[c], m_variance[c]));
-                    }
-                }
-            }
-        }
-    }
+    for(int y=0;y<m_nHeight;y++)
+       for(int x=0;x<m_nWidth;x++)
+         if(m_mask.value(x, y, z)==1 && members(x, y, z, c-1)>=0.51) //experiment here m_members
+	   probability.value(x, y, z, 1)=exp(-1.0*logGaussian(m_Mri.value(x, y, z), m_mean[c], m_variance[c]));
+                 
   return probability;
-
 }
 
-NEWIMAGE::volume4D<float> ZMRISegmentation::InitclassAlt(int numberofsegs)
-{
-  volume4D<float> probability;
-  probability=volume4D<float>(m_nWidth, m_nHeight, m_nDepth, noclasses+1);
-  probability=0.0;
-  if((numberofsegs==3)||(numberofsegs==2))
-    {
-
-      for(int z=0;z<m_nDepth;z++)
-        {
-          for(int y=0;y<m_nHeight;y++)
-            {
-              for(int x=0;x<m_nWidth;x++)
-                {
-                  if(m_mask.value(x, y, z)==1)
-                    {
-                      float tot=0.0f;
-                      for(int c=1;c<numberofsegs+1;c++)
-                        {
-
-                          probability.value(x, y, z, c)=logGaussian(m_Mri.value(x, y, z), m_mean[c], m_variance[c]);
-                          tot+=probability(x, y, z, c)=exp(-probability(x, y, z, c))*talpriors(x, y, z, c);
-                        }
-                      for(int c=1;c<numberofsegs+1;c++)
-                        {
-                          if((tot>0.0)&&(m_mask.value(x, y, z)==1))
-                            {
-                              probability.value(x, y, z, c)/=tot;
-                            }
-                          else
-                            {
-                              probability.value(x, y, z, c)=0.0;
-                            }
-                        }
-
-                    }
-                }
-            }
-        }
-    }
-  return probability;
-
-}
 
 NEWIMAGE::volume4D<float> ZMRISegmentation::Initclass(int numberofsegs)
 {
-  volume4D<float> probability;
-  probability=volume4D<float>(m_nWidth, m_nHeight, m_nDepth, noclasses+1);
+  volume4D<float> probability(m_nWidth, m_nHeight, m_nDepth, noclasses+1);
   probability=0.0;
   for(int z=0;z<m_nDepth;z++)
-    {
-      for(int y=0;y<m_nHeight;y++)
+    for(int y=0;y<m_nHeight;y++)
+      for(int x=0;x<m_nWidth;x++)
+	if(m_mask.value(x, y, z)==1)
         {
-          for(int x=0;x<m_nWidth;x++)
-            {
-              if(m_mask.value(x, y, z)==1)
-                {
-                  float tot=0.0f;
-                  for(int c=1;c<numberofsegs+1;c++)
-                    {
-
-                      probability.value(x, y, z, c)=logGaussian(m_Mri.value(x, y, z), m_mean[c], m_variance[c]);
-                      tot+=probability(x, y, z, c)=exp(-probability(x, y, z, c));
-                    }
-                  for(int c=1;c<numberofsegs+1;c++)
-                    {
-                      if((tot>0.0)&&(m_mask.value(x, y, z)==1))
-                        {
-                          probability.value(x, y, z, c)/=tot;
-                        }
-                      else
-                        {
-                          probability.value(x, y, z, c)=0.0;
-                        }
-                    }
-
-                }
-            }
-        }
-    }
+	  float tot=0.0f;
+	  for(int c=1;c<numberofsegs+1;c++)
+	  {
+	    probability.value(x, y, z, c)=logGaussian(m_Mri.value(x, y, z), m_mean[c], m_variance[c]);
+	    tot+=probability(x, y, z, c)=max(exp(-probability(x, y, z, c)),0.0f); // Need max? Can prob be less than zero?
+	  }
+	  for(int c=1;c<numberofsegs+1 && tot>0;c++)
+	    probability.value(x, y, z, c)/=tot; 
+	}
   return probability;
-
 }
 
 void ZMRISegmentation::UpdateMembers(NEWIMAGE::volume4D<float>& probability)
 {
   for(int x=0;x<m_nWidth;x++)
-    {
-      for(int y=0;y<m_nHeight;y++)
-        {
-          for(int z=0;z<m_nDepth;z++)
-            {
-              if(m_mask(x, y, z)>0)
-                {
-                  float sum=0.0f;
-                  for(int c=0;c<noclasses;c++)
-                    {
-                      sum+=members(x, y, z, c)=weight[c]*probability(x, y, z, c+1);
-                    }
-                  for(int c=0;c<noclasses;c++)
-                    {
-                      if(sum>0.0)
-                        members(x, y, z, c)/=sum;
-                      else
-                        members(x, y, z, c)=0.0f;
-                    }
-                }
-            }
-        }
-    }
-}
-
-float ZMRISegmentation::numberofvoxels()
-{
-  nvoxel=0.0f;
-  for(int x=0;x<m_nWidth;x++)
-    {
-      for(int y=0;y<m_nHeight;y++)
-        {
-          for(int z=0;z<m_nDepth;z++)
-            {
-              if(m_mask(x, y, z)>0)
-                {
-                  nvoxel=nvoxel+1;
-                }
-            }
-        }
-    }
-  return nvoxel;
-}
-void ZMRISegmentation::UpdateWeights()
-{
-  for(int c=0;c<noclasses;c++)
-    weight[c]=0.0f;
-  for(int x=0;x<m_nWidth;x++)
-    {
-      for(int y=0;y<m_nHeight;y++)
-        {
-          for(int z=0;z<m_nDepth;z++)
-            {
-              if(m_mask(x, y, z)>0)
-                {
-
-                  for(int c=0;c<noclasses;c++)
-                    {
-                      weight[c]+=members(x, y, z, c);
-                    }
-                }
-            }
-        }
-    }
-
-  for(int c=0;c<noclasses;c++)
-    {
-      weight[c]/=nvoxel;
-    }
+    for(int y=0;y<m_nHeight;y++)
+      for(int z=0;z<m_nDepth;z++)
+	if(m_mask(x, y, z)==1) {
+	  float sum=0.0f;
+	  for(int c=0;c<noclasses;c++)
+	    sum+=members(x, y, z, c)=max(weight[c]*probability(x, y, z, c+1),0.0f); // Need max? Can weight*prob be less than zero?
+	  for(int c=0;c<noclasses && sum>0;c++)
+	    members(x, y, z, c)/=sum;
+	}
 }
 
 void ZMRISegmentation::WeightedKMeans()
@@ -1479,117 +1075,77 @@ void ZMRISegmentation::WeightedKMeans()
   }
 
   m_post=m_prob=0.0f;
-  volume<float> m_maskc=volume<float>(m_nWidth, m_nHeight, m_nDepth);
-  copyconvert(m_mask,m_maskc);
 
   float perc=1.0/((float)(noclasses+1.0));     
   for(int c=1;c<noclasses+1;c++)
-    {
-      if ( input_c == noclasses+1 ) m_mean[c]=log(input_mean[c]);
-      else m_mean[c]=m_Mricopy.percentile((float)(perc*c), m_maskc);
-      if (verboseusage) cout << c << " " << m_mean[c] << endl;
-    }
+  {
+    if ( input_c == noclasses+1 ) m_mean[c]=log(input_mean[c]);
+    else m_mean[c]=m_Mricopy.percentile((float)(perc*c), m_mask);
+    if (verboseusage) cout << c << " " << m_mean[c] << endl;
+  }
 
-   for(int c=1;c<noclasses+1;c++)
-     for(int c2=1;c2<c;c2++)
-       if(m_mean[c]==m_mean[c2]) throw kmeansexc;
+  for(int c=1;c<noclasses+1;c++)
+    for(int c2=1;c2<c;c2++)
+      if(m_mean[c]==m_mean[c2]) throw kmeansexc;
 
   for(int z=0;z<m_nDepth;z++)
-    {
-      for(int y=0;y<m_nHeight;y++)
-        {
-          for(int x=0;x<m_nWidth;x++)
-            {
-              if(m_mask(x, y, z)==1)
-                {
-                  int minclass=0;
-                  float mindist=1e31;
-                  for(int c=1;c<noclasses+1;c++)
-                    {
-                      if((m_Mricopy.value(x, y, z)-m_mean[c])*(m_Mricopy.value(x, y, z)-m_mean[c])<mindist)
-                        {
-                          mindist=(m_Mricopy.value(x, y, z)-m_mean[c])*(m_Mricopy.value(x, y, z)-m_mean[c]);
-                          minclass=c;
-                        }
-                    }
-                  m_post(x, y, z, minclass)=1.0f;
-
-                }
-            }
-        }
-    }
+    for(int y=0;y<m_nHeight;y++)
+      for(int x=0;x<m_nWidth;x++)
+	if(m_mask(x, y, z)==1)
+	{
+	  int minclass=0;
+	  float mindist=1e31;
+	  for(int c=1;c<=noclasses;c++)
+	  {
+	    if((m_Mricopy.value(x, y, z)-m_mean[c])*(m_Mricopy.value(x, y, z)-m_mean[c])<mindist)
+	    {
+	      mindist=(m_Mricopy.value(x, y, z)-m_mean[c])*(m_Mricopy.value(x, y, z)-m_mean[c]);
+	      minclass=c;
+	    }
+	  }
+	  m_post(x, y, z, minclass)=1.0f;
+	}
 
   for(int initfiter=0;initfiter<initfixed+inititerations;initfiter++)
-    {
-      UpdateMembers(m_post);
-      MeansVariances(noclasses, m_post);
-      if(verboseusage) {
-        cout<<"KMeans Iteration "<<initfiter<<"\n";
-      }
-      m_post=m_prob=Initclass(noclasses);
-    }
+  {
+    UpdateMembers(m_post);
+    MeansVariances(noclasses, m_post);
+    if(verboseusage) 
+      cout<<"KMeans Iteration "<<initfiter<<"\n";
+    m_post=m_prob=Initclass(noclasses);
+  }
   delete[] input_mean;
 }
 
-int ZMRISegmentation::qsort()
+void ZMRISegmentation::qsort()
 {
   // sorts images so that 0 is csf, 1 is grey, 2 is white
-  int n;
-  if(imagetype==1)  // for a T2 image reverse the intensity order
-    {
-      for(n=1; n<noclasses+1; n++)
-        {
-          m_mean[n]*=-1.0f;
-        }
-    }
+  if(imagetype==2)  // for a T2 image reverse the intensity order
+    for(int n=1; n<=noclasses; n++)
+      m_mean[n]*=-1.0f;
+        
+  vector<float> meancopy(m_mean), varcopy(m_variance);
+  volume4D<float> postcopy(m_post), probcopy(m_prob);
 
+  sort(m_mean.begin()+1, m_mean.end());
 
-  float* meancopy=new float[noclasses+1];
-  float* varcopy=new float[noclasses+1];
-  varcopy[0]=meancopy[0]=0.0f;
-  for(n=1; n<noclasses+1; n++)
-    {
-      varcopy[n]=m_variance[n];
-      meancopy[n]=m_mean[n];
-    }
-  volume4D<float> postcopy;
-  postcopy=volume4D<float>(m_post);
-  volume4D<float> probcopy;
-  probcopy=volume4D<float>(m_prob);
-  sort(m_mean+1, m_mean+noclasses+1);
-  for (n=1; n<noclasses+1; n++)
-    {
-      for (int m=1; m<noclasses+1; m++)
-	{
-	  if(meancopy[m]==m_mean[n])
-	    {
-	      m_variance[n]=varcopy[m];
-	      for(int z=0;z<m_nDepth;z++)
-		{
-		  for(int y=0;y<m_nHeight;y++)
-		    {
-		      for(int x=0;x<m_nWidth;x++)
-			{
-			  if(m_mask.value(x, y, z)==1)
-			    {
+  for (int n=1; n<=noclasses; n++)
+    for (int m=1; m<=noclasses; m++)
+      if(meancopy[m]==m_mean[n]) 
+      {
+	m_variance[n]=varcopy[m];
+	for(int z=0;z<m_nDepth;z++)
+          for(int y=0;y<m_nHeight;y++)
+            for(int x=0;x<m_nWidth;x++)
+              if(m_mask.value(x, y, z)==1)
+              {
+		m_post.value(x, y, z ,n)=postcopy.value(x, y, z, m);
+		m_prob.value(x, y, z ,n)=probcopy.value(x, y, z, m);
+		Classification(x, y, z);
+	      }
+      }
 
-			      m_post.value(x, y, z ,n)=postcopy.value(x, y, z, m);
-			      m_prob.value(x, y, z ,n)=probcopy.value(x, y, z, m);
-			      Classification(x, y, z);
-
-			    }
-			}
-		    }
-		}
-	    }
-	}
-    }
-  if(imagetype==1)
-    {
-      for(n=1; n<noclasses+1; n++)
-        {
-          m_mean[n]*=-1.0f;
-        }
-    }
-  return 0;
+  if(imagetype==2)
+    for(int n=1; n<=noclasses; n++)
+      m_mean[n]*=-1.0f;
 }

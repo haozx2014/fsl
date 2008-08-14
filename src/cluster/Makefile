@@ -2,10 +2,10 @@ include ${FSLCONFDIR}/default.mk
 
 PROJNAME = cluster
 
-USRINCFLAGS = -I${INC_NEWMAT} -I${INC_PROB} -I${INC_ZLIB}
+USRINCFLAGS = -I${INC_NEWMAT} -I${INC_PROB} -I${INC_ZLIB} -I${INC_BOOST} 
 USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_PROB} -L${LIB_ZLIB}
 
-LIBS = -lutils -lnewimage -lmiscmaths -lprob -lfslio -lniftiio -lznz -lnewmat -lz
+LIBS = -lutils -lwarpfns -lbasisfield -lnewimage -lmiscmaths -lprob -lfslio -lniftiio -lznz -lnewmat -lz
 
 IOBJS = infertest.o infer.o
 ILIBS = -lprob
@@ -16,7 +16,7 @@ SOBJS = smoothest.o
 
 CLUSTER = cluster
 COBJS = cluster.o infer.o
-CLIBS = -lutils -lnewimage -lmiscmaths -lfslio -lniftiio -lznz -lnewmat -lprob -lz
+CLIBS = -lutils -lwarpfns -lbasisfield -lnewimage -lmiscmaths -lfslio -lniftiio -lznz -lnewmat -lprob -lz
 
 CCOBJS = connectedcomp.o
 

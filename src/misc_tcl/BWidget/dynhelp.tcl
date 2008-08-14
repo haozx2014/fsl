@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #  dynhelp.tcl
 #  This file is part of Unifix BWidget Toolkit
-#  $Id: dynhelp.tcl,v 1.1 2006/11/28 15:34:01 mwebster Exp $
+#  $Id: dynhelp.tcl,v 1.2 2008/01/08 16:31:25 mwebster Exp $
 # ----------------------------------------------------------------------------
 #  Index of commands:
 #     - DynamicHelp::configure
@@ -539,9 +539,13 @@ proc DynamicHelp::_show_help { path w x y } {
             -bd [Widget::getoption $_top -borderwidth] \
             -screen [winfo screen $w]
 
-        wm overrideredirect $_top 1
-        wm transient $_top
         wm withdraw $_top
+	if {$::tk_version >= 8.4
+	    && [string equal [tk windowingsystem] "aqua"]} {
+	    ::tk::unsupported::MacWindowStyle style $_top help none
+	} else {
+	    wm overrideredirect $_top 1
+	}
 
 	catch { wm attributes $_top -topmost 1 }
 
@@ -589,6 +593,7 @@ proc DynamicHelp::_show_help { path w x y } {
 proc DynamicHelp::_unset_help { path } {
     variable _canvases
     variable _registered
+    variable _top
 
     if {[info exists _registered($path)]} { unset _registered($path) }
     if {[winfo exists $path]} {
@@ -597,6 +602,7 @@ proc DynamicHelp::_unset_help { path } {
     }
     array unset _canvases   $path,*
     array unset _registered $path,*
+    destroy $_top
 }
 
 # ----------------------------------------------------------------------------

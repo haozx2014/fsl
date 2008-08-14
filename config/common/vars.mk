@@ -1,4 +1,4 @@
-# $Id: vars.mk,v 1.8 2005/12/01 15:33:30 duncan Exp $
+# $Id: vars.mk,v 1.11 2008/07/23 13:10:04 cowboy Exp $
 
 INCDIR = ${FSLDIR}/include
 LIBDIR = ${FSLDIR}/lib

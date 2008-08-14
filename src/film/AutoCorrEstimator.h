@@ -74,11 +74,8 @@
 #define WANT_STREAM
 #define WANT_MATH
 
-#include "miscmaths/volumeseries.h"
-#include "miscmaths/volume.h"
-#include "newmatap.h"
-#include "newmatio.h"
 #include "miscmaths/miscmaths.h"
+#include "newimage/newimageall.h"
 
 using namespace NEWMAT;
 using namespace MISCMATHS;
@@ -88,9 +85,11 @@ namespace FILM {
   class AutoCorrEstimator
     {
     public:
-      AutoCorrEstimator(const VolumeSeries& pxdata) : 
+      AutoCorrEstimator(const Matrix& pxdata) : 
+        sizeTS(pxdata.Nrows()),
+	numTS(pxdata.Ncols()),
 	xdata(pxdata),
-	acEst(pxdata.getNumVolumes(), pxdata.getNumSeries(), pxdata.getInfo(), pxdata.getPreThresholdPositions()),
+	acEst(pxdata.Nrows(), pxdata.Ncols()),
 	vrow(),
 	xrow(),
 	dummy(),
@@ -98,7 +97,7 @@ namespace FILM {
 	dm_mn(),
 	zeropad(0)
 	{ 
-	  zeropad = MISCMATHS::nextpow2(pxdata.getNumVolumes());
+	  zeropad = MISCMATHS::nextpow2(pxdata.Nrows());
 	  vrow.ReSize(zeropad);
 	  xrow.ReSize(zeropad);
 	  dummy.ReSize(zeropad);
@@ -110,40 +109,44 @@ namespace FILM {
 	}
 
       void calcRaw(int lag = 0);
-      void spatiallySmooth(const string& usanfname, const Volume& epivol, int masksize, const string& epifname, const string& susanpath, int usanthresh, int lag=0);
+      void spatiallySmooth(const string& usanfname, const ColumnVector& epivol, int masksize, const string& epifname, int usanthresh, const NEWIMAGE::volume<float>& usan_vol, int lag=0);
       void applyConstraints();
       void filter(const ColumnVector& filterFFT);
-      void fitAutoRegressiveModel();
+      Matrix fitAutoRegressiveModel();
       void pava();
-      void preWhiten(VolumeSeries& in, VolumeSeries& ret);
-      void preWhiten(ColumnVector& in, ColumnVector& ret, int i, Matrix& dmret, bool highfreqremovalonly=false);
+      //void preWhiten(VolumeSeries& in, VolumeSeries& ret);
+      void preWhiten(const ColumnVector& in, ColumnVector& ret, int i, Matrix& dmret, bool highfreqremovalonly=false);
       void setDesignMatrix(const Matrix& dm);
-      int establishUsanThresh(const Volume& epivol);
+      int establishUsanThresh(const ColumnVector& epivol);
 
       void getMeanEstimate(ColumnVector& ret);
 
-      VolumeSeries& getEstimates() { return acEst; }
-      VolumeSeries& getE() { return E; }
+      Matrix& getEstimates() { return acEst; }
+      Matrix& getE() { return E; }
       ColumnVector& getCountLargeE(){ return countLargeE; }
 
       int getZeroPad() { return zeropad; }
       void tukey(int M);
       void multitaper(int M);
       int pacf(const ColumnVector& x, int minorder, int maxorder, ColumnVector& betas);
+      
+      NEWIMAGE::volume<float> mask;
 
     private:
+      const int sizeTS;
+      const int numTS;
       AutoCorrEstimator();
       const AutoCorrEstimator& operator=(AutoCorrEstimator&);
       AutoCorrEstimator(AutoCorrEstimator&);
       void getSlepians(int M, int sizeTS, Matrix& slepians);
 
-      const VolumeSeries& xdata;
-      VolumeSeries acEst;
-      VolumeSeries E;
+      const Matrix& xdata;
+      Matrix acEst;
+      Matrix E;
       ColumnVector countLargeE;
 
-      VolumeSeries dminFFTReal;
-      VolumeSeries dminFFTImag;
+      Matrix dminFFTReal;
+      Matrix dminFFTImag;
 
       ColumnVector vrow;
       ColumnVector xrow;     

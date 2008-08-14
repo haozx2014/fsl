@@ -76,6 +76,7 @@ Usage() {
     echo "-intref <model_name> : reference structure for the local intensity normalization"
     echo "-loadBvars <bvars>   : initializes FIRST with a previous estimate of the structure"
     echo "-shcond <bmapfile>   : run FIRST on a structure given a previously segmented structure"
+    echo "-multipleImages : run first on multiple images, need to provide a list of images, transformation matrices, and output names"
     echo ""
     echo "e.g.:  run_first -i im1 -t im1_to_mni.mat -n 60 -o output_name -m ${FSLDIR}/data/first/models_317_bin/L_Hipp_bin.bmv"
     echo ""
@@ -84,7 +85,7 @@ Usage() {
 
 debug=0
 required=0
-
+useMultiImage=0
 while [ _$1 != _ ] ; do
 
     if [ $1 = -v ] ; then
@@ -107,10 +108,10 @@ while [ _$1 != _ ] ; do
 	modes=$2
 	shift 2
     elif [ $1 = -intref ] ; then
-	comExtras="$comExtras --useIntRefModel -n $2" 
+	comExtras="$comExtras --intref -p $2" 
 	shift 2
     elif [ $1 = -loadBvars ] ; then
-	comExtras="$comExtras --loadvars -o $2"
+	comExtras="$comExtras --loadbvars -o $2"
 	shift 2
     elif [ $1 = -shcond ] ; then
 	comExtras="$comExtras --shcond -b $2"
@@ -119,27 +120,42 @@ while [ _$1 != _ ] ; do
 	required=`echo $required + 1 | bc`
 	outname=$2
 	shift 2
+	elif [ $1 = -multipleImages ] ; then
+	useMultiImage=1
+	shift 1
     else
 	Usage
     fi
 done
 
-[ ${required} -ne 5 ] && Usage
+if [ $useMultiImage -eq 1 ] ; then 
+		[ ! -f $image ] && Usage
+	[ ${required} -ne 4 ] && Usage
+
+else
 [ `${FSLDIR}/bin/imtest $image` = 0 ] && Usage
-
-#use robust statistics
-lb=`${FSLDIR}/bin/fslstats $image -r | awk '{ print $1 }'`
-ub=`${FSLDIR}/bin/fslstats $image -r | awk '{ print $2 }'`
-
-if [ ! -f ${model} ] ; then
-    echo "model file not found"
-    exit 1
-fi
+[ ${required} -ne 5 ] && Usage
 
 if [ ! -f ${trmat} ] ; then
     echo "linear transformation matrix file not found"
     exit 1
 fi
 
-${FSLDIR}/bin/first --baam -i $image -l $trmat -m $model -k $outname -s 8 -g $modes -y $lb -z $ub -a -777 $verbose $comExtras
 
+fi 
+
+
+if [ ! -f ${model} ] ; then
+    echo "model file not found"
+    exit 1
+fi
+
+
+
+
+if [ $useMultiImage -eq 1 ] ; then 
+
+	${FSLDIR}/bin/first -i $image -l dummy -m $model -k $outname -n $modes  $verbose $comExtras  --multiImageInput
+else
+	 ${FSLDIR}/bin/first -i $image -l $trmat -m $model -k $outname -n $modes  $verbose $comExtras 
+fi;

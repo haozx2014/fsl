@@ -78,6 +78,10 @@
 #define WANT_STREAM
 #define WANT_MATH
 
+#ifndef EXPOSE_TREACHEROUS
+#define EXPOSE_TREACHEROUS
+#endif
+
 #include "newmatap.h"
 #include "newmatio.h"
 #include "miscmaths/miscmaths.h"
@@ -94,7 +98,7 @@
 #endif
 
 // Put current version number here:
-const string version = "5.4.2";
+const string version = "5.5";
 
 ////////////////////////////////////////////////////////////////////////////
 
@@ -137,73 +141,31 @@ void set_basescale(const string& filenameA, const string& filenameB)
 
 
 int FLIRT_read_volume4D(volume4D<float>& target, const string& filename, 
-			volumeinfo& vinfo, int& LRorder)
-{
-  // make voxels bigger if basescale is smaller than 1.0 (and vice versa)
-  int retval = read_volume4D(target,filename,vinfo);
-  LRorder = target.left_right_order();
-  if (globaloptions::get().verbose>2) {
-    cout << "Original file qform code & mat = " << target.qform_code() << endl;
-    cout << target.qform_mat() << endl;
-    cout << "Original file sform code & mat = " << target.sform_code()<< endl;
-    cout << target.sform_mat() << endl;
-  }
-  target.makeradiological();
-  if (globaloptions::get().verbose>2) {
-    cout << "Reoriented image qform code & mat = " << target.qform_code()<<endl;
-    cout << target.qform_mat() << endl;
-    cout << "Reoriented image sform code & mat = " << target.sform_code()<<endl;
-    cout << target.sform_mat() << endl;
-  }
-  // if basescale != 1.0
-  if (fabs(globaloptions::get().basescale - 1.0)>1e-5) {
-    target.setxdim(target.xdim() / globaloptions::get().basescale);
-    target.setydim(target.ydim() / globaloptions::get().basescale);
-    target.setzdim(target.zdim() / globaloptions::get().basescale);
-  }
-  return retval;
-}
-
-int FLIRT_read_volume(volume<float>& target, const string& filename, 
-		      volumeinfo& vinfo, int& LRorder)
-{
-  // make voxels bigger if basescale is smaller than 1.0 (and vice versa)
-  int retval = read_volume(target,filename,vinfo);
-  LRorder = target.left_right_order();
-  if (globaloptions::get().verbose>2) {
-    cout << "Original file qform code & mat = " << target.qform_code() << endl;
-    cout << target.qform_mat() << endl;
-    cout << "Original file sform code & mat = " << target.sform_code()<< endl;
-    cout << target.sform_mat() << endl;
-  }
-  target.makeradiological();
-  if (globaloptions::get().verbose>2) {
-    cout << "Reoriented image qform code & mat = " << target.qform_code()<<endl;
-    cout << target.qform_mat() << endl;
-    cout << "Reoriented image sform code & mat = " << target.sform_code()<<endl;
-    cout << target.sform_mat() << endl;
-  }
-  // if basescale != 1.0
-  if (fabs(globaloptions::get().basescale - 1.0)>1e-5) {
-    target.setxdim(target.xdim() / globaloptions::get().basescale);
-    target.setydim(target.ydim() / globaloptions::get().basescale);
-    target.setzdim(target.zdim() / globaloptions::get().basescale);
-  }
-  return retval;
-}
-
-int FLIRT_read_volume4D(volume4D<float>& target, const string& filename, 
 			volumeinfo& vinfo)
 {
-  int LRorder;
-  return FLIRT_read_volume4D(target,filename,vinfo,LRorder);
+  // make voxels bigger if basescale is smaller than 1.0 (and vice versa)
+  int retval = read_volume4D(target,filename,vinfo);  // as radiological
+  // if basescale != 1.0
+  if (fabs(globaloptions::get().basescale - 1.0)>1e-5) {
+    target.setxdim(target.xdim() / globaloptions::get().basescale);
+    target.setydim(target.ydim() / globaloptions::get().basescale);
+    target.setzdim(target.zdim() / globaloptions::get().basescale);
+  }
+  return retval;
 }
 
 int FLIRT_read_volume(volume<float>& target, const string& filename, 
 		      volumeinfo& vinfo)
 {
-  int LRorder;
-  return FLIRT_read_volume(target,filename,vinfo,LRorder);
+  // make voxels bigger if basescale is smaller than 1.0 (and vice versa)
+  int retval = read_volume(target,filename,vinfo);  // as radiological
+  // if basescale != 1.0
+  if (fabs(globaloptions::get().basescale - 1.0)>1e-5) {
+    target.setxdim(target.xdim() / globaloptions::get().basescale);
+    target.setydim(target.ydim() / globaloptions::get().basescale);
+    target.setzdim(target.zdim() / globaloptions::get().basescale);
+  }
+  return retval;
 }
 
 int FLIRT_read_volume(volume<float>& target, const string& filename)
@@ -212,26 +174,6 @@ int FLIRT_read_volume(volume<float>& target, const string& filename)
   return FLIRT_read_volume(target,filename,vinfo);
 }
 
-
-// support function to deal with the radiological swapping
-template <class T>
-Matrix voxel2flirtcoord(const volume<T>& vol) {
-  Matrix v2f(4,4);
-  v2f=vol.sampling_mat();
-  if (vol.left_right_order()==FSL_NEUROLOGICAL) {
-    Matrix swapx(4,4);
-    Identity(swapx);
-    swapx(1,1)=-1;
-    swapx(1,4)=vol.xsize()-1;
-    v2f = v2f * swapx;
-  }
-  return v2f;
-}
-
-template <class T>
-Matrix voxel2flirtcoord(const volume4D<T>& vol) {
-  return voxel2flirtcoord(vol[0]);
-}
 
 
 //------------------------------------------------------------------------//
@@ -323,7 +265,7 @@ int vector2affine(const ColumnVector& params, int n, const ColumnVector& centre,
 
 int vector2affine(const ColumnVector& params, int n, Matrix& aff)
 {
-  return vector2affine(params,n,globaloptions::get().impair->testvol.cog(),aff);
+  return vector2affine(params,n,globaloptions::get().impair->testvol.cog("scaled_mm"),aff);
 }
 
 
@@ -357,7 +299,7 @@ int affmat2vector(const Matrix& aff, int n, const ColumnVector& centre,
 
 int affmat2vector(const Matrix& aff, int n, ColumnVector& params)
 {
-  return affmat2vector(aff,n,globaloptions::get().impair->testvol.cog(),params);
+  return affmat2vector(aff,n,globaloptions::get().impair->testvol.cog("scaled_mm"),params);
 }
 
 
@@ -688,12 +630,12 @@ void search_cost(Matrix& paramlist, volume<float>& costs, volume<float>& tx,
   globaloptions::get().refparams(8) = 1.0;
   globaloptions::get().refparams(9) = 1.0;
   // set the initial translation (to align cog's)
-  //  trans = refvol.cog() - initmat * testvol.cog()
+  //  trans = refvol.cog("scaled_mm") - initmat * testvol.cog("scaled_mm")
   ColumnVector testcog(4), tcog(3);
-  tcog = globaloptions::get().impair->testvol.cog();
+  tcog = globaloptions::get().impair->testvol.cog("scaled_mm");
   testcog(1)=tcog(1); testcog(2)=tcog(2); testcog(3)=tcog(3); testcog(4)=1.0;
   testcog = globaloptions::get().initmat * testcog;
-  trans = globaloptions::get().impair->refvol.cog();
+  trans = globaloptions::get().impair->refvol.cog("scaled_mm");
   trans(1) -= testcog(1);
   trans(2) -= testcog(2);
   trans(3) -= testcog(3);
@@ -934,8 +876,8 @@ void aligncog(Matrix& affmat)
   resmat(1,4) = resmat(2,4) = resmat(3,4) = 0.0;
   ColumnVector transoff;
   transoff = resmat.SubMatrix(1,3,1,3)
-    * globaloptions::get().impair->testvol.cog()
-    - globaloptions::get().impair->refvol.cog();
+    * globaloptions::get().impair->testvol.cog("scaled_mm")
+    - globaloptions::get().impair->refvol.cog("scaled_mm");
   resmat(1,4) = -transoff(1);
   resmat(2,4) = -transoff(2);
   resmat(3,4) = -transoff(3);
@@ -962,7 +904,7 @@ void alignpaxes(Matrix& affmat)
     paxref.SubMatrix(1,3,3,3) = -paxref.SubMatrix(1,3,3,3);
   if (paxtest.Determinant()<0) 
     paxtest.SubMatrix(1,3,3,3) = -paxtest.SubMatrix(1,3,3,3);
-  affmat = Identity(4);
+  affmat = IdentityMatrix(4);
   affmat.SubMatrix(1,3,1,3) = paxref * paxtest.t();
   aligncog(affmat);
 }
@@ -1278,14 +1220,14 @@ int get_testvol(volume<float>& testvol)
     double_end_slices(testvol);
   }
   if (globaloptions::get().initmatfname.size()>0) {
-    read_matrix(globaloptions::get().initmat,
-		globaloptions::get().initmatfname, testvol);
+    globaloptions::get().initmat = 
+      read_ascii_matrix(globaloptions::get().initmatfname);
   }
   
   float minval=0.0, maxval=0.0;
   minval = testvol.robustmin();
   maxval = testvol.robustmax();
-  clamp(testvol,minval,maxval);
+  if (globaloptions::get().clamping) clamp(testvol,minval,maxval);
 
   if (globaloptions::get().useweights) {
     if (globaloptions::get().testweightfname.length()>0) {
@@ -1303,8 +1245,12 @@ int get_testvol(volume<float>& testvol)
     cout << "Init Matrix = \n" << globaloptions::get().initmat << endl;
     cout << "Testvol sampling matrix =\n" << testvol.sampling_mat() << endl;
     cout << "Testvol Data Type = " << dtype << endl;
-    cout << "Testvol intensity clamped between " 
-	 << minval << " and " << maxval << endl;
+    cout << "Testvol intensity ";
+    if (globaloptions::get().clamping) {
+      cout << "clamped between " << minval << " and " << maxval << endl;
+    } else {
+      cout << "between " << testvol.min() << " and " << testvol.max() << endl;
+    }
   }
   return 0;
 }  
@@ -1321,7 +1267,7 @@ int get_refvol(volume<float>& refvol)
   float minval=0.0, maxval=0.0;
   minval = refvol.robustmin();
   maxval = refvol.robustmax();
-  clamp(refvol,minval,maxval);
+  if (globaloptions::get().clamping) clamp(refvol,minval,maxval);
 
   if (globaloptions::get().useweights) {
     if (globaloptions::get().refweightfname.length()>0) {
@@ -1336,8 +1282,12 @@ int get_refvol(volume<float>& refvol)
   }
 
   if (globaloptions::get().verbose>=2) {
-    cout << "Refvol intensity clamped between " 
-	 << minval << " and " << maxval << endl;
+    cout << "Refvol intensity ";
+    if (globaloptions::get().clamping) {
+      cout << "clamped between " << minval << " and " << maxval << endl;
+    } else {
+      cout << "between " << refvol.min() << " and " << refvol.max() << endl;
+    }
   }
   return 0;
 }
@@ -1395,7 +1345,7 @@ int output_dtype(const V& outvol)
 
 ////////////////////////////////////////////////////////////////////////////
 
-
+// this does the applyxfm!
 void no_optimise()
 {
   Tracer tr("no_optimise");
@@ -1407,9 +1357,8 @@ void no_optimise()
 
   // set up image pair and global pointer
   
-  int refLRorder;
   volumeinfo dummy;
-  FLIRT_read_volume(refvol,globaloptions::get().reffname,dummy,refLRorder);
+  FLIRT_read_volume(refvol,globaloptions::get().reffname,dummy);
   FLIRT_read_volume4D(testvol,globaloptions::get().inputfname,
 	      globaloptions::get().vinfo);
 
@@ -1427,15 +1376,16 @@ void no_optimise()
 
   // Initialise with user-supplied matrix
   if (globaloptions::get().initmatfname.size()>0) {
-    read_matrix(globaloptions::get().initmat,
-		globaloptions::get().initmatfname,testvol[0]);
+    globaloptions::get().initmat =
+      read_ascii_matrix(globaloptions::get().initmatfname);
   } else {
     // If not matrix then use s/q form info (unless told to ignore it)
     if (globaloptions::get().initmatsqform) {
-      if ( (refvol.vox2mm_code()>0) && (testvol.vox2mm_code()>0) ) {
-	globaloptions::get().initmat = voxel2flirtcoord(refvol)
-	  * refvol.vox2mm_mat().i() * testvol.vox2mm_mat()
-	  * voxel2flirtcoord(testvol).i();
+      if ( ((refvol.qform_code() + refvol.sform_code())>0) && 
+	   ((testvol.qform_code() + testvol.sform_code())>0) ) {
+	globaloptions::get().initmat = refvol.sampling_mat()
+	  * refvol.newimagevox2mm_mat().i() * testvol.newimagevox2mm_mat()
+	  * testvol.sampling_mat().i();
       }
     }
   }
@@ -1464,7 +1414,8 @@ void no_optimise()
     for (int t0=testvol.mint(); t0<=testvol.maxt(); t0++) {
       int tref=t0-testvol.mint();
       outputvol.addvolume(refvol);
-      if (globaloptions::get().interpmethod != NearestNeighbour) {
+      if ((globaloptions::get().interpmethod != NearestNeighbour) &&
+	  (globaloptions::get().interpblur)) {
 	testvol[t0] = blur(testvol[t0],min_sampling_ref);
       }
       
@@ -1475,7 +1426,6 @@ void no_optimise()
       
       final_transform(testvol[t0],outputvol[tref],globaloptions::get().initmat);
     }
-    outputvol.setLRorder(refLRorder);
     int outputdtype = output_dtype(outputvol);
     save_volume4D_dtype(outputvol,globaloptions::get().outputfname.c_str(),
 			outputdtype,globaloptions::get().vinfo);
@@ -2515,10 +2465,11 @@ int main(int argc,char *argv[])
 
   // Initialise with s/q form info (disabled if a user-supplied mat is given)
   if (globaloptions::get().initmatsqform) {
-    if ( (refvol.vox2mm_code()>0) && (testvol.vox2mm_code()>0) ) {
-      globaloptions::get().initmat = voxel2flirtcoord(refvol)
-	* refvol.vox2mm_mat().i() * testvol.vox2mm_mat()
-	* voxel2flirtcoord(testvol).i();
+    if ( ((refvol.qform_code() + refvol.sform_code())>0) && 
+	 ((testvol.qform_code() + testvol.sform_code())>0) ) {
+      globaloptions::get().initmat = refvol.sampling_mat()
+	* refvol.newimagevox2mm_mat().i() * testvol.newimagevox2mm_mat()
+	* testvol.sampling_mat().i();
     }
   }
   if ( (globaloptions::get().verbose>0) || (globaloptions::get().printinit)) {
@@ -2536,8 +2487,8 @@ int main(int argc,char *argv[])
   }
     
   if (globaloptions::get().verbose>=3) {
-    cout << "CoG for refvol is:  " << refvol.cog().t();
-    cout << "CoG for testvol is:  " << testvol.cog().t();
+    cout << "CoG for refvol is:  " << refvol.cog("scaled_mm").t();
+    cout << "CoG for testvol is:  " << testvol.cog("scaled_mm").t();
   }
   
   volume<float> refvol_2, refvol_4, refvol_8;
@@ -2674,10 +2625,9 @@ int main(int argc,char *argv[])
     float oldbasescale = globaloptions::get().basescale;
     globaloptions::get().basescale = 1.0;
 
-    int refLRorder;
     volumeinfo dummy;
     FLIRT_read_volume(testvol,globaloptions::get().inputfname);
-    FLIRT_read_volume(refvol,globaloptions::get().reffname,dummy,refLRorder);
+    FLIRT_read_volume(refvol,globaloptions::get().reffname,dummy);
     if (globaloptions::get().verbose>=2) {
       print_volume_info(testvol,"testvol");
       print_volume_info(testvol,"refvol");
@@ -2697,14 +2647,14 @@ int main(int argc,char *argv[])
       volume<float> newtestvol = refvol;
       float min_sampling_ref=1.0;
       min_sampling_ref = Min(refvol.xdim(),Min(refvol.ydim(),refvol.zdim()));
-      if (globaloptions::get().interpmethod != NearestNeighbour) {
+      if ((globaloptions::get().interpmethod != NearestNeighbour) &&
+	  (globaloptions::get().interpblur)) {
 	testvol = blur(testvol,min_sampling_ref);
       }
       final_transform(testvol,newtestvol,finalmat);      
       if (globaloptions::get().verbose>=2) {
 	print_volume_info(newtestvol,"Transformed testvol");
       }
-      newtestvol.setLRorder(refLRorder);
       int outputdtype = output_dtype(newtestvol);
       save_volume_dtype(newtestvol,globaloptions::get().outputfname.c_str(),
 			outputdtype, globaloptions::get().vinfo);

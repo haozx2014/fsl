@@ -80,12 +80,15 @@
 #include "meshclass/meshclass.h"
 #include "shapeModel/shapeModel.h"
 #include "miscmaths/miscmaths.h"
+#include "fslvtkio/fslvtkio.h"
+
 using namespace std;
 using namespace NEWIMAGE;
 using namespace Utilities;
 using namespace mesh;
-using namespace shapemodel;
+using namespace SHAPE_MODEL_NAME;
 using namespace MISCMATHS;
+using namespace fslvtkio;
 
 string title="firt_utils (Version 1.0) University of Oxford (Brian Patenaude)";
 string examples="first_utils [options] -i input -o output ";
@@ -193,10 +196,246 @@ float refYdim=1.0;
 float refZdim=1.0;
 
 
+void setShapeMesh(shapeModel * model1, const Mesh & m){	
+	vector<float>::iterator j=model1->smean.begin();
+	for (vector<Mpoint*>::const_iterator i = m._points.begin(); i!=m._points.end(); i++ , j+=3){
+		*j=(*i)->get_coord().X;
+		*(j+1)=(*i)->get_coord().Y;
+		*(j+2)=(*i)->get_coord().Z;
+	}	
+}
+
+void meshReg(Mesh* m, const string & flirtmatname){
+
+	//refsize is actually target image
+	int numPoints=m->nvertices();
+	Matrix MeshPts(4,numPoints);
+	Matrix NewMeshPts(4,numPoints);
+	Matrix flirtmat(4,4);
+	
+	//read in flirt matrix, uses ascii
+	
+	ifstream fmat;
+	fmat.open(flirtmatname.c_str());
+	float tmpfloat=0;
+	for (int i=0; i<4;i++){
+		for (int j=0; j<4;j++){
+			fmat>>tmpfloat;
+			flirtmat.element(i,j)=tmpfloat;
+		//	cout<<flirtmat.element(i,j)<<" ";
+		}
+		//cout<<endl;
+	}
+				flirtmat=flirtmat.i();
+	
+	
+    //	cout<<"transform mesh points..."<<endl;
+	int count=0;
+	for (vector<Mpoint*>::iterator i = m->_points.begin(); i!=m->_points.end(); i++ ){
+		//	cout<<"count "<<count<<endl;	
+		
+		MeshPts.element(0,count)=(*i)->get_coord().X;
+		MeshPts.element(1,count)=(*i)->get_coord().Y;
+		MeshPts.element(2,count)=(*i)->get_coord().Z;
+		MeshPts.element(3,count)=1;
+		
+		count++;
+	}
+	//		cout<<"mesh points loaded into matrix..."<<endl;
+	NewMeshPts=flirtmat*MeshPts;
+	count=0;
+	for (vector<Mpoint*>::iterator i = m->_points.begin(); i!=m->_points.end(); i++ ){
+		Pt newPt(NewMeshPts.element(0,count),NewMeshPts.element(1,count),NewMeshPts.element(2,count));
+		(*i)->_update_coord = newPt;
+		count++;
+	}
+	m->update();
+	
+	
+}
 
 
 
+inline
+ReturnMatrix unwrapMatrix(const Matrix & m) 
+{
+	ColumnVector munwrap(m.Nrows()*m.Ncols());
+	unsigned int count=0;
+	for (int i =0; i<m.Nrows() ; i++)
+		for (int j =0; j<m.Ncols() ; j++,count++)
+			munwrap.element(count)=m.element(i,j);
+	return munwrap;
+}
 
+template<class T>
+vector<T> vectorToVector( const Matrix & sm, const int & MaxModes){
+	vector<T> vecM;	
+	if (sm.Nrows()==1){
+		for (int i=0;i<  MaxModes ; i++){
+			vecM.push_back(static_cast<T>(sm.element(0,i)));
+		}
+	}else{
+		for (int i=0;i<  MaxModes ; i++){
+			vecM.push_back(static_cast<T>(sm.element(i,0)));
+		}
+		
+		
+	}
+	
+	return vecM;
+}
+
+template<class T>
+vector<T> vectorToVector( const Matrix & sm){
+	vector<T> vecM;	
+	if (sm.Nrows()==1){
+		for (int i=0;i< sm.Ncols() ; i++){
+			vecM.push_back(static_cast<T>(sm.element(0,i)));
+		}
+	}else{
+		for (int i=0;i< sm.Nrows() ; i++){
+			vecM.push_back(static_cast<T>(sm.element(i,0)));
+		}
+		
+		
+	}
+	
+	return vecM;
+}
+
+template<class T>
+vector< vector<T> > matrixToVector( const Matrix & sm, const int & MaxModes){
+	vector< vector<T> > vecM;	
+    for (int j=0;j< MaxModes ; j++){
+		vector<T> mode;
+	    for (int i=0;i< sm.Nrows() ; i++){
+			mode.push_back(sm.element(i,j));
+		}
+		vecM.push_back(mode);
+	}   
+	
+	return vecM;
+}
+
+template<class T>
+vector< vector<T> > matrixToVector( const Matrix & sm){
+	vector< vector<T> > vecM;	
+    for (int j=0;j< sm.Ncols() ; j++)
+	{
+		vector<T> mode;
+	    for (int i=0;i< sm.Nrows() ; i++)
+			mode.push_back(static_cast<T>(sm.element(i,j)));
+		vecM.push_back(mode);
+	}   
+
+	return vecM;
+}
+
+
+
+shapeModel* loadAndCreateShapeModel( const string & modelname)
+{
+
+if (verbose.value()) cout<<"read model"<<endl;
+	fslvtkIO* fmodel = new fslvtkIO(modelname,static_cast<fslvtkIO::DataType>(0));
+	if (verbose.value()) cout<<"done reading model"<<endl;
+	const int Npts=fmodel->getPointsAsMatrix().Nrows();
+	
+		unsigned int M = static_cast<unsigned int>(fmodel->getField("numSubjects").element(0,0));
+	int MaxModes=M;
+	if (verbose.value()) cout<<"setting up shape/appearance model"<<endl;
+
+	//load mean shape into vector
+	vector<float> Smean;
+	Matrix* Pts = new Matrix;
+	*Pts=fmodel->getPointsAsMatrix();
+
+	if (verbose.value()) cout<<"The shape has "<<Npts<<" vertices."<<endl;
+    for (int i=0;i< Npts ; i++){
+		Smean.push_back(Pts->element(i,0));
+		Smean.push_back(Pts->element(i,1));
+		Smean.push_back(Pts->element(i,2));
+	}   
+	Pts->ReleaseAndDelete();
+
+	//read polygon data
+	vector< vector<unsigned int > > polygons = matrixToVector<unsigned int>(fmodel->getPolygons().t());
+
+	//process shape modes and conditional intensity mean modes
+	Matrix SmodesM;
+	Matrix ImodesM;
+
+	
+	SmodesM=unwrapMatrix(fmodel->getField("mode0"));
+	ImodesM=unwrapMatrix(fmodel->getField("Imode0"));
+	
+	
+	for (int i =1; i<MaxModes;i++)
+	{
+		stringstream ss;
+		ss<<i;
+		string mode;
+		ss>>mode;
+		SmodesM=SmodesM | unwrapMatrix(fmodel->getField("mode"+mode));
+		ImodesM=ImodesM | unwrapMatrix(fmodel->getField("Imode"+mode));
+		
+	}
+	if (verbose.value()) cout<<MaxModes<<" modes of variation are retained."<<endl;
+
+	
+	vector< vector<float > > Smodes = matrixToVector<float>(SmodesM);
+	vector< vector<float > > Imodes = matrixToVector<float>(ImodesM);
+	ImodesM.Release();
+	SmodesM.Release();
+	
+	
+	//process rest of information, including intensity variance
+	vector< vector<float > > Iprec = matrixToVector<float>(fmodel->getField("iCondPrec0").t());
+	vector<float > Errs =  vectorToVector<float>(fmodel->getField("ErrPriors0"));
+	vector<float > se =  vectorToVector<float>(fmodel->getField("eigenValues"), MaxModes);
+	vector<float > ie =  vectorToVector<float>(fmodel->getField("iCondEigs0"));
+	vector<float > Imean =  vectorToVector<float>(unwrapMatrix(fmodel->getField("Imean")));
+	vector<int> labels =  vectorToVector<int>(fmodel->getField("labels"));
+
+
+	if (verbose.value()) cout<<"The model was constructed from "<<M<<" training subjects."<<endl;
+
+	//have read in all data and store in local structures, now delete the reader.
+	delete fmodel;
+	
+	//create shape model
+	shapeModel* model1 = new shapeModel(Smean, Smodes, se, Imean, Imodes,Iprec, ie, M,Errs,polygons,labels);
+
+	return model1;
+
+}
+
+
+
+Mesh convertToMesh( const vector<float> & pts, const vector< vector<unsigned int> > & polys )
+{
+	Mesh mesh;
+
+  mesh._points.clear();
+  mesh._triangles.clear();
+  
+  int i=0;
+  for (vector<float>::const_iterator p= pts.begin(); p!=pts.end(); p+=3,i++)
+    {
+	  Mpoint * pt = new Mpoint(*p, *(p+1), *(p+2), i);
+      mesh._points.push_back(pt);
+    }
+	
+	
+  for (vector< vector<unsigned int> >::const_iterator p=polys.begin(); p!=polys.end(); p++)
+    {
+      Triangle * tr = new Triangle( mesh._points.at( p->at(0) ), mesh._points.at( p->at(1) ), mesh._points.at( p->at(2) ));
+      mesh._triangles.push_back(tr);
+    }
+
+	return mesh;
+
+}
 
 //%%%%%%%%%%%%%%mesh fill
 void getBounds(Mesh m, int *bounds, float xdim, float ydim, float zdim){
@@ -1092,30 +1331,35 @@ Matrix rigid_linear_xfm(Matrix Data,ColumnVector meanm, Mesh mesh, bool writeToF
 
 
 Matrix recon_meshesMNI( shapeModel* model1, Matrix bvars, ColumnVector* meanm, Mesh * meshout,vector<Mesh>* vMeshes){
+
+
 	vMeshes->clear();
 		//want to return mean mesh in vector form
-		meanm->ReSize(model1->getTotalNumberOfPoints()*3);
+		meanm->ReSize(model1->smean.size());
 		{
 		
 			int count=0;
 			int cumnum=0; 
-			for (int sh=0; sh<model1->getNumberOfShapes();sh++){
-				Mesh m=model1->getTranslatedMesh(sh);
+			for (int sh=0; sh<1;sh++)
+			{
+				Mesh m= convertToMesh(model1->smean, model1->cells);//model1->getTranslatedMesh(sh);
 				*meshout=m;
 				for (vector<Mpoint*>::iterator i = m._points.begin(); i!=m._points.end(); i++ ){
 					meanm->element(3*cumnum+count)=(*i)->get_coord().X;
 					meanm->element(3*cumnum+count+1)=(*i)->get_coord().Y;
 					meanm->element(3*cumnum+count+2)=(*i)->get_coord().Z;
 					count+=3;
+
 				}
-				cumnum+=model1->getNumberOfPoints(sh);	
+				cumnum+=model1->smean.size();	
 			}
 			
 		}
-		
+
+
 		//need number of subjects (to detrmine number of modes)
 		//int M=model1->getNumberOfSubjects();
-		int Tpts=model1->getTotalNumberOfPoints();
+		int Tpts=model1->smean.size()/3;
 			Matrix MeshVerts(3*Tpts,bvars.Ncols());
 		//this is different than mnumber of subjects which were used to create model
 		//int numSubs=bvars.Ncols();
@@ -1129,9 +1373,9 @@ Matrix recon_meshesMNI( shapeModel* model1, Matrix bvars, ColumnVector* meanm, M
 			}
 			//keep track of number of points preceding
 			int cumnum=0;
-			for (int sh=0; sh<model1->getNumberOfShapes();sh++){
+			for (int sh=0; sh<1;sh++){
 				//cout<<"cumnum "<<cumnum<<endl;
-				Mesh m=model1->getDeformedMesh(vars,sh,static_cast<int>(vars.size()));	
+				Mesh m=convertToMesh(model1->getDeformedGrid(vars),model1->cells);	
 				vMeshes->push_back(m);
 				int count=0;
 				for (vector<Mpoint*>::iterator i = m._points.begin(); i!=m._points.end(); i++ ){
@@ -1140,31 +1384,34 @@ Matrix recon_meshesMNI( shapeModel* model1, Matrix bvars, ColumnVector* meanm, M
 					MeshVerts.element(3*cumnum+count+2,j)=(*i)->get_coord().Z;
 					count+=3;
 				}	
-				cumnum+=model1->getNumberOfPoints(sh);	
+				cumnum+=model1->smean.size();	
 			}	
 		}
+
 	return MeshVerts;
 
 }
 
 Matrix recon_meshesNative( string modelname, Matrix bvars, ColumnVector* meanm, Mesh * meshout, vector<string> subjectnames, vector<string> flirtmats,vector<Mesh>* vMeshes){
 	vMeshes->clear();
-	
-	shapeModel* model1= new shapeModel();
-	model1->setImageParameters(refXsize,refYsize, refZsize,refXdim, refYdim, refZdim);
-	cout<<"load model "<<modelname<<endl;
-	model1->load_bmv_binaryInfo(modelname,1);
-	model1->load_bmv_binary(modelname,1);
+	//fslvtkIO* fin = new fslvtkIO(modelname,static_cast<fslvtkIO::DataType>(0));
+	shapeModel* model1=loadAndCreateShapeModel(modelname);
+
+//	shapeModel* model1= new shapeModel();
+//	model1->setImageParameters(refXsize,refYsize, refZsize,refXdim, refYdim, refZdim);
+//	cout<<"load model "<<modelname<<endl;
+//	model1->load_bmv_binaryInfo(modelname,1);
+//	model1->load_bmv_binary(modelname,1);
 	
 	//want to return mean mesh in vector form
-	meanm->ReSize(model1->getTotalNumberOfPoints()*3);
+	meanm->ReSize(model1->smean.size());
 	{
 		
 		int count=0;
 		int cumnum=0; 
-		for (int sh=0; sh<model1->getNumberOfShapes();sh++){
+		for (int sh=0; sh<1;sh++){
 			//dieferrence between origin specification
-			Mesh m=model1->getTranslatedMesh(sh);
+			Mesh m=convertToMesh( model1->smean , model1->cells );
 //			m.save("targetMesh.vtk",3);
 			//Mesh m=model1->getShapeMesh(sh);
 			*meshout=m;
@@ -1176,13 +1423,13 @@ Matrix recon_meshesNative( string modelname, Matrix bvars, ColumnVector* meanm, 
 
 				count+=3;
 			}
-			cumnum+=model1->getNumberOfPoints(sh);	
+			cumnum+=model1->smean.size()/3;	
 		}
 		
 	}
 	
 	//need number of subjects (to detrmine number of modes)
-	int Tpts=model1->getTotalNumberOfPoints();
+	int Tpts=model1->smean.size()/3;
 	Matrix MeshVerts(3*Tpts,bvars.Ncols());
 	//this is different than mnumber of subjects which were used to create model
 	//this loads all mesh point into a matrix to do stats on....
@@ -1196,9 +1443,9 @@ Matrix recon_meshesNative( string modelname, Matrix bvars, ColumnVector* meanm, 
 		}
 		//keep track of number of points preceding
 		int cumnum=0;
-		for (int sh=0; sh<model1->getNumberOfShapes();sh++){
-			Mesh m=model1->getDeformedMesh(vars,sh,static_cast<int>(vars.size()));	
-			model1->meshReg(&m, flirtmats.at(j));
+		for (int sh=0; sh<1;sh++){
+			Mesh m=convertToMesh(model1->getDeformedGrid(vars),model1->cells);	
+			meshReg(&m, flirtmats.at(j));
 			vMeshes->push_back(m);
 			int count=0;
 			for (vector<Mpoint*>::iterator i = m._points.begin(); i!=m._points.end(); i++ ){
@@ -1207,9 +1454,11 @@ Matrix recon_meshesNative( string modelname, Matrix bvars, ColumnVector* meanm, 
 				MeshVerts.element(3*cumnum+count+2,j)=(*i)->get_coord().Z;
 				count+=3;
 			}	
-			cumnum+=model1->getNumberOfPoints(sh);	
+			cumnum+=model1->smean.size()/3;	
 		}	
 	}
+	cout<<"done recon"<<endl;
+
 	return MeshVerts;
 	
 }
@@ -1239,10 +1488,8 @@ void do_work_bvars(){
 	mname=read_bvars_ModelName(inname.value() );	
 	
 	//load model 
-	shapeModel* model1 = new shapeModel;
-	model1->setImageParameters(refXsize,refYsize, refZsize,refXdim, refYdim, refZdim);
-	model1->load_bmv_binaryInfo(mname,1);
-	model1->load_bmv_binary(mname,1);
+	shapeModel* model1=loadAndCreateShapeModel(mname);
+	cout<<"model loaded"<<endl;
 	//need number of subjects (to detrmine number of modes)
 	vector<string> subjectnames;
 	Matrix bvars;
@@ -1306,7 +1553,7 @@ void do_work_bvars(){
 					//****************DEMEAN DESIGN MATRIX AND ADD ONE COLUMS*********************/
 					
 					
-					
+					cout<<"done recon and reg"<<endl;
 					//if the design has nto been demeaned and you are dooing discrimiant analysis
 					//then perform demean of matrix
 					
@@ -1529,7 +1776,7 @@ void do_work_bvars(){
 														count+=3;
 										}
 										m.update();
-										model1->setShapeMesh(0,m);
+										setShapeMesh(model1,m);
 										vector<float> scalarsT;
 										
 										//this provides the option to do stats on the vertices 
@@ -1563,35 +1810,48 @@ void do_work_bvars(){
 												scalarsT.push_back(F);
 												
 											}
+										
 																												
-										for (int sh=0; sh<model1->getNumberOfShapes();sh++){
-											model1->setShapeTstatX(sh,tstatsx);
-											model1->setShapeTstatY(sh,tstatsy);
-											model1->setShapeTstatZ(sh,tstatsz);
-											model1->setShapeScalars(sh,scalarsT);
+										fslvtkIO * fout = new fslvtkIO();
+										fout->setPoints(model1->smean);
+										fout->setPolygons(model1->cells);
+																																																																
+										for (int sh=0; sh<1;sh++){
+												fout->addFieldData<float>(tstatsx,"tstatx","float");
+												fout->addFieldData<float>(tstatsy,"tstaty","float");
+												fout->addFieldData<float>(tstatsz,"tstatz","float");
+
+											
+									//		model1->setShapeTstatX(sh,tstatsx);
+									//		model1->setShapeTstatY(sh,tstatsy);
+									//		model1->setShapeTstatZ(sh,tstatsz);
+									//		model1->setShapeScalars(sh,scalarsT);
 										}
 										//save the mesg with vectors
-										model1->save(outname.value()+evnum+".vtk",5,0);
+										fout->save(outname.value()+evnum+".vtk");//,5,0);
 									}
 					}
 					}		
 
 
 void do_work_meshToVol(){
- 
+ 	cout<<"mesh read0"<<endl;
+
 	volume<float> ref;
 	volume<short> segim;
 	read_volume(ref,inname.value());
 
-	shapeModel* mesh1 = new shapeModel;
-	mesh1->setImageParameters(ref.xsize(), ref.ysize(), ref.zsize(), ref.xdim(), ref.ydim(), ref.zdim());
-	mesh1->load_vtk(meshname.value(),1);
-	Mesh m1;
-	if (centreOrigin.value()){
-	  m1=mesh1->getTranslatedMesh(0);
-	}else{
-	  m1=mesh1->getShapeMesh(0);
-	}
+//	shapeModel* mesh1 = new shapeModel;
+	//mesh1->setImageParameters(ref.xsize(), ref.ysize(), ref.zsize(), ref.xdim(), ref.ydim(), ref.zdim());
+//	mesh1->load_vtk(meshname.value(),1);
+//	cout<<"mesh read"<<endl;
+		Mesh m1;
+		m1.load(meshname.value());
+//	if (centreOrigin.value()){
+//	  m1=mesh1->getTranslatedMesh(0);
+//	}else{
+//	  m1=mesh1->getShapeMesh(0);
+//	}
 	int bounds[6]={0,0,0,0,0,0};
 	int label=meshLabel.value();	
 	

@@ -114,7 +114,7 @@ cd $tmpdir
 
 $FSLDIR/bin/fslsplit $im 
 for fnm in `$FSLDIR/bin/imglob vol*` ; do
-  num=`$FSLDIR/bin/remove_ext $fnm | sed 's/vol//'`;  export num;
+  num=`echo $fnm | sed 's/vol//'`;  export num;
   echo $num; 
   $FSLDIR/bin/slicer $fnm -s 2 -a ${iout}_$num.png
   ${FSLDIR}/bin/pngappend ${iout}_$num.png ${iout}_$num.gif

@@ -5,7 +5,7 @@
 
     Christian F. Beckmann, FMRIB Image Analysis Group
     
-    Copyright (C) 1999-2007 University of Oxford */
+    Copyright (C) 1999-2008 University of Oxford */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -626,9 +626,12 @@ namespace Melodic{
 
     int res = 0;
     ColumnVector PPCA;
- 
+ 		RowVector PercEV(PPCAest.Column(1).t());
+	  PercEV = cumsum(PercEV / sum(PercEV,2).AsScalar());
+
 		if(which == string("aut"))
-			if(int(estimators(2)) < int(estimators(1)) && int(estimators(2)) > 15){
+			if(int(estimators(2)) < int(estimators(1)) && 
+				float(PercEV(int(estimators(2))))>0.8){
 				res=int(estimators(2));
 	      PPCA << PPCAest.Column(3);
 			}else{

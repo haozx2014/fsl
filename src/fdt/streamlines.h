@@ -29,8 +29,9 @@ namespace TRACT{
     volume<int> m_skipmask;
     volume<int> m_rubbish;
     volume<int> m_stop;
+    volume4D<float> m_prefdir;
     volume4D<float> m_loopcheck;
-    vector<volume<int>* > m_waymasks;
+    vector<volume<float>* > m_waymasks;
     vector<bool> m_passed_flags;
     vector<bool> m_own_waymasks;
     Matrix m_Seeds_to_DTI;
@@ -46,7 +47,7 @@ namespace TRACT{
       for(unsigned int i=0;i<m_waymasks.size();i++)
 	if(m_own_waymasks[i]) delete m_waymasks[i];
     }
-    void add_waymask(volume<int>& myway,const bool& ownership=false){
+    void add_waymask(volume<float>& myway,const bool& ownership=false){
       //make sure that the waymask to add will not be deleted before
       //this streamliner goes out of scope!!
       m_waymasks.push_back(&myway);
@@ -54,7 +55,7 @@ namespace TRACT{
       m_passed_flags.push_back(false);
     }
     void pop_waymasks(){
-      volume<int>* tmpptr=m_waymasks[m_waymasks.size()-1];
+      volume<float>* tmpptr=m_waymasks[m_waymasks.size()-1];
       m_waymasks.pop_back();
       m_passed_flags.pop_back();
       if(m_own_waymasks[m_own_waymasks.size()-1]){
@@ -96,7 +97,7 @@ namespace TRACT{
     vector<ColumnVector> m_path;
     
     vector<volume<int> > m_seedcounts;
-    vector<volume<int> > m_targetmasks;
+    vector<volume<float> > m_targetmasks;
     vector<string> m_targetmasknames;
     vector<int> m_targflags;
     //vector<vector<int> > m_particle_numbers;
@@ -115,13 +116,13 @@ namespace TRACT{
     int m_Conrow2;
     ColumnVector m_lrdim;
     
-    const volume<int>& m_seeds;
+    const volume<float>& m_seeds;
     ColumnVector m_seedsdim;
     const Streamliner& m_stline;
     Streamliner& m_nonconst_stline;
     
   public:
-    Counter(const volume<int>& seeds,Streamliner& stline):opts(probtrackxOptions::getInstance()),
+    Counter(const volume<float>& seeds,Streamliner& stline):opts(probtrackxOptions::getInstance()),
 							  logger(LogSingleton::getInstance()),
 							  m_seeds(seeds),m_stline(stline),
 							  m_nonconst_stline(stline){
@@ -129,14 +130,15 @@ namespace TRACT{
       m_beenhere.reinitialize(m_seeds.xsize(),m_seeds.ysize(),m_seeds.zsize());
       m_seedsdim.ReSize(3);
       m_seedsdim << m_seeds.xdim() <<m_seeds.ydim() <<m_seeds.zdim();
-      m_I=Identity(4);
+      m_I=IdentityMatrix(4);
       
     }
     
     void initialise();
     
     void initialise_path_dist(){
-      m_prob=m_seeds;
+      m_prob.reinitialize(m_seeds.xsize(),m_seeds.ysize(),m_seeds.zsize());
+      copybasicproperties(m_seeds,m_prob);
       m_prob=0;
     }
     void initialise_seedcounts();
@@ -184,7 +186,7 @@ namespace TRACT{
 
     inline const Streamliner& get_streamline() const {return m_stline;}
     inline Streamliner& get_nonconst_streamline() const {return m_nonconst_stline;}
-    inline const volume<int>& get_seeds() const {return m_seeds;}
+    inline const volume<float>& get_seeds() const {return m_seeds;}
 
     
   };
@@ -194,7 +196,7 @@ namespace TRACT{
     Log& logger;
     Counter& m_counter;    
     Streamliner& m_stline;
-    const volume<int>& m_seeds;
+    const volume<float>& m_seeds;
     ColumnVector m_seeddims;
   public:
     Seedmanager(Counter& counter):opts(probtrackxOptions::getInstance()),

@@ -1,4 +1,3 @@
-
 /*  signal2image.cc
 
     Ivana Drobnjak and Mark Jenkinson, FMRIB Image Analysis Group
@@ -84,7 +83,7 @@ using namespace Utilities;
 //  printed out as the help or usage message
 
 string title="signal2image (Version 2.0)\nCopyright(c) 2003, University of Oxford (Mark Jenkinson & Ivana Drobnjak)";
-string examples="signal2image [options] -i <signal> -p <pulse> -o <image> \nsignal2image -p <pulse> -c <kcoord>";
+string examples="signal2image [options] -i <signal> -p <pulse> -o <image> \n signal2image -p <pulse> -c <kcoord>";
 
 
 Option<bool> verbose(string("-v,--verbose"), false, 
@@ -103,24 +102,29 @@ Option<string> inname(string("-i,--in"), string(""),
 		  string("input signal"),
 		  false, requires_argument);
 Option<string> outname(string("-o,--out"), string(""),
-		  string("outputs image"),
+		  string("output image"),
 		  false, requires_argument);
 Option<string> koutname(string("-k,--kout"), string(""),
-		  string("outputs k-space"),
+		  string("output k-space"),
 		  false, requires_argument);
 Option<string> opt_kcoord(string("-c, --kcoord"), string(""),
 		  string("kspace coordinates"),
 		  false, requires_argument);
+Option<bool> opt_homo(string("--homo"), false,
+		  string("do the homodyne reconstruction"),
+		  false, no_argument);
 int nonoptarg;
 
 ////////////////////////////////////////////////////////////////////////////
 
 int ReshapeEpiSignal(const Matrix& signal,
-		     const int slcdir,const int nslc,const int phasedir, const int nphase, const int readdir, const int nread, 
+		     const int slcdir,const int nslc,const int phasedir, const int nphase, const int readdir, const int nread, const int startkspace,
              volume4D<double>& kspace_real,volume4D<double>& kspace_imag) {
-  
   cout<<"Reshaping the signal..."<<endl;
   int n=kspace_real.tsize();
+  int nsize=signal.Ncols();
+  kspace_real=0;
+  kspace_imag=0;
   int slchelp=0;
   int simdir=1;
   int zdir1=1;
@@ -133,10 +137,11 @@ int ReshapeEpiSignal(const Matrix& signal,
     simdir=-1;
     slchelp=nslc-1;
   }
+  int nphase_new=nphase-startkspace+1;
   for (int nn=1;nn<=n;nn++){
     for (int nzz=1;nzz<=nslc;nzz++){
-      for (int k=nphase;k>=1;k=k-2){
-	     int a=(nphase-k)*nread+(nzz-1)*nread*nphase+(nn-1)*nread*nphase*nslc+1;
+      for (int k=nphase_new;k>=1;k=k-2){
+	     int a=(nphase_new-k)*nread+(nzz-1)*nread*nphase_new+(nn-1)*nread*nphase_new*nslc+1;
 	     int c=a+nread;
 	     if (verbose.value()) { cout << "a,c,k = " << a << " " << c << " " << k << endl; }
 	     for (int m=1;m<=nread;m++){
@@ -184,7 +189,7 @@ int ReshapeEpiSignal(const Matrix& signal,
 		  cout<<""<<endl;
 	       }
 	       kspace_imag(xdir1,ydir1,zdir1,nn-1)=signal(2,a+m-1);
-               if (ydir2 <= (nphase-1)) {
+               if (c < nsize) {
 	           kspace_real(xdir2,ydir2,zdir2,nn-1)=signal(1,c+m-1);
 	           kspace_imag(xdir2,ydir2,zdir2,nn-1)=signal(2,c+m-1);
 	       }
@@ -194,6 +199,8 @@ int ReshapeEpiSignal(const Matrix& signal,
   }
   return 0;
 }
+
+//--------------------
 int ReshapeGradEchoSignal(const Matrix& signal,const int slcdir,const int nslc,const int phasedir, const int nphase, const int readdir, const int nread,  volume4D<double>& kspace_real,
 		  volume4D<double>& kspace_imag) 
 {
@@ -230,6 +237,39 @@ int ReshapeGradEchoSignal(const Matrix& signal,const int slcdir,const int nslc,c
   }
   return 0;
 }
+
+int setdir(int& xdir, int& ydir, int& zdir, const int x, const int y, const int z, const int readdir, const int phasedir,const int slcdir){
+  if (abs(slcdir)==1){
+    zdir=z;
+  }
+  if (abs(slcdir)==2){
+    ydir=z;
+  }
+  if (abs(slcdir)==3){
+    xdir=z;
+  }
+  if (phasedir==1){
+    zdir=y;
+  }
+  if (phasedir==2){
+    ydir=y;
+  }
+  if (phasedir==3){
+    xdir=y;
+  }
+  if (readdir==1){
+    zdir=x;
+  }
+  if (readdir==2){
+    ydir=x;
+  }
+  if (readdir==3){ 
+    xdir=x;
+  }
+  return 0;
+}
+
+
 int do_work(int argc, char* argv[]) 
 {
   RowVector pulseinfo;
@@ -246,6 +286,10 @@ int do_work(int argc, char* argv[])
   int slcdir=(int) pulseinfo(15);//1 for z, 2 for y and 3 for x
   int phasedir=(int) pulseinfo(19);
   int readdir=(int) pulseinfo(20);
+  int startkspace=1;
+  if (pulseinfo.Ncols() >= 22){
+    startkspace=(int) pulseinfo(22);
+  } 
   if (slcdir==phasedir || slcdir==readdir || readdir==phasedir){
    cout<<"WARNING: The same gradients used for different directions in the k-space!!"<<endl;
    exit(EXIT_FAILURE);
@@ -294,6 +338,7 @@ int do_work(int argc, char* argv[])
   }
   cout<<"nx,ny,nz "<<nx<<" "<<ny<<" "<<nz<<" "<<endl;
   cout<<"dx,dy,dz "<<dx<<" "<<dy<<" "<<dz<<" "<<endl;
+
   if (opt_kcoord.set()){
     volume4D<double> kcoord_kx(nx,ny,nz,n);
     volume4D<double> kcoord_ky(nx,ny,nz,n);
@@ -307,12 +352,13 @@ int do_work(int argc, char* argv[])
     kcoord_ky.settdim(dt);
     Matrix kcoord;
     kcoord=read_binary_matrix(opt_kcoord.value());
-    if (seqnum==1 || seqnum==3) ReshapeEpiSignal(kcoord,slcdir,nslc,phasedir,nphase,readdir,nread,kcoord_kx,kcoord_ky);
+    if (seqnum==1) ReshapeEpiSignal(kcoord,slcdir,nslc,phasedir,nphase,readdir,nread,startkspace,kcoord_kx,kcoord_ky);
     else if (seqnum==2) ReshapeGradEchoSignal(kcoord,slcdir,nslc,phasedir,nphase,readdir,nread,kcoord_kx,kcoord_ky);
     else cout<<"Do not know the sequence number "<<seqnum<<endl;
     save_volume4D(kcoord_kx,opt_kcoord.value()+"_kx");
     save_volume4D(kcoord_ky,opt_kcoord.value()+"_ky");
   }
+
   if (inname.set()){
     Matrix signal;
     signal=read_binary_matrix(inname.value());
@@ -326,9 +372,10 @@ int do_work(int argc, char* argv[])
     kspace_imag.setydim(dy);
     kspace_imag.setzdim(dz);
     kspace_imag.settdim(dt);
-    if (seqnum==1 || seqnum==3) ReshapeEpiSignal(signal,slcdir,nslc,phasedir,nphase,readdir,nread,kspace_real,kspace_imag);
+    if (seqnum==1) ReshapeEpiSignal(signal,slcdir,nslc,phasedir,nphase,readdir,nread,startkspace,kspace_real,kspace_imag);
     else if (seqnum==2) ReshapeGradEchoSignal(signal,slcdir,nslc,phasedir,nphase,readdir,nread,kspace_real,kspace_imag);
     else cout<<"Do not know the sequence"<<endl;
+
     if (koutname.set()) {
       if (useabs.value()) {
         volume4D<double> dummy(kspace_real);
@@ -354,7 +401,182 @@ int do_work(int argc, char* argv[])
         //save_complexvolume4D(kspace_real_float,kspace_imag_float,koutname.value());
       }
     }
-    if (outname.set()) {
+
+    if (outname.set() && startkspace>1 && opt_homo.value()) {
+        string aa="x";
+        string bb="y";
+        string cc="z";
+        string aaa="x";
+        string bbb="y";
+        string ccc="z";
+	//in the old version in order to make it be the same orientation as the images from the scanner I had to do swapdimensions("-x","-y","z") after the I did the fft2. The thing is the convention for the scanner is (y,x,z) and for me was (x,y,z) so maybe that had to do.will see...still testing this orientation thing. 
+        if (abs(slcdir)==1){
+          cc="z";
+	  ccc="z";
+	}
+	if (abs(slcdir)==2){
+          cc="y";
+	  bbb="z";
+	}
+        if (abs(slcdir)==3){
+	  cc="x";
+	  aaa="z";
+	}
+        if (phasedir==1){
+	  bb="z";
+	  ccc="y";
+	}
+        if (phasedir==2){
+	  bb="y";
+	  bbb="y";
+	}
+        if (phasedir==3){
+	  bb="x";
+	  aaa="y";
+	}
+        if (readdir==1){
+	  aa="z";
+	  ccc="x";
+	}
+        if (readdir==2){
+	  aa="y";
+	  bbb="x";
+	}
+        if (readdir==3){ 
+	  aa="x";
+	  aaa="x";
+	}
+	cout<<"slcdir="<<cc<<"; phasedir="<<bb<<"; readdir="<<aa<<endl;
+      //Setting up the the temporary volumes and variables needed for the homodyne recon
+	int ck=33;
+        if (nphase%2==0) {
+	   ck=nphase/2+1;//central line of the k-space
+	  } else {
+	   ck=(nphase-1)/2+1;
+        }
+        if (verbose.value()) {
+	  cout<<"Central line of the k-space is "<<ck<<endl;
+	  cout<<"Starting k-space line is "<<startkspace<<endl;
+	}
+        int nslope=ck-startkspace+1;
+	int npWslope=nslope*2+1;
+	volume<float> W(nx,ny,nz);
+	volume<float> Ws(nx,ny,nz);
+	W=0;Ws=0;
+	int np1=startkspace-2;
+	for (int s=0;s<nslc;s++){
+	  for (int k=0;k<np1;k++){
+	    for (int l=0;l<nread;l++){
+	      int zdir=s;
+	      int ydir=k;
+	      int xdir=l;
+	      setdir(xdir, ydir, zdir, l,k,s, readdir, phasedir, slcdir);
+	      W(xdir,ydir,zdir)=0;Ws(xdir,ydir,zdir)=0;
+	    }
+	  }
+	}
+	for (int s=0;s<nslc;s++){
+	  for (int k=np1;k<npWslope+np1;k++){
+	    for (int l=0;l<nread;l++){
+	      int zdir=s;
+	      int ydir=k;
+	      int xdir=l;
+	      setdir(xdir, ydir, zdir, l,k,s, readdir, phasedir, slcdir);
+	      W(xdir,ydir,zdir)=(k-np1)*2.0/(nslope*2.0);
+	      //W(xdir,ydir,zdir)=Wslope(xdir,ydir-np1,zdir);
+	      Ws(xdir,ydir,zdir)=1;
+	    }
+	  }
+	}
+	for (int s=0;s<nslc;s++){
+	  for (int k=np1+npWslope;k<nphase;k++){
+	    for (int l=0;l<nread;l++){
+	      int zdir=s;
+	      int ydir=k;
+	      int xdir=l;
+	      setdir(xdir, ydir, zdir, l,k,s, readdir, phasedir, slcdir);
+	      W(xdir,ydir,zdir)=2;Ws(xdir,ydir,zdir)=0;
+	    }
+	  }
+	}
+	if (verbose.value()){
+           save_volume(W,outname.value()+"_W");
+           save_volume(Ws,outname.value()+"_Ws");
+	   cout<<"Bottom "<<np1<<" lines are zeros. Middle "<<npWslope<<" lines are ones (in case of Ws) or slope increase (in case of W). The top  "<<nphase-np1-npWslope<<" lines are zeros (Ws) or two (W)."<<endl;
+	}
+	for (int nn=1;nn<=n;nn++){
+	  volume<float> kspaceHpc_real(nx,ny,nz);
+	  volume<float> kspaceHpc_imag(nx,ny,nz);
+	  for (int s=0;s<nslc;s++){
+	    for (int k=0;k<nphase;k++){
+	      for (int l=0;l<nread;l++){
+		int zdir=s;
+		int ydir=k;
+		int xdir=l;
+		setdir(xdir, ydir, zdir, l,k,s, readdir, phasedir, slcdir);
+		kspace_real(xdir,ydir,zdir,nn-1)=kspace_real(xdir,ydir,zdir,nn-1)*W(xdir,ydir,zdir);
+		kspace_imag(xdir,ydir,zdir,nn-1)=kspace_imag(xdir,ydir,zdir,nn-1)*W(xdir,ydir,zdir);
+		kspaceHpc_real(xdir,ydir,zdir)=kspace_real(xdir,ydir,zdir,nn-1)*Ws(xdir,ydir,zdir);
+		kspaceHpc_imag(xdir,ydir,zdir)=kspace_imag(xdir,ydir,zdir,nn-1)*Ws(xdir,ydir,zdir);
+	      }
+	    }
+	  }
+	  kspace_real[nn-1].swapdimensions(aa,bb,cc); 
+	  kspace_imag[nn-1].swapdimensions(aa,bb,cc);
+	  fftshift(kspace_real[nn-1]);
+	  fftshift(kspace_imag[nn-1]);
+	  fft2(kspace_real[nn-1],kspace_imag[nn-1]);
+	  fftshift(kspace_real[nn-1]);
+	  fftshift(kspace_imag[nn-1]);
+	  kspaceHpc_real.swapdimensions(aa,bb,cc); 
+	  kspaceHpc_imag.swapdimensions(aa,bb,cc);
+	  fftshift(kspaceHpc_real);
+	  fftshift(kspaceHpc_imag);
+	  fft2(kspaceHpc_real,kspaceHpc_imag);
+	  fftshift(kspaceHpc_real);
+	  fftshift(kspaceHpc_imag);
+	  volume<float> pcA(nx,ny,nz);
+	  volume<float> pcB(nx,ny,nz);
+	  for (int s=0;s<nslc;s++){
+	    for (int k=np1;k<nphase;k++){
+	      for (int l=0;l<nread;l++){
+		int zdir=s;
+		int ydir=k;
+		int xdir=l;
+		setdir(xdir, ydir, zdir, l,k,s, readdir, phasedir, slcdir);
+		float tmp1=1;
+		float tmp2=M_PI;
+		if (kspaceHpc_real(xdir,ydir,zdir)>0.0000001){
+		  tmp1=kspaceHpc_imag(xdir,ydir,zdir)/kspaceHpc_real(xdir,ydir,zdir);
+		  tmp2=atan(tmp1);
+		} else{
+		  if (kspaceHpc_imag(xdir,ydir,zdir)>0){
+		    tmp2=M_PI;
+		  }else{
+		    tmp2=-M_PI;
+		  }
+		}
+		pcA(xdir,ydir,zdir)=cos(tmp2);
+		pcB(xdir,ydir,zdir)=-sin(tmp2);
+	      }
+	    }
+	  }
+	  for (int s=0;s<nslc;s++){
+	    for (int k=np1;k<nphase;k++){
+	      for (int l=0;l<nread;l++){
+		int zdir=s;
+		int ydir=k;
+		int xdir=l;
+		setdir(xdir, ydir, zdir, l,k,s, readdir, phasedir, slcdir);
+		kspace_real(xdir,ydir,zdir,nn-1)=pcA(xdir,ydir,zdir)*kspace_real(xdir,ydir,zdir,nn-1)-pcB(xdir,ydir,zdir)*kspace_imag(xdir,ydir,zdir,nn-1);
+	      }
+	    }
+	  }
+	  kspace_real[nn-1].swapdimensions(aaa,bbb,ccc); 
+	  //kspace_real[nn-1].swapdimensions("-x","-y","z"); 
+	}
+	save_volume4D(kspace_real,outname.value()+"_homo");
+    } else {
       for (int nn=1;nn<=n;nn++){
         string aa="x";
         string bb="y";
@@ -410,8 +632,8 @@ int do_work(int argc, char* argv[])
         fftshift(kspace_imag[nn-1]);
         kspace_real[nn-1].swapdimensions(aaa,bbb,ccc); 
         kspace_imag[nn-1].swapdimensions(aaa,bbb,ccc);
-        kspace_real[nn-1].swapdimensions("-x","-y","z"); 
-        kspace_imag[nn-1].swapdimensions("-x","-y","z");
+        //kspace_real[nn-1].swapdimensions("-x","-y","z"); 
+        //kspace_imag[nn-1].swapdimensions("-x","-y","z");
       }
       if (useabs.value()) {
         volume4D<double> dummy(kspace_real);
@@ -445,10 +667,8 @@ int do_work(int argc, char* argv[])
 
 int main(int argc,char *argv[])
 {
-
   Tracer tr("main");
   OptionParser options(title, examples);
-
   try {
     // must include all wanted options here (the order determines how
     //  the help message is printed)
@@ -457,20 +677,18 @@ int main(int argc,char *argv[])
     options.add(opt_kcoord);
     options.add(koutname);
     options.add(useabs);
+    options.add(opt_homo);
     options.add(verbose);
     options.add(help);
     options.add(opt_pulse);
-    
     nonoptarg = options.parse_command_line(argc, argv);
-
     // line below stops the program if the help was requested or 
     //  a compulsory option was not set
     if ( (help.value()) || (!options.check_compulsory_arguments(true)) )
       {
 	options.usage();
 	exit(EXIT_FAILURE);
-      }
-    
+      }    
   }  catch(X_OptionError& e) {
     options.usage();
     cerr << endl << e.what() << endl;
@@ -478,9 +696,7 @@ int main(int argc,char *argv[])
   } catch(std::exception &e) {
     cerr << e.what() << endl;
   } 
-
   // Call the local functions
-
   return do_work(argc,argv);
 }
 
