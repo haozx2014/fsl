@@ -107,6 +107,8 @@ class InferenceTechnique {
   bool saveResiduals;
   
   vector<MVNDist*> resultMVNs;
+  vector<MVNDist*> resultMVNsWithoutPrior; // optional; used by Adrian's spatial priors research
+  vector<double> resultFs;
   
 private:
     const InferenceTechnique& operator=(const InferenceTechnique& from)

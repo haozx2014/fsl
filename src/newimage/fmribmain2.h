@@ -75,58 +75,26 @@ template <class T, class S>
 int fmrib_main(int argc, char* argv[]);
 
 template <class T>
-int call_fmrib_main(short datatype2, int argc, char* argv[])
+int call_fmrib_main(short datatype, int argc, char* argv[])
 {
-  switch (datatype2) {
-  case DT_UNSIGNED_CHAR:
-  case DT_INT8:
-    return fmrib_main<T,char>(argc, argv);
-  case DT_SIGNED_SHORT:
-    return fmrib_main<T,short>(argc, argv);
-  case DT_SIGNED_INT:
-  case DT_UINT16:
-    return fmrib_main<T,int>(argc, argv);
-  case DT_FLOAT:
-  case DT_UINT32:
-  case DT_INT64:
-  case DT_UINT64:
-    return fmrib_main<T,float>(argc, argv);
-  case DT_DOUBLE:
-  case DT_FLOAT128:
-    return fmrib_main<T,double>(argc, argv);
-  case DT_COMPLEX:
-    cerr << "COMPLEX not supported as an independent type" << endl;
-    return -1;
-  default:
-    return -1;
-  }
+  datatype=NEWIMAGE::closestTemplatedType(datatype);
+  if ( datatype==DT_UNSIGNED_CHAR ) return fmrib_main<T,char>(argc, argv);
+  else if ( datatype==DT_SIGNED_SHORT ) return fmrib_main<T,short>(argc, argv);
+  else if ( datatype==DT_SIGNED_INT ) return fmrib_main<T,int>(argc, argv);
+  else if ( datatype==DT_FLOAT )  return fmrib_main<T,float>(argc, argv);
+  else if ( datatype==DT_DOUBLE ) return fmrib_main<T,double>(argc, argv);
+  return -1;
 }
 
 int call_fmrib_main(short datatype1, short datatype2, int argc, char* argv[])
 {
-  switch (datatype1) {
-  case DT_UNSIGNED_CHAR:
-  case DT_INT8:
-    return call_fmrib_main<char>(datatype2, argc, argv);
-  case DT_SIGNED_SHORT:
-    return call_fmrib_main<short>(datatype2, argc, argv);
-  case DT_SIGNED_INT:
-  case DT_UINT16:
-    return call_fmrib_main<int>(datatype2, argc, argv);
-  case DT_FLOAT:
-  case DT_UINT32:
-  case DT_INT64:
-  case DT_UINT64:
-    return call_fmrib_main<float>(datatype2, argc, argv);
-  case DT_DOUBLE:
-  case DT_FLOAT128:
-    return call_fmrib_main<double>(datatype2, argc, argv);
-  case DT_COMPLEX:
-    cerr << "COMPLEX not supported as an independent type" << endl;
-    return -1;
-  default:
-    return -1;
-  }
+  datatype1=NEWIMAGE::closestTemplatedType(datatype1);
+  if ( datatype1==DT_UNSIGNED_CHAR ) return call_fmrib_main<char>(datatype2, argc, argv);
+  else if ( datatype1==DT_SIGNED_SHORT ) return call_fmrib_main<short>(datatype2, argc, argv);
+  else if ( datatype1==DT_SIGNED_INT ) return call_fmrib_main<int>(datatype2, argc, argv);
+  else if ( datatype1==DT_FLOAT )  return call_fmrib_main<float>(datatype2, argc, argv);
+  else if ( datatype1==DT_DOUBLE ) return call_fmrib_main<double>(datatype2, argc, argv);
+  return -1;
 }
 
 #endif

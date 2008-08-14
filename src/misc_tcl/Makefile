@@ -6,7 +6,7 @@ PROJNAME = misc_tcl
 
 SCRIPTS = runfsl
 
-TCLFILES = *.tcl *xbm *.sh *.ppm *.ico fslwebbrowser
+TCLFILES = *.tcl *xbm *.sh *.ppm *.ico 
 
 all:
 	@if [ ! -d ${DESTDIR}/bin ] ; then \

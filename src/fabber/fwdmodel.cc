@@ -2,7 +2,7 @@
 
     Adrian Groves and Michael Chappell, FMRIB Image Analysis Group
 
-    Copyright (C) 2007 University of Oxford  */
+    Copyright (C) 2007-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -79,7 +79,7 @@ string FwdModel::ModelVersion() const
   // Something like this:
   // return " $ I d $ "; // without the spaces
   // CVS will automatically replace this with version information that looks
-  // like this: $Id: fwdmodel.cc,v 1.12 2007/08/06 13:52:16 adriang Exp $
+  // like this: $Id: fwdmodel.cc,v 1.21 2008/04/25 14:55:18 chappell Exp $
   // It should probably go in your .cc file, not the header.
 }
 
@@ -109,6 +109,8 @@ void FwdModel::DumpParameters(const ColumnVector& params,
 #include "fwdmodel_asl_grase.h"
 #include "fwdmodel_asl_buxton.h"
 #include "fwdmodel_q2tips.h"
+#include "fwdmodel_flobs.h"
+#include "fwdmodel_dsc.h"
 // Add your models here
 
 FwdModel* FwdModel::NewFromName(const string& name, ArgsType& args)
@@ -128,18 +130,38 @@ FwdModel* FwdModel::NewFromName(const string& name, ArgsType& args)
     {
         return new Q2tipsFwdModel(args);
     } 
-    else if (name == "grase")
+    else if (name == "buxton")
       {
 	return new GraseFwdModel(args);
       }
-    else if (name == "buxton")
+    else if (name == "buxton_simple")
       {
 	return new BuxtonFwdModel(args);
+      }
+    else if (name == "linear")
+      {
+	return new LinearFwdModel(args);
+      }
+    else if (name == "flobs7")
+      {
+	// flobs7 = polar coordinate parameterization
+	// b1 cos(b2) X1 + b1 sin(b2) X2
+	// prior on b2 should probably be modified slightly (unless it's very small).
+        return new FlobsFwdModel(args, true);
+      }
+    else if (name == "flobs5")
+      {
+	// flobs5 = b1X1 + b1b2X2 parameterization
+        return new FlobsFwdModel(args, false);
+      }
+    else if (name == "dsc")
+      {
+	return new DSCFwdModel(args);
       }
     // Your models go here!
     else
     {
-        throw Invalid_option("Unrecognized forward model '" + name + "'");
+        throw Invalid_option("Unrecognized forward model '" + name + "'\n");
     }  
 }
 
@@ -162,13 +184,17 @@ void FwdModel::ModelUsageFromName(const string& name, ArgsType& args)
         cout << "Note: --model=q2tips uses exactly the same options as --model=quipss2:\n";
 	Quipss2FwdModel::ModelUsage();
     } 
-    else if (name == "grase")
+    else if (name == "buxton")
       {
 	GraseFwdModel::ModelUsage();
       }
-    else if (name == "buxton")
+    else if (name == "buxton-simple")
       {
 	BuxtonFwdModel::ModelUsage();
+      }
+    else if (name == "linear")
+      {
+	LinearFwdModel::ModelUsage();
       }
     // Your models go here!
     else

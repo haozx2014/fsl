@@ -87,12 +87,13 @@ struct=`remove_ext $1`
 echo "digital brain generation..."
 
 #run bet on $struct in order to remove the skull and stuff.
-bet ${struct} ${struct}_possumtmp -f 0.5 -g 0 
+${FSLDIR}/bin/bet ${struct} ${struct}_possumtmp -f 0.5 -g 0 
 
 #running fast in order to obtain all of the segmented partial volumes. For this case we only use one chanel input T1-weighted image. 
 #The output of this is $struct_brain_seg_0,1,2 for three different tissue types,$struct_seg is all of them in one image, 
 #$struct_bias is the estimates biased field (1/bias). In order to calculate the restore image you just need to multiply this field with the $struct.
 
-fast -t1 -c 3 -os -ob -od ${struct}_possumtmp ${struct}_possumtmp
-fslmerge -t ${struct}_possum ${struct}_possumtmp_seg_1  ${struct}_possumtmp_seg_2 ${struct}_possumtmp_seg_0 
+${FSLDIR}/bin/fast -g -o ${struct}_possumtmp ${struct}_possumtmp
+${FSLDIR}/bin/fslmerge -t ${struct}_possum ${struct}_possumtmp_seg_1 ${struct}_possumtmp_seg_2 ${struct}_possumtmp_seg_0
 rm ${struct}_possumtmp*
+

@@ -88,15 +88,18 @@ the case of selecting a co-ordinate).
   (for the probabilistic atlases, the % probability for each
   overlapping structure will be given).
 
-<p>If you select <b>Convert PE/COPE values to %</b>, any PE or COPE
-parameter estimate or contrast values will be converted to percentage
-signal change values before reporting. This is achieved by scaling the
-PE or COPE values by (100*) the peak-peak height of the regressor (or
-effective regressor in the case of COPEs) and then by dividing by
-mean_func (the mean over time of filtered_func_data). If you are
-running Featquery on a higher-level FEAT directory, mean_func is the
-mean of all the lower-level mean_func images, so the % change values
-are reported correctly.
+<p>If you select <b>Convert PE/COPE values to % (VARCOPE to %^2)</b>,
+any PE or COPE parameter estimate or contrast values will be converted
+to percentage signal change values before reporting. This is achieved
+by scaling the PE or COPE values by (100*) the peak-peak height of the
+regressor (or effective regressor in the case of COPEs) and then by
+dividing by mean_func (the mean over time of filtered_func_data). If
+you are running Featquery on a higher-level FEAT directory, mean_func
+is the mean of all the lower-level mean_func images, so the % change
+values are reported correctly. For VARCOPE variance images, the
+equivalent transformation is also made, this time in units of %
+squared (i.e., take the square root to compare with the size of the
+COPE % change).
 
 <!-- % signal change at higher-level N (%N): -->
 <!-- %N = HconN * 100 * mean(HconN-1) * COPEN ./ mean(I0) -->

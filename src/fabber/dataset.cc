@@ -2,7 +2,7 @@
 
     Adrian Groves, FMRIB Image Analysis Group
 
-    Copyright (C) 2007 University of Oxford  */
+    Copyright (C) 2007-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -150,7 +150,7 @@ void DataSet::LoadData(ArgsType& args)
 
       int nSets = dataSets.size();
       if (nSets < 1)
-	throw Invalid_option("At least one data file is required: --date1=<file1> [--data2=<file2> [...]]");      
+	throw Invalid_option("At least one data file is required: --data1=<file1> [--data2=<file2> [...]]\n");      
 
       string maskFile = args.Read("mask");
  

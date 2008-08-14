@@ -6,7 +6,7 @@
 #
 #   Stephen Smith, FMRIB Image Analysis Group
 #
-#   Copyright (C) 2002-2007 University of Oxford
+#   Copyright (C) 2002-2008 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -152,7 +152,7 @@ for { set argindex 1 } { $argindex < $argc } { incr argindex 1 } {
 	}
 
 	-film { 
-	    feat5:success [ feat5:proc_film ]
+	    feat5:success [ feat5:proc_film $session ]
 	}
 
 	-poststats {
@@ -255,17 +255,21 @@ set logout ${FD}/logs/feat1
 
 fsl:exec "/bin/cp ${fsfroot}.fsf design.fsf"
 
-set motreg ""
-if { $fmri(motionevs) > 0 && [ file exists mc/prefiltered_func_data_mcf.par ] } {
-    set motreg "mc/prefiltered_func_data_mcf.par"
+set confevs ""
+if { [ file exists confoundevs.txt ] } {
+    set confevs "confoundevs.txt"
 }
-fsl:exec "${FSLDIR}/bin/feat_model design $motreg"
+fsl:exec "${FSLDIR}/bin/feat_model design $confevs"
 set fsfroot ${FD}/design
 
 #}}}
     #{{{ setup web pages
 
-fsl:echo report.html "<link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+if { ! [ file exists .files ] } {
+    fsl:exec "mkdir .files;cp ${FSLDIR}/doc/fsl.css .files;ln -s ${FSLDIR}/doc/images .files/images"
+}
+
+fsl:echo report.html "<link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
 
 <TABLE BORDER=0><TR>
 
@@ -300,25 +304,25 @@ Started at [ exec date ]
 " -o
 
 if { ! [ file exists report_prestats.html ] } {
-    fsl:echo report_prestats.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+    fsl:echo report_prestats.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
 <TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"report.html\"></OBJECT>
 <h2>Prestats</h2>...not yet run..." -o
 }
 
 if { ! [ file exists report_stats.html ] } {
-    fsl:echo report_stats.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+    fsl:echo report_stats.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
 <TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"report.html\"></OBJECT>
 <h2>Stats</h2>...not yet run..." -o
 }
 
 if { ! [ file exists report_poststats.html ] } {
-    fsl:echo report_poststats.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+    fsl:echo report_poststats.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
 <TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"report.html\"></OBJECT>
 <h2>Poststats</h2>...not yet run..." -o
 }
 
 if { ! [ file exists report_reg.html ] } {
-    fsl:echo report_reg.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+    fsl:echo report_reg.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
 <TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"report.html\"></OBJECT>
 <h2>Registration</h2>...not yet run..." -o
 }
@@ -327,7 +331,7 @@ fsl:echo logs/feat0 "<HTML><HEAD>
 <!--refreshstart-->
 <META HTTP-EQUIV=REFRESH CONTENT=5>
 <!--refreshstop-->
-<link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+<link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
 <TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"report.html\"></OBJECT>
 <h2>Progress Report / Log</h2>
 Started at [ exec date ]<p>
@@ -361,7 +365,7 @@ if { $fmri(featwatcher_yn) } {
 
     if { $fmri(stats_yn) } {
 	set howlong [ expr int( $fmri(npts) * $fmri(evs_real) / 10 ) ]
-	set filmID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -film" -b $howlong -h $prestatsID -N feat3_film -l logs ]
+	set filmID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -I $session -film" -b $howlong -h $prestatsID -N feat3_film -l logs ]
     }
 
     if { $fmri(poststats_yn) } {
@@ -370,7 +374,8 @@ if { $fmri(featwatcher_yn) } {
     }
 
     if { $fmri(reginitial_highres_yn) || $fmri(reghighres_yn) || $fmri(regstandard_yn) } {
-	set regID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -I $session -reg" -b 30 -h $prestatsID -N feat5_reg -l logs ]
+	set howlong [ expr 30 + 30 * $fmri(regstandard_nonlinear_yn) ]
+	set regID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -I $session -reg" -b $howlong -h $prestatsID -N feat5_reg -l logs ]
     }
 
     if { $fmri(poststats_yn) && ( [ file exists ${FD}/reg/example_func2standard.mat ] || $fmri(regstandard_yn) ) } {
@@ -410,7 +415,11 @@ set fsfroot ${FD}/design
 #}}}
 #{{{ setup toplevel .gfeat web pages
 
-fsl:echo report.html "<link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+if { ! [ file exists .files ] } {
+    fsl:exec "mkdir .files;cp ${FSLDIR}/doc/fsl.css .files;ln -s ${FSLDIR}/doc/images .files/images"
+}
+
+fsl:echo report.html "<link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
 
 <TABLE BORDER=0><TR>
 
@@ -445,7 +454,7 @@ fsl:echo report.html "<A HREF=\"report_stats.html\" target=\"_top\">Results</A> 
 </TR></TABLE><hr>
 "
 
-fsl:echo report_firstlevel.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+fsl:echo report_firstlevel.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
 <TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"report.html\"></OBJECT>
 <h2>Inputs to higher-level analysis</h2>(lower-level FEAT reports)<p>" -o
 for { set i 1 } { $i <= $fmri(multiple) } { incr i 1 } {
@@ -458,18 +467,18 @@ for { set i 1 } { $i <= $fmri(multiple) } { incr i 1 } {
 }
 fsl:echo report_firstlevel.html "</BODY></HTML>"
 
-fsl:echo report_reg.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+fsl:echo report_reg.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
 <TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"report.html\"></OBJECT>
 <h2>Summary of first-level registrations and masks</h2>" -o
 
-fsl:echo report_stats.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+fsl:echo report_stats.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
 <TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"report.html\"></OBJECT>" -o
 
 fsl:echo logs/feat0 "<HTML><HEAD>
 <!--refreshstart-->
 <META HTTP-EQUIV=REFRESH CONTENT=5>
 <!--refreshstop-->
-<link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+<link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
 <TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"report.html\"></OBJECT>
 <h2>Progress Report / Log</h2>
 Started at [ exec date ]<p>
@@ -546,7 +555,7 @@ set fsfroot ${FD}/design
 fsl:echo design.lev "$contrastname($session)"
 
 #setup dummy .flame file to keep the batch submission happy
-if { [ exec sh -c "grep NumPoints design.mat | awk '{ print \$2 }'" ] < 30 && $fmri(mixed_yn) != 1 } {
+if { [ exec sh -c "grep NumPoints design.mat | awk '{ print \$2 }'" ] < 30 && $fmri(mixed_yn) != 1 && $fmri(robust_yn) == 0 } {
     fsl:echo .flame "dummy"
 } else {
     set DIMZ [ exec sh -c "$FSLDIR/bin/fslval $STANDARD dim3" ]
@@ -563,7 +572,9 @@ if { $contrastname($session) != "" } {
     set conname "($contrastname($session))"
 }
 
-fsl:echo report.html "<link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+fsl:exec "ln -s ../.files .files"
+
+fsl:echo report.html "<link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
 
 <TABLE BORDER=0><TR>
 
@@ -597,13 +608,13 @@ Started at [ exec date ]
 " -o
 
 if { ! [ file exists report_stats.html ] } {
-    fsl:echo report_stats.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+    fsl:echo report_stats.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
 <TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"report.html\"></OBJECT>
 <h2>Stats</h2>...not yet run..." -o
 }
 
 if { ! [ file exists report_poststats.html ] } {
-    fsl:echo report_poststats.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+    fsl:echo report_poststats.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
 <TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"report.html\"></OBJECT>
 <h2>Poststats</h2>...not yet run..." -o
 }
@@ -612,7 +623,7 @@ fsl:echo logs/feat0 "<HTML><HEAD>
 <!--refreshstart-->
 <META HTTP-EQUIV=REFRESH CONTENT=5>
 <!--refreshstop-->
-<link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+<link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
 <TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"report.html\"></OBJECT>
 <h2>Progress Report / Log</h2>
 Started at [ exec date ]<p>
@@ -660,7 +671,11 @@ fsl:exec "/bin/cp ${fsfroot}.fsf design.fsf"
 #}}}
     #{{{ setup toplevel .gfeat web pages
 
-fsl:echo report.html "<link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+if { ! [ file exists .files ] } {
+    fsl:exec "mkdir .files;cp ${FSLDIR}/doc/fsl.css .files;ln -s ${FSLDIR}/doc/images .files/images"
+}
+
+fsl:echo report.html "<link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
 
 <TABLE BORDER=0><TR>
 
@@ -693,16 +708,16 @@ Started at [ exec date ]
 </TR></TABLE><hr>
 "
 
-fsl:echo report_firstlevel.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+fsl:echo report_firstlevel.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
 <TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"report.html\"></OBJECT>
 <h2>Inputs to higher-level analysis</h2>(lower-level processing)<p>" -o
 
-fsl:echo report_reg.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+fsl:echo report_reg.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
 <TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"report.html\"></OBJECT>
 <h2>Summary of first-level registrations and masks</h2>" -o
 
 fsl:exec "mkdir -p groupmelodic.ica/report" -n
-fsl:echo groupmelodic.ica/report/00index.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+fsl:echo groupmelodic.ica/report/00index.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
 <TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"../../report.html\"></OBJECT>
 ...not yet run..." -o
 
@@ -710,7 +725,7 @@ fsl:echo logs/feat0 "<HTML><HEAD>
 <!--refreshstart-->
 <META HTTP-EQUIV=REFRESH CONTENT=5>
 <!--refreshstop-->
-<link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+<link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
 <TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"report.html\"></OBJECT>
 <h2>Progress Report / Log</h2>
 Started at [ exec date ]<p>
@@ -761,7 +776,11 @@ if { $fmri(icaopt) > 1 } {
 #}}}
     #{{{ setup web pages
 
-fsl:echo report.html "<link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+if { ! [ file exists .files ] } {
+    fsl:exec "mkdir .files;cp ${FSLDIR}/doc/fsl.css .files;ln -s ${FSLDIR}/doc/images .files/images"
+}
+
+fsl:echo report.html "<link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
 
 <TABLE BORDER=0><TR>
 
@@ -799,20 +818,20 @@ fsl:echo report.html "<A HREF=\"report_log.html\" target=\"_top\">Log</A>
 "
 
 if { ! [ file exists report_prestats.html ] } {
-    fsl:echo report_prestats.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+    fsl:echo report_prestats.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
 <TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"report.html\"></OBJECT>
 <h2>Prestats</h2>...not yet run..." -o
 }
 
 if { ! [ file exists report_reg.html ] } {
-    fsl:echo report_reg.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+    fsl:echo report_reg.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
 <TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"report.html\"></OBJECT>
 <h2>Registration</h2>...not yet run..." -o
 }
 
 if { $fmri(icaopt) == 1 } {
     fsl:exec "mkdir -p filtered_func_data.ica/report" -n
-    fsl:echo filtered_func_data.ica/report/00index.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+    fsl:echo filtered_func_data.ica/report/00index.html "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
 <TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"../../report.html\"></OBJECT>
 ...not yet run..." -o
 }
@@ -821,7 +840,7 @@ fsl:echo logs/feat0 "<HTML><HEAD>
 <!--refreshstart-->
 <META HTTP-EQUIV=REFRESH CONTENT=5>
 <!--refreshstop-->
-<link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+<link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
 <TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"report.html\"></OBJECT>
 <h2>Progress Report / Log</h2>
 Started at [ exec date ]<p>

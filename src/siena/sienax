@@ -103,7 +103,7 @@ nseg=3
 stdroi=""
 origin3=37 # `fslval ${FSLDIR}/data/standard/MNI152_T1_2mm origin3`
 pixdim3=2  # `fslval ${FSLDIR}/data/standard/MNI152_T1_2mm pixdim3`
-imtype=-t1
+imtype="-t 1"
 
 while [ _$1 != _ ] ; do
 
@@ -126,7 +126,7 @@ while [ _$1 != _ ] ; do
         nseg=2
         shift
     elif [ $1 = -t2 ] ; then
-        imtype=-t2
+        imtype="-t 2"
         shift
     elif [ $1 = -t ] ; then
 	stdt=`echo $2 | sed 's/-/_/g'`
@@ -169,7 +169,7 @@ echo "-----------------------------------------------------------------------" >
 echo ""                                                                        >> report.sienax
 echo " SIENA - Structural Image Evaluation, using Normalisation, of Atrophy"   >> report.sienax
 echo " part of FSL www.fmrib.ox.ac.uk/fsl"                                     >> report.sienax
-echo " running cross-sectional atrophy measurement: sienax version 2.5"        >> report.sienax
+echo " running cross-sectional atrophy measurement: sienax version 2.6"        >> report.sienax
 echo " sienax $@"                                                              >> report.sienax
 echo ""                                                                        >> report.sienax
 
@@ -224,9 +224,11 @@ fi
 echo ""                                                                        >> report.sienax
 echo "----------  segment tissue into types  --------------------------------" >> report.sienax
 if [ $nseg = 2 ] ; then
-    ${FSLDIR}/bin/fast1 -c 2 $imtype -e -ov $segopts ${I}_stdmaskbrain >> report.sienax 2>&1
+    ${FSLDIR}/bin/fast -g -n 2 $imtype $segopts ${I}_stdmaskbrain >> report.sienax 2>&1
     echo "" >> report.sienax
     echo "----------  convert brain volume into normalised volume  --------------" >> report.sienax
+    echo "" >> report.sienax
+    echo "                   volume    unnormalised-volume" >> report.sienax
     S=`${FSLDIR}/bin/fslstats ${I}_stdmaskbrain_pve_1 -m -v`
     xa=`echo $S | awk '{print $1}'`
     xb=`echo $S | awk '{print $3}'`
@@ -237,7 +239,7 @@ else
 	${FSLDIR}/bin/fslmaths $lm -bin -mul -1 -add 1 -mul ${I}_stdmaskbrain ${I}_stdmaskbrain -odt float
     fi
 
-    ${FSLDIR}/bin/fast1 $imtype -e -ov $segopts ${I}_stdmaskbrain >> report.sienax 2>&1
+    ${FSLDIR}/bin/fast -g $imtype $segopts ${I}_stdmaskbrain >> report.sienax 2>&1
 
     if [ _$lm != _ ] ; then
 	${FSLDIR}/bin/fslmaths $lm -bin -max ${I}_stdmaskbrain_pve_2 ${I}_stdmaskbrain_pve_2 -odt float
@@ -303,7 +305,7 @@ if [ $regional = 1 ] ; then
 fi
 
 if [ $debug = 0 ] ; then
-    /bin/rm -f `$FSLDIR/bin/imglob ${I}_brain* ${I}_stdmask*`
+    /bin/rm -f `$FSLDIR/bin/imglob -extensions ${I}_brain* ${I}_stdmask*`
     /bin/rm -f ${I}2std.avscale ${I}2std_inv.mat
 fi
 

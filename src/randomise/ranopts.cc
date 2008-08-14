@@ -1,8 +1,8 @@
 /*  ranopts.cc
 
-    Tim Behrens & Steve Smith (FMRIB) & Tom Nichols (UMich)
+    Matthew Webster, Tim Behrens & Steve Smith (FMRIB) & Tom Nichols (UMich)
 
-    Copyright (C) 2004 University of Oxford  */
+    Copyright (C) 2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -75,7 +75,6 @@
 #include <stdio.h>
 #include "ranopts.h"
 
-//#include "newmat.h"
 using namespace Utilities;
 
 namespace RANDOMISE {
@@ -94,22 +93,11 @@ ranopts* ranopts::gopt = NULL;
 	  options.usage();
 	  exit(2);
 	}  
-      else if(!how_many_perms.value()){
-	
-// 	logger.makeDir(logdir.value());  
-// 	cout << "Log directory is: " << logger.getDir() << endl;
-// 	// do again so that options are logged
-// 	for(int a = 0; a < argc; a++){
-// 	  logger.str() << argv[a] << " ";}
-// 	logger.str() << endl << "---------------------------------------------" << endl << endl;
-	
-      }
-      
     }
     catch(X_OptionError& e){
       cerr<<e.what()<<endl;
       cerr<<"try: randomise --help"<<endl;
-      exit(0);
+      exit(1);
     }
     
      

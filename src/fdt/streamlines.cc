@@ -4,8 +4,22 @@
 
 namespace TRACT{
 
-
- 
+  ColumnVector mean_sph_pol(ColumnVector& A, ColumnVector& B){
+    // A and B contain th, ph f. 
+    float th,ph;
+    ColumnVector rA(3), rB(3);
+    rA<< sin(A(1))*cos(A(2)) <<sin(A(1))*sin(A(2)) <<cos(A(1));
+    rB<< sin(B(1))*cos(B(2)) <<sin(B(1))*sin(B(2)) <<cos(B(1));
+    
+    if(SP(rA,rB).AsScalar()>0)
+      cart2sph((rA+rB)/2,th,ph);
+    else
+      cart2sph((rA-rB)/2,th,ph);
+    
+    A(1)=th; A(2)=ph;
+    return A;
+  }
+  
   void read_masks(vector<string>& masks, const string& filename){
     ifstream fs(filename.c_str());
     string tmp;
@@ -40,6 +54,9 @@ namespace TRACT{
     if(opts.stopfile.value()!=""){
       read_volume(m_stop,opts.stopfile.value());
     }
+    if(opts.prefdirfile.value()!=""){
+      read_volume4D(m_prefdir,opts.prefdirfile.value());
+    }
  
     vector<string> masknames;
     if(opts.waypoints.value()!=""){
@@ -51,7 +68,7 @@ namespace TRACT{
       }
 
       for( unsigned int m = 0; m < masknames.size(); m++ ){
-	volume<int>* tmpptr =new volume<int>;
+	volume<float>* tmpptr =new volume<float>;
 	if(opts.verbose.value()>0)
 	  cout<<masknames[m]<<endl;
 	read_volume(*tmpptr,masknames[m]);
@@ -61,10 +78,10 @@ namespace TRACT{
       }
     } 
     if(opts.seeds_to_dti.value()!=""){
-      read_ascii_matrix(m_Seeds_to_DTI,opts.seeds_to_dti.value());
+      m_Seeds_to_DTI = read_ascii_matrix(opts.seeds_to_dti.value());
     }
     else{
-      m_Seeds_to_DTI=Identity(4);
+      m_Seeds_to_DTI=IdentityMatrix(4);
     }
     vols.initialise(opts.basename.value());
     m_path.reserve(opts.nparticles.value());
@@ -137,7 +154,12 @@ namespace TRACT{
 	int y_s =(int)round((float)xyz_seeds(2));
 	int z_s =(int)round((float)xyz_seeds(3));
 	
-	  
+	float pref_x=0,pref_y=0,pref_z=0;
+	if(opts.prefdirfile.value()!=""){
+	  pref_x = m_prefdir(xyz_seeds(1),xyz_seeds(2),xyz_seeds(3),0);
+	  pref_y = m_prefdir(xyz_seeds(1),xyz_seeds(2),xyz_seeds(3),1);
+	  pref_z = m_prefdir(xyz_seeds(1),xyz_seeds(2),xyz_seeds(3),2); 
+	}
 	//update every passed_flag
 	for( unsigned int wm=0;wm<m_waymasks.size();wm++ ){
 	  if( (*m_waymasks[wm])(x_s,y_s,z_s)!=0 ) {
@@ -166,11 +188,11 @@ namespace TRACT{
 	}	  
 	  
 	if(opts.skipmask.value() == ""){
-	  th_ph_f=vols.sample(m_part.x(),m_part.y(),m_part.z(),m_part.rx(),m_part.ry(),m_part.rz());
+	  th_ph_f=vols.sample(m_part.x(),m_part.y(),m_part.z(),m_part.rx(),m_part.ry(),m_part.rz(),pref_x,pref_y,pref_z);
 	}
 	else{
 	  if(m_skipmask(x_s,y_s,z_s)==0)
-	    th_ph_f=vols.sample(m_part.x(),m_part.y(),m_part.z(),m_part.rx(),m_part.ry(),m_part.rz());
+	    th_ph_f=vols.sample(m_part.x(),m_part.y(),m_part.z(),m_part.rx(),m_part.ry(),m_part.rz(),pref_x,pref_y,pref_z);
 	}
 	  
 	  
@@ -188,7 +210,8 @@ namespace TRACT{
 		{
 		  ColumnVector test_th_ph_f;
 		  m_part.testjump(th_ph_f(1),th_ph_f(2));
-		  test_th_ph_f=vols.sample(m_part.testx(),m_part.testy(),m_part.testz(),m_part.rx(),m_part.ry(),m_part.rz());
+		  test_th_ph_f=vols.sample(m_part.testx(),m_part.testy(),m_part.testz(),m_part.rx(),m_part.ry(),m_part.rz(),pref_x,pref_y,pref_z);
+		  test_th_ph_f=mean_sph_pol(th_ph_f,test_th_ph_f);
 		  m_part.jump(test_th_ph_f(1),test_th_ph_f(2));
 		}
 	    }
@@ -238,8 +261,8 @@ namespace TRACT{
   
   void Counter::initialise_seedcounts(){
     
-    volume<int> tmp;
-    //vector<int> tmpvec;
+    volume<float> tmp;
+    volume<int> tmpint;
     read_masks(m_targetmasknames,opts.targetfile.value());
     m_targflags.resize(m_targetmasknames.size(),0);
     //m_particle_numbers.resize(m_targetmasknames.size());
@@ -249,8 +272,9 @@ namespace TRACT{
     for(unsigned int m=0;m<m_targetmasknames.size();m++){
       read_volume(tmp,m_targetmasknames[m]);
       m_targetmasks.push_back(tmp);
-      tmp=0;
-      m_seedcounts.push_back(tmp);
+      copyconvert(tmp,tmpint);
+      tmpint=0;
+      m_seedcounts.push_back(tmpint);
       //m_particle_numbers.push_back(tmpvec);
     }
   }
@@ -606,18 +630,37 @@ namespace TRACT{
       save_volume(m_seedcounts[m],logger.appendDir("seeds_to_"+tmpname));
     }
   }
-  
+    
+  // the following is a helper function for save_matrix*
+  //  to convert between nifti coords (external) and newimage coord (internal)
+  void applycoordchange(volume<int>& coordvol, const Matrix& old2new_mat)
+  {
+    for (int n=0; n<=coordvol.maxx(); n++) {
+      ColumnVector v(4);
+      v << coordvol(n,0,0) << coordvol(n,1,0) << coordvol(n,2,0) << 1.0;
+      v = old2new_mat * v;
+      coordvol(n,0,0) = MISCMATHS::round(v(1));
+      coordvol(n,1,0) = MISCMATHS::round(v(2));
+      coordvol(n,2,0) = MISCMATHS::round(v(3));
+    }
+  }
+
   void Counter::save_matrix1(){
     save_volume(m_ConMat,logger.appendDir("fdt_matrix1"));
+    applycoordchange(m_CoordMat, m_seeds.niftivox2newimagevox_mat().i());
     save_volume(m_CoordMat,logger.appendDir("coords_for_fdt_matrix1"));
+    applycoordchange(m_CoordMat, m_seeds.niftivox2newimagevox_mat());
   }
 
   void Counter::save_matrix2(){
     save_volume(m_ConMat2,logger.appendDir("fdt_matrix2"));
+    applycoordchange(m_CoordMat2, m_seeds.niftivox2newimagevox_mat().i());
     save_volume(m_CoordMat2,logger.appendDir("coords_for_fdt_matrix2"));
+    applycoordchange(m_CoordMat2, m_seeds.niftivox2newimagevox_mat());
+    applycoordchange(m_CoordMat_tract2, m_lrmask.niftivox2newimagevox_mat().i());
     save_volume(m_CoordMat_tract2,logger.appendDir("tract_space_coords_for_fdt_matrix2"));
+    applycoordchange(m_CoordMat_tract2, m_lrmask.niftivox2newimagevox_mat());
     save_volume4D(m_lookup2,logger.appendDir("lookup_tractspace_fdt_matrix2"));
-  
   }
   
   int Seedmanager::run(const float& x,const float& y,const float& z,bool onewayonly, int fibst){
@@ -629,17 +672,23 @@ namespace TRACT{
   int Seedmanager::run(const float& x,const float& y,const float& z,bool onewayonly, int fibst,const ColumnVector& dir){
     //onewayonly for mesh things..
     cout <<x<<" "<<y<<" "<<z<<endl;
-    if(fibst == -1){
-      fibst=0;//m_seeds(int(round(x)),int(round(y)),int(round(z)))-1;//fibre to start with is taken from seed volume..
+    if(opts.fibst.set()){
+      fibst=opts.fibst.value()-1;
+      OUT(fibst);
+   }
+    else{
+      if(fibst == -1){
+	fibst=0;//m_seeds(int(round(x)),int(round(y)),int(round(z)))-1;//fibre to start with is taken from seed volume..
     }
-    if(opts.randfib.value()){
-      float tmp=rand()/RAND_MAX * float(m_stline.nfibres()-1);
-      fibst = (int)round(tmp);
-      //if(tmp>0.5)
-      //fibst=0;
-      //else
-      //fibst=1;// fix this for > 2 fibres
-    } 
+      if(opts.randfib.value()){
+	float tmp=rand()/RAND_MAX * float(m_stline.nfibres()-1);
+	fibst = (int)round(tmp);
+	//if(tmp>0.5)
+	//fibst=0;
+	//else
+	//fibst=1;// fix this for > 2 fibres
+      } 
+    }
     
     int nlines=0;
     for(int p=0;p<opts.nparticles.value();p++){

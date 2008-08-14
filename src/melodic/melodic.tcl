@@ -151,11 +151,11 @@ set tempSpin -1
 
 toplevel $w
 
-set melodic_version [ fsl:exec "$FSLDIR/bin/melodic -V" -n ] 
-set fmri(version) [ lindex $melodic_version 2 ]
+catch { exec sh -c "${FSLDIR}/bin/melodic -V | grep \[0-9\]" } melodicversion
+set fmri(version) [ lindex $melodicversion 2 ]
 
-wm title      $w $melodic_version
-wm iconname   $w $melodic_version
+wm title      $w $melodicversion
+wm iconname   $w $melodicversion
 wm iconbitmap $w @${FSLDIR}/tcl/fmrib.xbm
 
 set fmri(inmelodic) 1

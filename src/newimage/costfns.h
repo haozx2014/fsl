@@ -76,7 +76,7 @@ using namespace NEWIMAGE;
 
 namespace NEWIMAGE {
 
-  enum costfns { Woods, CorrRatio, MutualInfo, NormCorr, NormMI, LeastSq, 
+  enum costfns { Woods, CorrRatio, MutualInfo, NormCorr, NormMI, LeastSq, LabelDiff,
 		 NormCorrSinc };
 
   class Costfn {
@@ -142,6 +142,12 @@ namespace NEWIMAGE {
     float leastsquares(const Matrix& aff) const;
     float leastsquares_smoothed(const Matrix& aff) const;
     float leastsquares_fully_weighted(const Matrix& aff, 
+				      const volume<float>& refweight, 
+				      const volume<float>& testweight) const;
+    
+    float labeldiff(const Matrix& aff) const;
+    float labeldiff_smoothed(const Matrix& aff) const;
+    float labeldiff_fully_weighted(const Matrix& aff, 
 				      const volume<float>& refweight, 
 				      const volume<float>& testweight) const;
     

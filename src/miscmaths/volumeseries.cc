@@ -294,6 +294,13 @@ namespace MISCMATHS {
        int volSize = getNumSeries();
        int volNum = getNumVolumes();
 
+       // This should assert() but I'm too scared to add that to production code!
+       if ( (volinfo.x * volinfo.y * volinfo.z != volSize) || (volinfo.v != volNum) )
+         cerr << "WARNING: Dimensions are inconsistent in VolumeSeries::writeAsFloat()\n"
+              << "x, y, z, v = " << volinfo.x << ", " << volinfo.y << ", " << volinfo.z
+              << ", " << volinfo.v << "\nvolSize, volNum = " << volSize << ", " 
+              << volNum << "\nThis is probably NOT what you intended!!" << endl;
+
        FslWriteHeader(OP);
 
        float *qv = new float[volSize];

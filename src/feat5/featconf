@@ -112,6 +112,12 @@ set fmri(prewhiten_yn) 1
 # 1 : Yes
 set fmri(motionevs) 0
 
+# General confound matrix (any number of EVs)
+set fmri(confoundevs) 0
+
+# Robust outlier detection in FLAME
+set fmri(robust_yn) 0
+
 # Higher-level modelling
 # 3 : Fixed effects
 # 0 : Mixed Effects: Simple OLS
@@ -151,6 +157,8 @@ set fmri(default_bfcustom) "${FSLDIR}/etc/default_flobs.flobs/hrfbasisfns.txt"
 # Add temporal derivative
 set fmri(default_deriv_yn) 1
 
+# Number of additional voxel-dependent EVs
+set fmri(evs_vox) 0
 
 #########################################################################
 # Post-stats
@@ -196,6 +204,8 @@ set fmri(rendertype) 1
 # 5 : Standard space template
 set fmri(bgimage) 1
 
+# Create time series plots
+set fmri(tsplot_yn) 1
 
 #########################################################################
 # Registration
@@ -213,13 +223,13 @@ set fmri(reginitial_highres_search) 90
 
 # Degrees of Freedom for registration to initial structural
 # options: 3/6/7/9/12
-set fmri(reginitial_highres_dof) 12
+set fmri(reginitial_highres_dof) 3
 
 # Search space for registration to main structural
 set fmri(reghighres_search) 90
 
 # Degrees of Freedom for registration to main structural
-set fmri(reghighres_dof) 12
+set fmri(reghighres_dof) 6
 
 # Standard image
 set fmri(regstandard) "${FSLDIR}/data/standard/MNI152_T1_2mm_brain"
@@ -229,6 +239,13 @@ set fmri(regstandard_search) 90
 
 # Degrees of Freedom for registration to standard space
 set fmri(regstandard_dof) 12
+
+# Do nonlinear registration from structural to standard space?
+set fmri(regstandard_nonlinear_yn) 0
+
+# Control nonlinear warp field resolution
+set fmri(regstandard_nonlinear_warpres) 10
+
 
 #########################################################################
 # Non-GUI options
@@ -251,6 +268,9 @@ set fmri(init_standard) ""
 
 # For full FEAT analysis: overwrite existing .feat output dir?
 set fmri(overwrite_yn) 0
+
+# For custom FNIRT configuration change the following
+set fmri(fnirt_config) "T1_2_MNI152_2mm"
 
 #########################################################################
 

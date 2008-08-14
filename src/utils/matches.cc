@@ -66,6 +66,8 @@
 
 namespace Utilities {
 
+  using namespace std;
+
   bool BaseOption::matches(const string& arg)
   {
     string::size_type pos = 0, np;

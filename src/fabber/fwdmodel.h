@@ -72,7 +72,7 @@
  * Written by Adrian Groves, 2007
  * FMRIB Centre, University of Oxford
  *
- * Last modified: $Date: 2007/08/02 11:16:47 $ $Author: adriang $ $Revision: 1.11 $
+ * Last modified: $Date: 2008/03/18 14:31:59 $ $Author: chappell $ $Revision: 1.14 $
  */
 
 //#pragma once // prevent multiple includes
@@ -132,7 +132,16 @@ public:
   
   // Usage information for this model
   static void ModelUsageFromName(const string& name, ArgsType& args);
+
+  // An ARD update step can be specified in the model
+  virtual void UpdateARD(const MVNDist& posterior, MVNDist& prior, double& Fard) const { return; };
+
+  // Steup function for the ARD process (forces the prior on the parameter that is subject to ARD to be correct) - really a worst case scenario if people are loading in their own priors
+  virtual void SetupARD( const MVNDist& posterior, MVNDist& prior, double& Fard ) const { return; };
   
+  // For models that need the data values in the voxel to calculate
+  virtual void pass_in_data( const ColumnVector& voxdata ) { };
+
   virtual ~FwdModel() { return; };
   // Virtual destructor
   

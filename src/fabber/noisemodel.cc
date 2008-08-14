@@ -94,8 +94,21 @@ NoiseModel* NoiseModel::NewFromName(const string& name, ArgsType& args)
 {
     // Update this to add your own models to the code
     
-    if (name == "ar1" || name == "ar1c")
+  if (name == "ar")
     {
+      string nPhis = args.ReadWithDefault("num-echoes","(default)");
+      if (nPhis == "(default)")
+	{
+	  nPhis = "1";
+	  Warning::IssueOnce("Defaulting to --num-echoes=1");
+	}
+      string ar1CrossTerms = args.ReadWithDefault("ar1-cross-terms","none");
+      
+      return new Ar1cNoiseModel(ar1CrossTerms, convertTo<int>(nPhis));
+    }
+  else if (name == "ar1" || name == "ar1c")
+    {
+      Warning::IssueOnce("--noise="+name+" is depreciated; use --noise=ar --num-echoes=2 for dual-echo ASL.");
       string ar1CrossTerms = args.ReadWithDefault("ar1-cross-terms","none");
       string nPhis = args.ReadWithDefault("num-echoes","2");
       
@@ -103,9 +116,10 @@ NoiseModel* NoiseModel::NewFromName(const string& name, ArgsType& args)
     }
     else if (name == "white")
     {
-      string pattern = args.ReadWithDefault("noise-pattern","1");
-      return new WhiteNoiseModel(pattern);
-    } 
+      //      string pattern = args.ReadWithDefault("noise-pattern","1");
+      //      return new WhiteNoiseModel(pattern);
+      return new WhiteNoiseModel(args);
+    }
     // Your models go here!
     else
     {

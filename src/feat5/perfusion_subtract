@@ -100,8 +100,8 @@ ${FSLDIR}/bin/fslsplit $IN ${tmpbase}_asl_subtract/vol
 OLDPWD=`pwd`
 cd ${tmpbase}_asl_subtract
 
-${FSLDIR}/bin/fslmerge -t even `${FSLDIR}/bin/imglob -oneperimage vol*[02468].*`
-${FSLDIR}/bin/fslmerge -t odd  `${FSLDIR}/bin/imglob -oneperimage vol*[13579].*`
+${FSLDIR}/bin/fslmerge -t even `${FSLDIR}/bin/imglob vol*[02468].*`
+${FSLDIR}/bin/fslmerge -t odd  `${FSLDIR}/bin/imglob vol*[13579].*`
 
 if [ `${FSLDIR}/bin/fslnvols even` != `${FSLDIR}/bin/fslnvols odd` ] ; then
     echo "Warning - odd number of timepoints in input data - will ignore last timepoint"
@@ -117,7 +117,7 @@ ${FSLDIR}/bin/fslmaths odd_earlier -sub even_later   odd_to_even
 ${FSLDIR}/bin/fslsplit even_to_odd e_
 ${FSLDIR}/bin/fslsplit odd_to_even o_
 
-la=`${FSLDIR}/bin/imglob -oneperimage [eo]_*`
+la=`${FSLDIR}/bin/imglob -extension [eo]_*`
 lb=`ls -1 $la | sort -t _ -k 2`
 ${FSLDIR}/bin/fslmerge -t output $lb
 

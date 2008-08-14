@@ -69,6 +69,9 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <sstream>
+#include <iterator>
+#include <cstdlib>
 
 #define POSIX_SOURCE 1
 
@@ -76,13 +79,13 @@ using namespace std;
 
 namespace Utilities {
 
-  bool string_to_T(bool &b, const string& s); 
-  bool string_to_T(string& d, const string& s); 
-  bool string_to_T(int& i, const string& s); 
-  bool string_to_T(float& v, const string& s); 
-  bool string_to_T(vector<int>& vi, const string& s);
-  bool string_to_T(vector<float>& vi, const string& s);
-  bool string_to_T(vector<string>& vi, const string& s);
+  bool string_to_T(bool &b, const std::string& s); 
+  bool string_to_T(std::string& d, const std::string& s); 
+  bool string_to_T(int& i, const std::string& s); 
+  bool string_to_T(float& v, const std::string& s); 
+  bool string_to_T(std::vector<int>& vi, const std::string& s);
+  bool string_to_T(std::vector<float>& vi, const std::string& s);
+  bool string_to_T(std::vector<std::string>& vi, const std::string& s);
 
   typedef enum argflag { 
     no_argument = 0, requires_argument, optional_argument, requires_2_arguments, 
@@ -93,27 +96,47 @@ namespace Utilities {
 
 namespace Utilities {
 
+
+  template<class T,class U>
+  std::ostream& operator<<(std::ostream& os, const std::pair<T, U>& o)
+  {
+    return os << o.first << "," << o.second;
+  }
+  
+  template<class T>
+  std::ostream& operator<<(std::ostream& os, const std::vector<T>& v)
+  {
+    std::ostringstream oss;
+    std::copy(v.begin(), v.end(), std::ostream_iterator<T>(oss,","));
+    
+    std::string s(oss.str());
+  
+    os << s.substr(0, s.length() - 1); // Strip off the final ","
+    
+    return os;
+  }
+
   /**
      Throw this exception if an error occured inside the Options package.
    */
   class X_OptionError: public std::exception {
   public:
     X_OptionError() throw() {}
-    X_OptionError(const string& o) throw() :
+    X_OptionError(const std::string& o) throw() :
       m_option(o), m_explanation("unknown error") {}
-    X_OptionError(const string& o, const string& e) throw() :
+    X_OptionError(const std::string& o, const std::string& e) throw() :
       m_option(o), m_explanation(e) {}
 
     virtual const char * what() const throw() {
-      string str(string(m_option + ": " + m_explanation + "!"));
+      std::string str(std::string(m_option + ": " + m_explanation + "!"));
       return str.c_str();
     }
 
     ~X_OptionError() throw() {}
 
   private:
-    string m_option;
-    string m_explanation;
+    std::string m_option;
+    std::string m_explanation;
   };
 
   /**
@@ -134,7 +157,7 @@ namespace Utilities {
        @param f one of no_argument, requires_argument, optional_argument
        to indicate what arguments should be supplied
     */
-    BaseOption(const string& k, const string& ht, bool c, ArgFlag f): 
+    BaseOption(const std::string& k, const std::string& ht, bool c, ArgFlag f): 
       key_(k), help_text_(ht), arg_flag_(f), 
       unset_(true), compulsory_(c), visible_(true) {}
     /**
@@ -145,7 +168,7 @@ namespace Utilities {
        @param v true or false -- display the option in usage
        to indicate what arguments should be supplied
     */
-    BaseOption(const string& k, const string& ht, bool c, ArgFlag f, bool v): 
+    BaseOption(const std::string& k, const std::string& ht, bool c, ArgFlag f, bool v): 
       key_(k), help_text_(ht), arg_flag_(f), 
       unset_(true), compulsory_(c), visible_(v) {}
 
@@ -172,12 +195,14 @@ namespace Utilities {
     /**
        @return the number of required arguments 
     */
-    int nrequired() const { if (arg_flag_ == requires_argument) { return 1; } 
-                            else if (arg_flag_ == requires_2_arguments) { return 2; }
-                            else if (arg_flag_ == requires_3_arguments) { return 3; }
-                            else if (arg_flag_ == requires_4_arguments) { return 4; }
-                            else if (arg_flag_ == requires_5_arguments) { return 5; }
-                            else return 0;
+    int nrequired() const { 
+      if ((arg_flag_ == requires_argument) || 
+	  (arg_flag_ == optional_argument)) { return 1; } 
+      else if (arg_flag_ == requires_2_arguments) { return 2; }
+      else if (arg_flag_ == requires_3_arguments) { return 3; }
+      else if (arg_flag_ == requires_4_arguments) { return 4; }
+      else if (arg_flag_ == requires_5_arguments) { return 5; }
+      else return 0;
     }
     /**
        @return true if the option has an optional argument
@@ -200,34 +225,55 @@ namespace Utilities {
       the list of possible keys for this option.
       @return True if a match is found.
     */
-    bool matches(const string& arg);
+    bool matches(const std::string& arg);
     /*
       @return This options key string.
     */
-    const string& key() const { return key_; }
+    const std::string& key() const { return key_; }
+
+    virtual std::string value_string() const = 0;
+    virtual std::string config_key() const = 0;
+
     /*
       @return This options help text.
     */
-    const string& help_text() const { return help_text_; }
+    const std::string& help_text() const { return help_text_; }
 
     /*
       @param Sets the value for this option. Is overridden in the type
       specific template class Option.
     */
-    virtual bool set_value(const string& vs) = 0;
-    virtual bool set_value(const string& vs, char *argv[], int valpos, int argc) = 0;
+    virtual bool set_value(const std::string& vs) = 0;
+    virtual bool set_value(const std::string& vs, char *argv[], int valpos, int argc) = 0;
+
+    // For use with optional switch arguments...
+    bool use_default_value() {
+      unset_ = false;
+      return true;
+    }
+
+    void usage(std::ostream& os) const;
+
+    virtual std::ostream& print(std::ostream& os) const = 0;
 
     virtual ~BaseOption() {}
 
   private:
-    string key_, help_text_;
+    std::string key_, help_text_;
     ArgFlag arg_flag_;
 
   protected:
+    /*
+      @return This options short-form key (if any)
+    */
+    const std::string short_form() const;
+    /*
+      @return This options long-form key (if any)
+    */
+    const std::string long_form() const;
+
     bool unset_, compulsory_, visible_;
   };
-
-  std::ostream& operator<<(std::ostream &os, const BaseOption& o);
 
 
   /**
@@ -246,7 +292,7 @@ namespace Utilities {
 	@param c If true then this option is compulsory
 	@param f This options argument requirements
     */
-    Option(const string& k, const T& v, const string& ht,
+    Option(const std::string& k, const T& v, const std::string& ht,
 	   bool c, ArgFlag f = no_argument): 
       BaseOption(k, ht, c, f), default_(v), value_(v) {}
   /** 
@@ -256,24 +302,28 @@ namespace Utilities {
 	@param c If true then this option is compulsory
 	@param f This options argument requirements
     */
-    Option(const string& k, const T& v, const string& ht,
+    Option(const std::string& k, const T& v, const std::string& ht,
 	   bool c, ArgFlag f, bool vis): 
       BaseOption(k, ht, c, f, vis), default_(v), value_(v) {}
 
 
     /** 
-	@param vs The value string which needs to be parsed to set
+	@param s The value string which needs to be parsed to set
 	this options value. The overloaded function string_to_T must be defined
 	for type T.
+
+	@return true if the value actually got set
     */
-    bool set_value(const string& vs) { 
-      if(string_to_T(value_, vs))
-	unset_ = false;
-      return !unset_;
-    }
+    bool set_value(const std::string& s)
+      { 
+	if(string_to_T(value_, s))
+	  unset_ = false;
+	return !unset_;
+      }
 
     // and a version for multiple options...
-    bool set_value(const string& vs, char* argv[], int valpos, int argc) { 
+    bool set_value(const std::string& vs, char* argv[], int valpos, int argc) {
+
       if (nrequired()<=0) { /* error */ return false; }
       if (nrequired()==1) {
 	// first and only argument
@@ -285,9 +335,9 @@ namespace Utilities {
 	// Multiple argument case
 	T tmpval;
 	valuevec_size_ = 0;
-	string vstmp;
+	std::string vstmp;
 	for (int nv=0; nv<nrequired(); nv++) {
-	  if (valpos+nv<argc) vstmp=string(argv[valpos+nv]); else vstmp=string();
+	  if (valpos+nv<argc) vstmp=std::string(argv[valpos+nv]); else vstmp=std::string();
 	  unset_ = !string_to_T(tmpval,vstmp);
 	  valuevec_[nv] = tmpval;
 	  valuevec_size_ = nv + 1;
@@ -295,6 +345,25 @@ namespace Utilities {
 	return !unset_;
       }
       return !unset_;
+    }
+
+    std::string config_key() const
+    {
+      std::string key(long_form());
+      if( key != "" )
+	key = key + "=";
+      else
+	key = short_form() + " ";
+
+      return key;
+    }
+
+    std::string value_string() const
+    {
+      std::ostringstream os;
+      os << value();
+
+      return os.str();
     }
 
     /** 
@@ -327,7 +396,17 @@ namespace Utilities {
     */
     const T& default_value() const { return default_; }
 
+    virtual ostream& print(ostream& os) const {
+      os << "# " << help_text() << std::endl 
+	 << config_key() << value_string();
+      
+      return os;
+    }
+
     virtual ~Option() {}
+
+  protected:
+    void display() const;
 
   private:
     Option() {}
@@ -337,10 +416,15 @@ namespace Utilities {
     unsigned int valuevec_size_;
   };
 
+  template<> bool Option<bool>::set_value(const string& s);
+  template<> std::ostream& Option<bool>::print(std::ostream& s) const;
+  //  std::ostream& operator<<(std::ostream& os, const Option<bool>& o);
+  std::ostream& operator<<(std::ostream& os, const BaseOption& o);
+
   template<class T> class HiddenOption: public Option<T>
   {
   public:
-    HiddenOption(const string& k, const T& v, const string& ht,
+    HiddenOption(const std::string& k, const T& v, const std::string& ht,
 		 bool c, ArgFlag f = no_argument): 
       Option<T>(k, v, ht, c, f, false) {}
   };
@@ -348,12 +432,10 @@ namespace Utilities {
   template<class T> class FmribOption: public Option<T>
   {
   public:
-    FmribOption(const string& k, const T& v, const string& ht,
+    FmribOption(const std::string& k, const T& v, const std::string& ht,
 		 bool c, ArgFlag f = no_argument): 
       Option<T>(k, v, ht, c, f) { if( getenv("FSLINFMRIB") ){ Option<T>::visible_ = true; } else { Option<T>::visible_ = false; } }
   };
-  
-
   
   /**
      A class for parsing command line arguments into Option objects. The 
@@ -365,7 +447,7 @@ namespace Utilities {
      <pre>
 #include "options.h"
 
-// $Id: options.h,v 1.24 2007/07/31 12:29:00 flitney Exp $ 
+// $Id: options.h,v 1.32 2008/02/08 17:34:10 mwebster Exp $ 
 
 using namespace Utilities;
 
@@ -440,7 +522,7 @@ int main(unsigned int argc, char **argv) {
   class OptionParser {
   public:
 
-    OptionParser(const string& p, const string& e): progname_(p), example_(e) {}
+  OptionParser(const std::string& p, const std::string& e): progname_(p), example_(e), overWriteMode_(Allow) {}
 
     /**
        @param o An option to be added to the parser
@@ -462,6 +544,11 @@ int main(unsigned int argc, char **argv) {
     */
     unsigned int parse_command_line(unsigned int argc, char **argv, int skip=0);
 
+    /**
+       @param filename The config file name.
+    */
+    unsigned int parse_config_file(const std::string& filename);
+
     virtual ~OptionParser() {}
 
   protected:
@@ -470,12 +557,14 @@ int main(unsigned int argc, char **argv) {
     OptionParser() {}
 
   private:
+    enum OverwriteMode {Allow=0, ThrowException, Ignore};
+
     /**
        @param optstr A string which should match one of the option strings
        registered with the add method.
        @return Pointer to the matching option or NULL if a match wasn't found.
     */
-    BaseOption* find_matching_option(const string& optstr);
+    BaseOption* find_matching_option(const std::string& optstr);
     /**
        @param optstr A string which should match one of the option strings
        registered with the add method.
@@ -483,7 +572,7 @@ int main(unsigned int argc, char **argv) {
        if applicable.
        @return true on success.
     */
-    unsigned int parse_option(const string& optstr, const string& valstr, 
+    unsigned int parse_option(const std::string& optstr, const std::string& valstr, 
 			      char *argv[], int valpos, int argc)
       throw(X_OptionError);
 
@@ -491,13 +580,22 @@ int main(unsigned int argc, char **argv) {
        @param str A string of the form --option[=value].
        @return true on success.
     */
-    unsigned int parse_long_option(const string& str);
+    unsigned int parse_long_option(const std::string& str);
 
-    string progname_, example_;
+    std::string progname_, example_;
 
-    typedef vector<BaseOption *> Options;
+    typedef std::vector<BaseOption *> Options;
     Options options_;
+    OverwriteMode overWriteMode_;
+
+    friend std::ostream& operator<<(std::ostream& os, const OptionParser p);
   };
 
 }
+
+// std::ostream& operator<<(std::ostream& os, const std::pair<float, float>& o)
+// {
+//   return os << o.first << "," << o.second;
+// }
+
 #endif

@@ -4,7 +4,7 @@
 #
 #   Stephen Smith, FMRIB Image Analysis Group
 #
-#   Copyright (C) 2006-2007 University of Oxford
+#   Copyright (C) 2006-2008 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -78,25 +78,25 @@ fi
 
 echo [`date`] [`hostname`] [`uname -a`] [`pwd`] [$0 $@] >> .tbsslog
 
-best=`cat FAi/best.msf`
+best=`cat FA/best.msf`
 echo "using pre-chosen registration target: $best"
 
 echo "upsampling alternative images into standard space"
 # re-create temporary analyze version of MNI152 for use by IRTK
-cd FAi
+cd FA
 postaffine=""
-if [ -f ../stats/target_to_MNI152.mat ] ; then
-    postaffine="--postmat=../stats/target_to_MNI152.mat"
+if [ -f target_to_MNI152.mat ] ; then
+    postaffine="--postmat=target_to_MNI152.mat"
 fi
-for f in `$FSLDIR/bin/remove_ext *FAi.hdr` ; do
+for f in `$FSLDIR/bin/imglob *_FA.*` ; do
+    f=` echo $f | sed 's/_FA$//g'`
     echo $f
-    $FSLDIR/bin/applywarp -i ../${ALTIM}/FAi/$f -o ${f}_to_${best}_nonlinear_hr_${ALTIM} -r ../stats/MNI152 -w ${f}_to_${best}_nonlinear --rel $postaffine
+    $FSLDIR/bin/applywarp -i ../${ALTIM}/$f -o ${f}_to_target_${ALTIM} -r $FSLDIR/data/standard/FMRIB58_FA_1mm -w ${f}_FA_to_${best}_warp $postaffine
 done
 
 echo "merging all upsampled $ALTIM images into single 4D image"
-${FSLDIR}/bin/fslmerge -t ../stats/all_$ALTIM `$FSLDIR/bin/imglob -oneperimage *_nonlinear_hr_${ALTIM}.*`
+${FSLDIR}/bin/fslmerge -t ../stats/all_$ALTIM `$FSLDIR/bin/imglob *_to_target_${ALTIM}.*`
 cd ../stats
-$FSLDIR/bin/fslcpgeom MNI152 all_$ALTIM -d
 $FSLDIR/bin/fslmaths all_$ALTIM -mas mean_FA_mask all_$ALTIM
 
 echo "projecting all_$ALTIM onto mean FA skeleton"
@@ -104,6 +104,6 @@ thresh=`cat thresh.txt`
 ${FSLDIR}/bin/tbss_skeleton -i mean_FA -p $thresh mean_FA_skeleton_mask_dst ${FSLDIR}/data/standard/LowerCingulum_1mm all_FA all_${ALTIM}_skeletonised -a all_$ALTIM
 
 echo "now run stats - for example:"
-echo "randomise -i all_${ALTIM}_skeletonised -o tbss_$ALTIM -m mean_FA_skeleton_mask -d design.mat -t design.con -n 5000 -c 3 -V"
+echo "randomise -i all_${ALTIM}_skeletonised -o tbss_$ALTIM -m mean_FA_skeleton_mask -d design.mat -t design.con -n 500 --T2 -V"
 echo "(after generating design.mat and design.con)"
 

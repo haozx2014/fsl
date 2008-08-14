@@ -78,7 +78,7 @@ using namespace Utilities;
 using namespace MISCMATHS;
 using namespace NEWIMAGE;
 
-string title="distancemap (Version 1.0)\nCopyright(c) 2003, University of Oxford (Mark Jenkinson)";
+string title="distancemap (Version 2.0)\nCopyright(c) 2003-2008, University of Oxford (Mark Jenkinson)";
 string examples="distancemap [options] -i <inputimage> -o <outputimage>";
 
 
@@ -91,108 +91,29 @@ Option<bool> help(string("-h,--help"), false,
 Option<bool> invertinput(string("--invert"), false,
 		  string("invert input image"),
 		  false, no_argument);
-Option<int> version(string("--version"), 2,
-		  string("<int>\tselect algorithm version (1 or 2=default)"),
-		  false, requires_argument);
 Option<string> inname(string("-i,--in"), string(""),
-		  string("input mask filename"),
+		  string("input image filename (calc distance to non-zero voxels)"),
 		  true, requires_argument);
 Option<string> outname(string("-o,--out"), string(""),
 		  string("output image filename"),
 		  true, requires_argument);
 Option<string> maskname(string("-m,--mask"), string(""),
-		  string("mask image filename"),
+		  string("mask image filename (only calc values at these voxels)"),
+		  false, requires_argument);
+Option<string> valueimname(string("--interp"), string(""),
+		  string("filename for values to interpolate (sparse sampling interpolation)"),
 		  false, requires_argument);
 Option<string> labelname(string("-l,--localmax"), string(""),
 		  string("local maxima output image filename"),
 		  false, requires_argument);
 Option<string> segmentname(string("-s,--segment"), string(""),
-		  string("segmented output image filename"),
+		  string("segmented output image filename (unique value per segment is local maxima label)"),
 		  false, requires_argument);
 int nonoptarg;
 
 ////////////////////////////////////////////////////////////////////////////
 
-// Global variables (not options)
-
-class rowentry { public: int x; int y; int z; float d; } ;
-
-bool rowentry_lessthan(const rowentry& r1, const rowentry& r2) 
-{
-  return r1.d < r2.d ;
-}
-
-vector<rowentry> schedule;
-Matrix octantsign(8,3);
-
-////////////////////////////////////////////////////////////////////////////
-
-// Local functions
-
-int setup_globals(const volume<float>& vin)
-{
-  // octantsign gives the 8 different octant sign combinations for coord
-  //  offsets
-  int row=1;
-  for (int p=-1; p<=1; p+=2) {
-    for (int q=-1; q<=1; q+=2) {
-      for (int r=-1; r<=1; r+=2) {
-	octantsign(row,1)=p;
-	octantsign(row,2)=q;
-	octantsign(row,3)=r;
-	row++;
-      }
-    }
-  }
-
-  // construct list of displacements (in one octant) in ascending
-  // order of distance
-  for (int z=vin.minz(); z<=vin.maxz(); z++) {
-    for (int y=vin.miny(); y<=vin.maxy(); y++) {
-      for (int x=vin.minx(); x<=vin.maxx(); x++) {
-	if ( (x==0) && (y==0) && (z==0) ) 
-         { // do nothing 
-         } else {
-	   rowentry newrow;
-	   newrow.x=x;
-	   newrow.y=y;
-	   newrow.z=z;
-	   float d2 = norm2(x*vin.xdim(),y*vin.ydim(),z*vin.zdim());
-	   newrow.d=d2;
-	   schedule.push_back(newrow);
-         }
-      }
-    }
-  }
-
-  // sort schedule to get ascending d2
-  sort(schedule.begin(),schedule.end(),rowentry_lessthan);
-  return 0;
-}
-
-int find_nearest(const volume<float>& vin, int x, int y, int z,
-	         int& x1, int& y1, int&z1)
-{
-  for (int r=0; r<(int) schedule.size(); r++) 
-  {
-    for (int p=1; p<=8; p++) {
-      int dx=MISCMATHS::round(schedule[r].x*octantsign(p,1));
-      int dy=MISCMATHS::round(schedule[r].y*octantsign(p,2));
-      int dz=MISCMATHS::round(schedule[r].z*octantsign(p,3));
-      if (vin.in_bounds(x+dx,y+dy,z+dz) && (vin.value(x+dx,y+dy,z+dz)>0.5)) 
-       { 
-	x1=x+dx; y1=y+dy; z1=z+dz; 
-	return 0; 
-       }
-    }
-  }
-  // return furtherest point (in error)
-  x1= x + MISCMATHS::round(schedule.back().x);
-  y1= y + MISCMATHS::round(schedule.back().y);
-  z1= z + MISCMATHS::round(schedule.back().z);
-  return 1;
-}
-
+// // Global variables (not options)
 
 // find local maxima and returns volume with zero except at local max
 volume<float> label_local_maxima(const volume<float>& vin, 
@@ -201,11 +122,13 @@ volume<float> label_local_maxima(const volume<float>& vin,
   int lmaxcount=0;
   volume<float> vout;
   vout = 0.0f*vin;
+  bool usemask=true;
+  if (mask.nvoxels()==0) usemask=false;
   for (int z=vin.minz(); z<=vin.maxz(); z++) {
     for (int y=vin.miny(); y<=vin.maxy(); y++) {
       for (int x=vin.minx(); x<=vin.maxx(); x++) {
-	if ( (mask(x,y,z)>0.5) &&
-	     vin(x,y,z)>vin(x-1,y-1,z-1) &&
+	if ( (usemask && (mask(x,y,z)>0.5)) || (!usemask)) {
+	  if (vin(x,y,z)>vin(x-1,y-1,z-1) &&
 	     vin(x,y,z)>vin(x,  y-1,z-1) &&
 	     vin(x,y,z)>vin(x+1,y-1,z-1) &&
 	     vin(x,y,z)>vin(x-1,y,  z-1) &&
@@ -231,8 +154,9 @@ volume<float> label_local_maxima(const volume<float>& vin,
 	     vin(x,y,z)>=vin(x-1,y+1,z+1) &&
 	     vin(x,y,z)>=vin(x,  y+1,z+1) &&
 	     vin(x,y,z)>=vin(x+1,y+1,z+1) ) {
-	  lmaxcount++;
-	  vout(x,y,z)=lmaxcount;
+	    lmaxcount++;
+	    vout(x,y,z)=lmaxcount;
+	  }
 	}
       }
     }
@@ -241,70 +165,57 @@ volume<float> label_local_maxima(const volume<float>& vin,
 }
 
 
-// create the distance map as vout
-// if use_distance is false then put the value of the input volume
-//  at the output location rather than the distance to it
-void create_distancemap(volume<float>& vout, const volume<float>& vin,
-			const volume<float>& mask, bool use_distance=true)
-{
-  int x1, y1, z1;
-  for (int z=vout.minz(); z<=vout.maxz(); z++) {
-    if (verbose.value()) { cerr << ":"; }
-    for (int y=vout.miny(); y<=vout.maxy(); y++) {
-      if (verbose.value()) { cerr << "."; }
-      for (int x=vout.minx(); x<=vout.maxx(); x++) {
-	if (mask(x,y,z)>0.5) {
-	  find_nearest(vin,x,y,z,x1,y1,z1);
-	  if (use_distance) {
-	    vout(x,y,z)=sqrt(norm2((x1-x)*vin.xdim(),
-				   (y1-y)*vin.ydim(),(z1-z)*vin.zdim()));
-	  } else {
-	    vout(x,y,z)=vin(x1,y1,z1);
-	  }
-	}
-      }
-    }
-  }
-  if (verbose.value()) { cerr << endl; }
-}
-
-
 // makes the minimum distance map for each voxel to the non-zero voxels
 //  in the input image
 int do_work(int argc, char* argv[]) 
 {
-  volume<float> vin, dmap, mask;
+  volume<float> vin, mask;
+  volume4D<float> dmap, valim;
+
   read_volume(vin,inname.value());
   if (invertinput.value()) {
     vin = 1.0f - binarise(vin,0.5f);
+  } else {
+    vin.binarise(0.5f);
   }
-  setup_globals(vin);
-  dmap = 0.0f*vin;
+
   if (maskname.set()) {
     read_volume(mask,maskname.value());
-  } else {
-    // set the mask as all the zero values (others have distance=0)
-    mask = 1.0f - binarise(vin,0.5f);
+  }
+
+  if (valueimname.set()) {
+    read_volume4D(valim,valueimname.value());
   }
 
   if (verbose.value()) { cout << "Creating distance map" << endl; }
-  create_distancemap(dmap,vin,mask);
-  save_volume(dmap,outname.value());
+  if (valueimname.set()) {
+    dmap = sparseinterpolate(valim,vin);
+  } else {
+    if (maskname.set()) {
+      dmap = distancemap(vin,mask);
+    } else {
+      dmap = distancemap(vin);
+    }
+  }
+  save_volume4D(dmap,outname.value());
 
   if (labelname.set() || segmentname.set()) {
     if (verbose.value()) { cout << "Finding local max" << endl; }
     volume<float> label;
-    label = label_local_maxima(dmap,mask);
+    label = label_local_maxima(dmap[0],mask);
     if (labelname.set()) { save_volume(label,labelname.value()); }
     if (segmentname.set()) {
       if (verbose.value()) { cout << "Segmenting wrt distance" << endl; }
-      create_distancemap(dmap,label,mask,false);
-      save_volume(dmap,segmentname.value());
+      {
+	volume4D<float> lab4;
+	lab4=label;
+	dmap = sparseinterpolate(lab4,vin,"nn");
+      }
+      save_volume4D(dmap,segmentname.value());
     }
   }
   return 0;
 }
-
 ////////////////////////////////////////////////////////////////////////////
 
 int main(int argc,char *argv[])
@@ -320,6 +231,7 @@ int main(int argc,char *argv[])
     options.add(labelname);
     options.add(segmentname);
     options.add(invertinput);
+    options.add(valueimname);
     options.add(verbose);
     options.add(help);
     

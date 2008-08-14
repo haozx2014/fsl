@@ -75,7 +75,7 @@ global PXHOME USER FSLDIR PROCID
 
     set InF  [ remove_ext $In ]
     set OutF [ remove_ext $Out ]
-    set InT2F  [ remove_ext $InT2 ]
+    if { $InT2 != "" }  { set InT2F  [ remove_ext $InT2 ] } 
 
 #}}}
     #{{{ run command

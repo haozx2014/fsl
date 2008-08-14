@@ -4,7 +4,7 @@
 #
 #   Stephen Smith, FMRIB Image Analysis Group
 #
-#   Copyright (C) 2005-2007 University of Oxford
+#   Copyright (C) 2005-2008 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -76,7 +76,7 @@ Usage: tbss_2_reg [options]
 Target-selection options - choose ONE of:
  -T            : use FMRIB58_FA_1mm as target for nonlinear registrations (recommended)
  -t <target>   : use <target> image as target for nonlinear registrations
- -n            : find best target from all images in FAi
+ -n            : find best target from all images in FA
 
 EOF
     exit 1
@@ -86,15 +86,14 @@ do_reg(){
 
     f=$1
 
-    for g in *_FAi.hdr ; do
-	g=`$FSLDIR/bin/remove_ext $g`
+    for g in `$FSLDIR/bin/imglob *_FA.*` ; do
         	
 	o=${g}_to_$f
 	
-	if [ ! -f ${o}_nonlinear.msf ] ; then
+	if [ ! -f ${o}_warp.msf ] ; then
 	    echo $o
-	    touch ${o}_nonlinear.msf
-	    echo "$FSLDIR/bin/tbss_reg $g $f" >> .commands
+	    touch ${o}_warp.msf
+	    echo "$FSLDIR/bin/fsl_reg $g $f ${g}_to_$f -e -FA" >> .commands
 	fi
 	
     done
@@ -104,12 +103,12 @@ do_reg(){
 
 echo [`date`] [`hostname`] [`uname -a`] [`pwd`] [$0 $@] >> .tbsslog
 
-/bin/rm -f FAi/.commands
+/bin/rm -f FA/.commands
 
 if [ $1 = -n ] ; then
-    cd FAi
-    for f in *_FAi.hdr ; do
-	do_reg `$FSLDIR/bin/remove_ext $f`
+    cd FA
+    for f in `$FSLDIR/bin/imglob *_FA.*` ; do
+	do_reg $f
     done
 else
     if [ $1 = -T ] ; then
@@ -124,16 +123,10 @@ else
 	echo "Error: target image $TARGET not valid"
 	Usage
     fi
-    FSLOUTPUTTYPE=ANALYZE
-    scaling=`$FSLDIR/bin/fslstats $TARGET -R | awk '{print "10 k 10000 " $2 " / p"}' | dc -`
-    $FSLDIR/bin/fslmaths $TARGET -mul $scaling FAi/target -odt short
-    cd FAi
-    $FSLDIR/bin/fslhd -x target | sed "s/sform_code .*/sform_code = \'0\'/g" | sed "s/qform_code .*/qform_code = \'0\'/g" > grot.xml
-    $FSLDIR/bin/fslcreatehd grot.xml target.hdr
-    /bin/rm grot.xml
-    FSLOUTPUTTYPE=NIFTI_GZ
+    $FSLDIR/bin/imcp $TARGET FA/target
+    cd FA
     do_reg target
 fi
 
-${FSLDIR}/bin/fsl_sub -T 300 -N tbss_2_reg -t .commands
+${FSLDIR}/bin/fsl_sub -T 60 -N tbss_2_reg -t .commands
 

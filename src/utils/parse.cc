@@ -63,8 +63,11 @@
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
 #include "options.h"
+#include <fstream>
 
 namespace Utilities {
+
+  using namespace std;
 
   BaseOption * OptionParser::find_matching_option(const string& optstr)
   {
@@ -82,33 +85,39 @@ namespace Utilities {
     throw(X_OptionError)
   {
     BaseOption * theOption = 0;
-    bool spasMode = true;
 
     if((theOption = find_matching_option(optstr)) == 0)
       throw X_OptionError(optstr, "Option doesn't exist");
 
-    if(theOption->unset() || spasMode) 
+    if(theOption->unset() || (overWriteMode_==Allow)) 
       {
 	if(theOption->has_arg()) {
 	  if(valstr.length() > 0) {
 	    if(theOption->set_value(valstr,argv,valpos,argc))
 	      return 1 + theOption->nrequired();
 	    else {
-	      string errstr = valstr;
+	      string errstr = "Couldn't set_value! valstr=\"" + valstr;
 	      for (int nn=valpos+1; nn<=valpos + theOption->nrequired(); nn++) {
 		if (nn<argc)  errstr += " " + string(argv[nn]);
 	      }
-	      throw X_OptionError(optstr, errstr); }
-	  } else {
-	    throw X_OptionError(optstr);
+	      throw X_OptionError(optstr, errstr + "\""); 
+	    }
+	  } else if(!theOption->optional()) {
+	    throw X_OptionError(optstr, "Missing non-optional argument");
 	  }
 	}
-	theOption->set_value(string());
+	if(theOption->optional()) 
+	  theOption->use_default_value();
+	else
+	  theOption->set_value(string());
 	return 1;
       } 
     else 
       {
-	throw X_OptionError(optstr, "Option already set");
+	if( overWriteMode_!= Ignore)
+	  throw X_OptionError(optstr, "Option already set");
+	else
+	  return 1;
       }
 
     throw X_OptionError(optstr);
@@ -132,6 +141,31 @@ namespace Utilities {
     return 1;
   }
 
+  unsigned int OptionParser::parse_config_file(const string& filename)
+  {
+    ifstream cf(filename.c_str());
+
+    if(cf.fail())
+      throw X_OptionError(filename, "Couldn't open the file");
+    
+    OverwriteMode oldMode=overWriteMode_;
+    overWriteMode_=Ignore;
+
+    string optstr; char buffer[1024];
+    while (cf >> optstr) {
+      if(optstr[0] == '#')
+	cf.getline(buffer, 1024);	     // Read and discard the rest of this line
+      else if(optstr.substr(0,2) == "--")
+	parse_long_option(optstr); // Parse a long option
+      else {
+	cf.getline(buffer, 1024);
+	parse_option(optstr, string(buffer), 0, 0, 0);
+      }
+    }
+    overWriteMode_=oldMode;
+    return 1;
+  }
+ 
   unsigned int OptionParser::parse_command_line(unsigned int argc, 
 						char **argv, int skip) 
   {
@@ -172,4 +206,12 @@ namespace Utilities {
     return optpos;		// User should process any remaining args
   }
 
+  std::ostream& operator<<(std::ostream& os, const OptionParser p) 
+  {
+    for(OptionParser::Options::const_iterator o = p.options_.begin();
+	o != p.options_.end(); ++o)
+      os << *(*o) << std::endl;
+
+    return os;
+  }
 }

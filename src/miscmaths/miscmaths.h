@@ -177,8 +177,8 @@ namespace MISCMATHS {
     { return Sum(SP(a,b)); }
 
   double norm2(const ColumnVector& x);
-  double norm2(double a, double b, double c);
-  float norm2(float a, float b, float c);
+  double norm2sq(double a, double b, double c);
+  float norm2sq(float a, float b, float c);
 
   int Identity(Matrix& m);
   ReturnMatrix Identity(int num);
@@ -194,6 +194,7 @@ namespace MISCMATHS {
 
   void reshape(Matrix& r, const Matrix& m, int nrows, int ncols);
   ReturnMatrix reshape(const Matrix& m, int nrows, int ncols);
+  int addrow(Matrix& m, int ncols);
 
   int construct_rotmat_euler(const ColumnVector& params, int n, Matrix& aff);
   int construct_rotmat_euler(const ColumnVector& params, int n, Matrix& aff,
@@ -225,7 +226,7 @@ namespace MISCMATHS {
   mat44 NewmatToMat44(const Matrix& m);
   mat44 newmat_to_mat44(const Matrix& inmat);
   Matrix mat44_to_newmat(mat44 inmat);
- 
+
   void get_axis_orientations(const Matrix& sform_mat, int sform_code,
 			     const Matrix& qform_mat, int qform_code,
 			     int& icode, int& jcode, int& kcode);
@@ -242,25 +243,6 @@ namespace MISCMATHS {
   ReturnMatrix percentile(const Matrix& in, float p);
   inline ReturnMatrix median(const Matrix& in){ return quantile(in,2);}
   inline ReturnMatrix iqr(const Matrix& in){ Matrix res = quantile(in,3) - quantile(in,1); res.Release(); return res;}
-
-// the following give left-right order and voxel2mm coordinate conversions
-//  consistent with FSLView behaviour (NB: you cannot tell left-right from
-//  the vox2mm matrix!)
-  int FslGetLeftRightOrder(int sform_code, const Matrix& sform_mat, 
-			   int qform_code, const Matrix& qform_mat);
-  short FslGetVox2mmMatrix(Matrix& vox2mm,
-			   int sform_code, const Matrix& sform_mat, 
-			   int qform_code, const Matrix& qform_mat, 
-			   float dx, float dy, float dz);
-  Matrix FslGetVox2VoxMatrix(const Matrix& flirt_in2ref,
-			     int sform_code_in, const Matrix& sform_mat_in, 
-			     int qform_code_in, const Matrix& qform_mat_in, 
-			     float dx_in, float dy_in, float dz_in,
-			     int nx_in, int ny_in, int nz_in,
-			     int sform_code_ref, const Matrix& sform_mat_ref, 
-			     int qform_code_ref, const Matrix& qform_mat_ref, 
-			     float dx_ref, float dy_ref, float dz_ref,
-			     int nx_ref, int ny_ref, int nz_ref);
 
   void cart2sph(const ColumnVector& dir, float& th, float& ph);// cartesian to sperical polar coordinates
   void cart2sph(const Matrix& dir,ColumnVector& th,ColumnVector& ph);//ditto
