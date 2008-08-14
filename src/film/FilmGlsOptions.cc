@@ -70,6 +70,7 @@
 #define WANT_MATH
 
 #include <iostream>
+#include <cstring>
 #include <fstream>
 #include <stdlib.h>
 #include <stdio.h>

@@ -298,9 +298,10 @@ int segmentSingleChannel(int argc, char* argv[])
     cerr<<"Image cannot be found";
     return 1;
   }
-  string tempName=outname.value();
-  make_basename(tempName);
-  outname.set_value(tempName);
+  // seems to be duplicate!
+  //string tempName=outname.value();
+  //make_basename(tempName);
+  //outname.set_value(tempName);
 
 
   if(inputImage.min()<0.0)
