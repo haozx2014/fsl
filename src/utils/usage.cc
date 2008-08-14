@@ -63,12 +63,16 @@
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
 #include "options.h"
+#include "buildno.h"
 
 namespace Utilities {
 
+  using namespace std;
+
   void OptionParser::usage()
   {
-    cerr << endl << progname_ << endl << endl;
+    cerr << endl << "Part of FSL (build " << build << ")"<< endl;
+    cerr << progname_ << endl << endl;
     cerr << "Usage: " << endl << example_ << endl;
 
     for(Options::iterator option = options_.begin(); option != options_.end(); 
@@ -80,7 +84,7 @@ namespace Utilities {
 	    cerr << endl << "Compulsory arguments (You MUST set one or more of):" << endl;
 	    banner = false;
 	  }
-	  cerr << **option << endl;
+	  (*option)->usage(cerr); cerr << endl;
 	}
       }
 
@@ -94,7 +98,7 @@ namespace Utilities {
 	    cerr << endl << "Optional arguments (You may optionally specify one or more of):" << endl;
 	    banner = false;
 	  }
-	  cerr << **optionx << endl;
+	  (*optionx)->usage(cerr); cerr << endl;
 	}
       }
 

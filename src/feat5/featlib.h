@@ -70,21 +70,14 @@
 
 /* }}} */
 /* {{{ defines, includes and typedefs */
-
 #include "newimage/newimageall.h"
-#include "newmatap.h"
-#include "miscmaths/miscmaths.h"
 #include <vector>
 
-using namespace NEWMAT;
-using namespace NEWIMAGE;
-
-void establish_pwfilter(const ColumnVector&, ColumnVector&, int, int);
-void prewhiten_model(const ColumnVector&, double *, double *, int, int);
-void prewhiten_timeseries(const ColumnVector&, const ColumnVector&, ColumnVector&, int);
-double *read_model(char *, int *, int *);
-double *read_contrasts(char *, int *, int *);
-void read_ftests(char *, int *);
-int read_triggers(char *, float **, int, int);
+void establish_pwfilter(const NEWMAT::ColumnVector&, NEWMAT::ColumnVector&, int, int);
+void prewhiten_model(const NEWMAT::ColumnVector&,vector<double>& model,vector<double>& pwmodel, int, int);
+void prewhiten_timeseries(const NEWMAT::ColumnVector&, const NEWMAT::ColumnVector&, NEWMAT::ColumnVector&, int);
+vector<double> read_model(const string& filename, int *, int *);
+void read_ftests(const string& filename, int *);
+bool read_triggers(const string& filename,vector<double>& triggers, int, int);
 
 /* }}} */

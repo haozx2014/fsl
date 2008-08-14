@@ -63,6 +63,7 @@
 
 #include <vector>
 #include <string>
+#include <fstream>
 
 using namespace std;
 
@@ -97,6 +98,9 @@ using namespace Utilities;
 Option<bool> verbose(string("-V,--verbose"), false, 
 		     string("switch on diagnostic messages"), 
 		     false, no_argument);
+Option<bool> debugging(string("-D"), false, 
+		     string("switch on debugging mode"), 
+		     false, no_argument);
 Option<bool> help(string("-h,--help"), false,
 		  string("display this message"),
 		  false, no_argument);
@@ -109,21 +113,31 @@ Option<string> mask(string("-m,--mask"), string("mask"),
 Option<string> resid(string("-r,--res"), string("res4d"),
 		     string("4d `residual-of-fit' image"),
 		     true, requires_argument);
+Option<string> config_file(string("-c,--config"), string(""),
+			   string("Specify a config file to read the default settings from."),
+			   false, requires_argument);
 Option<int> segid(string("-s,--shared-seg-id"), -1,
 		  "shared memory segment ID",
 		  false, requires_argument);
 HiddenOption<bool> noint(string("-n,--no-scientific-integrity"), false,
 			 string("You complete putz"),
 			 false, no_argument);
-Option< std::vector<string> > strseq(string("-i"), std::vector<string>(),
-		     string("string to vector<string> input sequence"),
-		     false, requires_argument);
+Option<string> zopt(string("--zopt"), string("Whoo!"),
+		     string("string input"),
+		     false, optional_argument);
+Option< pair<float,float> > popt(string("-P,--popt"), std::make_pair(0.0, 0.0),
+				 string("X,Y location"),
+				 false, requires_argument);
 
+FmribOption< std::vector<string> > 
+strseq(string("-I"), std::vector<string>(),
+       string("A coma seperated include path"),
+       false, requires_argument);
 
 string title = 
-"opttst (Version 1.0)\n\n\
-Copyright(c) 2000, University of Oxford\n\
-Dave Flitney";
+"opttst (Version 2.0)\n\n\
+Copyright(c) 2000-2007, University of Oxford\n\
+Author: Dave Flitney";
 
 string examples =
 "opttst --dof=<number> --mask=<filename> --res=<filename>\n\
@@ -137,13 +151,17 @@ int main(unsigned int argc, char **argv) {
   try {
 
     options.add(verbose);
+    options.add(debugging);
     options.add(help);
+    options.add(config_file);
     options.add(segid);
     options.add(dof);
     options.add(mask);
     options.add(resid);
     options.add(noint);
     options.add(strseq);
+    options.add(zopt);
+    options.add(popt);
 
     for(unsigned int a = options.parse_command_line(argc, argv); 
 	a < argc; ) {
@@ -171,25 +189,53 @@ int main(unsigned int argc, char **argv) {
       cout << "ibricon   = " << ibricon.value().first << ", " << ibricon.value().second<< endl;
     }
 
+    if(config_file.set())
+      options.parse_config_file(config_file.value());
+
     if(help.value() || 
        !options.check_compulsory_arguments(true))
       options.usage();
 
-    dof.set_T(50);
 
     if(verbose.value()) {
       cout << "verbose = " << verbose.value() << endl;
       cout << "help = " << help.value() << endl;
       cout << "segid = " << segid.value() << endl;
       cout << "dof = " << dof.value() << endl;
+      dof.set_T(50);
+      cout << "dof.set_T = " << dof.value() << endl;
       cout << "mask = " << mask.value() << endl;
       cout << "resid = " << resid.value() << endl;
       cout << "noint = " << noint.value() << endl;
-      cout << "strseq = ";
+
+      if(zopt.set()) cout << "zopt = " << zopt.value() << endl;
+      if(config_file.set()) cout << "config_file = " << config_file.value() << endl;
+
       for(int i =0; i < (int)strseq.value().size(); i++)
 	cout << strseq.value().at(i) << endl;
+
+      cout << "popt   = " << popt.value().first << ", " << popt.value().second<< endl;
       cout << endl << endl;
+    } else {
+     for(int i =0; i < (int)strseq.value().size(); i++)
+	cout << strseq.value().at(i) << endl;      
     }
+
+    std::ofstream of("saved_config");
+
+    of << options << endl;
+
+//     cerr << verbose << endl;
+//     cerr << debugging << endl;
+//     cerr << help << endl;
+//     cerr << segid << endl;
+//     cerr << dof << endl;
+//     cerr << mask << endl;
+//     cerr << resid << endl;
+//     cerr << noint << endl;
+//     cerr << zopt << endl;
+//     cerr << strseq << endl;
+//     cerr << popt << endl;
 
   } catch(X_OptionError& e) {
     options.usage();

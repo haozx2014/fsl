@@ -87,7 +87,9 @@ echo "make sure all bvar files use the same model!!!!"
 
 count=0;
 totalsub=0;
-rm temp.txt
+if [ -f temp.txt ] ; then
+  rm temp.txt
+fi
 for i in $@; do 
 
 	#output models to test
@@ -108,3 +110,4 @@ cat ${i} | sed '2q;d'>>${output};
 echo NumberOfSubjects ${totalsub} >> ${output}
 cat temp.txt >> ${output}
 rm temp.txt
+

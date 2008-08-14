@@ -7,7 +7,7 @@
 #
 #   Mark Jenkinson & Steve Smith, FMRIB Image Analysis Group
 #
-#   Copyright (C) 1999-2007 University of Oxford
+#   Copyright (C) 1999-2008 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -88,10 +88,16 @@ invupdate() {
 }
 
 picupdate() {
-    if [ `${FSLDIR}/bin/imtest $1` -a `${FSLDIR}/bin/imtest $2` -a -f ${1}2${2}.mat ] ; then
+    if [ `${FSLDIR}/bin/imtest $1` = 1 -a `${FSLDIR}/bin/imtest $2` = 1 -a -f ${1}2${2}.mat ] ; then
 	out=${1}2${2}
 	echo creating summary picture for ${out}
-	${FSLDIR}/bin/flirt -in $1 -ref $2 -out ${out} -applyxfm -init ${out}.mat
+	if [ $1 = "example_func" -a $2 = "standard" -a `${FSLDIR}/bin/imtest highres2standard_warp` = 1 ] ; then
+	    ${FSLDIR}/bin/applywarp --ref=$2 --in=$1 --out=$out --warp=highres2standard_warp --premat=${1}2highres.mat
+	elif [ $1 = "highres" -a $2 = "standard" -a `${FSLDIR}/bin/imtest highres2standard_warp` = 1 ] ; then
+	    ${FSLDIR}/bin/applywarp --ref=$2 --in=$1 --out=$out --warp=highres2standard_warp
+	else
+	    ${FSLDIR}/bin/flirt -ref $2 -in $1 -out $out -applyxfm -init ${out}.mat
+	fi
 	${FSLDIR}/bin/slicer $out $2 -s 2 -x 0.35 sla.png -x 0.45 slb.png -x 0.55 slc.png -x 0.65 sld.png -y 0.35 sle.png -y 0.45 slf.png -y 0.55 slg.png -y 0.65 slh.png -z 0.35 sli.png -z 0.45 slj.png -z 0.55 slk.png -z 0.65 sll.png
 	${FSLDIR}/bin/pngappend sla.png + slb.png + slc.png + sld.png + sle.png + slf.png + slg.png + slh.png + sli.png + slj.png + slk.png + sll.png ${out}1.png
 	${FSLDIR}/bin/slicer $2 $out -s 2 -x 0.35 sla.png -x 0.45 slb.png -x 0.55 slc.png -x 0.65 sld.png -y 0.35 sle.png -y 0.45 slf.png -y 0.55 slg.png -y 0.65 slh.png -z 0.35 sli.png -z 0.45 slj.png -z 0.55 slk.png -z 0.65 sll.png
@@ -100,6 +106,7 @@ picupdate() {
 	/bin/rm sl?.png
     fi
 }
+
 
 dirnm=$1
 

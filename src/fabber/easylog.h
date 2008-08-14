@@ -2,7 +2,7 @@
 
     Adrian Groves, FMRIB Image Analysis Group
 
-    Copyright (C) 2007 University of Oxford  */
+    Copyright (C) 2007-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -76,6 +76,8 @@
 using namespace std;
 using namespace Utilities;
 
+#define PRINTNOTE fprintf(stderr, "Note: %s line %d\n", __FILE__, __LINE__);
+
 #define LOG (*EasyLog::CurrentLog())
 // Use LOG just like you'd use cout.  (i.e. LOG << your_data << endl;)
 // Make sure you call StartLog or StartLogUsingStream before LOGging anything.
@@ -141,3 +143,14 @@ inline ostream& operator<<(ostream& out, vector<int> x)
   return out;
 }
 
+#include <map>
+
+// A work in progress:
+class Warning {
+ public:
+  static void IssueOnce(const string& text);
+  static void IssueAlways(const string& text);
+  static void ReissueAll();
+ private:
+  static map<string, int> issueCount;
+};

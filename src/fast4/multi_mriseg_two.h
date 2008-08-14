@@ -85,7 +85,7 @@ class ZMRIMULTISegmentation
   ~ZMRIMULTISegmentation()
     {
     }
-  void TanakaCreate(const NEWIMAGE::volume<float>* images, int nclasses, bool b2d, int nbiter,float nblowpass, float fbeta, int bapused, bool pveboolean, int nchan, int altype, bool bbias, int initfixity, bool verb,int biterationspve, int winit, float mixelpB, float Hyp,string mansegfle,int finalT2file);
+  void TanakaCreate(const NEWIMAGE::volume<float>* images, int nclasses, bool b2d, int nbiter,float nblowpass, float fbeta, int bapused, bool pveboolean, int nchan, bool bbias, int initfixity, bool verb,int biterationspve, int winit, float mixelpB, float Hyp,string mansegfle,int finalT2file);
   int TanakaMain(NEWIMAGE::volume<float>& pcsf, NEWIMAGE::volume<float>& pgm, NEWIMAGE::volume<float>& pwm);
 
  

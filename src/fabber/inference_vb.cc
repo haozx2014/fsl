@@ -78,7 +78,9 @@ void VariationalBayesInferenceTechnique::Setup(ArgsType& args)
 
   // Load up initial prior and initial posterior
   MVNDist* loadPrior = new MVNDist( model->NumParams() );
-  MVNDist* loadPosterior = new MVNDist( model->NumParams() );  
+  MVNDist* loadPosterior = new MVNDist( model->NumParams() );
+  NoiseParams* loadNoisePrior = noise->NewParams();
+  NoiseParams* loadNoisePosterior = noise->NewParams();
   
   string filePrior = args.ReadWithDefault("fwd-initial-prior", "modeldefault");
   string filePosterior = args.ReadWithDefault("fwd-initial-posterior", "modeldefault");
@@ -86,13 +88,55 @@ void VariationalBayesInferenceTechnique::Setup(ArgsType& args)
       model->HardcodedInitialDists(*loadPrior, *loadPosterior);
   if (filePrior != "modeldefault") loadPrior->Load(filePrior);
   if (filePosterior != "modeldefault") loadPosterior->Load(filePosterior);
+ 
+  if ( (loadPosterior->GetSize() != model->NumParams()) 
+    || (loadPrior->GetSize() != model->NumParams()) )
+      throw Invalid_option("Size mismatch: model wants " 
+      	+ stringify(model->NumParams())
+	+ ", initial prior (" + filePrior + ") is " 
+	+ stringify(loadPrior->GetSize()) 
+	+ ", initial posterior (" + filePosterior + ") is "
+        + stringify(loadPosterior->GetSize())
+	+ "\n");
+
+  filePrior = args.ReadWithDefault("noise-initial-prior", "modeldefault");
+  filePosterior = args.ReadWithDefault("noise-initial-posterior", "modeldefault");
+  if (filePrior == "modeldefault" || filePosterior == "modeldefault")
+      noise->HardcodedInitialDists(*loadNoisePrior, *loadNoisePosterior);
+  if (filePrior != "modeldefault") 
+      loadNoisePrior->InputFromMVN( MVNDist(filePrior) );
+  if (filePosterior != "modeldefault") 
+      loadNoisePosterior->InputFromMVN( MVNDist(filePosterior) );
 
   // Make these distributions constant:
   assert(initialFwdPrior == NULL);
   assert(initialFwdPosterior == NULL);    
+  assert(initialNoisePrior == NULL);
+  assert(initialNoisePosterior == NULL);    
   initialFwdPrior = loadPrior;
   initialFwdPosterior = loadPosterior;
-  loadPrior = loadPosterior = NULL; // now, only accessible as consts.
+  initialNoisePrior = loadNoisePrior;
+  initialNoisePosterior = loadNoisePosterior;
+  loadPrior = loadPosterior = NULL;
+  loadNoisePrior = loadNoisePosterior = NULL; // now, only accessible as consts.
+
+  // Resume from a previous run? 
+  continueFromFile = args.ReadWithDefault("continue-from-mvn", "");
+  if (continueFromFile != "")
+  {
+    // Won't need these any more.  They don't hurt, but why leave them around?
+    // They can only cause trouble (if used by mistake).
+    delete initialFwdPosterior; initialFwdPosterior = NULL;
+    
+    if ( !args.ReadBool("continue-fwd-only") )
+    {
+        delete initialNoisePosterior; 
+        initialNoisePosterior = NULL;
+    }
+  }
+
+  // Fix the linearization centres?
+  lockedLinearFile = args.ReadWithDefault("locked-linear-from-mvn","");
 
   // Maximum iterations allowed:
   string maxIterations = args.ReadWithDefault("max-iterations","10");
@@ -136,7 +180,7 @@ void VariationalBayesInferenceTechnique::Setup(ArgsType& args)
 void VariationalBayesInferenceTechnique::DoCalculations(const DataSet& allData) 
 {
   Tracer_Plus tr("VariationalBayesInferenceTechnique::DoCalculations");
-
+  
   const Matrix& data = allData.GetVoxelData();
   // Rows are volumes
   // Columns are (time) series
@@ -153,84 +197,153 @@ void VariationalBayesInferenceTechnique::DoCalculations(const DataSet& allData)
   assert(resultMVNs.empty()); // Only call DoCalculations once
   resultMVNs.resize(Nvoxels, NULL);
 
+  assert(resultFs.empty());
+  resultFs.resize(Nvoxels, 9999);  // 9999 is a garbage default value
+
+  // If we're continuing from previous saved results, load them here:
+  bool continuingFromFile = (continueFromFile != "");
+  vector<MVNDist*> continueFromDists;
+  if (continuingFromFile)
+  {
+    MVNDist::Load(continueFromDists, continueFromFile, allData.GetMask());
+  } 
+
+  if (lockedLinearFile != "")
+    throw Invalid_option("The option --locked-linear-from-mvn doesn't work with --method=vb yet, but should be pretty easy to implement.\n");
+    
+
+  const int nFwdParams = initialFwdPrior->GetSize();
+  const int nNoiseParams = initialNoisePrior->OutputAsMVN().GetSize(); 
+
   // Reverse order (to test that everything is being properly reset):
   //for (int voxel = Nvoxels; voxel >=1; voxel--) 
   
   for (int voxel = 1; voxel <= Nvoxels; voxel++)
     {
       ColumnVector y = data.Column(voxel);
-      NoiseModel* noiseVox = noise->Clone();
-//      NoiseModel* noiseVox = noise;
-
-// I think this problem has been resolved, but an interesting comment for later...
-//
-// Problem with using a new noise model every time: much poorer 
-// convergence.  Re-using previous voxel's posterior improves things
-// enormously.  Can a slightly more informative initial posterior
-// on alpha do just as well?? 
-// Also: why doesn't the MATLAB one have this problem?
-// Increased iterations to match (30) --> problem is considerably reduced
-// but still present.
-
-//      noise->Dump();
-//      noiseVox->Dump();
+      model->pass_in_data( y );
+      NoiseParams* noiseVox = NULL;
+      
+      // if (continuingFromFile)
+      if (initialNoisePosterior == NULL) // continuing noise params from file 
+      {
+        assert(continuingFromFile);
+        assert(continueFromDists.at(voxel-1)->GetSize() == nFwdParams+nNoiseParams);
+        noiseVox = noise->NewParams();
+        noiseVox->InputFromMVN( continueFromDists.at(voxel-1)
+            ->GetSubmatrix(nFwdParams+1, nFwdParams+nNoiseParams) );
+      }  
+      else
+      {
+        noiseVox = initialNoisePosterior->Clone();
+	/* if (continuingFromFile)
+	   assert(continueFromDists.at(voxel-1)->GetSize() == nFwdParams);*/
+      }
+      const NoiseParams* noiseVoxPrior = initialNoisePrior;
+      NoiseParams* const noiseVoxSave = noiseVox->Clone();
       
       LOG_ERR("  Voxel " << voxel << " of " << Nvoxels << endl); 
       //  << " sumsquares = " << (y.t() * y).AsScalar() << endl;
       double F = 1234.5678;
 
-      const MVNDist fwdPrior( *initialFwdPrior );
-      MVNDist fwdPosterior( *initialFwdPosterior );
+      MVNDist fwdPrior( *initialFwdPrior );
+      MVNDist fwdPosterior;
+      if (continuingFromFile)
+      {
+        assert(initialFwdPosterior == NULL);
+        fwdPosterior = continueFromDists.at(voxel-1)->GetSubmatrix(1, nFwdParams);
+      }
+      else
+      { 
+        assert(initialFwdPosterior != NULL);
+        fwdPosterior = *initialFwdPosterior;
+      }
+      MVNDist fwdPosteriorSave(fwdPosterior);
+
+      
       LinearizedFwdModel linear( model );
+      
+      // Setup for ARD (fwdmodel will decide if there is anything to be done)
+      double Fard = 0;
+      model->SetupARD( fwdPosterior, fwdPrior, Fard );
+      
+
       try
 	{
 	  linear.ReCentre( fwdPosterior.means );
 	  conv->Reset();
 
-	  noiseVox->Precalculate( y );
-    
+	  noise->Precalculate( *noiseVox, *noiseVoxPrior, y );
+
+	  int iteration = 0; //count the iterations
 	  do 
 	    {
-	      if (needF) F = noiseVox->CalcFreeEnergy( fwdPosterior, fwdPrior, linear, y );
-	      if (printF) LOG << "      Fbefore == " << F << endl;
+	      if (needF) { 
+		F = noise->CalcFreeEnergy( *noiseVox, 
+					   *noiseVoxPrior, fwdPosterior, fwdPrior, linear, y);
+		F = F + Fard; }
+	      if (printF) 
+		LOG << "      Fbefore == " << F << endl;
 
-//	      fwdPosterior.Dump();
-	     
-              // Save old values if called for
-	      if ( conv->NeedSave() ) {
-		noiseVox->SaveParams( fwdPosterior );
-	      }
  
+              // Save old values if called for
+	      if ( conv->NeedSave() )
+              {
+		*noiseVoxSave = *noiseVox;  // copy values, not pointers!
+                fwdPosteriorSave = fwdPosterior;
+              }
+
+	      // Do ARD updates (model will decide if there is anything to do here)
+	      if (iteration > 0) { model->UpdateARD( fwdPosterior, fwdPrior, Fard ); }
+
 	      // Theta update
-	      noiseVox->UpdateTheta( fwdPosterior, fwdPrior, linear, y );
+	      noise->UpdateTheta( *noiseVox, fwdPosterior, fwdPrior, linear, y );
 
 
       
-	      if (needF) F = noiseVox->CalcFreeEnergy( fwdPosterior, fwdPrior, linear, y );
-	      if (printF) LOG << "      Ftheta == " << F << endl;
+	      if (needF) {
+		F = noise->CalcFreeEnergy( *noiseVox, 
+					   *noiseVoxPrior, fwdPosterior, fwdPrior, linear, y);
+		F = F + Fard; }
+	      if (printF) 
+		LOG << "      Ftheta == " << F << endl;
 	      
-	      // Linearization update
-	      linear.ReCentre( fwdPosterior.means );
-	      if (needF) F = noiseVox->CalcFreeEnergy( fwdPosterior, fwdPrior, linear, y );
-	      if (printF) LOG << "      Flin == " << F << endl;
-//noiseVox->Dump();	      
+	      
 	      // Alpha & Phi updates
-	      noiseVox->UpdateNoise( fwdPosterior, linear, y );
+	      noise->UpdateNoise( *noiseVox, *noiseVoxPrior, fwdPosterior, linear, y );
+
+	      if (needF) {
+		F = noise->CalcFreeEnergy( *noiseVox, 
+					   *noiseVoxPrior, fwdPosterior, fwdPrior, linear, y);
+		F = F + Fard; }
+	      if (printF) 
+	      LOG << "      Fphi == " << F << endl;
 
 	      // Test of NoiseModel cloning:
 	      // NoiseModel* tmp = noise; noise = tmp->Clone(); delete tmp;
-	      
-	      if (needF) F = noiseVox->CalcFreeEnergy( fwdPosterior, fwdPrior, linear, y );
-	      if (printF) LOG << "      Fnoise == " << F << endl;
 
+	      // Linearization update
+	      // Update the linear model before doing Free eneergy calculation (and ready for next round of theta and phi updates)
+	      linear.ReCentre( fwdPosterior.means );
+	      
+	      
+	      if (needF) {
+		F = noise->CalcFreeEnergy( *noiseVox, 
+					   *noiseVoxPrior, fwdPosterior, fwdPrior, linear, y);
+		F = F + Fard; }
+	      if (printF) 
+		LOG << "      Fnoise == " << F << endl;
+
+	      iteration++;
 	    }           
 	  while ( !conv->Test( F ) );
 
 	  // Revert to old values at last stage if required
-	  if ( conv-> NeedRevert() ) {
-	    noiseVox->RevertParams( fwdPosterior );
+	  if ( conv-> NeedRevert() )
+          {
+	    *noiseVox = *noiseVoxSave;  // copy values, not pointers!
+            fwdPosterior = fwdPosteriorSave;
 	  }
-	  
 	  conv->DumpTo(LOG, "    ");
 	} 
       catch (const overflow_error& e)
@@ -263,19 +376,31 @@ void VariationalBayesInferenceTechnique::DoCalculations(const DataSet& allData)
 	
 	assert(resultMVNs.at(voxel-1) == NULL);
 	resultMVNs.at(voxel-1) = new MVNDist(
-	  fwdPosterior, noiseVox->GetResultsAsMVN() );
+	  fwdPosterior, noiseVox->OutputAsMVN() );
+	if (needF)
+	  resultFs.at(voxel-1) = F;
 
       } catch (...) {
 	// Even that can fail, due to results being singular
 	LOG << "    Can't give any sensible answer for this voxel; outputting zero +- identity\n";
 	MVNDist* tmp = new MVNDist();
 	tmp->SetSize(fwdPosterior.means.Nrows()
-		    + noiseVox->GetResultsAsMVN().means.Nrows());
+		    + noiseVox->OutputAsMVN().means.Nrows());
 	tmp->SetCovariance(IdentityMatrix(tmp->means.Nrows()));
 	resultMVNs.at(voxel-1) = tmp;
+
+	if (needF)
+	  resultFs.at(voxel-1) = F;
       }
+      
       delete noiseVox; noiseVox = NULL;
-//      assert(noiseVox == noise);
+      delete noiseVoxSave;
+    }
+
+    while (continueFromDists.size()>0)
+    {
+      delete continueFromDists.back();
+      continueFromDists.pop_back();
     }
 }
 

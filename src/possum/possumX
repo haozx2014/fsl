@@ -88,8 +88,22 @@ Usage() {
     echo "In case there is a cluster enviroment (e.g. SGE):"
     echo "-n (number of processors, default 1)"   
     echo "-t (estimated running time per processor (minutes), default 2000)"
-    exit
+    echo "-a (architecture [e.g., darwin or lx24-amd64])"
+    exit 1
 }
+
+nargs=$#
+if [ $nargs -eq 0 ] ; then
+  Usage
+fi
+
+echo "POSSUMDIR (before)" $POSSUMDIR
+if [ "${POSSUMDIR}" == "${FSLDEVDIR}" ] ; then
+   echo "POSSUMDIR (during)" $POSSUMDIR
+else
+    export POSSUMDIR=$FSLDIR
+fi
+echo "POSSUMDIR (after)" $POSSUMDIR
 
 make_absolute(){
     dir=$1;
@@ -112,11 +126,6 @@ run(){
  date >> $2/possum.log
 }
 
-nargs=$#
-if [ $nargs -eq 0 ] ; then
-  Usage
-fi
-
 subjdir=`make_absolute $1`
 subjdir=`echo $subjdir | sed 's/\/$/$/g'`
 echo subjectdir is $subjdir
@@ -128,6 +137,7 @@ do
   case "$2" in
       -n) nproc=$3;shift;;
       -t) ntime=$3;shift;;
+      -a) arch="-a $3";shift;;
       *) break;;
   esac
   shift
@@ -172,10 +182,6 @@ fi
 
 command="$command -x ${subjdir}/MRpar -f ${subjdir}/slcprof -p ${subjdir}/pulse -m ${subjdir}/motion "
 
-if [  -e ${subjdir}/b0timecourse ]; then
-	command="$command --b0time=${subjdir}/b0timecourse -l 4"
-fi
-
 if [ `${FSLDIR}/bin/imtest ${subjdir}/RFtrans` -eq 1 ]; then
 	command="$command -s ${subjdir}/RFtrans"
 fi
@@ -203,7 +209,10 @@ if [ `${FSLDIR}/bin/imtest ${subjdir}/b0z_dz` -eq 1 ]; then
 fi
 
 if [ `${FSLDIR}/bin/imtest ${subjdir}/b0extra` -eq 1 ]; then
-	command="$command --b0extra=${subjdir}/b0extra"
+	command="$command --b0extra=${subjdir}/b0extra --b0time=${subjdir}/b0timecourse -l 4"
+	if [ ! -e ${subjdir}/b0timecourse ]; then
+	   echo "${subjdir}/b0timecourse not found"
+        fi
 fi
 
 if [ -e ${subjdir}/nospeedup ]; then
@@ -228,15 +237,23 @@ echo Processing stage
 date
 command="$command --nproc=${nproc}"
 [ -f ${subjdir}/possum.com ] && rm ${subjdir}/possum.com
-for ((procnum=0; procnum < $nproc; procnum++)) ; do
-    echo "${FSLDIR}/bin/possum $command --procid=${procnum}  -o ${subjdir}/diff_proc/signal_proc_${procnum}" >> ${subjdir}/possum.com
+procnum=0
+while [ $procnum -le $nproc ]
+do
+    echo "${POSSUMDIR}/bin/possum $command --procid=${procnum}  -o ${subjdir}/diff_proc/signal_proc_${procnum}" >> ${subjdir}/possum.com
+    procnum=$(($procnum + 1))
 done
 
-possumid=`${FSLDIR}/bin/fsl_sub -T $ntime -l ${subjdir}/logs -M $mailto -N possum -t ${subjdir}/possum.com` 
+echo "${FSLDIR}/bin/fsl_sub -T $ntime -l ${subjdir}/logs $arch -M $mailto -N possum -t ${subjdir}/possum.com"
+
+possumid=`${FSLDIR}/bin/fsl_sub -T $ntime -l ${subjdir}/logs $arch -M $mailto -N possum -t ${subjdir}/possum.com ` 
 
 echo Post processing stage
 date
-mergeid=`${FSLDIR}/bin/fsl_sub -T 10 -j $possumid -F -l ${subjdir}/logs ${FSLDIR}/bin/possumX_postproc.sh $subjdir $nproc`
+
+echo "${FSLDIR}/bin/fsl_sub -T 10 -j $possumid -F -l ${subjdir}/logs $arch ${POSSUMDIR}/bin/possumX_postproc.sh $subjdir $nproc"
+
+mergeid=`${FSLDIR}/bin/fsl_sub -T 10 -j $possumid -F -l ${subjdir}/logs $arch ${POSSUMDIR}/bin/possumX_postproc.sh $subjdir $nproc`
 
 echo Done
 date

@@ -1,8 +1,8 @@
-/*  noisemodel_ar.cc - Class implementation for the multiple white noise model
+/*  noisemodel_white.cc - Class implementation for the multiple white noise model
 
     Adrian Groves and Michael Chappell, FMRIB Image Analysis Group
 
-    Copyright (C) 2007 University of Oxford  */
+    Copyright (C) 2007-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -74,91 +74,84 @@ using namespace MISCMATHS;
 using namespace Utilities;
 #include "easylog.h"
 
-WhiteNoiseModel* WhiteNoiseModel::Clone() const
+void WhiteNoiseModel::HardcodedInitialDists(NoiseParams& priorIn,
+    NoiseParams& posteriorIn) const
 {
-  Tracer_Plus tr("WhiteNoiseModel::Clone");
-  WhiteNoiseModel* clone = new WhiteNoiseModel(phiPattern);
-  clone->phis = phis;
-  clone->phisPrior = phisPrior;
+    Tracer_Plus tr("WhiteNoiseModel::HardcodedInitialDists");
+    
+    WhiteParams& prior = dynamic_cast<WhiteParams&>(priorIn);
+    WhiteParams& posterior = dynamic_cast<WhiteParams&>(posteriorIn);
+    
+    int nPhis = Qis.size();
+    assert(nPhis > 0);
+//    prior.resize(nPhis);
+//    posterior.resize(nPhis);
+    assert(nPhis == prior.nPhis);
+    assert(nPhis == posterior.nPhis);
 
-  return clone;
-}
-  
-
-void WhiteNoiseModel::LoadPrior(const string& filename)
-{
-  Tracer_Plus tr("WhiteNoiseModel::LoadPrior");
-  int nPhis = Qis.size();
-  assert(nPhis > 0);
-  phis.resize(nPhis);
-  phisPrior.resize(nPhis);
-
-  if (filename == "hardcoded")
     for (int i = 1; i <= nPhis; i++)
-      {
-	phis[i-1].b = phisPrior[i-1].b = 1e6;
-	phis[i-1].c = phisPrior[i-1].c = 1e-6;
+    {
+	   posterior.phis[i-1].b = prior.phis[i-1].b = 1e6;
+	   posterior.phis[i-1].c = prior.phis[i-1].c = 1e-6;
 
-        // Bit of black magic... tiny initial noise precision seems to help
-        phis[i-1].b = 1e-8;
-        phis[i-1].c = 50;
-      }
-  else
-    throw Invalid_option("Only --noise-priors=hardcoded is supported at present");
-
+       // Bit of black magic... tiny initial noise precision seems to help
+	   posterior.phis[i-1].b = 1e-8;
+	   posterior.phis[i-1].c = 50;
+    }
 }
 
-const MVNDist WhiteNoiseModel::GetResultsAsMVN() const
+const MVNDist WhiteParams::OutputAsMVN() const
 {
-  Tracer_Plus tr("WhiteNoiseModel::GetResultsAsMVN");
-  MVNDist phiMVN( phis.size() );
-  SymmetricMatrix phiVars( phis.size() );
-  phiVars = 0;
+  Tracer_Plus tr("WhiteParams::OutputAsMVN");
+  
+  assert((unsigned)nPhis == phis.size());
+  MVNDist mvn( phis.size() );
+  SymmetricMatrix vars( phis.size() );
+  vars = 0;
   for (unsigned i = 1; i <= phis.size(); i++)
     {
-      phiMVN.means(i) = phis[i-1].CalcMean();
-      phiVars(i,i) = phis[i-1].CalcVariance();
+      mvn.means(i) = phis[i-1].CalcMean();
+      vars(i,i) = phis[i-1].CalcVariance();
     }
-  phiMVN.SetCovariance(phiVars);
-  return phiMVN;
+  mvn.SetCovariance(vars);
+  return mvn;
 }
 
-void WhiteNoiseModel::Dump(const string indent) const
+void WhiteParams::InputFromMVN( const MVNDist& mvn )
 {
-  Tracer_Plus tr("WhiteNoiseModel::Dump");
-  LOG << indent << "White noise distribution, " << phis.size() << " separate distributions." << endl;
-//  LOG << indent << "  Prior:" << endl;
-  DumpPrior(indent + "  ");
-//  LOG << indent << "  Posterior:" << endl;
-  DumpPosterior(indent + "  ");
-}
-
-void WhiteNoiseModel::DumpPrior(const string indent) const
-{
-  Tracer_Plus tr("WhiteNoiseModel::DumpPrior");
-  for (unsigned i = 0; i < phisPrior.size(); i++)
+    for (unsigned i = 1; i <= phis.size(); i++)
     {
-      LOG << indent << "Phi_" << i+1 << " prior: ";
-      phisPrior[i].Dump();
-    }
-}
+        phis[i-1].SetMeanVariance( mvn.means(i), mvn.GetCovariance()(i,i) );
+        for (int j = i+1; j <= mvn.means.Nrows(); j++)
+            if (mvn.GetCovariance()(i, j) != 0.0)
+                throw Invalid_option("Phis should have zero covariance!");
+    }    
+} 
 
-void WhiteNoiseModel::DumpPosterior(const string indent) const
+
+void WhiteParams::Dump(const string indent) const
 {
-  Tracer_Plus tr("WhiteNoiseModel::DumpPosterior");
-  for (unsigned i = 0; i < phisPrior.size(); i++)
+  Tracer_Plus tr("WhiteParams::Dump");
+  assert( (unsigned)nPhis == phis.size() );
+  for (unsigned i = 0; i < phis.size(); i++)
     {
       LOG << indent << "Phi_" << i+1 << ": ";
       phis[i].Dump();
     }
 }
 
-WhiteNoiseModel::WhiteNoiseModel(const string& pattern) 
-  : phiPattern(pattern)
+//WhiteNoiseModel::WhiteNoiseModel(const string& pattern) 
+//  : phiPattern(pattern)
+WhiteNoiseModel::WhiteNoiseModel(ArgsType& args)
+  : phiPattern(args.ReadWithDefault("noise-pattern","1"))
 { 
   Tracer_Plus tr("WhiteNoiseModel::WhiteNoiseModel");
   assert(phiPattern.length() > 0);
   MakeQis(phiPattern.length()); // a quick way to validate the input
+
+  // A quick hack to allow phi to be locked externally
+  lockedNoiseStdev = convertTo<double>(args.ReadWithDefault("locked-noise-stdev","-1"));
+  assert(lockedNoiseStdev == -1 || lockedNoiseStdev > 0); // TODO (should throw)
 }
 
 
@@ -224,43 +217,69 @@ void WhiteNoiseModel::MakeQis(int dataLen) const
 }
 
 void WhiteNoiseModel::UpdateNoise(
+    NoiseParams& noise,
+    const NoiseParams& noisePrior,
   	const MVNDist& theta,
   	const LinearFwdModel& linear,
-  	const ColumnVector& data)
+  	const ColumnVector& data) const
 {
   Tracer_Plus tr("WhiteNoiseModel::UpdateNoise");
+  
+  WhiteParams& posterior = dynamic_cast<WhiteParams&>(noise);
+  const WhiteParams& prior = dynamic_cast<const WhiteParams&>(noisePrior);
+  
   const Matrix& J = linear.Jacobian();
   ColumnVector k = data - linear.Offset() + J*(linear.Centre() - theta.means);
   
   // check the Qis are valid
   MakeQis(data.Nrows());
+  const int nPhis = Qis.size();
+  assert(nPhis == posterior.nPhis);
+  assert(nPhis == prior.nPhis);
 
   // Update each phi distribution in turn
-  for (unsigned i = 1; i <= Qis.size(); i++)
+  for (int i = 1; i <= nPhis; i++)
     {
       const DiagonalMatrix& Qi = Qis[i-1];
       double tmp = 
 	(k.t() * Qi * k).AsScalar()
 	+ (theta.GetCovariance() * J.t() * Qi * J).Trace();
       
-      phis[i-1].b =
-	1/( tmp*0.5 + 1/phisPrior[i-1].b);
+      posterior.phis[i-1].b =
+	1/( tmp*0.5 + 1/prior.phis[i-1].b);
       
       double nTimes = Qi.Trace(); // number of data points for this dist
       assert(nTimes == int(nTimes)); // should be an integer
 
-      phis[i-1].c = 
-	(nTimes-1)*0.5 + phisPrior[i-1].c;
+      posterior.phis[i-1].c = 
+	(nTimes-1)*0.5 + prior.phis[i-1].c;
+
+      if (lockedNoiseStdev > 0)
+	{
+	  // Ignore this update and force phi to a specified value.
+	  // b*c = noise precision = lockedNoiseStdev^-2
+	  posterior.phis[i-1].b = 
+	    1/posterior.phis[i-1].c/lockedNoiseStdev/lockedNoiseStdev;
+	}
+
     }
 }
 
 void WhiteNoiseModel::UpdateTheta(
+    const NoiseParams& noiseIn,
   	MVNDist& theta,
   	const MVNDist& thetaPrior,
   	const LinearFwdModel& linear,
-  	const ColumnVector& data) const
+        const ColumnVector& data,
+        MVNDist* thetaWithoutPrior) const
 {
   Tracer_Plus tr("WhiteNoiseModel::UpdateTheta");
+
+  //  if (thetaWithoutPrior != NULL)
+  //    throw Invalid_option("This noise model doesn't yet work with "
+  //      +string("--spatial-prior-output-correction... implement it!\n"));
+
+  const WhiteParams& noise = dynamic_cast<const WhiteParams&>(noiseIn);
 
   const ColumnVector &ml = linear.Centre();
   const ColumnVector &gml = linear.Offset();
@@ -268,12 +287,15 @@ void WhiteNoiseModel::UpdateTheta(
 
   // Make sure Qis are up-to-date
   MakeQis(data.Nrows());
+  assert(Qis.size() == (unsigned)noise.nPhis);
 
   // Marginalize over phi distributions
   DiagonalMatrix X(data.Nrows()); 
   X = 0;
   for (unsigned i = 1; i <= Qis.size(); i++)
-    X += Qis[i-1] * phis[i-1].CalcMean();
+    X += Qis[i-1] * noise.phis[i-1].CalcMean();
+  // Qis are diagonal matrices with 1 only where that phi applies.
+  // Adding up all the Qis will give you the identity matrix.
 
   // Calculate Lambda & Lambda*m (without priors)
   SymmetricMatrix Ltmp;
@@ -287,6 +309,26 @@ void WhiteNoiseModel::UpdateTheta(
   theta.means = theta.GetCovariance()
     * ( mTmp + thetaPrior.GetPrecisions() * thetaPrior.means );
 
+  if (thetaWithoutPrior != NULL)
+    {
+      Tracer_Plus tr("WhiteNoiseModel::UpdateTheta - WithoutPrior calcs");
+      thetaWithoutPrior->SetSize(theta.GetSize());
+      
+      thetaWithoutPrior->SetPrecisions(Ltmp);
+
+      //      try
+      //	{
+      //          thetaWithoutPrior->GetCovariance(); // Cached, so not wasteful.
+      //	}
+      //      catch (Exception)
+      //	{
+      //	  Warning::IssueAlways("Ltmp was singular -- adding 1e-20 to diagonal");
+      //	  thetaWithoutPrior->SetPrecisions(Ltmp + IdentityMatrix(Ltmp.Nrows()) * 1e-20);
+      //	}
+
+      thetaWithoutPrior->means = thetaWithoutPrior->GetCovariance() * mTmp;
+    }
+
   // Error checking
   LogAndSign chk = theta.GetPrecisions().LogDeterminant();
   if (chk.Sign() <= 0)
@@ -294,14 +336,19 @@ void WhiteNoiseModel::UpdateTheta(
 	<< chk.Sign() << ", " << chk.LogValue() << endl;
 }
 
+
 double WhiteNoiseModel::CalcFreeEnergy(
+    const NoiseParams& noiseIn,
+    const NoiseParams& noisePriorIn,
 	const MVNDist& theta,
   	const MVNDist& thetaPrior,
   	const LinearFwdModel& linear,
   	const ColumnVector& data) const
 {
-
-  int nPhis = Qis.size();
+    Tracer_Plus tr("WhiteNoiseModel::CalcFreeEnergy");
+    const int nPhis = Qis.size();
+    const WhiteParams& noise = dynamic_cast<const WhiteParams&>(noiseIn);
+    const WhiteParams& noisePrior = dynamic_cast<const WhiteParams&>(noisePriorIn);
 
   // Calculate some matrices we will need
   const Matrix &J = linear.Jacobian();
@@ -328,20 +375,20 @@ double WhiteNoiseModel::CalcFreeEnergy(
   
    for (int i = 0; i < nPhis; i++) 
      {
-      double si = phis[i].b;
-      double ci = phis[i].c;
-      double siPrior = phisPrior[i].b;
-      double ciPrior = phisPrior[i].c;
+      double si = noise.phis[i].b;
+      double ci = noise.phis[i].c;
+      double siPrior = noisePrior.phis[i].b;
+      double ciPrior = noisePrior.phis[i].c;
 
       expectedLogPhiDist +=
 	-gammaln(ci) - ci*log(si) - ci
 	+(ci-1)*(digamma(ci)+log(si));
       
       expectedLogPosteriorParts[0] += 
-	(digamma(ci)+log(si)) * ( (nTimes)*0.5 + ciPrior - 1 ); // nTimes rather than nTimes-1
+	(digamma(ci)+log(si)) * ( (Qis[i].Trace())*0.5 + ciPrior - 1); // nTimes using phi_{i+1} = Qis[i].Trace()
       
       expectedLogPosteriorParts[9] += 
-	-2*gammaln(ciPrior) -2*ciPrior*log(siPrior) - si*ci/siPrior;
+	-gammaln(ciPrior) -ciPrior*log(siPrior) - si*ci/siPrior;
      } 
 
    expectedLogPosteriorParts[1] = 0; //*NB not required
@@ -351,7 +398,9 @@ double WhiteNoiseModel::CalcFreeEnergy(
     -0.5 * (J.t() * J * Linv).Trace(); //*NB remove Qsum
   
   expectedLogPosteriorParts[3] =
-    +0.5 * thetaPrior.GetPrecisions().LogDeterminant().LogValue();
+    +0.5 * thetaPrior.GetPrecisions().LogDeterminant().LogValue()
+    -0.5 * nTimes * log(2*M_PI);
+    -0.5 * nTheta * log(2*M_PI);
   
   expectedLogPosteriorParts[4] = 
     -0.5 * (
@@ -368,7 +417,8 @@ double WhiteNoiseModel::CalcFreeEnergy(
   expectedLogPosteriorParts[7] = 0; //*NB not required  
   
   expectedLogPosteriorParts[8] = 0; //*NB not required
- 
+
+  
   // Assemble the parts into F
   double F =  
     - expectedLogThetaDist 
@@ -389,6 +439,7 @@ double WhiteNoiseModel::CalcFreeEnergy(
   return F;
 }
 
+/*
 void WhiteNoiseModel::SaveParams(const MVNDist& theta) {
   Tracer_Plus tr("WhiteNoiseModel::SaveParams");
   // save the current values of parameters 
@@ -413,3 +464,6 @@ void WhiteNoiseModel::RevertParams(MVNDist& theta) {
       }
   theta = thetasave;
 }
+*/
+
+

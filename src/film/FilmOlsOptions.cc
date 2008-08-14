@@ -165,10 +165,6 @@ void FilmOlsOptions::parse_command_line(int argc, char** argv, ofstream& logfile
       gopt->ms = atoi(argv[n+1]);
       logfile << argv[n+1] << " ";
       n+=2;
-    } else if ( arg == "-sp" ) {
-      gopt->susanpath = argv[n+1];      
-      logfile << argv[n+1] << " ";
-      n+=2;
     } else if ( arg == "-rn" ) {
       gopt->datadir = argv[n+1];      
       logfile << argv[n+1] << " ";
@@ -210,8 +206,6 @@ void FilmOlsOptions::print_usage(int argc, char *argv[])
        << "        -det                               (detrend data as preprocessing step)\n"
        << "        -rn <dir>                          (directory name to store results in, default is "
        << gopt->datadir << ")\n"
-       << "        -sp <path>                         (path for SUSAN executable, default is "
-       << gopt->susanpath << ")\n"
        << "        -help\n\n";
 }
 

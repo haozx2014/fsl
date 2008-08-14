@@ -2,7 +2,7 @@
 
     Adrian Groves, FMRIB Image Analysis Group
 
-    Copyright (C) 2007 University of Oxford  */
+    Copyright (C) 2007-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -77,7 +77,7 @@ using namespace NEWIMAGE;
 
 string Quipss2FwdModel::ModelVersion() const
 {
-  return "$Id: fwdmodel_quipss2.cc,v 1.20 2007/08/02 15:14:11 adriang Exp $";
+  return "$Id: fwdmodel_quipss2.cc,v 1.23 2008/03/17 13:00:49 adriang Exp $";
 }
 
 void Quipss2FwdModel::HardcodedInitialDists(MVNDist& prior, 
@@ -89,6 +89,23 @@ void Quipss2FwdModel::HardcodedInitialDists(MVNDist& prior,
     // Set priors
     prior.means = 0;
     SymmetricMatrix precisions = IdentityMatrix(NumParams()) * 1e-12;
+
+    if(0) 
+      {
+	LOG_ERR("Hack: using 1e-10 precision instead of 1e-12");
+	precisions = IdentityMatrix(NumParams()) * 1e-10;
+      }
+
+    if(0) 
+      {
+	LOG_ERR("Hack: using slightly informative (100x expected stdev) priors"<<endl);
+	precisions(1,1) = 1e-4/350/350;
+	precisions(2,2) = 1e-4/350/350;
+	precisions(3,3) = 1e-4/17000/17000;
+	precisions(4,4) = 1e-4/700/700;
+	precisions(5,5) = 1e-4/50/50;
+	precisions(6,6) = 1e-4/.05/.05;
+      }
     
     // informative prior on dt
     if (stdevDt>0)
@@ -244,7 +261,7 @@ Quipss2FwdModel::Quipss2FwdModel(ArgsType& args)
             << " --tag-pattern=" << tagPattern
             ;
 	for (int i = 1; i <= echoTime.Nrows(); i++)
-	  LOG << " --te" << i << "==" << echoTime(i);
+	  LOG << " --te" << i << "=" << echoTime(i)*1000.0;
 	LOG << endl;
     }
     // It should also be possible to parse most of this information straight out of 

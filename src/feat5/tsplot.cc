@@ -4,7 +4,7 @@
 
     Stephen Smith, Mark Woolrich and Matthew Webster, FMRIB Image Analysis Group
 
-    Copyright (C) 1999-2007 University of Oxford  */
+    Copyright (C) 1999-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -103,14 +103,13 @@ the Hansen projection c'*pinv(X) with Y instead.
 #include <iomanip>
 #include "featlib.h"
 #include "libvis/miscplot.h"
-#include "miscmaths/miscmaths.h"
-#include "miscmaths/miscprob.h"
-#include "utils/options.h"
+#include <math.h>
+#include "utils/fsl_isfinite.h"
 #include <vector>
  
+using namespace NEWMAT;
+using namespace NEWIMAGE;
 using namespace MISCPLOT;
-using namespace MISCMATHS;
-using namespace Utilities;
 using namespace std;
  
 /*
@@ -274,11 +273,9 @@ void smooth(ColumnVector &x,ColumnVector &y,ColumnVector &dy,int npoint,double s
 }
 */
 
-/* }}} */
-/* {{{ usage */
-
-void usage(void)
+void usage(const string& message)
 {
+  if (!message.empty()) cout << message << endl;
   printf("Usage: tsplot <feat_directory.feat> [options]\n");
   printf("[-f <4D_data>] input main filtered data, in case it's not <feat_directory.feat>/filtered_func_data\n");
   printf("[-c <X Y Z>] : use X,Y,Z instead of max Z stat position\n");
@@ -291,686 +288,474 @@ void usage(void)
   exit(1);
 }
 
-/* }}} */
-
 int main(int argc, char **argv)
 {
-  /* {{{ variables */
-
-FILE         *ifp, *rofp;
-ofstream output_file;
-int          argi=1, prewhiten=0, ev, i, j, t, v, X=0, Y=0, Z=0, nevs, npts,
-  ncon=1, nftests=0, size, ymin, ymax, coordset=0, dataonly=0, modelfree=0, zweight=1,
-  use_triggers, level, custommask=0;
-double       *model, *contrasts=NULL, *norm_contrasts=NULL, tsmean, tmpf, maxz;
-float        *triggers;
-char         rofpM[100000], rofpF[100000], rofpP[100000], 
-  fmridata[10000], fsldir[10000], featdir[10000], outputdir[10000], gpname[10000], gprootname[10000],
-  thestring[10000], datafile[10000], statname[100], vname[100];
- ColumnVector pwts;
- bool textfiles=true;
+ofstream     outputFile;
+int          t, numEVs, npts, numContrasts=1, nftests=0, ymin, ymax, GRPHSIZE(600), PSSIZE(600); 
+vector<double> normalisedContrasts, model, triggers;
+string       fmriFileName, fslPath, outputName, featdir, vType, statType, graphFileName, indexText, graphText, graphName, peristimulusText;
+ColumnVector NewimageVoxCoord(4),NiftiVoxCoord(4);
+bool outputText(true), useCoordinate(false), prewhiten(false), useTriggers(false), customMask(false), modelFree(false), isHigherLevel(false), outputDataOnly(false);
+bool zWeightClusters(true);
 volume<float> immask;
 
- int GRPHSIZE=600;
-  int PSSIZE=600;
+  NewimageVoxCoord << 0 << 0 << 0 << 1;
+  NiftiVoxCoord << 0 << 0 << 0 << 1;
 
-rofpM[0]='\0';
+  /* process arguments */
 
-/* }}} */
+  if (argc<2) usage("");
+  featdir=string(argv[1]);
+  fmriFileName=featdir+"/filtered_func_data";
+  fslPath=string(getenv("FSLDIR"));
 
-  /* {{{ process arguments */
-
-if (argc<2) usage();
-
-strcpy(featdir,argv[argi++]);
-
-strcpy(outputdir,featdir);
-
-sprintf(fmridata,"%s/filtered_func_data",featdir);
-sprintf(fsldir,getenv("FSLDIR"));
-
-for (;argi<argc;argi++)
-{
-  if (!strcmp(argv[argi], "-f"))
-    /* {{{ alternative fmri data */
-
-{
-  argi++;
-  if (argc<argi+1)
+  for (int argi=2;argi<argc;argi++)
+  {
+    if (!strcmp(argv[argi], "-f")) /* alternative fmri data */
     {
-      printf("Error: no value given following -f\n");
-      usage();
+      if (argc<argi+2)
+	usage("Error: no value given following -f");
+      fmriFileName=string(argv[++argi]);
     }
-  strcpy(fmridata,argv[argi]);
-}
-
-/* }}} */
-  else if (!strcmp(argv[argi], "-c"))
-    /* {{{ alternative voxel position */
-
-{
-  coordset=1;
-  argi++;
-  if (argc<argi+3) /* options following c haven't been given */
+    else if (!strcmp(argv[argi], "-c")) /* alternative voxel position */
     {
-      printf("Error: incomplete values given following -c\n");
-      usage();
+      useCoordinate=true;
+      if (argc<=(argi+=3)) /* options following c haven't been given */
+	usage("Error: incomplete values given following -c");
+      NiftiVoxCoord << atoi(argv[argi-2]) << atoi(argv[argi-1]) << atoi(argv[argi]) << 1;
     }
-  X=atoi(argv[argi++]);
-  Y=atoi(argv[argi++]);
-  Z=atoi(argv[argi]);
-}
-
-/* }}} */
-  else if (!strcmp(argv[argi], "-C"))
-    /* {{{ output data only */
-
-{
-  coordset=1;
-  dataonly=1;
-  argi++;
-  if (argc<argi+4)
+    else if (!strcmp(argv[argi], "-C")) /* output data only */
     {
-      printf("Error: incomplete values given following -C\n");
-      usage();
+      outputDataOnly=useCoordinate=true;
+      if (argc<=(argi+=4))
+	usage("Error: incomplete values given following -C");
+      NiftiVoxCoord << atoi(argv[argi-3]) << atoi(argv[argi-2]) << atoi(argv[argi-1]) << 1;
+      outputName=string(argv[argi]);
     }
-  X=atoi(argv[argi++]);
-  Y=atoi(argv[argi++]);
-  Z=atoi(argv[argi++]);
-  strcpy(datafile,argv[argi]);
-}
-
-/* }}} */
-  else if (!strcmp(argv[argi], "-m"))
-    /* {{{ alternative mask image */
-
-{
-  custommask=1;
-
-  argi++;
-  if (argc<argi+1)
+    else if (!strcmp(argv[argi], "-m")) /* alternative mask image */
     {
-      printf("Error: no mask image given following -m\n");
-      usage();
+      customMask=true;
+      if (argc<argi+2)
+	usage("Error: no mask image given following -m");    
+      if ( read_volume(immask,argv[++argi]) )
+	usage("Error: mask image chosen doesn't exist");      
     }
-
-  if ( read_volume(immask,argv[argi]) )
+    else if (!strcmp(argv[argi], "-o")) /* output dir */
     {
-      printf("Error: mask image chosen doesn't exist\n");
-      usage();
+      if (argc<argi+2)
+	usage("Error: no value given following -o"); 
+      outputName=string(argv[++argi]);
     }
- }
+    else if (!strcmp(argv[argi], "-d")) outputText=false;
+    else if (!strcmp(argv[argi], "-n")) zWeightClusters=false;   
+    else if (!strcmp(argv[argi], "-p")) prewhiten=true; 
+  }
 
-/* }}} */
-  else if (!strcmp(argv[argi], "-o"))
-    /* {{{ output dir */
+  /* read filtered_func_data */
 
-{
-  argi++;
-  if (argc<argi+1)
+  volume4D<int> im;
+  read_volume4D(im, fmriFileName);
+
+  if (useCoordinate) NewimageVoxCoord = im.niftivox2newimagevox_mat()*NiftiVoxCoord;
+
+  if (outputDataOnly && outputText) /* output raw data and exit */
+  {
+    outputFile.open(outputName.c_str());
+    if(!outputFile.is_open())
     {
-      printf("Error: no value given following -o\n");
-      usage();
-    }
-  strcpy(outputdir,argv[argi]);
-}
-
-  else if (!strcmp(argv[argi], "-d"))
-    /* don't output files */
-{
-  textfiles=false;
-}
-
-/* }}} */
-  else if (!strcmp(argv[argi], "-n"))
-    /* {{{ zweight clusters? */
-
-{
-  zweight=0;
-}
-
-/* }}} */
-  else if (!strcmp(argv[argi], "-p"))
-    /* {{{ turn on prewhitening */
-
-{
-  prewhiten=1;
-}
-
-/* }}} */
-}
-
-/* }}} */
-  /* {{{ read filtered_func_data */
-
-volume4D<int> im;
-read_volume4D(im, fmridata);
-
-size=im.nvoxels();
-
-if (dataonly && textfiles)
-  /* {{{ output raw data and exit */
-{
-  output_file.open(datafile);
-  if(!output_file.is_open())
-    {
-      fprintf(stderr,"Can't open output data file %s\n",datafile);
+      cerr << "Can't open output data file " << outputName << endl;
       exit(1);
     }
+    for(t=0; t<im.tsize(); t++) outputFile << scientific << im((int)NewimageVoxCoord(1),(int)NewimageVoxCoord(2),(int)NewimageVoxCoord(3),t) << endl;
+    outputFile.close();
+    exit(0);
+  }
 
-  for(t=0; t<im.tsize(); t++) output_file << scientific << im(X,Y,Z,t) << endl;
-  output_file.close();
-  return 0;
-}
+  model=read_model(featdir+"/design.mat",&numEVs,&npts);
+  
+  if (npts==0)
+  {
+    modelFree=true;
+    nftests=1;
+    numContrasts=0;
+  }
 
-/* }}} */
+  npts=im.tsize();
 
-/* }}} */
-  /* {{{ read design.mat */
+ColumnVector TS_model(npts),TS_copemodel(npts),TS_pemodel(npts*numEVs),TS_data(npts),TS_residuals(npts);
 
-sprintf(thestring,"%s/design.mat",featdir);
-model=read_model(thestring,&nevs,&npts);
+  /* read auto correlation estimates for prewhitening */
 
-if (npts==0)
-{
-  modelfree=1;
-  nftests=1;
-  ncon=0;
-}
-
-npts=im.tsize();
-
-ColumnVector TS_model(npts),TS_copemodel(npts),TS_pemodel(npts*nevs),TS_data(npts),TS_residuals(npts);
-
-
-/* }}} */
-  /* {{{ read auto correlation estimates for prewhitening */
-
-double* pwmodel=0;
+vector<double> pwmodel;
 volume4D<float> acs;
 
-if ( prewhiten ) {
+  if ( prewhiten ) {
+    prewhiten=false;
+    if(fsl_imageexists(featdir+"/stats/threshac1")) {
+      read_volume4D(acs, featdir+"/stats/threshac1");
+      if (acs[1].max()!=0) {/* hacky test for whether prewhitening was actually carried out */
+	pwmodel.resize(numEVs*npts);
+	prewhiten=true;
+      }
+    }
+  }
 
-  prewhiten=0;
+  /* read design.con and PEs */
 
-  sprintf(thestring,"%s/stats/threshac1",featdir);
-  if (fsl_imageexists(string(thestring)))
+  vector< volume<float> > impe(numEVs);
+  if (!modelFree)
+  {
+    Matrix contrasts=read_vest(featdir+"/design.con");
+    numEVs=contrasts.Ncols();
+    numContrasts=contrasts.Nrows();
+    normalisedContrasts.resize( numEVs * numContrasts );
+    for(int i=1; i<=numContrasts; i++)
+      for(int ev=1; ev<=numEVs; ev++)
+	normalisedContrasts[(i-1)*numEVs+(ev-1)] = contrasts(i,ev) / sqrt(contrasts.Row(i).SumSquare());
+    
+    for(int i=1;i<=numEVs;i++)
+      read_volume(impe[i-1],featdir+"/stats/pe"+num2str(i));
+  }
+
+  if (!modelFree)
+    read_ftests(featdir+"/design.fts",&nftests);
+  useTriggers=read_triggers(featdir+"/design.trg",triggers,numEVs,npts);
+  /* check analysis level */
+
+  ifstream testFile((featdir+"/design.lev").c_str());
+  isHigherLevel=testFile.is_open();
+  testFile.close();
+
+  /* create plot(s) for each contrast */
+  miscplot newplot;
+  for(int type=0;type<2;type++) /* setup stats type */
+  {
+    int maxi;
+    if (type==0) { statType="zstat";  maxi=numContrasts; }
+    else         { statType="zfstat"; maxi=nftests; }
+    for(int i=1; i<=maxi; i++)
     {
-      read_volume4D(acs, thestring);
-
-      if (acs[1].max()!=0) /* hacky test for whether prewhitening was actually carried out */
-	{
-	  pwmodel=new double[nevs*npts];
-	  prewhiten=1;
+      volume<float> imcope, imz;
+      bool haveclusters=false;
+      graphText="";
+      peristimulusText="";
+      /* read COPE and derived stats; test for f-test output */
+      /* load zstat or zfstat */
+      if (fsl_imageexists(featdir+"/stats/"+statType+num2str(i))) 
+	read_volume(imz,featdir+"/stats/"+statType+num2str(i));
+      else 
+	continue; /* f-test i wasn't valid - no zfstat image */
+      /* load cope */
+      if ( (type==0) && (!modelFree) )
+	read_volume(imcope,featdir+"/stats/cope"+num2str(i));
+      
+      /* load cluster mask */
+      if (!useCoordinate) {
+	if (!customMask) {
+	  if (fsl_imageexists(featdir+"/cluster_mask_"+statType+num2str(i)))
+	    read_volume(immask,featdir+"/cluster_mask_"+statType+num2str(i));
 	}
-    }
+	haveclusters=(immask.max()>0);
+      }
+      /* find max Z and X,Y,Z */
 
-}
-
-/* }}} */
-  /* {{{ read design.con and PEs */
-
-vector< volume<float> > impe(nevs);
-if (!modelfree)
-{
-  sprintf(thestring,"%s/design.con",featdir);
-  contrasts=read_contrasts(thestring,&nevs,&ncon);
-
-  /* create normalised contrasts */
-  norm_contrasts=(double*)malloc(sizeof(double)* nevs * ncon);
-  for(i=0; i<ncon; i++)
-    {
-      double norm_factor=0;
-
-      for(ev=0; ev<nevs; ev++)
-	norm_factor += contrasts[i*nevs+ev] * contrasts[i*nevs+ev];
-
-      for(ev=0; ev<nevs; ev++)
-	norm_contrasts[i*nevs+ev] = contrasts[i*nevs+ev] / sqrt(norm_factor);
-    }
-
-  for(i=1;i<=nevs;i++)
-    {
-      sprintf(thestring,"%s/stats/pe%d",featdir,i);
-      read_volume(impe[i-1], thestring);
-    }
-}
-
-/* }}} */
-  /* {{{ read design.fts */
-
-if (!modelfree)
-{
-  sprintf(thestring,"%s/design.fts",featdir);
-  read_ftests(thestring,&nftests);
-}
-
-/* }}} */
-  /* {{{ read triggers */
-
-use_triggers=read_triggers(featdir,&triggers,nevs,npts);
-
-/* }}} */
-  /* {{{ check analysis level */
-
-level=1;
-
-sprintf(thestring,"%s/design.lev",featdir);
-if((ifp=fopen(thestring,"rb"))!=NULL)
-{
-  fclose(ifp);
-  level=2;
-}
-
-/* }}} */
-  /* {{{ create plot(s) for each contrast */
-
-for(j=0;j<2;j++)
-{
-  /* {{{ setup stats type */
-
-int maxi;
-
-if (j==0) { sprintf(statname,"zstat");  maxi=ncon; }
-else      { sprintf(statname,"zfstat"); maxi=nftests; }
-
-/* }}} */
-
-  for(i=0; i<maxi; i++)
-    {
-      /* {{{ vars */
-
-volume<float> imcope, imz, imweight;
-bool haveclusters=false;
-
-rofpF[0]='\0';
-rofpP[0]='\0';
-
-/* }}} */
-      /* {{{ read COPE and derived stats; test for f-test output */
-
-/* load zstat or zfstat */
-sprintf(thestring,"%s/stats/%s%d",featdir,statname,i+1);
-if (fsl_imageexists(string(thestring))) 
-{
-  read_volume(imz,thestring);
-  imweight=imz;
-  if (!zweight)
-    imweight=1;
-}
-else
-  continue; /* f-test i wasn't valid - no zfstat image */
-
-/* load cope */
-if ( (j==0) && (!modelfree) )
-{
-  sprintf(thestring,"%s/stats/cope%d",featdir,i+1);
-  read_volume(imcope,thestring);
-}
-
-/* load cluster mask */
-if (!coordset)
-{
-  if (!custommask)
-    {
-      sprintf(thestring,"%s/cluster_mask_%s%d",featdir,statname,i+1);
-      if (fsl_imageexists(string(thestring)))
-	read_volume(immask,thestring);
-    }
-  haveclusters=(immask.max()>0);
-}
-
-/* }}} */
-      /* {{{ find max Z and X,Y,Z */
-
-if (!coordset)
-{
-  X=Y=Z=0;
-  maxz=-1000;
-
-  for(int z=0; z<im.zsize(); z++)
-    for(int y=0; y<im.ysize(); y++)
-      for(int x=0; x<im.xsize(); x++)
-	if ( (imz(x,y,z)>maxz) &&
-	     ( (!haveclusters) ||   /* make max Z be inside a cluster if we found a cluster map */
-	       (immask(x,y,z)>0) && (!prewhiten || acs(x,y,z,1)!=0 || acs(x,y,z,2)!=0) ) )
-	  {
-	    maxz=imz(x,y,z);
-	    X=x; Y=y; Z=z;
-	  }
-}
-else
-  maxz=imz(X,Y,Z);
-
-/* }}} */
+      double maxz(-1000);
+      if (!useCoordinate)
+      {
+	NewimageVoxCoord << 0 << 0 << 0 << 1;
+	for(int z=0; z<im.zsize(); z++)
+	  for(int y=0; y<im.ysize(); y++)
+	    for(int x=0; x<im.xsize(); x++)
+	      if ( (imz(x,y,z)>maxz) && ( (!haveclusters) || (immask(x,y,z)>0) && (!prewhiten || acs(x,y,z,1)!=0 || acs(x,y,z,2)!=0) ) )
+	      {
+		/* make max Z be inside a cluster if we found a cluster map */
+		maxz=imz(x,y,z);
+		NewimageVoxCoord << x << y << z << 1;
+	      }
+      }
+      else
+	maxz=imz((int)NewimageVoxCoord(1),(int)NewimageVoxCoord(2),(int)NewimageVoxCoord(3));
 
       /* first do peak voxel plotting then do mask-averaged plotting */
-      for(v=0;v<2;v++)
+      for(int v=0;v<=1;v++)
+      {
+	double wtotal=0;
+	int maskedVoxels=0;
+	if (v==0) vType.clear();
+	else vType="c";
+	 
+	/* {{{ create model and data time series */
+	TS_model=0;
+	TS_residuals=0;
+	TS_copemodel=0;
+	TS_data=0;
+	TS_pemodel=0;
+	ColumnVector prewhitenedTS;
+	for(int x=0; x<im.xsize(); x++) 
+	  for(int y=0; y<im.ysize(); y++) 
+	    for(int z=0; z<im.zsize(); z++)
+	      if ( ((v==0 && x==(int)NewimageVoxCoord(1) && y==(int)NewimageVoxCoord(2) && z==(int)NewimageVoxCoord(3)) || (v==1 && immask(x,y,z)>0)) && (!prewhiten || acs(x,y,z,1)!=0 || acs(x,y,z,2)!=0)) {
+		maskedVoxels++;
+		double weight(1);
+		if (v!=0 && zWeightClusters) weight=imz(x,y,z);
+
+		wtotal+=weight;
+		if(prewhiten)
+		  prewhiten_timeseries(acs.voxelts(x,y,z), im.voxelts(x,y,z), prewhitenedTS, npts);
+		else
+		   prewhitenedTS = im.voxelts(x,y,z);
+		for(t=1; t<=npts; t++) TS_data(t)+= prewhitenedTS(t)*weight;
+
+		if (!modelFree) {
+		  if (prewhiten)
+		    prewhiten_model(acs.voxelts(x,y,z), model, pwmodel, numEVs, npts);
+		  else
+		    pwmodel=model;
+		  for(t=1; t<=npts; t++)
+		    for(int ev=0; ev<numEVs; ev++)
+		    {
+		      double tmpf=pwmodel[(t-1)*numEVs+ev]*impe[ev](x,y,z)*weight;
+		      TS_model(t)           += tmpf;
+		      TS_copemodel(t)       += tmpf*normalisedContrasts[(i-1)*numEVs+ev];
+		      TS_pemodel(ev*npts+t) += tmpf;
+		    }
+		}
+	      }
+
+	double tsmean(0);
+	for(t=1; t<=npts; t++)
 	{
-          /* {{{ setup */
-
-double wtotal=0;
-int count=0;
-volume<float> tmp_imweight=imweight, tmp_immask=immask;
-
-if (v==0) {
-  vname[0]='\0';
-  tmp_imweight=0;
-  tmp_imweight(X,Y,Z)=1;
-  tmp_immask=tmp_imweight;
-} else {
-  sprintf(vname,"c");
-}
-
-/* }}} */
-          /* {{{ create model and data time series */
-
-TS_model=0;
-TS_residuals=0;
-TS_copemodel=0;
-TS_data=0;
-TS_pemodel=0;
-
-for(int x=0; x<im.xsize(); x++) for(int y=0; y<im.ysize(); y++) for(int z=0; z<im.zsize(); z++)
-  if (tmp_immask(x,y,z)>0 && (!prewhiten || acs(x,y,z,1)!=0 || acs(x,y,z,2)!=0))
-  {
-    count++;
-    wtotal+=tmp_imweight(x,y,z);
-
-    if(prewhiten)
-      prewhiten_timeseries(acs.voxelts(x,y,z), im.voxelts(x,y,z), pwts, npts);
-    else
-      pwts = im.voxelts(x,y,z);
-    for(t=1; t<=npts; t++) TS_data(t)+=pwts(t)*tmp_imweight(x,y,z);
-    
-
-    if (!modelfree) {
-      if (prewhiten)
-	prewhiten_model(acs.voxelts(x,y,z), model, pwmodel, nevs, npts);
-      else
-	pwmodel=model;
-      for(t=1; t<=npts; t++)
-	for(ev=0; ev<nevs; ev++)
+	  TS_data(t)/=wtotal;
+	  tsmean+=TS_data(t);
+	}
+	tsmean/=npts;
+	if (isHigherLevel) tsmean=0;
+	if (!modelFree)
+	  for(t=1; t<=npts; t++)
 	  {
-	    tmpf=pwmodel[(t-1)*nevs+ev]*impe[ev](x,y,z)*tmp_imweight(x,y,z);
-            TS_model(t)           += tmpf;
-            TS_copemodel(t)       += tmpf*norm_contrasts[i*nevs+ev];
-            TS_pemodel(ev*npts+t) += tmpf;
+	    TS_model(t) = TS_model(t)/wtotal + tsmean;
+	    TS_copemodel(t) = TS_copemodel(t)/wtotal + tsmean;
+	    TS_residuals(t)=TS_data(t)-TS_model(t);
+	    for(int ev=0; ev<numEVs; ev++)
+	      TS_pemodel(ev*npts+t) = TS_pemodel(ev*npts+t)/wtotal + tsmean;
 	  }
-    }
-  }
-
-tsmean=0;
-for(t=1; t<=npts; t++)
-{
-  TS_data(t)/=wtotal;
-  tsmean+=TS_data(t);
-}
-tsmean/=npts;
-
-if (level==2) tsmean=0;
-
-if (!modelfree)
-  for(t=1; t<=npts; t++)
-    {
-      TS_model(t) = TS_model(t)/wtotal + tsmean;
-      TS_copemodel(t) = TS_copemodel(t)/wtotal + tsmean;
-      TS_residuals(t)=TS_data(t)-TS_model(t);
-      for(ev=0; ev<nevs; ev++)
-	TS_pemodel(ev*npts+t) = TS_pemodel(ev*npts+t)/wtotal + tsmean;
-    }
-
-
-/* }}} */
-	  /* {{{ output data text files */
-
-sprintf(thestring,"%s/tsplot%s_%s%d.txt",outputdir,vname,statname,i+1);
-if (textfiles) output_file.open(thestring);
-   ymin=ymax=(int)TS_data(1);
-   for(t=1; t<=npts; t++)
-   {
-     if (textfiles) output_file << scientific << TS_data(t);
-     ymin=(int)MISCMATHS::Min(TS_data(t),ymin); 
-     ymax=(int)MISCMATHS::Max(TS_data(t),ymax);
-     if (!modelfree)
-     {
-       if (j==0)
-       {
-          if (textfiles) output_file << " " << TS_copemodel(t); 
-          ymin=(int)MISCMATHS::Min(TS_copemodel(t),ymin); 
-          ymax=(int)MISCMATHS::Max(TS_copemodel(t),ymax);
-       }
-       if (textfiles) output_file << " " << TS_model(t); 
-       ymin=(int)MISCMATHS::Min(TS_model(t),ymin); 
-       ymax=(int)MISCMATHS::Max(TS_model(t),ymax);
-       if (j==0) output_file << " " << TS_residuals(t)+TS_copemodel(t);
-     }
-     if (textfiles) output_file << endl;
-   }
-if (textfiles) output_file.close();
-ymax+=(ymax-ymin)/5;
-ymin-=(ymax-ymin)/20;
-
-if (ymin==ymax) { ymin-=1; }
-/* }}} */
-	  /* {{{ create graphs */
-
-  sprintf(gprootname,"tsplot%s_%s%d",vname,statname,i+1); 
-  sprintf(gpname,"%s/%s",outputdir,gprootname);
-  miscplot newplot;
-  GRPHSIZE= MISCMATHS::Min(MISCMATHS::Max(npts*4,600),3000);
-  newplot.set_minmaxscale(1.001);
-  newplot.set_xysize(GRPHSIZE,192);
-  newplot.set_yrange(ymin,ymax);
-  string title=statname+num2str(i+1);
-  if (v==0) 
-  {
-    if (!coordset) title+= ": max Z stat of "+num2str(maxz)+" at voxel ("+num2str(X)+" "+num2str(Y)+" "+num2str(Z)+")";
-    else title+= ": Z stat of "+num2str(maxz)+" at selected voxel ("+num2str(X)+" "+num2str(Y)+" "+num2str(Z)+")";
-  } 
-  else title+= ": averaged over "+num2str(count)+" voxels";
-  Matrix blank=TS_data;
-  blank=log(-1.0);
-  if (!modelfree)
-  {
-    if (j==0)
-    {
-      newplot.add_label("full model fit");
-      newplot.add_label("cope partial model fit");
-      newplot.add_label("data");
-      newplot.timeseries((TS_model | TS_copemodel | TS_data).t(),string(gpname),title,1,GRPHSIZE,4,2,false);
-      newplot.remove_labels(3);
-      newplot.add_label("");
-      newplot.add_label("cope partial model fit");
-      newplot.add_label("reduced data");
-      newplot.timeseries((blank | TS_copemodel | TS_residuals+TS_copemodel ).t(),string(gpname)+"p",title,1,GRPHSIZE,4,2,false);
-      newplot.remove_labels(3);
-      sprintf(rofpF,"%sFull model fit - <a href=\"%sp.png\">Partial model fit</a> - <a href=\"%s.txt\">Raw data</a><br>\n<IMG BORDER=0 SRC=\"%s.png\"><br><br>\n",rofpF,gprootname,gprootname,gprootname);
-    }
-    else
-    {
-      newplot.add_label("full model fit");
-      newplot.add_label("");
-      newplot.add_label("data");
-      newplot.timeseries((TS_model|blank|TS_data).t(),string(gpname),title,1,GRPHSIZE,4,2,false);
-      newplot.remove_labels(3);
-      sprintf(rofpF,"%sFull model fit - <a href=\"%s.txt\">Raw data</a><br>\n<IMG BORDER=0 SRC=\"%s.png\"><br><br>\n",rofpF,gprootname,gprootname);
-    }
-  }
-  else
-  {    
-      newplot.add_label("");
-      newplot.add_label("");
-      newplot.add_label("data");
-      newplot.timeseries((blank | blank | TS_data).t(),string(gpname),title,1,GRPHSIZE,4,2,false);
-      newplot.remove_labels(3);
-      sprintf(rofpF,"%sData plot - <a href=\"%s.txt\">Raw data</a>\n<IMG BORDER=0 SRC=\"%s.png\"><br><br>\n",rofpF,gprootname,gprootname);
-  }
-/* picture for main web index page */
-  if (v==0) sprintf(rofpM,"%s<a href=\"%s.html\"><IMG BORDER=0 SRC=\"%s.png\"></a><br><br>\n",rofpM,gprootname,gprootname);
-
-  	  /* {{{ peri-stimulus: output text and graphs */
-  if (use_triggers)
-  {
-    if (!modelfree) sprintf(rofpP,"%s<table><tr>\n",rofpP);
-    for(ev=0; ev<nevs; ev++) if (triggers[ev]>0.5)
-    {
-      float ps_period=triggers[((int)triggers[ev]+1)*nevs+ev];
-      Matrix ps_compact((int)(10*ps_period)+1,3);
-      if (!modelfree) ps_compact.ReSize((int)(10*ps_period)+1,6);
-
-      int size=0;
-      for(int which_event=1;which_event<=triggers[ev];which_event++)
-	for(t=(int)ceil(triggers[which_event*nevs+ev])+1;t<=MISCMATHS::Min(npts-1,(int)ceil(triggers[which_event*nevs+ev])+(int)ps_period);t++) size++;
-
-      Matrix ps_full(size,ps_compact.Ncols()-1); 
-      ps_compact=0;
-      ps_full=0;
-      int ptr=0;
-      for(int which_event=1;which_event<=triggers[ev];which_event++)
-      {
-        double min_t=triggers[which_event*nevs+ev];
-        int int_min_t=(int)ceil(min_t),max_t=MISCMATHS::Min(npts-1,int_min_t+(int)ps_period);
-        for(t=int_min_t+1;t<=max_t;t++)
+	/* output data text files */
+	if (outputText) 
+	  outputFile.open((outputName+"/tsplot"+vType+"_"+statType+num2str(i)+".txt").c_str());
+	ymin=ymax=(int)TS_data(1);
+	for(t=1; t<=npts; t++)
 	{
-          Matrix input(1,ps_compact.Ncols());
-          if (!modelfree) input.Row(1) << ((int)((t-min_t-1)*10))/10.0 << TS_residuals(t)+TS_model(t) << TS_model(t) << TS_pemodel(ev*npts+t) << TS_residuals(t)+TS_pemodel(ev*npts+t) << 1;  //(restricted temporal accuraccy (0.1*TR)
-          else input.Row(1) << t-min_t-1 << TS_residuals(t)+TS_model(t) << 1;
-          ps_compact.Row(((int)((t-min_t-1)*10))+1)+=input.Row(1); 
-          ps_full.Row(++ptr) = input.SubMatrix(1,1,1,input.Ncols()-1); 
+	  if (outputText) outputFile << scientific << TS_data(t);
+	  ymin=(int)MISCMATHS::Min(TS_data(t),ymin); 
+	  ymax=(int)MISCMATHS::Max(TS_data(t),ymax);
+	  if (!modelFree)
+	  {
+	    if (type==0)
+	    {
+	      if (outputText) outputFile << " " << TS_copemodel(t); 
+	      ymin=(int)MISCMATHS::Min(TS_copemodel(t),ymin); 
+	      ymax=(int)MISCMATHS::Max(TS_copemodel(t),ymax);
+	    }
+	    if (outputText) outputFile << " " << TS_model(t); 
+	    ymin=(int)MISCMATHS::Min(TS_model(t),ymin); 
+	    ymax=(int)MISCMATHS::Max(TS_model(t),ymax);
+	    if (type==0) outputFile << " " << TS_residuals(t)+TS_copemodel(t);
+	  }
+	  if (outputText) outputFile << endl;
 	}
-      }
-
-
-      sprintf(gprootname,"ps_tsplot%s_%s%d_ev%d",vname,statname,i+1,ev+1);
-      sprintf(thestring,"%s/%s.txt",outputdir,gprootname);
-      sprintf(gpname,"%s/%s",outputdir,gprootname);  
-      ps_full=ps_full.SubMatrix(1,ptr,1,ps_full.Ncols());
-      
-      if (textfiles) 
-      {
-	output_file.open(thestring,ofstream::out);
-	for(int k=1;k<=ps_full.Nrows();k++)
-	{ 
-	  output_file << setprecision(1) << fixed << ps_full(k,1) << setprecision(6) << scientific;
-	  for (int j=2;j<=ps_full.Ncols();j++) output_file << " " << ps_full(k,j);
-	  output_file << endl;
-	}
-	output_file.close();
-      }
-      title=statname+num2str(i+1)+" ev"+num2str(ev+1);
-
-      for(int j=1;j<=ps_compact.Nrows();j++) 
+	if (outputText) 
+	  outputFile.close();
+	ymax+=(ymax-ymin)/5;
+	ymin-=(ymax-ymin)/20;
+	if (ymin==ymax) 
+	  ymin-=1; 	
+	/* create graphs */
+	graphName="tsplot"+vType+"_"+statType+num2str(i);
+	graphFileName=outputName+"/"+graphName;
+	GRPHSIZE= MISCMATHS::Min(MISCMATHS::Max(npts*4,600),3000);
+	newplot.set_minmaxscale(1.001);
+	newplot.set_xysize(GRPHSIZE,192);
+	newplot.set_yrange(ymin,ymax);
+	string title=statType+num2str(i);
+	if (v==0) 
 	{
-	  if (ps_compact(j,6)) ps_compact.Row(j)/=ps_compact(j,6);
-	  else  ps_compact.Row(j)=log10(-1.0); //deliberately set to nan
-	}
-
-      Matrix ps_interp=ps_compact.t();
-
-      PSSIZE = MISCMATHS::Min(MISCMATHS::Max(ps_period*3,400),3000);
-      newplot.set_minmaxscale(1.001);
-      newplot.add_xlabel("peristimulus time (TRs)");
-      newplot.set_xysize(PSSIZE,192);
-      newplot.set_yrange(ymin,ymax);
-      if (v==0) 
-      {
-        if (!coordset) title+= ": max Z stat of "+num2str(maxz)+" at voxel ("+num2str(X)+" "+num2str(Y)+" "+num2str(Z)+")";
-        else title+= ": Z stat of "+num2str(maxz)+" at selected voxel ("+num2str(X)+" "+num2str(Y)+" "+num2str(Z)+")";
-      } 
-      else title+= ": averaged over "+num2str(count)+" voxels";
-      if (!modelfree)
-      {
-        ps_compact=ps_full.SubMatrix(1,ps_full.Nrows(),1,2);
-        ps_compact.Column(1)*=10;
-        newplot.setscatter(ps_compact,(int)(10*(ps_period+3)));  //12+2
-        newplot.add_label("full model fit");
-	newplot.add_label("EV "+num2str(ev+1)+" model fit");
-        newplot.add_label("data");
-        newplot.timeseries(ps_interp.SubMatrix(3,4,1,ps_interp.Ncols()),string(gpname),title,-0.1,PSSIZE,3,2,false);
-        newplot.remove_labels(3);
-        ps_compact=ps_full.SubMatrix(1,ps_full.Nrows(),1,1) | ps_full.SubMatrix(1,ps_full.Nrows(),5,5);
-        ps_compact.Column(1)*=10;
-        newplot.setscatter(ps_compact,(int)(10*(ps_period+3)));
-        newplot.add_label("");
-        newplot.add_label("EV "+num2str(ev+1)+" model fit");
-        newplot.add_label("reduced data");
-        ps_interp.Row(3)=log(-1.0);
-        newplot.timeseries(ps_interp.SubMatrix(3,4,1,ps_interp.Ncols()),string(gpname)+"p",title,-0.1,PSSIZE,3,2,false);
-	newplot.deletescatter();
-        newplot.remove_labels(3);
-	sprintf(rofpP,"%s<td>Full model fit - <a href=\"%sp.png\">Partial model fit</a> - <a href=\"%s.txt\">Raw data</a><br>\n<IMG BORDER=0 SRC=\"%s.png\">\n",rofpP,gprootname,gprootname,gprootname);
-      }
-      else
-      {
-	Matrix blank=ps_full.SubMatrix(2,2,1,ps_compact.Ncols());
+	  NiftiVoxCoord = im.niftivox2newimagevox_mat().i()*NewimageVoxCoord;
+	  if (!useCoordinate) title+= ": max Z stat of "+num2str(maxz)+" at ";
+	  else title+= ": Z stat of "+num2str(maxz)+" at selected ";
+	  title+="voxel ("+num2str((int)NiftiVoxCoord(1))+" "+num2str((int)NiftiVoxCoord(2))+" "+num2str((int)NiftiVoxCoord(3))+")";
+	} 
+	else 
+	  title+= ": averaged over "+num2str(maskedVoxels)+" voxels";
+	Matrix blank=TS_data;
 	blank=log(-1.0);
-        newplot.add_label("");
-        newplot.add_label("");
-        newplot.add_label("data");
-        newplot.timeseries(blank & blank & ps_full.SubMatrix(2,2,1,ps_compact.Ncols()),string(gpname),title,-0.1,PSSIZE,3,2,false);
-        newplot.remove_labels(3);
-        sprintf(rofpP,"%sData plot - <a href=\"%s.txt\">Raw data</a>\n<IMG BORDER=0 SRC=\"%s.png\"><br><br>\n",rofpP,gprootname,gprootname);
+	if (!modelFree)
+	{
+	  if (type==0)
+	  {
+	    newplot.add_label("full model fit");
+	    newplot.add_label("cope partial model fit");
+	    newplot.add_label("data");
+	    newplot.timeseries((TS_model | TS_copemodel | TS_data).t(),graphFileName,title,1,GRPHSIZE,4,2,false);
+	    newplot.remove_labels(3);
+	    newplot.add_label("");
+	    newplot.add_label("cope partial model fit");
+	    newplot.add_label("reduced data");
+	    newplot.timeseries((blank | TS_copemodel | TS_residuals+TS_copemodel ).t(),graphFileName+"p",title,1,GRPHSIZE,4,2,false);
+	    newplot.remove_labels(3);
+	    graphText+="Full model fit - <a href=\""+graphName+"p.png\">Partial model fit</a> - <a href=\""+graphName+".txt\">Raw data</a><br>\n<IMG BORDER=0 SRC=\""+graphName+".png\"><br><br>\n";
+	  }
+	  else
+	  {
+	    newplot.add_label("full model fit");
+	    newplot.add_label("");
+	    newplot.add_label("data");
+	    newplot.timeseries((TS_model|blank|TS_data).t(),graphFileName,title,1,GRPHSIZE,4,2,false);
+	    newplot.remove_labels(3);
+	    graphText+="Full model fit - <a href=\""+graphName+".txt\">Raw data</a><br>\n<IMG BORDER=0 SRC=\""+graphName+".png\"><br><br>\n";
+	  }
+	}
+	else
+	{    
+	  newplot.add_label("");
+	  newplot.add_label("");
+	  newplot.add_label("data");
+	  newplot.timeseries((blank | blank | TS_data).t(),graphFileName,title,1,GRPHSIZE,4,2,false);
+	  newplot.remove_labels(3);
+	  graphText+="Data plot - <a href=\""+graphName+".txt\">Raw data</a>\n<IMG BORDER=0 SRC=\""+graphName+".png\"><br><br>\n";
+	}
+	/* picture for main web index page */
+	if (v==0) 
+	  indexText+="<a href=\"" + graphName + ".html\"><IMG BORDER=0 SRC=\"" + graphName + ".png\"></a><br><br>\n";
+  	/* peri-stimulus: output text and graphs */
+	if (useTriggers)
+	{
+	  if (!modelFree)
+	    peristimulusText+="<table><tr>\n";
+	  for(int ev=0; ev<numEVs; ev++) 
+	    if (triggers[ev]>0.5) {
+	      float ps_period=triggers[((int)triggers[ev]+1)*numEVs+ev];
+	      Matrix ps_compact((int)(10*ps_period)+1,3);
+	      if (!modelFree) ps_compact.ReSize((int)(10*ps_period)+1,6);
+	      Matrix ps_full(0,ps_compact.Ncols()-1);
+	      ps_compact=0;
+	      for(int which_event=1;which_event<=triggers[ev];which_event++)
+	      {
+		double min_t=triggers[which_event*numEVs+ev];
+		int int_min_t=(int)ceil(min_t-(1e-10*min_t)),max_t=MISCMATHS::Min(npts-1,int_min_t+(int)ps_period);		
+		for(t=int_min_t+1;t<=max_t;t++)
+		{
+		  RowVector input(ps_compact.Ncols());
+		  if (!modelFree) input << (ceil((t-min_t-1)*10))/10.0 << TS_residuals(t)+TS_model(t) << TS_model(t) << TS_pemodel(ev*npts+t) << TS_residuals(t)+TS_pemodel(ev*npts+t) << 1;  //(restricted temporal accuraccy (0.1*TR) must be at least 0.1 ( scatter can not take 0 )
+		  else input << t-min_t-1 << TS_residuals(t)+TS_model(t) << 1;
+		  ps_compact.Row(((int)((t-min_t-1)*10))+1)+=input; 
+		  ps_full &= input.Columns(1,input.Ncols()-1);
+		}
+	      }
+	      graphName="ps_tsplot"+vType+"_"+statType+num2str(i)+"_ev"+num2str(ev+1);
+	      graphFileName=outputName+"/"+graphName;
+	      if (outputText) {
+		outputFile.open((graphFileName+".txt").c_str());
+		for(int k=1;k<=ps_full.Nrows();k++)
+		{ 
+		  outputFile << setprecision(1) << fixed << ps_full(k,1) << setprecision(6) << scientific;
+		  for (int j=2;j<=ps_full.Ncols();j++) outputFile << " " << ps_full(k,j);
+		  outputFile << endl;
+		}
+		outputFile.close();
+	      }
+	      title=statType+num2str(i)+" ev"+num2str(ev+1);
+	      for(int j=1;j<=ps_compact.Nrows();j++) 
+	      {
+		if (isfinite(ps_compact(j,6))) ps_compact.Row(j)/=ps_compact(j,6);
+		else  ps_compact.Row(j)=log10(-1.0); //deliberately set to nan
+	      }
+	      Matrix ps_interp=ps_compact.t();
+	      PSSIZE = MISCMATHS::Min(MISCMATHS::Max(ps_period*3,400),3000);
+	      newplot.set_minmaxscale(1.001);
+	      newplot.add_xlabel("peristimulus time (TRs)");
+	      newplot.set_xysize(PSSIZE,192);
+	      newplot.set_yrange(ymin,ymax);
+	      if (v==0) {
+		NiftiVoxCoord = im.niftivox2newimagevox_mat().i()*NewimageVoxCoord;
+		if (!useCoordinate) title+= ": max Z stat of "+num2str(maxz)+" at ";
+		else title+= ": Z stat of "+num2str(maxz)+" at selected ";
+		title+="voxel ("+num2str((int)NiftiVoxCoord(1))+" "+num2str((int)NiftiVoxCoord(2))+" "+num2str((int)NiftiVoxCoord(3))+")"; 
+	      } 
+	      else title+= ": averaged over "+num2str(maskedVoxels)+" voxels";
+	      if (!modelFree)
+	      {
+		ps_compact=ps_full.SubMatrix(1,ps_full.Nrows(),1,2);
+		ps_compact.Column(1)*=10;
+		newplot.setscatter(ps_compact,(int)(10*(ps_period+3)));
+		newplot.add_label("full model fit");
+		newplot.add_label("EV "+num2str(ev+1)+" model fit");
+		newplot.add_label("data");
+		newplot.timeseries(ps_interp.SubMatrix(3,4,1,ps_interp.Ncols()),graphFileName,title,-0.1,PSSIZE,3,2,false);
+		newplot.remove_labels(3);
+		ps_compact=ps_full.SubMatrix(1,ps_full.Nrows(),1,1) | ps_full.SubMatrix(1,ps_full.Nrows(),5,5);
+		ps_compact.Column(1)*=10;
+		newplot.setscatter(ps_compact,(int)(10*(ps_period+3)));
+		newplot.add_label("");
+		newplot.add_label("EV "+num2str(ev+1)+" model fit");
+		newplot.add_label("reduced data");
+		ps_interp.Row(3)=log(-1.0);
+		newplot.timeseries(ps_interp.SubMatrix(3,4,1,ps_interp.Ncols()),graphFileName+"p",title,-0.1,PSSIZE,3,2,false);
+		newplot.deletescatter();
+		newplot.remove_labels(3);
+		peristimulusText+="<td>Full model fit - <a href=\""+graphName+"p.png\">Partial model fit</a> - <a href=\""+graphName+".txt\">Raw data</a><br>\n<IMG BORDER=0 SRC=\""+graphName+".png\">\n";
+	      }
+	      else
+	      {
+		Matrix blank=ps_full.SubMatrix(2,2,1,ps_compact.Ncols());
+		blank=log(-1.0);
+		newplot.add_label("");
+		newplot.add_label("");
+		newplot.add_label("data");
+		newplot.timeseries(blank & blank & ps_full.SubMatrix(2,2,1,ps_compact.Ncols()),graphFileName,title,-0.1,PSSIZE,3,2,false);
+		newplot.remove_labels(3);
+		peristimulusText+="%sData plot - <a href=\""+graphName+".txt\">Raw data</a>\n<IMG BORDER=0 SRC=\""+graphName+".png\"><br><br>\n";
+	      }
+	      newplot.remove_xlabel();
+	    }
+	  if (!modelFree) peristimulusText+="</tr></table><br><br>\n";
+	}
+	if (!haveclusters) break;
       }
-      newplot.remove_xlabel();
-    }
-    if (!modelfree) sprintf(rofpP,"%s</tr></table><br><br>\n",rofpP);
-  }
-  if (!haveclusters) v=10;
-}
       /* {{{ web output */
-sprintf(thestring,"%s/tsplot_%s%d.html",outputdir,statname,i+1);
-
-if((rofp=fopen(thestring,"wb"))==NULL)
-{
-  fprintf(stderr,"Can't open output report file %s\n",outputdir);
-  exit(1);
-}
-
-  if (use_triggers) fprintf(rofp,"<HTML>\n<TITLE>%s%d</TITLE>\n<BODY BACKGROUND=\"file:%s/doc/images/fsl-bg.jpg\">\n<hr><CENTER>\n<H1>FEAT Time Series Report - %s%d</H1>\n</CENTER>\n<hr><b>Full plots</b><p>\n%s\n<hr><b>Peristimulus plots</b><p>\n%s\n<HR></BODY></HTML>\n\n",statname,i+1,fsldir,statname,i+1,rofpF,rofpP);
-  else fprintf(rofp,"<HTML>\n<TITLE>%s%d</TITLE>\n<BODY BACKGROUND=\"file:%s/doc/images/fsl-bg.jpg\">\n<hr><CENTER>\n<H1>FEAT Time Series Report - %s%d</H1>\n</CENTER>\n<hr><b>Full plots</b><p>\n%s\n</BODY></HTML>\n\n",statname,i+1,fsldir,statname,i+1,rofpF);
-
-fclose(rofp);
-
-/* }}} */
+      outputFile.open((outputName+"/tsplot_"+statType+num2str(i)+".html").c_str());
+      if(!outputFile.is_open())
+      {
+	cerr << "Can't open output report file " << outputName << endl;
+	exit(1);
+      }
+      outputFile << "<HTML>\n<TITLE>"<< statType << num2str(i) <<"</TITLE>\n<BODY BACKGROUND=\"file:"<< fslPath <<"/doc/images/fsl-bg.jpg\">\n<hr><CENTER>\n<H1>FEAT Time Series Report - "<< statType << num2str(i) <<"</H1>\n</CENTER>\n<hr><b>Full plots</b><p>\n"<< graphText;
+      if (useTriggers) outputFile << "\n<hr><b>Peristimulus plots</b><p>\n"<< peristimulusText <<"\n<HR></BODY></HTML>\n\n";
+      else outputFile << "\n</BODY></HTML>\n\n";
+      outputFile.close();
     }
- }
+  }
 
-/* {{{ main web index page output */
+  /* main web index page output */
+  /* first output full index page (eg for use by featquery) */
+  outputFile.open((outputName+"/tsplot_index.html").c_str());
+  if(!outputFile.is_open())
+  {
+      cerr << "Can't open output report file " << outputName << endl;
+      exit(1);
+  }
+  outputFile << "<HTML>\n<TITLE>FEAT Time Series Report</TITLE>\n<BODY BACKGROUND=\"file:" << fslPath << "/doc/images/fsl-bg.jpg\">\n<hr><CENTER>\n<H1>FEAT Time Series Report</H1>\n</CENTER>\n<hr>" << indexText << "<HR></BODY></HTML>" << endl << endl;
+  outputFile.close();
 
-/* first output full index page (eg for use by featquery) */
-
-sprintf(thestring,"%s/tsplot_index.html",outputdir);
-
-if((rofp=fopen(thestring,"wb"))==NULL)
-{
-  fprintf(stderr,"Can't open output report file %s\n",outputdir);
-  exit(1);
-}
-
-fprintf(rofp,"<HTML>\n<TITLE>FEAT Time Series Report</TITLE>\n<BODY BACKGROUND=\"file:%s/doc/images/fsl-bg.jpg\">\n<hr><CENTER>\n<H1>FEAT Time Series Report</H1>\n</CENTER>\n<hr>%s<HR></BODY></HTML>\n\n",fsldir,rofpM);
-
-fclose(rofp);
-
-
-/* now output same thing without start and end, for inclusion in feat report */
-
-sprintf(thestring,"%s/tsplot_index",outputdir);
-
-if((rofp=fopen(thestring,"wb"))==NULL)
-{
-  fprintf(stderr,"Can't open output report file %s\n",outputdir);
-  exit(1);
-}
-
-fprintf(rofp,"%s\n\n",rofpM);
-
-fclose(rofp);
-
-/* }}} */
-
-/* }}} */
+  /* now output same thing without start and end, for inclusion in feat report */
+  outputFile.open((outputName+"/tsplot_index").c_str());
+  if(!outputFile.is_open())
+  {
+      cerr << "Can't open output report file " << outputName << endl;
+      exit(1);
+  }
+  outputFile << indexText << endl << endl;
+  outputFile.close();
 
   exit(0);
- }
+}
 

@@ -28,9 +28,6 @@ setenv FSLMULTIFILEQUIT TRUE
 setenv FSLTCLSH $FSLDIR/bin/fsltclsh
 setenv FSLWISH $FSLDIR/bin/fslwish
 
-setenv FSLBROWSER $FSLDIR/tcl/fslwebbrowser
-
-
 # The following variables are used for running code in parallel across
 #  several machines ( i.e. for FDT )
 

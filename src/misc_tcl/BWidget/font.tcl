@@ -24,8 +24,10 @@ namespace eval SelectFont {
 
         {-type		Enum		dialog        0 {dialog toolbar}}
         {-font		TkResource	""            0 label}
+	{-initialcolor	String		""            0}
 	{-families	String		"all"         1}
 	{-querysystem	Boolean		1             0}
+	{-nosizes	Boolean		0             1}
 	{-styles	String		"bold italic underline overstrike" 1}
         {-command	String		""            0}
         {-sampletext	String		"Sample Text" 0}
@@ -102,7 +104,7 @@ namespace eval SelectFont {
 	    presetfixed		$presetFixed	\
 	    presetall		$presetAll	\
 	    ]
-		
+
     variable _widget
 }
 
@@ -126,7 +128,8 @@ proc SelectFont::create { path args } {
     set bg [Widget::getoption "$path#SelectFont" -background]
     set _styles [Widget::getoption "$path#SelectFont" -styles]
     if { [Widget::getoption "$path#SelectFont" -type] == "dialog" } {
-        Dialog::create $path -modal local -default 0 -cancel 1 -background $bg \
+        Dialog::create $path -modal local -anchor e -default 0 -cancel 1 \
+	    -background $bg \
             -title  [Widget::getoption "$path#SelectFont" -title] \
             -parent [Widget::getoption "$path#SelectFont" -parent]
 
@@ -153,6 +156,8 @@ proc SelectFont::create { path args } {
         bind $lbf <ButtonRelease-1> $script
         bind $lbf <space>           $script
 	bind $lbf <1>               [list focus %W]
+	bind $lbf <Up> $script
+	bind $lbf <Down> $script
         pack $sw -fill both -expand yes
 
         set labf2 [LabelFrame::create $topf.labf2 -text "Size" -name size \
@@ -169,6 +174,8 @@ proc SelectFont::create { path args } {
         bind $lbs <ButtonRelease-1> $script
         bind $lbs <space>           $script
 	bind $lbs <1>               [list focus %W]
+	bind $lbs <Up> $script
+	bind $lbs <Down> $script
         pack $sw -fill both -expand yes
 
         set labf3 [LabelFrame::create $topf.labf3 -text "Style" -name style \
@@ -189,7 +196,9 @@ proc SelectFont::create { path args } {
         LabelFrame::configure $labf3 -focus $subf.[lindex $_styles 0]
 
         pack $labf1 -side left -anchor n -fill both -expand yes
-        pack $labf2 -side left -anchor n -fill both -expand yes -padx 8
+	if { ![Widget::getoption "$path#SelectFont" -nosizes] } {
+	        pack $labf2 -side left -anchor n -fill both -expand yes -padx 8
+	}
         pack $labf3 -side left -anchor n -fill both -expand yes
 
         set botf [frame $frame.botf -width 100 -height 50 \
@@ -204,8 +213,38 @@ proc SelectFont::create { path args } {
                       -text [Widget::getoption "$path#SelectFont" -sampletext]]
         place $lab -relx 0.5 -rely 0.5 -anchor c
 
-        pack $topf -pady 4 -fill both -expand yes
-        pack $botf -pady 4 -fill x
+	pack $topf -pady 4 -fill both -expand yes
+
+	if { [Widget::getoption "$path#SelectFont" -initialcolor] != ""} {
+		set thecolor [Widget::getoption "$path#SelectFont" -initialcolor]
+		set colf [frame $frame.colf]
+			
+		set frc [frame $colf.frame -width 50 -height 20 -bg $thecolor -bd 0 -relief flat\
+			-highlightthickness 1 -takefocus 0 \
+			-highlightbackground black \
+			-highlightcolor black]
+			
+		set script "set [list SelectFont::${path}(fontcolor)] \[tk_chooseColor -parent $colf.button -initialcolor \[set [list SelectFont::${path}(fontcolor)]\]\];\
+			SelectFont::_update [list $path]"
+		
+		set but  [button $colf.button -command $script \
+			-text "Color..."]
+		
+		$lab configure -foreground $thecolor
+		$frc configure -bg $thecolor
+		
+		pack $but -side left
+		pack $frc -side left -padx 5
+		
+		set data(frc) $frc
+		set data(fontcolor) $thecolor
+
+		pack $colf -pady 4 -fill x -expand true        
+	
+	} else {
+		set data(fontcolor) -1
+	}
+	pack $botf -pady 4 -fill x
 
         Dialog::add $path -name ok
         Dialog::add $path -name cancel
@@ -226,29 +265,54 @@ proc SelectFont::create { path args } {
 	    set fams "preset"
 	    append fams [Widget::getoption "$path#SelectFont" -families]
 	}
-        frame $path -relief flat -borderwidth 0 -background $bg
-        bind $path <Destroy> [list SelectFont::_destroy $path]
-        set lbf [ComboBox::create $path.font \
-                     -highlightthickness 0 -takefocus 0 -background $bg \
-                     -values   $_families($fams) \
-                     -textvariable SelectFont::$path\(family\) \
-                     -editable 0 \
-                     -modifycmd [list SelectFont::_update $path]]
-        set lbs [ComboBox::create $path.size \
-                     -highlightthickness 0 -takefocus 0 -background $bg \
-                     -width    4 \
-                     -values   $_sizes \
-                     -textvariable SelectFont::$path\(size\) \
-                     -editable 0 \
-                     -modifycmd [list SelectFont::_update $path]]
+	if {[Widget::theme]} {
+	    ttk::frame $path
+	    set lbf [ttk::combobox $path.font \
+			 -takefocus 0 -exportselection 0 \
+			 -values   $_families($fams) \
+			 -textvariable SelectFont::${path}(family) \
+			 -state readonly]
+	    set lbs [ttk::combobox $path.size \
+			 -takefocus 0 -exportselection 0 \
+			 -width    4 \
+			 -values   $_sizes \
+			 -textvariable SelectFont::${path}(size) \
+			 -state readonly]
+	    bind $lbf <<ComboboxSelected>> [list SelectFont::_update $path]
+	    bind $lbs <<ComboboxSelected>> [list SelectFont::_update $path]
+	} else {
+	    frame $path -background $bg
+	    set lbf [ComboBox::create $path.font \
+			 -highlightthickness 0 -takefocus 0 -background $bg \
+			 -values   $_families($fams) \
+			 -textvariable SelectFont::$path\(family\) \
+			 -editable 0 \
+			 -modifycmd [list SelectFont::_update $path]]
+	    set lbs [ComboBox::create $path.size \
+			 -highlightthickness 0 -takefocus 0 -background $bg \
+			 -width    4 \
+			 -values   $_sizes \
+			 -textvariable SelectFont::$path\(size\) \
+			 -editable 0 \
+			 -modifycmd [list SelectFont::_update $path]]
+	}
+	bind $path <Destroy> [list SelectFont::_destroy $path]
         pack $lbf -side left -anchor w
         pack $lbs -side left -anchor w -padx 4
         foreach st $_styles {
-            button $path.$st \
-                -highlightthickness 0 -takefocus 0 -padx 0 -pady 0 -bd 2 \
-                -background $bg \
-                -image  [Bitmap::get $st] \
-                -command [list SelectFont::_modstyle $path $st]
+	    if {$::Widget::_theme} {
+		ttk::checkbutton $path.$st -takefocus 0 \
+		    -style BWSlim.Toolbutton \
+		    -image [Bitmap::get $st] \
+		    -variable SelectFont::${path}($st) \
+		    -command [list SelectFont::_update $path]
+	    } else {
+		button $path.$st \
+		    -highlightthickness 0 -takefocus 0 -padx 0 -pady 0 \
+		    -background $bg \
+		    -image [Bitmap::get $st] \
+		    -command [list SelectFont::_modstyle $path $st]
+	    }
             pack $path.$st -side left -anchor w
         }
         set data(label) ""
@@ -360,13 +424,28 @@ proc SelectFont::_draw { path } {
 
     if { [Dialog::draw $path] == 0 } {
         set result [Widget::getoption "$path#SelectFont" -font]
+    	set color $data(fontcolor)
+	
+	if { $color == "" } {
+		set color #000000
+	}
+
     } else {
         set result ""
+        if {$data(fontcolor) == -1} {
+            set color -1
+        } else {
+            set color ""
+        }
     }
     unset data
     Widget::destroy "$path#SelectFont"
     destroy $path
-    return $result
+    if { $color != -1 } {
+    	return [list $result $color]
+    } else {
+    	return $result
+    }
 }
 
 
@@ -377,13 +456,8 @@ proc SelectFont::_modstyle { path style } {
     variable $path
     upvar 0  $path data
 
-    if { $data($style) == 1 } {
-        $path.$style configure -relief raised
-        set data($style) 0
-    } else {
-        $path.$style configure -relief sunken
-        set data($style) 1
-    }
+    $path.$style configure -relief [expr {$data($style) ? "raised" : "sunken"}]
+    set data($style) [expr {!$data($style)}]
     _update $path
 }
 
@@ -428,6 +502,14 @@ proc SelectFont::_update { path } {
     if { $type == "dialog" } {
         $data(label) configure -font $font
         $path:cmd configure -cursor $curs
+	if { ($data(fontcolor) != "") && ($data(fontcolor) != -1) } {
+		$data(label) configure -foreground $data(fontcolor)
+		$data(frc) configure -bg $data(fontcolor)
+	} elseif { $data(fontcolor) == "" }  {
+		#If no color is selected, restore previous one
+		set data(fontcolor) [$data(label) cget -foreground]
+
+	}
     } elseif { [set cmd [Widget::getoption "$path#SelectFont" -command]] != "" } {
         uplevel \#0 $cmd
     }
@@ -461,11 +543,14 @@ proc SelectFont::_getfont { path } {
         set data(family) [expr {$idxf >= 0 ? $idxf : 0}]
         set data(size)   [expr {$idxs >= 0 ? $idxs : 0}]
     } else {
-        set data(family) $font(-family)
-        set data(size)   $font(-size)
-        foreach st $_styles {
-            $path.$st configure -relief [expr {$data($st) ? "sunken":"raised"}]
-        }
+	set data(family) $font(-family)
+	set data(size)   $font(-size)
+	if {![Widget::theme]} {
+	    foreach st $_styles {
+		$path.$st configure \
+		    -relief [expr {$data($st) ? "sunken":"raised"}]
+	    }
+	}
     }
 }
 

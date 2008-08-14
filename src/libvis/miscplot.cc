@@ -68,10 +68,12 @@
 
 #include <sstream>
 #include <stdio.h>
+#include <math.h>
 
 #include "miscplot.h"
 #include "miscmaths/miscprob.h"
 #include "gdfonts.h"
+#include "utils/fsl_isfinite.h"
 
 extern "C" {
  #include "gd.h"
@@ -214,9 +216,8 @@ void miscplot::timeseries(const Matrix& mat, string filename, string title,
   GDC_interpolations=TRUE;
   for(int ctr1=1;ctr1<=numlines; ctr1++)
       for(int ctr2=1;ctr2<=numpoint; ctr2++)
-        if (!finite(data[(ctr1-1)*numpoint + ctr2-1])) 
+        if (!isfinite(data[(ctr1-1)*numpoint + ctr2-1])) 
  	   			data[(ctr1-1)*numpoint + ctr2-1] = GDC_INTERP_VALUE;
-
   if(ymin < ymax){
     GDC_requested_ymax = ymax;
     GDC_requested_ymin = ymin;
@@ -242,7 +243,7 @@ void miscplot::timeseries(const Matrix& mat, string filename, string title,
 
   for(int ctr1=1;ctr1<=numlines; ctr1++)
     for(int ctr2=1;ctr2<=numpoint; ctr2++)
-      if (!finite(data[(ctr1-1)*numpoint + ctr2-1])) data[(ctr1-1)*numpoint + ctr2-1]=GDC_INTERP_VALUE;
+      if (!isfinite(data[(ctr1-1)*numpoint + ctr2-1])) data[(ctr1-1)*numpoint + ctr2-1]=GDC_INTERP_VALUE;
 
   if (tr<0) tr=-tr;
 

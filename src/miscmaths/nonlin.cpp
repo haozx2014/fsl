@@ -10,6 +10,7 @@
 #include "newmatio.h"
 #include "bfmatrix.h"
 #include "nonlin.h"
+#include "utils/fsl_isfinite.h"
 
 using namespace std;
 using namespace NEWMAT;
@@ -110,7 +111,7 @@ ReturnMatrix NonlinCF::grad(const ColumnVector& p) const
   double tiny = 1e-8;
   double cf0 = cf(tmpp);
   for (int i=0; i<p.Nrows(); i++) {
-    double step = tiny * max(tmpp.element(i),1.0);
+    double step = tiny * std::max(tmpp.element(i),1.0);
     tmpp.element(i) += step;
     gradv.element(i) = (cf(tmpp) - cf0) / step;
     tmpp.element(i) -= step;
@@ -145,7 +146,7 @@ boost::shared_ptr<BFMatrix> NonlinCF::hess(const ColumnVector&         p,
   // First calculate all f(x+dx_i) values
 
   for (int i=0; i<p.Nrows(); i++) {         
-    step.element(i) = tiny * max(tmpp.element(i),1.0);
+    step.element(i) = tiny * std::max(tmpp.element(i),1.0);
     tmpp.element(i) += step.element(i);
     fdx.element(i) = cf(tmpp);
     tmpp.element(i) -= step.element(i);
@@ -646,7 +647,7 @@ LinOut linsrch(// Input
 
   double almin=0.0;
   for (int i=0; i<p0.Nrows(); i++) {
-    almin = max(almin,abs(pdir.element(i))/max(abs(p0.element(i)),1.0));
+    almin = std::max(almin,std::abs(pdir.element(i))/std::max(std::abs(p0.element(i)),1.0));
   }
   almin = ptol / almin;
 
@@ -664,8 +665,8 @@ LinOut linsrch(// Input
 
   *lambda = - fp0 / (2.0*(f2-f0-fp0));  // Minumum of f(lambda)
   // Make sure new lambda is 0.1*old_l < lambda < 0.5*old_l
-  *lambda = max(lmin,*lambda);
-  *lambda = min(lmax,*lambda);
+  *lambda = std::max(lmin,*lambda);
+  *lambda = std::min(lmax,*lambda);
   (*np) =  p0 + (*lambda)*pdir;         // Second set of new parameters to try
   double f1 = sf * cfo.cf(*np);              // Cost-function value for par
 
@@ -685,14 +686,14 @@ LinOut linsrch(// Input
     // See if present value is acceptable
     if (f1 < f0 + alpha*(*lambda)*DotProduct(grad,(*np)-p0)) {*of = f1; return(LM_CONV);}
     // Find parameter values for cubic and square on lambda
-    X << pow(l1,3) << pow(l1,2) << pow(l2,3) << pow(l2,2);
+    X << std::pow(l1,3.0) << std::pow(l1,2.0) << std::pow(l2,3.0) << std::pow(l2,2.0);
     y << f1-fp0*l1-f0 << f2-fp0*l2-f0;
     ColumnVector b = X.i()*y;
     // Find value for lambda that yield minimum of cubic
-    *lambda = (-b.element(1) + sqrt(pow(b.element(1),2) - 3.0*b.element(0)*fp0)) / (3.0*b.element(0));
+    *lambda = (-b.element(1) + sqrt(std::pow(b.element(1),2.0) - 3.0*b.element(0)*fp0)) / (3.0*b.element(0));
     // Make sure new lambda is 0.1*old_l < lambda < 0.5*old_l
-    *lambda = max(lmin*l1,*lambda);
-    *lambda = min(lmax*l1,*lambda);
+    *lambda = std::max(lmin*l1,*lambda);
+    *lambda = std::min(lmax*l1,*lambda);
     // Get new function value and update parameters
     f2 = f1;
     (*np) = p0 + (*lambda)*pdir;
@@ -780,27 +781,27 @@ LinOut linmin(// Input
 
   for (int i=0; i<maxiter; i++) {
     double midp = (rp.first+lp.first)/2.0;                       // Midpoint of bracketing points
-    double tol = 2.0*ftol*abs(x->first)+MISCMATHS::EPS;          // Absolute tolerance
-    if  (abs(x->first-midp) <= (tol-0.5*(rp.first-lp.first))) {  // Convergence check
+    double tol = 2.0*ftol*std::abs(x->first)+MISCMATHS::EPS;          // Std::Absolute tolerance
+    if  (std::abs(x->first-midp) <= (tol-0.5*(rp.first-lp.first))) {  // Convergence check
       return(LM_CONV);
     }
     // Try parabolic fit, but not before third iteration
     double tmp = 10.0*sqrt(MISCMATHS::EPS);
-    if (abs(ostep) > tol/2.0 &&           // If second to last step big enough
-        abs(x->first-w.first) > tmp && 
-        abs(x->first-v.first) > tmp && 
-        abs(w.first-v.first) > tmp) {     // And points not degenerate
+    if (std::abs(ostep) > tol/2.0 &&           // If second to last step big enough
+        std::abs(x->first-w.first) > tmp && 
+        std::abs(x->first-v.first) > tmp && 
+        std::abs(w.first-v.first) > tmp) {     // And points not degenerate
       step = ostep;
       ostep = d;
       y << x->second << w.second << v.second;
-      X << pow(x->first,2.0) << x->first << 1.0 <<
-	   pow(w.first,2.0) << w.first << 1.0 <<
-	   pow(v.first,2.0) << v.first << 1.0;
+      X << std::pow(x->first,2.0) << x->first << 1.0 <<
+	   std::pow(w.first,2.0) << w.first << 1.0 <<
+	   std::pow(v.first,2.0) << v.first << 1.0;
       ColumnVector b = X.i() * y;
       if (b.element(0) < 4*MISCMATHS::EPS ||                   // If on line or going for maximum
           (test.first = -b.element(1)/(2.0*b.element(0))) <= lp.first 
           || test.first >= rp.first ||                         // If outside bracketed interval
-          abs(test.first-x->first) > 0.5*step) {               // Or if step too big (indicates oscillation)
+          std::abs(test.first-x->first) > 0.5*step) {               // Or if step too big (indicates oscillation)
         // Take golden step into larger interval
         if (rp.first-x->first > x->first-lp.first) {           // If right interval larger
           test.first = x->first + gold * (rp.first - x->first);
@@ -868,7 +869,7 @@ pair<double,double> bracket(// Input
   // Find maximum relative component of search direction
 
   double test = 0.0;
-  for (int i=0; i<pdir.Nrows(); i++) {test = max(test,abs(pdir.element(i))/max(p.element(i),1.0));}
+  for (int i=0; i<pdir.Nrows(); i++) {test = std::max(test,std::abs(pdir.element(i))/std::max(p.element(i),1.0));}
 
   // Do a crude initial search for order of magnitude
 
@@ -902,8 +903,8 @@ pair<double,double> bracket(// Input
       return(p_l);
     }
     // Let's see if a parabolic might help us
-    if (abs(l2-l1) > 10.0*sqrt(MISCMATHS::EPS)) {
-      X << pow(l1,2.0) << l1 << pow(l2,2.0) << l2;
+    if (std::abs(l2-l1) > 10.0*sqrt(MISCMATHS::EPS)) {
+      X << std::pow(l1,2.0) << l1 << std::pow(l2,2.0) << l2;
       y << cf1 << cf2;
       ColumnVector b = X.i()*y;
       if (b.element(0) > 4.0*MISCMATHS::EPS) {           // Check they are not on a line and not for maximum
@@ -959,9 +960,9 @@ bool zero_grad_conv(const ColumnVector&   par,
 {
   double test = 0.0;     // test will be largest relative component of gradient
   for (int i=0; i<par.Nrows(); i++) {
-    test = max(test,abs(grad.element(i))*max(abs(par.element(i)),1.0));
+    test = std::max(test,std::abs(grad.element(i))*std::max(std::abs(par.element(i)),1.0));
   }
-  test /= max(cf,1.0);   // Protect against near-zero values for cost-function
+  test /= std::max(cf,1.0);   // Protect against near-zero values for cost-function
 
   return(test < gtol);
 }
@@ -972,7 +973,7 @@ bool zero_cf_diff_conv(double cfo,
                        double cfn,
                        double cftol)
 {
-  return(2.0*abs(cfo-cfn) <= cftol*(abs(cfo)+abs(cfn)+MISCMATHS::EPS));
+  return(2.0*std::abs(cfo-cfn) <= cftol*(std::abs(cfo)+std::abs(cfn)+MISCMATHS::EPS));
 }
 
 // Based on zero (neglible) step in parameter space
@@ -983,7 +984,7 @@ bool zero_par_step_conv(const ColumnVector&   par,
 {
   double test = 0.0;
   for (int i=0; i<par.Nrows(); i++) {
-    test = max(test,abs(step.element(i))/max(abs(par.element(i)),1.0));
+    test = std::max(test,std::abs(step.element(i))/std::max(std::abs(par.element(i)),1.0));
   }
   return(test < ptol);
 }

@@ -14,12 +14,12 @@ SSLIBS = -lss_32R $(IOLIBS)
 XFILES = fslorient fslstats fslmerge \
          fslpspec fslroi fslnvols fsl2ascii  \
          fslsplit fslcc fslinterleave \
-         fslhd fslcpgeom fslcreatehd fslmaths \
-         fslcomplex fslfft fslmeants fslcheck fslslice fslswapdim
+         fslhd fslcpgeom fslcreatehd fslcorrecthd fslmaths \
+         fslcomplex fslfft fslmeants fslcheck fslslice fslswapdim_exe fslchfiletype_exe
 
-SCRIPTS = fslval fslchpixdim fslanimate fslsize sliceanimate fslinfo fsledithd fslchfiletype avw2fsl
+SCRIPTS = fslval fslchpixdim fslanimate fslsize sliceanimate fslinfo fsledithd avw2fsl fslswapdim fslchfiletype 
 
-FSCRIPTS = fmriborient fslswapdim2
+FSCRIPTS = fmriborient 
 
 all: ${XFILES}
 
@@ -44,51 +44,8 @@ avwfixfloat: avwfixfloat.cc
 fslcomplex: fslcomplex.cc
 	${CXX} ${CXXFLAGS} ${LDFLAGS} -o fslcomplex fslcomplex.cc ${LIBS}
 
-avwnvols: avwnvols.c
-	${CC} ${CFLAGS} ${LDFLAGS} -o avwnvols avwnvols.c ${LIBS}
-
-avwsplit: avwsplit.c
-	${CC} ${CFLAGS} ${LDFLAGS} -o avwsplit avwsplit.c ${LIBS}
-
-avwhd: avwhd.c
-	$(CC) $(CFLAGS) -o avwhd avwhd.c $(LDFLAGS) ${LIBS}
-
-avwcreatehd: avwcreatehd.c
-	$(CC) $(CFLAGS) -o avwcreatehd avwcreatehd.c $(LDFLAGS) ${SSLIBS}
-
-avwcpgeom: avwcpgeom.c
-	$(CC) $(CFLAGS) -o avwcpgeom avwcpgeom.c $(LDFLAGS) ${SSLIBS}
-
-avwstats: avwstats.c
-	$(CC) $(CFLAGS) -DFDT="float" -o avwstats avwstats.c $(LDFLAGS) ${SSLIBS}
-
-avwroi_8UI: avwroi.c
-	for FDT in 8UI 16SI 32SI 32R 64R ; do $(DATATYPES) ; \
-	$(CC) $(CFLAGS) -DFDT="$$STR" -o avwroi_$$FDT avwroi.c $(LDFLAGS) -lss_$$FDT $(IOLIBS); \
-	done
-
-avwmaths_8UI: avwmaths.c
-	for FDT in 8UI 16SI 32SI 32R 64R ; do $(DATATYPES) ; \
-	$(CC) $(CFLAGS) -DFDT="$$STR" -o avwmaths_$$FDT avwmaths.c $(LDFLAGS) -lss_$$FDT $(IOLIBS); \
-	done
-
-avwcc_8UI: avwcc.c
-	for FDT in 8UI 16SI 32SI 32R 64R ; do $(DATATYPES) ; \
-	$(CC) $(CFLAGS) -DFDT="$$STR" -o avwcc_$$FDT avwcc.c $(LDFLAGS) -lss_$$FDT $(IOLIBS); \
-	done
-
-avwinterleave_8UI: avwinterleave.c
-	for FDT in 8UI 16SI 32SI 32R 64R ; do $(DATATYPES) ; \
-	$(CC) $(CFLAGS) -DFDT="$$STR" -o avwinterleave_$$FDT avwinterleave.c $(LDFLAGS) -lss_$$FDT $(IOLIBS); \
-	done
-
-avw2ascii_8UI: avw2ascii.c
-	for FDT in 8UI 16SI 32SI 32R 64R ; do $(DATATYPES) ; \
-	$(CC) $(CFLAGS) -DFDT="$$STR" -o avw2ascii_$$FDT avw2ascii.c $(LDFLAGS) -lss_$$FDT $(IOLIBS); \
-	done
-
-fslswapdim: fslswapdim.o
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ fslswapdim.o ${LIBS} 
+fslswapdim_exe: fslswapdim.o
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o fslswapdim_exe fslswapdim.o ${LIBS} 
 
 fslorient: fslorient.o
 	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ fslorient.o ${LIBS} 
@@ -128,9 +85,18 @@ fslhd: fslhd.o
 fslcpgeom: fslcpgeom.o
 	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ fslcpgeom.o ${LIBS}
 
+fslcorrecthd: fslcorrecthd.o
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ fslcorrecthd.o ${LIBS}
+
 fslcreatehd: fslcreatehd.o
 	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ fslcreatehd.o ${LIBS}
 
 fslmaths: fslmaths.o
 	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ fslmaths.o ${LIBS}
+
+fsldecorr4d: fsldecorr4d.o
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ fsldecorr4d.o ${LIBS}
+
+fslchfiletype_exe: fslchfiletype.o
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o fslchfiletype_exe fslchfiletype.o ${LIBS}
 

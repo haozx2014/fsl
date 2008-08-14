@@ -74,14 +74,9 @@
 #define WANT_STREAM
 #define WANT_MATH
 
-#include "newmatap.h"
-#include "newmatio.h"
-#include "miscmaths/volume.h"
-#include "miscmaths/miscmaths.h"
-#include "miscmaths/volumeseries.h"
+#include "newimage/newimageall.h"
 
 using namespace NEWMAT;
-using namespace MISCMATHS;
 
 namespace FILM {
 
@@ -93,7 +88,7 @@ namespace FILM {
       GlimGls(const int pnumTS, const int psizeTS, const int pnumParams);
      
       void setData(const ColumnVector& p_y, const Matrix& p_x, const int ind);       
-      void Save(const VolumeInfo& volinfo, const ColumnVector& prethreshpos);
+      void Save(NEWIMAGE::volumeinfo  vinfo, const NEWIMAGE::volume<float>& mask,const float reftdim);
       ColumnVector& getResiduals() { return r; }
       void CleanUp();
 
@@ -109,9 +104,9 @@ namespace FILM {
       int numParams;
 
       // Data to be saved:
-      VolumeSeries corrections;
+      Matrix corrections;
       Matrix b;
-      Volume sigmaSquareds;
+      RowVector sigmaSquareds;
       float dof;
       ColumnVector r;
 

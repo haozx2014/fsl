@@ -3,7 +3,7 @@
 <HTML><HEAD><link REL="stylesheet" TYPE="text/css" href="../fsl.css"><TITLE>FSL</TITLE></HEAD><BODY><hr><TABLE BORDER=0 WIDTH="100%"><TR><TD ALIGN=CENTER><H1>
 SIENA - Analysis of Structural Brain MRI Data
 </H1>
-SIENA - Structural Image Evaluation, using Normalisation, of Atrophy - v2.5
+SIENA - Structural Image Evaluation, using Normalisation, of Atrophy - v2.6
 <br><br>
 <a href="#intro">intro</a> - <a href="#tools">tools used</a> - <a href="#siena">SIENA</a> - <a
 href="#sienax">SIENAX</a> - <a href="#sienar">voxelwise SIENA statistics</a>
@@ -11,6 +11,10 @@ href="#sienax">SIENAX</a> - <a href="#sienar">voxelwise SIENA statistics</a>
 
 <!-- }}} -->
 <!-- {{{ Introduction -->
+
+
+<i>SIENA v2.6 has switched to using FAST v4 and so results should not be
+mixed with previous SIENA versions in the same analysis.</i>
 
 <a name="intro"></a><p><H2>Introduction</H2>
 
@@ -481,7 +485,7 @@ space called <code>A_to_B_flow_to_std</code>. Merge these into a
 single 4D image; for example, if each subject's analysis has so far
 been carried out in a subdirectory called subject_*/A_to_B_siena, where the *
 could be subject ID or name, use a command such as:<br><code> fslmerge
--t flow_all_subjects `imglob -oneperimage
+-t flow_all_subjects `imglob
 subject_*/A_to_B_siena/A_to_B_flow_to_std*`</code><br>
 
 Note: it is very important that the order that the subjects appear in
@@ -493,7 +497,8 @@ recommend using <a href="../randomise/index.html">randomise</a> for
 this, as the above steps are very unlikely to generate nice Gaussian
 distributions in the data. You will need to generate a FEAT-style
 design matrix <code>design.mat</code> and contrasts file
-<code>design.con</con>.
+<code>design.con</code>. The mask image that you use for randomise
+should be <code>${FSLDIR}/data/standard/MNI152_T1_2mm_edges</code>
 
 </UL>
 

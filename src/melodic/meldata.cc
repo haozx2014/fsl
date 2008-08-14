@@ -5,7 +5,7 @@
 
     Christian F. Beckmann, FMRIB Image Analysis Group
     
-    Copyright (C) 1999-2007 University of Oxford */
+    Copyright (C) 1999-2008 University of Oxford */
 
 // {{{  includes/namespaces
 
@@ -114,8 +114,8 @@ namespace Melodic{
       Matrix meanimg = convert_to_pbsc(tmpData);
       meanR = meanimg.Row(1);
       message(" done" << endl);
-    }
-    else{
+    } 
+	else{
       message(string("  Removing mean image ..."));
       meanR = mean(tmpData);
       tmpData = remmean(tmpData);
@@ -147,9 +147,11 @@ namespace Melodic{
     if(opts.varnorm.value()){
       message("  Normalising by voxel-wise variance ..."); 
 			if(stdDev.Storage()==0)
-      	stdDev = varnorm(tmpData,std::min(30,tmpData.Nrows()-1),2.3)/numfiles;
+      	stdDev = varnorm(tmpData,std::min(30,tmpData.Nrows()-1),
+					opts.vn_level.value())/numfiles;
 			else 	
-				stdDev += varnorm(tmpData,std::min(30,tmpData.Nrows()-1),2.3)/numfiles;
+				stdDev += varnorm(tmpData,std::min(30,tmpData.Nrows()-1),
+					opts.vn_level.value())/numfiles;
       stdDevi = pow(stdDev,-1); 
       message(" done" << endl);
     }
@@ -232,7 +234,7 @@ namespace Melodic{
 			Matrix alltcs = Smodes.at(0);
 			for(int ctr=1; ctr < (int)Smodes.size();ctr++)
 				alltcs|=Smodes.at(ctr);
-			if((alltcs.Nrows()==Sdes.Nrows())&&(Sdes.Nrows()>Sdes.Ncols()))
+			if((alltcs.Nrows()==Sdes.Nrows())&&(Sdes.Nrows()>Sdes.Ncols()&&alltcs.Nrows()>2))
 				glmS.olsfit(alltcs,Sdes,Scon);
 		}
   }
@@ -242,21 +244,21 @@ namespace Melodic{
     numfiles = (int)opts.inputfname.value().size();
     setup_misc();
 
-		if(opts.filtermode){ // basic setup for filtering only
-			Data = process_file(opts.inputfname.value().at(0));
-		}
-		else{
+	if(opts.filtermode){ // basic setup for filtering only
+		Data = process_file(opts.inputfname.value().at(0));
+	}
+	else{
 
-    if((numfiles > 1) && (opts.approach.value()==string("defl") || opts.approach.value()==string("symm")))
-      opts.approach.set_T("tica");
+      	if((numfiles > 1) && (opts.approach.value()==string("defl") || opts.approach.value()==string("symm")))
+        	opts.approach.set_T("tica");
 
-    Matrix alldat, tmpData;
+    	Matrix alldat, tmpData;
 		bool tmpvarnorm = opts.varnorm.value();
 
-		if(opts.joined_vn.value()){
+		if(numfiles > 1 && opts.joined_vn.value()){
 			opts.varnorm.set_T(false);
 		}
-    alldat = process_file(opts.inputfname.value().at(0), numfiles) / numfiles;
+    	alldat = process_file(opts.inputfname.value().at(0), numfiles) / numfiles;
 
 		if(opts.pca_dim.value() > alldat.Nrows()-2){
 			cerr << "ERROR:: too many components selected \n\n";
@@ -266,51 +268,51 @@ namespace Melodic{
  		if(opts.debug.value())
 			save4D(alldat,string("preproc_dat") + num2str(1));   
 		for(int ctr = 1; ctr < numfiles; ctr++){
-    	tmpData = process_file(opts.inputfname.value().at(ctr), numfiles);
+    		tmpData = process_file(opts.inputfname.value().at(ctr), numfiles);
 			if(opts.debug.value())
 				save4D(tmpData /numfiles,string("preproc_dat") + num2str(ctr+1));
 			if(tmpData.Ncols() == alldat.Ncols() && tmpData.Nrows() == alldat.Nrows())
-      	alldat += tmpData / numfiles;	
+      			alldat += tmpData / numfiles;	
 			else
 				message("Data dimensions do not match - ignoring "+opts.inputfname.value().at(ctr) << endl);
-    }
+   		}
 
-    //update mask
-    if(opts.update_mask.value()){
-      message("Excluding voxels with constant value ...");
-      update_mask(Mask, alldat); 
-      message(" done" << endl);
-    }
+    	//update mask
+    	if(opts.update_mask.value()){
+      		message("Excluding voxels with constant value ...");
+      		update_mask(Mask, alldat); 
+      		message(" done" << endl);
+    	}
 
-		if(opts.joined_vn.value()){	
+		if((numfiles > 1 ) && opts.joined_vn.value() && tmpvarnorm){	
 			//variance - normalisation
-	    message(endl<<"Normalising by voxel-wise variance ..."); 
-	    stdDev = varnorm(alldat,alldat.Nrows(),3.1);
-	    stdDevi = pow(stdDev,-1); 
-	    message(" done" << endl);
+	    	message(endl<<"Normalising jointly by voxel-wise variance ..."); 
+	    	stdDev = varnorm(alldat,alldat.Nrows(),3.1);
+	    	stdDevi = pow(stdDev,-1); 
+	    	message(" done" << endl);
 		}
 		
 		if(numfiles>1)
-    	message(endl << "Initial data size : "<<alldat.Nrows()<<" x "<<alldat.Ncols()<<endl<<endl);
+    		message(endl << "Initial data size : "<<alldat.Nrows()<<" x "<<alldat.Ncols()<<endl<<endl);
 
 		if(opts.debug.value())
 			save4D(alldat,"alldat");
-    //estimate model order
-    Matrix tmpPPCA;
-    RowVector AdjEV, PercEV;
-    Matrix Corr, tmpE;
-    int order;
+    	//estimate model order
+    	Matrix tmpPPCA;
+    	RowVector AdjEV, PercEV;
+    	Matrix Corr, tmpE;
+    	int order;
 
-    order = ppca_dim(remmean(alldat,2), RXweight, tmpPPCA, AdjEV, PercEV, Corr, pcaE, pcaD, Resels, opts.pca_est.value());	  
+    	order = ppca_dim(remmean(alldat,2), RXweight, tmpPPCA, AdjEV, PercEV, Corr, pcaE, pcaD, Resels, opts.pca_est.value());	  
 
-	  if(opts.pca_dim.value() == 0){
-      opts.pca_dim.set_T(order);
+	  	if(opts.pca_dim.value() == 0){
+      		opts.pca_dim.set_T(order);
 			PPCA=tmpPPCA;
-  	}
-    order = opts.pca_dim.value();
-    calc_white(pcaE, pcaD, order, whiteMatrix, dewhiteMatrix);
+  		}
+    	order = opts.pca_dim.value();
+    	calc_white(pcaE, pcaD, order, whiteMatrix, dewhiteMatrix);
 
-    if(opts.debug.value()){
+    	if(opts.debug.value()){
 			outMsize("pcaE",pcaE); saveascii(pcaE,"pcaE");
 			outMsize("pcaD",pcaD); saveascii(pcaD,"pcaD");
 			outMsize("AdjEV",AdjEV); saveascii(AdjEV,"AdjEV");
@@ -324,26 +326,26 @@ namespace Melodic{
 		EV = AdjEV;
 		EVP = PercEV;
 
-    if(numfiles == 1){
-      Data = alldat;
-      Matrix tmp = Identity(Data.Nrows());
-      DWM.push_back(tmp);
-      WM.push_back(tmp);
-    } 
+    	if(numfiles == 1){
+      		Data = alldat;
+      		Matrix tmp = IdentityMatrix(Data.Nrows());
+      		DWM.push_back(tmp);
+      		WM.push_back(tmp);
+    	} 
 		else {
 	
-      for(int ctr = 0; ctr < numfiles; ctr++){
+      		for(int ctr = 0; ctr < numfiles; ctr++){
 				tmpData = process_file(opts.inputfname.value().at(ctr), numfiles);
 	
-				if(opts.joined_vn.value()){
+				if(opts.joined_vn.value() && tmpvarnorm){
 					tmpData=SP(tmpData,pow(ones(tmpData.Nrows(),1)*stdDev,-1));
 				}
 				//  whiten (separate / joint)
 				Matrix newWM,newDWM; 
 				if(!opts.joined_whiten.value()){	  
 					message("  Individual whitening in a " << order << " dimensional subspace " << endl);
-      	  std_pca(tmpData, RXweight, Corr, pcaE, pcaD);
-	  			calc_white(pcaE, pcaD, order, newWM, newDWM);
+      	  			std_pca(tmpData, RXweight, Corr, pcaE, pcaD);
+	  				calc_white(pcaE, pcaD, order, newWM, newDWM);
 				}else{
 					std_pca(whiteMatrix*tmpData, RXweight, Corr, pcaE, pcaD);
 					calc_white(pcaE, pcaD, order, newWM, newDWM);		
@@ -359,19 +361,19 @@ namespace Melodic{
 	  			Data = tmpData;
 				else
 	  			Data &= tmpData;
-      }
-    }
+      		}
+        }
 		opts.varnorm.set_T(tmpvarnorm);
 
-    message(endl << "  Data size : "<<Data.Nrows()<<" x "<<Data.Ncols()<<endl<<endl);
+    	message(endl << "  Data size : "<<Data.Nrows()<<" x "<<Data.Ncols()<<endl<<endl);
  		outMsize("stdDev",stdDev);
    
-    //meanC=mean(Data,2);
+    	//meanC=mean(Data,2);
 		if(opts.debug.value())
 			save4D(Data,"concat_data");    
-    //save the mean & mask
-    save_volume(Mask,logger.appendDir("mask"));
-    save_volume(Mean,logger.appendDir("mean"));
+    	//save the mean & mask
+    	save_volume(Mask,logger.appendDir("mask"));
+    	save_volume(Mean,logger.appendDir("mean"));
     }
   } // void setup()
 	
@@ -535,7 +537,7 @@ namespace Melodic{
       	Matrix tmp;
       	tmp=calc_FFT(dewhiteMatrix, opts.logPower.value());
       	saveascii(tmp,opts.outputfname.value() + "_FTdewhite");
-		  }
+	  }
 
     //Output PCA
     if(opts.output_pca.value() && pcaD.Storage()>0&&pcaE.Storage()>0){
@@ -550,6 +552,8 @@ namespace Melodic{
 
       save4D(PCAmaps,opts.outputfname.value() + "_pca");
     }
+ 
+		message("...done" << endl);
   } //void save()
 
   int MelodicData::remove_components()
@@ -584,7 +588,7 @@ namespace Melodic{
       noiseMix = mixMatrix.Column(ctr);
       noiseIC  = IC.Row(ctr).t();    
     }
-		else{
+    else{
       cerr << endl<< "component number "<<ctr<<" does not exist" << endl;
     }
     
@@ -670,8 +674,7 @@ namespace Melodic{
     }
   }
 
-  unsigned long MelodicData::standardise(volume<float>& mask, 
-		volume4D<float>& R){
+  unsigned long MelodicData::standardise(volume<float>& mask, volume4D<float>& R){
     	unsigned long count = 0;
     	int M=R.tsize();
     
@@ -709,7 +712,7 @@ namespace Melodic{
       	}
     	}  
     	return count;
-    }
+  }
 
   float MelodicData::est_resels(volume4D<float> R, volume<float> mask)
   {
@@ -752,7 +755,7 @@ namespace Melodic{
 	      				if (usez) S2[Z] += 0.5 * (R(x, y, z, t)*R(x, y, z, t) + 
 									R(x, y, z-1, t)*R(x, y, z-1, t));
 	    				}
-	  				}
+	  			}
 
     float norm = 1.0/(float) N;
     float v = dof;	// v - degrees of freedom (nu)  
@@ -808,14 +811,19 @@ namespace Melodic{
 
 				// Setup external call to BET:
 
-				char callBETstr[1000];
-				ostrstream betosc(callBETstr,1000);
-				betosc  << BET_path << " " << Mean_fname << " " 
-	     		<< BET_outputfname << " " << BET_optarg << " > /dev/null " << '\0';
+		//		char callBETstr[1000];
+	//			ostrstream betosc(callBETstr,1000);
+//				betosc  << BET_path << " " << Mean_fname << " " 
+//	     		<< BET_outputfname << " " << BET_optarg << " > /dev/null " << '\0';
 	
-        message("  Calling BET: " << callBETstr << endl);
-				system(callBETstr);
-	
+//        message("  Calling BET: " << callBETstr << endl);
+//				system(callBETstr);
+
+				string tmpstr = BET_path + string(" ") + 
+				                Mean_fname + string(" ") + BET_outputfname + string(" ") + 
+				                BET_optarg + string(" > /dev/null ");
+				system(tmpstr.c_str());
+								
 				// read back the Mask file   
 				read_volume(theMask,Mask_fname);
 				
@@ -857,28 +865,28 @@ namespace Melodic{
 
   void MelodicData::sort(){
     int numComp = mixMatrix.Ncols(), numVox = IC.Ncols(), 
-      numTime = mixMatrix.Nrows(), i,j;
+        numTime = mixMatrix.Nrows(), i,j;
 
-		//flip IC maps to be positive (on average)
-		//flip Subject/Session modes to be positive (on average)
-		//have time courses accordingly
+	//flip IC maps to be positive (on max)
+	//flip Subject/Session modes to be positive (on average)
+	//flip time courses accordingly
 
     for(int ctr_i = 1; ctr_i <= numComp; ctr_i++)
       if(IC.Row(ctr_i).MaximumAbsoluteValue()>IC.Row(ctr_i).Maximum()){
 				flipres(ctr_i);	
-			}
+	  }
     message("Sorting IC maps" << endl);  
     Matrix tmpscales, tmpICrow, tmpMIXcol;
-		if(numfiles > 1){
-			set_TSmode();
-			Matrix allmodes = Smodes.at(0);
-			for(int ctr = 1; ctr < (int)Smodes.size();++ctr)
-				allmodes |= Smodes.at(ctr);
-			tmpscales = median(allmodes).t();	
-		} else {
+	if(numfiles > 1){
+		set_TSmode();
+		Matrix allmodes = Smodes.at(0);
+		for(int ctr = 1; ctr < (int)Smodes.size();++ctr)
+			allmodes |= Smodes.at(ctr);
+		tmpscales = median(allmodes).t();	
+	} else {
     // re-order wrt standard deviation of IC maps 
     tmpscales = stdev(IC,2);
-		}
+	}
 		
     ICstats = tmpscales;
 

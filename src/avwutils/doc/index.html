@@ -1,4 +1,4 @@
-<HTML><HEAD><link REL="stylesheet" TYPE="text/css" href="../fsl.css"><TITLE>FSL</TITLE></HEAD><BODY><hr><TABLE BORDER=0 WIDTH="100%"><TR><TD ALIGN=CENTER><H1>
+<HTML><HEAD><link REL="stylesheet" TYPE="text/css" href="../fsl.css"><TITLE>FSLUTILS DOCS</TITLE></HEAD><BODY><hr><TABLE BORDER=0 WIDTH="100%"><TR><TD ALIGN=CENTER><H1>
 FSLUTILS
 </H1>
 Miscellaneous FSL Image Utilities
@@ -9,10 +9,6 @@ conversion, processing etc. of Analyze and Nifti format data sets.
 Many of them work on both 3D and 4D data. For each of these programs,
 type just the program name to get the usage help.
 
-<p>Changes: all programs previously called <b>avwsomething</b> are now
-called <b>fslsomething</b>. All old C programs have now been replaced
-with C++ programs, hence all programs with a "++" at the end of the
-name have had the "++" removed.
 
 <p>The different FSLUTILS programs are:
 <UL>
@@ -37,7 +33,7 @@ an image with the same basename and different filetypes (e.g. stdimg.nii.gz
 and stdimg.hdr and stdimg.img) creates many problems for determining
 what images to read, and in general will cause FSL programs to stop.
 
-<br><br><LI><b>fslcomplex</b> - a utility that allows 3D or 4D complex
+<br><br><a name="fslcomplex"></a><LI><b>fslcomplex</b> - a utility that allows 3D or 4D complex
 image files to be split or constructed from corresponding real
 components (either Cartesian or polar). The initial flag indicates
 what kind of processing is done.  In addition, two optional arguments
@@ -52,19 +48,18 @@ Note that only copies from Analyze to Analyze or Nifti to Nifti
 will work properly.  Copying from different files will result in
 loss of information or potentially incorrect settings.
 
-<br><br><LI><b>fslcreatehd</b> - creates a new image header along
-with a zero intensity data image.  There are two forms of input:
-one takes a list of minimal information on the command line, the 
-other takes in an xml-style file, as written by <kbd>fslhd -x</kbd>.
-The information required in the first version is: x/y/z/tsize for 
-image dimensions, x/y/zvoxsize for voxel
-dimensions (eg in mm), tr for time between volumes (for 3D data set to
-0), x/y/zorigin for co-ordinate origin (eg for standard space -
-otherwise leave as 0 0 0), datatype for the voxel data type (the
-commonest are: 1=binary, 2=unsigned char, 4=signed short, 8=signed
-int, 16=float).
-Note that this is <b><i>different</i></b> from the previous versions in
-that an entire image is created, and will <b><i>overwrite</i></b> any
+<br><br><LI><b>fslcreatehd</b> - creates a new image header along with
+a zero intensity data image.  There are two forms of input: one takes
+a list of minimal information on the command line, the other takes in
+an xml-style file, as written by <kbd>fslhd -x</kbd>.  The information
+required in the first version is: x/y/z/tsize for image dimensions,
+x/y/zvoxsize for voxel dimensions (eg in mm), tr in seconds for time
+between volumes (for 3D data set to 0), x/y/zorigin for voxel
+co-ordinate origin (eg for standard space - otherwise leave as 0 0 0),
+datatype for the voxel data type (the commonest are: 1=binary,
+2=unsigned char, 4=signed short, 8=signed int, 16=float).  Note that
+this is <b><i>different</i></b> from the previous versions in that an
+entire image is created, and will <b><i>overwrite</i></b> any
 <kbd>.img</kbd> file contents of the same image name.
 
 <br><br><LI><b>fsledithd</b> - allows the header information in
@@ -74,13 +69,16 @@ and some help text provided).  Note that
 the default text editor used is pico, but other editors can be
 specified by the second argument.
 
-<br><br><LI><b>fslfft</b> - Outputs the Fast-Fourier Transform ( or inverse )
+<br><br><LI><b>fslfft</b> - outputs the Fast-Fourier Transform (or inverse)
 for a complex input volume.
 
-<br><br><LI><b>fslhd</b> - report every field of an Analyze or
-Nifti header (note that the fields are different although some
-are common, e.g. pixdims).  The option "-x" produces an xml-style
-output which can be used in conjunction with <kbd>fslcreatehd</kbd>.
+<br><br><LI><b>fslhd</b> - report every field of an Analyze or Nifti
+header (note that the fields are different although some are common,
+e.g. pixdims).  The option "-x" produces an xml-style output which can
+be used in conjunction with <kbd>fslcreatehd</kbd>.  The reported
+values are those used internally in FSL programs and are sometimes
+different from the raw values stored in the file to avoid incorrect
+settings (e.g. dimN has a minimum value of 1, not 0).
 
 <br><br><LI><b>fslinfo</b> - report a basic subset of an Analyze or
 Nifti header.
@@ -89,9 +87,11 @@ Nifti header.
 combined image.
 
 <br><br><LI><b>fslmaths</b> - simple but powerful program to allow
-mathematical manipulation of images.
+mathematical manipulation of images.  Now includes spatial and
+temporal filtering, statistic conversion (e.g. z to p-values),
+diffusion tensor decomposition, and TFCE calculation.
 
-<br><br><LI><b>fslmeants</b> - output the average timeseries of a set of voxels.
+<br><br><LI><b>fslmeants</b> - output the average timeseries of a set of voxels, or the individual time series for each of these voxels.
 
 <br><br><LI><b>fslmerge</b> - concatenate image files into a single
 output. This concatenation can be in time, or in X, Y or Z. All image
@@ -103,14 +103,16 @@ file.
 <br><br><LI><b>fslnvols</b> - report how many time points are in the
 input 4D data set.
 
-<br><br><LI><b>fslspec</b> - Outputs the spectral power density of an
+<br><br><LI><b>fslpspec</b> - outputs the spectral power density of an
 input 4D data set.
 
 <br><br><LI><b>fslroi</b> - extract region of interest (ROI) from an
-image. You can a) take a 3D ROI from a 3D data set (or if it is
-4D, the same ROI is taken from each time point and a new 4D data set
-is created), b) extract just some time points from a 4D data set, or
-c) control time and space limits to the ROI.
+image. You can a) take a 3D ROI from a 3D data set (or if it is 4D,
+the same ROI is taken from each time point and a new 4D data set is
+created), b) extract just some time points from a 4D data set, or c)
+control time and space limits to the ROI.  Note that the arguments are
+minimum index and <i>size</i> (not maximum index).  So to extract
+voxels 10 to 12 inclusive you would specify 10 and 3 (not 10 and 12).
 
 <br><br><LI><b>fslslice</b> - split a 3D file into lots of 2D files (along z-axis).
 
@@ -119,9 +121,11 @@ c) control time and space limits to the ROI.
 
 <br><br><LI><b>fslstats</b> - report certain summary statistics for an
 input 3D/4D image. Of particular value is the "robust intensity range"
-which calculates the 2% and 98% percentiles. In addition, it can take
-an aribitrary mask as input so that statistics are only calculated
-within the mask.
+which calculates values similar to the 2% and 98% percentiles, but
+ensuring that the majority of the intensity range is captured, even
+for binary images. In addition, it can take an aribitrary mask as
+input so that statistics are only calculated within the mask and can
+also generate histogram data.
 
 <br><br><LI><b>fslval</b> - report a particular parameter (given a
 particular keyword eg "dim4") from an image header. To see the list of
@@ -155,14 +159,14 @@ the <code>avg152</code> standard images - equivalent to the appropriate
 determinant).
 
 <p>In Nifti files it is possible to independently report or modify
-the <i>qform</i> or <i>sform</i> fields.  However, the FSL3.3 output
+the <i>qform</i> or <i>sform</i> fields.  However, the FSL4.1 output
 routines will try to keep
 <i>qform and sform matrices the same</i> whenever one would otherwise
 be unset.  Therefore it is not possible, for instance, to delete only
 the qform, as if the sform is set then doing this will result in the
 qform being set equal (or nearly equal) to the sform.  This is
-currently done to aid interoperability with other packages.  If both
-qform and sform are given different values though, these are
+currently done to aid interoperability with other packages.  However, if both
+qform and sform are given different values then these are
 preserved by the output routines.
 
 <p>This command does not change the data storage at all - only the
@@ -170,47 +174,61 @@ orientation information in the header.
 
 <br><br><LI><b>fslswapdim</b> - re-orders the data storage to permit
 changes between axial, sagittal and coronal slicing.  When used in this
-mode no warning should be printed and the output files will maintain
-the same left-right order.
+mode the same left-right convention (also called coordinate handedness or radiological/neurological convention) will be maintained <i>as long as no warning is printed</i>.
+
+<p>The new orientation of the data is specified by selecting what the
+new axes should represent.  This can either be done in terms of the
+old axes (<kbd>x y z -x -y -z</kbd>) or in terms of anatomical labels
+<i>when this information is available</i> (in a Nifti image where
+either the sform or qform is set).  The anatomical labels are RL LR AP
+PA SI IA.  This latter form is the most convenient to achieve a given
+orientation.  For example: <br> &nbsp; &nbsp; &nbsp; <kbd>fslswapdim
+invol RL PA IS outvol</kbd> <br>will create a volume <kbd>outvol</kbd>
+with axial slicing the same as the standard template images.  Note
+that the anatomical label version will not allow the left-right
+convention to be changed.
 
 <p>
-It is also possible to use fslswapdim to swap the left-right order of
-the data, in which case a warning will be output.  Also, in this case,
-it <i>will not change the left-right ordering
-(i.e. radiological/neurological) information in the header</i>.
-Therefore after swapping left-right (e.g. using <kbd>-x y z</kbd> as
-arguments) the viewed image in FSLView or slices will be different.
-If the header information is also appropriately swapped (by
-using <kbd>fslorient</kbd>) then the image will display as it
-originally did, although the data will be stored in a different order.
-With this command it is possible to change incorrectly reconstructed
-data to match its header description, or to swap between neurological
-and radiological storage (if used in conjunction with fslorient), but
-please use with <i>extreme care</i> - otherwise the left and right
-sides of the image may be set incorrectly!
+Ordinarily <kbd>fslswapdim</kbd> will change the orientation
+information in the header as well as reordering the data.  This is so
+that the anatomical labels stay attached to the same parts of the
+image and not fixed to the voxel coordinates.  Hence, reordering a
+coronal image to axial slicing should keep the labels correctly
+attached to the relevant parts of the image, as long as they were
+correct initially.  If the initial labels are incorrect (see the
+labels in <kbd>fslview</kbd> or <kbd>fslhd</kbd>) then
+<kbd>fslorient</kbd> needs to be used in conjunction with
+<kbd>fslswapdim</kbd> in order to correct this.
 
 <p>
-Finally, changes to the left-right ordering by swapping other axes
-besides the x-axis can also be done, and these will issue the same
-warning.  However, when doing this, fslswapdim also modifies the
-header information about the ordering in the first voxel dimension (x)
-in order to maintain the previous left-right ordering in the header.
-This can result in confusing outputs, and so <i>fslswapdim should not
-be used to change left-right ordering except by swapping the x
-axis</i>.  Other reorderings can be done by: (1) changing into the
-standard image orientation (axial) - without swapping the left-right
-order; (2) swapping left-right, which will now be the x axis; and (3)
-swapping back into the original slicing (e.g. sagittal) with another
-fslswapdim that does not swap the left-right order.  Note that
-whenever a left-right order swap would occur, fslswapdim will issue a
-warning message.
+When <kbd>fslswapdim</kbd> is given arguments that will change the
+left-right orientation it will issue a warning that the left-right
+orientation is being flipped.  It will also try to modify the
+orientation information in the header, but <i>not</i> in a way that
+swaps this left-right orientation in the header.  Hence there is a net
+change in orientation as the data is swapped while the header is not.
+If the swap occurs on the x-axis then nothing is done to the header at
+all.  Otherwise, the axis which is being swapped, together with the
+x-axis, have their orientation changed.  In this way the handedness of
+the header is preserved, the labels associated with the y-axis and
+z-axis follow the image change, but the x-axis labels do not.  It is
+recommended that if a left-right swap is desired (and this should only
+be done if the reconstruction is initially incorrect) then the
+arguments <kbd>-x y z</kbd> should be used as this is the simplest
+form of swapping since it only affects the x-axis data and no labels
+or header information is changed.
 
-<br><br><LI><b>fslswapdim2</b> - wrapper script for fslswapdim, with increased input parameters and some additional logic checks.
 
 </UL>
 
+<hr>
+<p>Major change from FSL3.3: all programs previously called
+<b>avwsomething</b> are now called <b>fslsomething</b>. All old C
+programs have now been replaced with C++ programs, hence all programs
+with a "++" at the end of the name have had the "++" removed.
 
-<p><HR><FONT SIZE=1>Copyright &copy; 2000-2007, University of
+
+<p><HR><FONT SIZE=1>Copyright &copy; 2000-2008, University of
 Oxford. Written by <A
 HREF="http://www.fmrib.ox.ac.uk/~steve/index.html">S. Smith</A> and M. Jenkinson.</FONT>
 

@@ -4,7 +4,7 @@
 #
 #   Stephen Smith, FMRIB Image Analysis Group
 #
-#   Copyright (C) 2002-2007 University of Oxford
+#   Copyright (C) 2002-2008 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -221,7 +221,7 @@ pack $fmri(optsf).atlas.label $fmri(optsf).atlas.menu -in $fmri(optsf).atlas -pa
 frame $fmri(optsf).percent
 
 set fmri(showpercent) 0
-checkbutton $fmri(optsf).percent.yn -variable fmri(showpercent) -text "Convert PE/COPE values to %"
+checkbutton $fmri(optsf).percent.yn -variable fmri(showpercent) -text "Convert PE/COPE values to % (VARCOPE to %^2)"
 
 pack $fmri(optsf).percent.yn -in $fmri(optsf).percent -padx 5 -side left
 
@@ -263,6 +263,16 @@ LabelSpinBox  $fmri(optsf).thresh.thresh -textvariable fmri(statsthresh) -range 
 pack $fmri(optsf).thresh.yn $fmri(optsf).thresh.thresh  -in $fmri(optsf).thresh -padx 5 -side left
 
 #}}}
+#{{{ tsplot
+
+frame $fmri(optsf).tsplot
+
+set fmri(tsplot_yn) 1
+checkbutton $fmri(optsf).tsplot.yn -variable fmri(tsplot_yn) -text "Create timeseries plots"
+
+pack $fmri(optsf).tsplot.yn -in $fmri(optsf).tsplot -padx 5 -side left
+
+#}}}
 #{{{ web browser popup
 
 frame $fmri(optsf).popup
@@ -283,7 +293,7 @@ pack $fmri(optsf).name.label $fmri(optsf).name.entry -in $fmri(optsf).name -padx
 
 #}}}
 
-pack $fmri(optsf).atlas $fmri(optsf).percent $fmri(optsf).maskweight $fmri(optsf).ithresh $fmri(optsf).thresh $fmri(optsf).popup $fmri(optsf).name -in $fmri(optsf) -side top -anchor w
+pack $fmri(optsf).atlas $fmri(optsf).percent $fmri(optsf).maskweight $fmri(optsf).ithresh $fmri(optsf).thresh $fmri(optsf).tsplot $fmri(optsf).popup $fmri(optsf).name -in $fmri(optsf) -side top -anchor w
 
 #}}}
     #{{{ bottom buttons
@@ -387,7 +397,7 @@ proc featquery_whichstats { w } {
 
     foreach statstype { stats/pe stats/cope stats/varcope stats/tstat stats/fstat stats/zstat stats/zfstat thresh_zstat thresh_zfstat } {
     
-	set statslist [ remove_ext [ lsort -dictionary [ imglob -oneperimage ${statstype}*.* ] ] ]
+	set statslist [ lsort -dictionary [ imglob ${statstype}*.* ] ] 
     
 	if { [ llength $statslist ] > 0 } {
 
@@ -476,10 +486,9 @@ proc featquery_proc { w } {
 	set thecommand "$thecommand -i $fmri(ithresh)"
     }
 
-    set thecommand "$thecommand -s"
-    #    if { $fmri(tsplot_yn) } {
-    #	set thecommand "$thecommand -s"
-    #    }
+    if { $fmri(tsplot_yn) } {
+	set thecommand "$thecommand -s"
+    }
 
     if { $fmri(maskweight_yn) } {
 	set thecommand "$thecommand -w"

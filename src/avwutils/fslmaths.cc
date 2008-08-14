@@ -1,7 +1,7 @@
 //     
 //     fslmaths.cc Image processing routines, some basic, some not so basic...
-//     Steve Smith, David Flitney, Stuart Clare and Matthew Webster, FMRIB Image Analysis Group
-//     Copyright (C) 2000-2007 University of Oxford  
+//     Steve Smith, David Flitney, Mark Jenkinson, Stuart Clare, Thomas Nichols and Matthew Webster, FMRIB Image Analysis Group
+//     Copyright (C) 2000-2008 University of Oxford  
 //     
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -68,13 +68,8 @@
 
 #include "newimage/newimageall.h"
 #include "miscmaths/miscmaths.h"
-
-
-#if defined ( __CYGWIN__ ) ||  defined (__sun)
-extern "C" { 
-#include <ieeefp.h> 
-}
-#endif
+#include "utils/fsl_isfinite.h"
+#include "libprob/libprob.h"
 
 using namespace MISCMATHS;
 using namespace NEWIMAGE;
@@ -82,15 +77,15 @@ using namespace NEWIMAGE;
 #define MAX(a,b) (((a)>(b))?(a):(b))
 #define MIN(a,b) (((a)<(b))?(a):(b))
 
-void print_usage(const string& progname) 
+int printUsage(const string& programName) 
 {
-  cout << "Usage: fslmaths [-dt <datatype>] <first_input> [operations and inputs] <output> [-odt <datatype>]" << endl;
+  cout << "\nUsage: fslmaths [-dt <datatype>] <first_input> [operations and inputs] <output> [-odt <datatype>]" << endl;
 
   cout << "\nDatatype information:" << endl;
-  cout << " -dt sets the native (math operations) datatype (default float for all except double images)" << endl;
+  cout << " -dt sets the datatype used internally for calculations (default float for all except double images)" << endl;
   cout << " -odt sets the output datatype (default as original image)" << endl;
   cout << " Possible datatypes are: char short int float double" << endl;
-  cout << " Additionally \"-dt input\" will set the native datatype to that of the original image" << endl;
+  cout << " Additionally \"-dt input\" will set the internal datatype to that of the original image" << endl;
 
   cout << "\nBinary operations:" << endl;
   cout << "  (some inputs can be either an image or a number)" << endl;
@@ -114,18 +109,25 @@ void print_usage(const string& progname)
   cout << " -log   : natural logarithm" << endl;
   cout << " -sqr   : square" << endl;
   cout << " -sqrt  : square root" << endl;
+  cout << " -recip : reciprocal (1/current image)" << endl;
   cout << " -abs   : absolute value" << endl;
   cout << " -bin   : use (current image>0) to binarise" << endl;
   cout << " -index : replace each nonzero voxel with a unique (subject to wrapping) index number" << endl;
   cout << " -grid <value> <spacing> : add a 3D grid of intensity <value> with grid spacing <spacing>" << endl;
   cout << " -edge  : edge strength" << endl;
   cout << " -tfce <H> <E> <connectivity>: enhance with TFCE, e.g. -tfce 2 0.5 6 (maybe change 6 to 26 for skeletons)" << endl;
+  cout << " -tfceS <H> <E> <connectivity> <X> <Y> <Z> <tfce_thresh>: show support area for voxel (X,Y,Z)" << endl;
   cout << " -nan   : replace NaNs (improper numbers) with 0" << endl;
   cout << " -nanm  : make NaN (improper number) mask with 1 for NaN voxels, 0 otherwise" << endl;
+  cout << " -rand  : add uniform noise (range 0:1)" << endl;
+  cout << " -randn : add Gaussian noise (mean=0 sigma=1)" << endl;
   cout << " -inm <mean> :  (-i i ip.c) intensity normalisation (per 3D volume mean)" << endl;
   cout << " -ing <mean> :  (-I i ip.c) intensity normalisation, global 4D mean)" << endl;
 
-  cout << "\nKernel operations:" << endl;
+  cout << "\nMatrix operations:" << endl;
+  cout << " -tensor_decomp : convert a 4D (6-timepoint )tensor image into L1,2,3,FA,MD,MO,V1,2,3 (remaining image in pipeline is FA)" << endl;
+
+  cout << "\nKernel operations (set BEFORE filtering operation):" << endl;
   cout << " -kernel 3D : 3x3x3 box centered on target voxel (set as default kernel)" << endl;
   cout << " -kernel 2D : 3x3x1 box centered on target voxel" << endl;
   cout << " -kernel box    <size>     : all voxels in a box of width <size> centered on target voxel" << endl;
@@ -134,7 +136,7 @@ void print_usage(const string& progname)
   cout << " -kernel sphere <size>     : all voxels in a sphere of radius <size> mm centered on target voxel" << endl;
   cout << " -kernel file   <filename> : use external file as kernel" << endl;
 
-  cout << "\nSpatial Filtering operations: N.B. all options apart from -s use the kernel specified by -kernel" << endl;
+  cout << "\nSpatial Filtering operations: N.B. all options apart from -s use the kernel _previously_ specified by -kernel" << endl;
   cout << " -dilM    : Mean Dilation of zero voxels  (using non-zero voxels in kernel)" << endl;
   cout << " -dilD    : Modal Dilation of zero voxels (using non-zero voxels in kernel)" << endl;
   cout << " -dilF    : Maximum filtering of all voxels" << endl;
@@ -158,14 +160,27 @@ void print_usage(const string& progname)
   cout << " -Tperc <percentage> : nth percentile (0-100) of FULL RANGE across time" << endl;
   cout << " -Tar1    : temporal AR(1) coefficient (use -odt float and probably demean first)" << endl;
 
+  cout << "\nBasic statistical operations:" << endl;
+  cout << " -pval    : Nonparametric uncorrected P-value, assuming timepoints are the permutations; first timepoint is actual (unpermuted) stats image" << endl;
+  cout << " -pval0   : Same as -pval, but treat zeros as missing data" << endl;
+  cout << " -cpval   : Same as -pval, but gives FWE corrected P-values" << endl;
+  cout << " -ztop    : Convert Z-stat to (uncorrected) P" << endl;
+  cout << " -ptoz    : Convert (uncorrected) P to Z" << endl;
+
   cout << "\nMulti-argument operations:" << endl;
-  cout << " -roi <xmin> <xsize> <ymin> <ysize> <zmin> <zsize> <tmin> <tsize> : zero outside roi" << endl;
+  cout << " -roi <xmin> <xsize> <ymin> <ysize> <zmin> <zsize> <tmin> <tsize> : zero outside roi (using voxel coordinates)" << endl;
   cout << " -bptf  <hp_sigma> <lp_sigma> : (-t in ip.c) Bandpass temporal filtering; nonlinear highpass and Gaussian linear lowpass (with sigmas in volumes, not seconds); set either sigma<0 to skip that filter" << endl;
   cout << " -roc <AROC-thresh> <outfile> [4Dnoiseonly] <truth> : take (normally binary) truth and test current image in ROC analysis against truth. <AROC-thresh> is usually 0.05 and is limit of Area-under-ROC measure FP axis. <outfile> is a text file of the ROC curve (triplets of values: FP TP threshold). If the truth image contains negative voxels these get excluded from all calculations. If <AROC-thresh> is positive then the [4Dnoiseonly] option needs to be set, and the FP rate is determined from this noise-only data, and is set to be the fraction of timepoints where any FP (anywhere) is seen, as found in the noise-only 4d-dataset. This is then controlling the FWE rate. If <AROC-thresh> is negative the FP rate is calculated from the zero-value parts of the <truth> image, this time averaging voxelwise FP rate over all timepoints. In both cases the TP rate is the average fraction of truth=positive voxels correctly found." << endl;
+
+  cout << "\nCombining 4D and 3D images:" << endl;
+  cout << " If you apply a Binary operation (one that takes the current image and a new image together), when one is 3D and the other is 4D," << endl;
+  cout << " the 3D image is cloned temporally to match the temporal dimensions of the 4D image." << endl;
 
   cout << "\ne.g. fslmaths input_volume -add input_volume2 output_volume" << endl;
   cout << "     fslmaths input_volume -add 2.5 output_volume" << endl;
   cout << "     fslmaths input_volume -add 2.5 -mul input_volume2 output_volume\n" << endl;
+  cout << "     fslmaths 4D_input_volume -Tmean -mul -1 -add 4D_input_volume demeaned_4D_input_volume\n" << endl;
+  return 1;
 }
 
 bool isNumber( const string& x )
@@ -177,22 +192,34 @@ bool isNumber( const string& x )
  return flag; 
 } 
 
+template <class T>
+void loadNewImage(volume4D<T> &oldI, volume4D<T> &newI, string filename)
+{
+  read_volume4D(newI, filename);
+  if ( (oldI.tsize() == 1) && (oldI.tsize() < newI.tsize()) )
+    {
+      volume4D<T> tmpvol=oldI;
+      oldI.reinitialize(oldI.xsize(),oldI.ysize(),oldI.zsize(),newI.tsize()); 
+      oldI.copyproperties(tmpvol);
+      for (int t=0;t<newI.tsize();t++) oldI[t]=tmpvol[0]; 
+    }
+}
 
 template <class T>
-int fmrib_main(int argc, char *argv[], short output_dt)
+int inputParser(int argc, char *argv[], short output_dt, bool forceOutputType=false)
 {
   volume4D<T> input_volume;
   volumeinfo vinfo;
-  //for (int i = 2; i < argc-1; i++) cout << argv[i] << endl;
-  volume<float> kernel;
-  kernel=box_kernel(3,3,3);
+  volume<float> kernel(box_kernel(3,3,3));
   bool separable=false;
   read_volume4D(input_volume,string(argv[1]),vinfo);
 
   for (int i = 2; i < argc-1; i++)  //main loop
   {    
     volume4D<T> temp_volume;
-    /********************Dimensionality Reduction*******************/
+
+    /***************************************************************/
+    /******************** Dimensionality Reduction *****************/
     /***************************************************************/
     if (isupper((int)argv[i][1]) && argv[i][0] == '-')  //if first letters are -capital - dimensionality reduction...
     { 
@@ -229,192 +256,10 @@ int fmrib_main(int argc, char *argv[], short output_dt)
 	      }
 	    }
        if (string(argv[i]+2) == "perc") i++;
-       
     }
-    /********************Binary Operations**************************/
+
     /***************************************************************/
-    else if (string(argv[i])=="-mas")
-    {  
-        read_volume4D(temp_volume,string(argv[++i]));
-        temp_volume.binarise(0,temp_volume.max()+1,exclusive); // needed to binarise max() value + 1 due to
-        for (int t=0;t<input_volume.tsize();t++)                     //potential issue with exclusive binarise
-          input_volume[t]*=temp_volume[t%temp_volume.tsize()]; //this gives compatibility with 3 and 4D masks
-    }                                                            //without needing to have a specific volume3D variable
-    /***************************************************************/
-    else if (string(argv[i])=="-thr") input_volume.threshold((T)atof(argv[++i]),input_volume.max()+1,inclusive);
-    /***************************************************************/
-    else if (string(argv[i])=="-thrp") 
-    {
-      T lowerlimit =(T)(input_volume.robustmin()+(atof(argv[++i])/100.0)*(input_volume.robustmax()-input_volume.robustmin())); 
-      input_volume.threshold(lowerlimit,input_volume.max()+1,inclusive);
-    }
-    /***************************************************************/
-    else if (string(argv[i])=="-thrP") 
-    {
-      volume4D<T> mask(input_volume);
-      mask.binarise(0,input_volume.max()+1,exclusive);
-      T lowerlimit =(T)(input_volume.robustmin(mask)+(atof(argv[++i])/100.0)*(input_volume.robustmax(mask)-input_volume.robustmin(mask))); 
-      input_volume.threshold(lowerlimit,input_volume.max()+1,inclusive);
-    }
-    /***************************************************************/
-    else if (string(argv[i])=="-uthr") input_volume.threshold(input_volume.min()-1,(T)atof(argv[++i]),inclusive);
-    /***************************************************************/
-    else if (string(argv[i])=="-uthrp") 
-    {
-      T upperlimit = (T)(input_volume.robustmin()+(atof(argv[++i])/100.0)*(input_volume.robustmax()-input_volume.robustmin())); 
-       input_volume.threshold(input_volume.min()-1,upperlimit,inclusive);
-    }
-    /***************************************************************/
-    else if (string(argv[i])=="-uthrP") 
-    {
-       volume4D<T> mask(input_volume);
-       mask.binarise(0,input_volume.max()+1,exclusive);
-       T upperlimit = (T)(input_volume.robustmin(mask)+(atof(argv[++i])/100.0)*(input_volume.robustmax(mask)-input_volume.robustmin(mask))); 
-       input_volume.threshold(input_volume.min()-1,upperlimit,inclusive);
-    }
-    /***************************************************************/
-    else if (string(argv[i])=="-kernel") 
-    {
-       kernel.destroy();
-       float xdim=input_volume.xdim();
-       float ydim=input_volume.ydim();
-       float zdim=input_volume.zdim();
-       if(string(argv[i+1])=="2D")      kernel=box_kernel(3,3,1);
-       else if(string(argv[i+1])=="3D") kernel=box_kernel(3,3,3);
-       else
-       {
-	 float size=atof(argv[i+2]);
-	 if(string(argv[i+1])=="box")      kernel=box_kernel(size,xdim,ydim,zdim);
-	 if(string(argv[i+1])=="boxv")   kernel=box_kernel((int)size,(int)size,(int)size);
-         else if(string(argv[i+1])=="gauss")  kernel=gaussian_kernel3D(size,xdim,ydim,zdim);
-         else if(string(argv[i+1])=="sphere") kernel=spherical_kernel(size,xdim,ydim,zdim);
-	 else if(string(argv[i+1])=="file")   read_volume(kernel,string(argv[i+2]));
-         if(string(argv[i+1])=="box" || string(argv[i+1])=="gauss") separable=true;       
-         else separable=false;  
-	  i++;
-       }
-       i++;
-       //save_volume(kernel,"kernel");
-       
-    }
-    /***************************************************************/
-    else if (string(argv[i])=="-s") 
-    {
-      kernel.destroy();
-      float xdim=input_volume.xdim();
-      float ydim=input_volume.ydim();
-      float zdim=input_volume.zdim();
-      kernel=gaussian_kernel3D(atof(argv[i+1]),xdim,ydim,zdim);
-      separable=true;
-      input_volume=generic_convolve(input_volume,kernel,separable,true); 
-      i++;
-    }
-    /***************************************************************/
-    else if (string(argv[i])=="-subsamp2"){
-      temp_volume.clear();
-      temp_volume = subsample_by_2(input_volume,true);
-      input_volume = temp_volume;
-    }
-    /***************************************************************/
-    else if (string(argv[i])=="-subsamp2offc"){
-      temp_volume.clear();
-      temp_volume = subsample_by_2(input_volume,false);
-      input_volume = temp_volume;
-    }
-    /***************************************************************/
-    else if (string(argv[i])=="-add"){
-      i++;
-      if (isNumber(string(argv[i]))) input_volume+=(T)atof(argv[i]); 
-      else 
-      {  
-	read_volume4D(temp_volume,string(argv[i]));
-        for (int t=0;t<input_volume.tsize();t++) input_volume[t]+=temp_volume[t%temp_volume.tsize()]; 
-      }}
-    /***************************************************************/
-    else if (string(argv[i])=="-sub"){
-      i++;
-      if (isNumber(string(argv[i]))) input_volume-=(T)atof(argv[i]);
-      else 
-      {  
-	read_volume4D(temp_volume,string(argv[i]));
-        for (int t=0;t<input_volume.tsize();t++) input_volume[t]-=temp_volume[t%temp_volume.tsize()]; 
-      }}
-    /***************************************************************/
-    else if (string(argv[i])=="-mul"){
-      i++;
-      if (isNumber(string(argv[i]))) input_volume*=(T)atof(argv[i]);
-      else  
-      {  
-	read_volume4D(temp_volume,string(argv[i]));
-        for (int t=0;t<input_volume.tsize();t++) input_volume[t]*=temp_volume[t%temp_volume.tsize()]; 
-      }}
-    /***************************************************************/
-    else if (string(argv[i])=="-rem"){
-      i++;
-      if (isNumber(string(argv[i]))) 
-      {
-	int denom=(int)atof(argv[i]);
-	for(int t=0;t<input_volume.tsize();t++) 
-          for(int z=0;z<input_volume.zsize();z++)
-	    for(int y=0;y<input_volume.ysize();y++)	    
-	      for(int x=0;x<input_volume.xsize();x++)
-		input_volume(x,y,z,t)=(int)input_volume(x,y,z,t)%denom;
-      }
-      else 
-      {  
-	read_volume4D(temp_volume,string(argv[i]));
-        for(int t=0;t<input_volume.tsize();t++) 
-	  { 
-            int t2=t%temp_volume.tsize();     
-            for(int z=0;z<input_volume.zsize();z++)
-	      for(int y=0;y<input_volume.ysize();y++)	    
-	        for(int x=0;x<input_volume.xsize();x++)
-		  if(temp_volume(x,y,z,t2)!=0) input_volume(x,y,z,t)=(int)input_volume(x,y,z,t)%(int)temp_volume(x,y,z,t2); 
-	  }
-      }
-    }
-    /***************************************************************/
-    else if (string(argv[i])=="-div"){
-      i++;
-      if (isNumber(string(argv[i]))) {if (atof(argv[i])!=0) input_volume/=(T)atof(argv[i]);}
-      else 
-      {  
-        read_volume4D(temp_volume,string(argv[i]));
-        for(int t=0;t<input_volume.tsize();t++)      
-	{
-          int t2=t%temp_volume.tsize();     
-          for(int z=0;z<input_volume.zsize();z++)
-            for(int y=0;y<input_volume.ysize();y++)	    
-	      for(int x=0;x<input_volume.xsize();x++)
-		  if(temp_volume(x,y,z,t2)!=0) input_volume.value(x,y,z,t) /= temp_volume.value(x,y,z,t2);
-                  else input_volume.value(x,y,z,t)=(T)0.0;
-        }          
-      }}
-    /***************************************************************/
-    else if (string(argv[i])=="-max" || string(argv[i])=="-min")
-    {
-      T param=0;
-      bool max=false;
-      bool file=false;
-      if (string(argv[i])=="-max") max=true;
-      i++;
-      if (isNumber(string(argv[i]))) param=(T)atof(argv[i]);
-      else 
-      {                           
-	read_volume4D(temp_volume,string(argv[i]));
-        file=true;
-      }     
-      for(int t=0;t<input_volume.tsize();t++)           
-        for(int z=0;z<input_volume.zsize();z++)
-          for(int y=0;y<input_volume.ysize();y++)	    
-	    for(int x=0;x<input_volume.xsize();x++)
-	    {
-              if (max && file) input_volume.value(x,y,z,t)=MAX(input_volume.value(x,y,z,t),temp_volume.value(x,y,z,t%temp_volume.tsize()));
-              if (max && !file) input_volume.value(x,y,z,t)=MAX(input_volume.value(x,y,z,t),param);
-              if (!max && file) input_volume.value(x,y,z,t)=MIN(input_volume.value(x,y,z,t),temp_volume.value(x,y,z,t%temp_volume.tsize()));
-              if (!max && !file) input_volume.value(x,y,z,t)=MIN(input_volume.value(x,y,z,t),param);
-            }
-    }
+    /******************** ROC **************************************/
     /***************************************************************/
     else if (string(argv[i])=="-roc")
     {
@@ -434,7 +279,6 @@ if (aroc_thresh<0)
   }
 
 // }}}
-
       // {{{ setup minval, read pure-noise and log-transform it, log-transform input
 
 float minval=input_volume.min();
@@ -459,152 +303,6 @@ for(int t=0;t<input_volume.tsize();t++)
 	loginput.value(x,y,z,t)=log(input_volume.value(x,y,z,t)-minval+1);
 
 // }}}
-
-#ifdef pooooey
-      // {{{ read the truth image
-
-volume<float> truth;
-read_volume(truth,string(argv[++i]));
-
-// }}}
-      if (separatenoise)
-	// {{{ get FP from separate noise image
-
-{
-  float aroc=0, FP=0, TP=0, TPprev=0, FPprev=0;
-
-  float maxlogval=max(loginput.max(),noise.max());
-  float delta=maxlogval/1000;
-  if (delta==0) delta=1;
-
-  // {{{ setup truth and invtruth images
-
-truth.binarise(truth.max() * 0.05);
-for(int z=0;z<loginput.zsize();z++)
-  for(int y=0;y<loginput.ysize();y++)	    
-    for(int x=0;x<loginput.xsize();x++)
-      if ((x<border)||(x>=loginput.xsize()-border)||(y<border)||(y>=loginput.ysize()-border)||(z<border)||(z>=loginput.zsize()-border))
-	truth.value(x,y,z)=0;
-int truecount=truth.sum();
-
-volume4D<float> TPim;
-copyconvert(loginput,TPim);
-for(int t=0;t<loginput.tsize();t++)           
-  TPim[t]*=truth;
-
-// volume<float> invtruth = (truth*-1.0)+1;
-// volume4D<float> FPim;
-// copyconvert(loginput,FPim);
-// for(int t=0;t<loginput.tsize();t++)           
-//   FPim[t]*=invtruth;
-
-// }}}
-					  
-  for (float thresh=maxlogval+delta; thresh>=0 && FP<aroc_thresh; thresh-=delta)
-    {
-      TP=FP=0;
-      for(int t=0;t<loginput.tsize();t++)           
-	{
-	  int anyFP=0;
-	  float sigTP=0, sigFP=0;
-	  for(int z=border;z<loginput.zsize()-border;z++)
-	    for(int y=border;y<loginput.ysize()-border;y++)	    
-	      for(int x=border;x<loginput.xsize()-border;x++)
-		{
-		  sigTP+=TPim.value(x,y,z,t)>thresh;
-		  //sigFP+=FPim.value(x,y,z,t)>thresh;
-		  anyFP+=noise.value(x,y,z,t)>thresh;
-		}
-	  //TP += 2*sigTP / ( truecount + sigFP + sigTP ); // Dice overlap measure
-	  TP += sigTP / truecount;
-	  FP += anyFP>0;
-	}
-	      
-      TP /= loginput.tsize();
-      FP /= loginput.tsize();
-
-      if (FP<aroc_thresh)
-	aroc += (TP+TPprev)/2 * (FP-FPprev);
-      else  // case for when the latest update straddles the FP threshold
-	aroc += (TPprev + (TP-TPprev)*0.5*((aroc_thresh-FPprev)/(FP-FPprev))) * (aroc_thresh-FPprev);
-	      
-      TPprev=TP;
-      FPprev=FP;
-      
-      ofs << FP << " " << TP << " " << exp(thresh)-1+minval << endl;
-    }
-  
-  if (FP<aroc_thresh) // deal with case of when FP never reached aroc_thresh
-    aroc += TP*(aroc_thresh-FP);
-  
-  ofs.close();
-  cout << aroc / aroc_thresh << endl;
-}
-
-// }}}
-      else
-	// {{{ "traditional" ROC
-
-{
-  float maxlogval=loginput.max();
-  float delta=maxlogval/1000; if (delta==0) delta=1;
-  //cout << "minval=" << minval << " maxlogval=" << maxlogval << " delta=" << delta << endl;
-  float aroc=0, FP=0, TP=0, TPprev=0, FPprev=0;
-
-  // {{{ setup truth and invtruth images
-
-volume<float> maskim=truth;
-maskim.binarise(-0.001);
-truth.binarise(truth.max() * 0.05);
-int truecount=truth.sum();
-
-volume<float> invtruth = ((truth*-1.0)+1)*maskim;
-int invtruecount=invtruth.sum();
-
-volume<float> TPim;
-copyconvert(loginput[0],TPim);
-TPim*=truth;
-
-volume<float> FPim;
-copyconvert(loginput[0],FPim);
-FPim*=invtruth;
-
-// }}}
-
-  for (float thresh=maxlogval+delta; thresh>=0 && FP<aroc_thresh; thresh-=delta)
-    {
-      TP=FP=0;
-      for(int z=0;z<loginput.zsize();z++)
-	for(int y=0;y<loginput.ysize();y++)	    
-	  for(int x=0;x<loginput.xsize();x++)
-	    {
-	      TP+=TPim.value(x,y,z)>thresh;
-	      FP+=FPim.value(x,y,z)>thresh;
-	    }
-      TP /= truecount;
-      FP /= invtruecount;
-
-      if (FP<aroc_thresh)
-	aroc += (TP+TPprev)/2 * (FP-FPprev);
-      else  // case for when the latest update straddles the FP threshold
-	aroc += (TPprev + (TP-TPprev)*0.5*((aroc_thresh-FPprev)/(FP-FPprev))) * (aroc_thresh-FPprev);
-      
-      TPprev=TP;
-      FPprev=FP;
-      
-      ofs << FP << " " << TP << " " << exp(thresh)-1+minval << endl;
-    }
-
-  if (FP<aroc_thresh) // deal with case of when FP never reached aroc_thresh
-    aroc += TP*(aroc_thresh-FP);
-  
-  ofs.close();
-  cout << aroc / aroc_thresh << endl;
-}
-
-// }}}
-#endif
-
       // {{{ get FP from separate noise image
 
 {
@@ -723,7 +421,196 @@ if (!separatenoise)
 
 // }}}
     }
-    /*********************Unary Operations**************************/
+
+
+    /***************************************************************/
+    /********************Binary Operations**************************/
+    /***************************************************************/
+    else if (string(argv[i])=="-mas")
+    {  
+	loadNewImage(input_volume, temp_volume, string(argv[++i]));
+        temp_volume.binarise(0,temp_volume.max()+1,exclusive); // needed to binarise max() value + 1 due to
+        for (int t=0;t<input_volume.tsize();t++)                     //potential issue with exclusive binarise
+          input_volume[t]*=temp_volume[t%temp_volume.tsize()]; //this gives compatibility with 3 and 4D masks
+    }                                                            //without needing to have a specific volume3D variable
+    /***************************************************************/
+    else if (string(argv[i])=="-add"){
+      i++;
+      if (isNumber(string(argv[i]))) input_volume+=(T)atof(argv[i]); 
+      else 
+      {  
+	loadNewImage(input_volume, temp_volume, string(argv[i]));
+        for (int t=0;t<input_volume.tsize();t++) input_volume[t]+=temp_volume[t%temp_volume.tsize()]; 
+      }}
+    /***************************************************************/
+    else if (string(argv[i])=="-sub"){
+      i++;
+      if (isNumber(string(argv[i]))) input_volume-=(T)atof(argv[i]);
+      else 
+      {  
+	loadNewImage(input_volume, temp_volume, string(argv[i]));
+        for (int t=0;t<input_volume.tsize();t++) input_volume[t]-=temp_volume[t%temp_volume.tsize()]; 
+      }}
+    /***************************************************************/
+    else if (string(argv[i])=="-mul"){
+      i++;
+      if (isNumber(string(argv[i]))) input_volume*=(T)atof(argv[i]);
+      else  
+      {  
+	loadNewImage(input_volume, temp_volume, string(argv[i]));
+        for (int t=0;t<input_volume.tsize();t++) input_volume[t]*=temp_volume[t%temp_volume.tsize()]; 
+      }}
+    /***************************************************************/
+    else if (string(argv[i])=="-rem"){
+      i++;
+      if (isNumber(string(argv[i]))) 
+      {
+	int denom=(int)atof(argv[i]);
+	for(int t=0;t<input_volume.tsize();t++) 
+          for(int z=0;z<input_volume.zsize();z++)
+	    for(int y=0;y<input_volume.ysize();y++)	    
+	      for(int x=0;x<input_volume.xsize();x++)
+		input_volume(x,y,z,t)=(int)input_volume(x,y,z,t)%denom;
+      }
+      else 
+      {  
+	loadNewImage(input_volume, temp_volume, string(argv[i]));
+        for(int t=0;t<input_volume.tsize();t++) 
+	  { 
+            int t2=t%temp_volume.tsize();     
+            for(int z=0;z<input_volume.zsize();z++)
+	      for(int y=0;y<input_volume.ysize();y++)	    
+	        for(int x=0;x<input_volume.xsize();x++)
+		  if(temp_volume(x,y,z,t2)!=0) input_volume(x,y,z,t)=(int)input_volume(x,y,z,t)%(int)temp_volume(x,y,z,t2); 
+	  }
+      }
+    }
+    /***************************************************************/
+    else if (string(argv[i])=="-div"){
+      i++;
+      if (isNumber(string(argv[i]))) {if (atof(argv[i])!=0) input_volume/=(T)atof(argv[i]);}
+      else 
+      {  
+        loadNewImage(input_volume, temp_volume, string(argv[i]));
+        for(int t=0;t<input_volume.tsize();t++)      
+	{
+          int t2=t%temp_volume.tsize();     
+          for(int z=0;z<input_volume.zsize();z++)
+            for(int y=0;y<input_volume.ysize();y++)	    
+	      for(int x=0;x<input_volume.xsize();x++)
+		  if(temp_volume(x,y,z,t2)!=0) input_volume.value(x,y,z,t) /= temp_volume.value(x,y,z,t2);
+                  else input_volume.value(x,y,z,t)=(T)0.0;
+        }          
+      }}
+    /***************************************************************/
+    else if (string(argv[i])=="-max" || string(argv[i])=="-min")
+    {
+      T param=0;
+      bool max=false;
+      bool file=false;
+      if (string(argv[i])=="-max") max=true;
+      i++;
+      if (isNumber(string(argv[i]))) param=(T)atof(argv[i]);
+      else 
+      {                           
+	loadNewImage(input_volume, temp_volume, string(argv[i]));
+        file=true;
+      }     
+      for(int t=0;t<input_volume.tsize();t++)           
+        for(int z=0;z<input_volume.zsize();z++)
+          for(int y=0;y<input_volume.ysize();y++)	    
+	    for(int x=0;x<input_volume.xsize();x++)
+	    {
+              if (max && file) input_volume.value(x,y,z,t)=MAX(input_volume.value(x,y,z,t),temp_volume.value(x,y,z,t%temp_volume.tsize()));
+              if (max && !file) input_volume.value(x,y,z,t)=MAX(input_volume.value(x,y,z,t),param);
+              if (!max && file) input_volume.value(x,y,z,t)=MIN(input_volume.value(x,y,z,t),temp_volume.value(x,y,z,t%temp_volume.tsize()));
+              if (!max && !file) input_volume.value(x,y,z,t)=MIN(input_volume.value(x,y,z,t),param);
+            }
+    }
+
+    /***************************************************************/
+    /******************** Unary Operations *************************/
+    /***************************************************************/
+    else if (string(argv[i])=="-thr") input_volume.threshold((T)atof(argv[++i]),input_volume.max()+1,inclusive);
+    /***************************************************************/
+    else if (string(argv[i])=="-thrp") 
+    {
+      T lowerlimit =(T)(input_volume.robustmin()+(atof(argv[++i])/100.0)*(input_volume.robustmax()-input_volume.robustmin())); 
+      input_volume.threshold(lowerlimit,input_volume.max()+1,inclusive);
+    }
+    /***************************************************************/
+    else if (string(argv[i])=="-thrP") 
+    {
+      volume4D<T> mask(input_volume);
+      mask.binarise(0,input_volume.max()+1,exclusive);
+      T lowerlimit =(T)(input_volume.robustmin(mask)+(atof(argv[++i])/100.0)*(input_volume.robustmax(mask)-input_volume.robustmin(mask))); 
+      input_volume.threshold(lowerlimit,input_volume.max()+1,inclusive);
+    }
+    /***************************************************************/
+    else if (string(argv[i])=="-uthr") input_volume.threshold(input_volume.min()-1,(T)atof(argv[++i]),inclusive);
+    /***************************************************************/
+    else if (string(argv[i])=="-uthrp") 
+    {
+      T upperlimit = (T)(input_volume.robustmin()+(atof(argv[++i])/100.0)*(input_volume.robustmax()-input_volume.robustmin())); 
+       input_volume.threshold(input_volume.min()-1,upperlimit,inclusive);
+    }
+    /***************************************************************/
+    else if (string(argv[i])=="-uthrP") 
+    {
+       volume4D<T> mask(input_volume);
+       mask.binarise(0,input_volume.max()+1,exclusive);
+       T upperlimit = (T)(input_volume.robustmin(mask)+(atof(argv[++i])/100.0)*(input_volume.robustmax(mask)-input_volume.robustmin(mask))); 
+       input_volume.threshold(input_volume.min()-1,upperlimit,inclusive);
+    }
+    /***************************************************************/
+    else if (string(argv[i])=="-kernel") 
+    {
+       kernel.destroy();
+       float xdim=input_volume.xdim();
+       float ydim=input_volume.ydim();
+       float zdim=input_volume.zdim();
+       if(string(argv[i+1])=="2D")      kernel=box_kernel(3,3,1);
+       else if(string(argv[i+1])=="3D") kernel=box_kernel(3,3,3);
+       else
+       {
+	 float size=atof(argv[i+2]);
+	 if(string(argv[i+1])=="box")      kernel=box_kernel(size,xdim,ydim,zdim);
+	 if(string(argv[i+1])=="boxv")   kernel=box_kernel((int)size,(int)size,(int)size);
+         else if(string(argv[i+1])=="gauss")  kernel=gaussian_kernel3D(size,xdim,ydim,zdim);
+         else if(string(argv[i+1])=="sphere") kernel=spherical_kernel(size,xdim,ydim,zdim);
+	 else if(string(argv[i+1])=="file")   read_volume(kernel,string(argv[i+2]));
+         if(string(argv[i+1])=="box" || string(argv[i+1])=="gauss") separable=true;       
+         else separable=false;  
+	  i++;
+       }
+       i++;
+       //save_volume(kernel,"kernel");
+       
+    }
+    /***************************************************************/
+    else if (string(argv[i])=="-s") 
+    {
+      kernel.destroy();
+      float xdim=input_volume.xdim();
+      float ydim=input_volume.ydim();
+      float zdim=input_volume.zdim();
+      kernel=gaussian_kernel3D(atof(argv[i+1]),xdim,ydim,zdim);
+      separable=true;
+      input_volume=generic_convolve(input_volume,kernel,separable,true); 
+      i++;
+    }
+    /***************************************************************/
+    else if (string(argv[i])=="-subsamp2"){
+      temp_volume.clear();
+      temp_volume = subsample_by_2(input_volume,true);
+      input_volume = temp_volume;
+    }
+    /***************************************************************/
+    else if (string(argv[i])=="-subsamp2offc"){
+      temp_volume.clear();
+      temp_volume = subsample_by_2(input_volume,false);
+      input_volume = temp_volume;
+    }
     /***************************************************************/
     else if (string(argv[i])=="-sqrt")
     {
@@ -737,7 +624,24 @@ if (!separatenoise)
             }
     }
     /***************************************************************/
+    else if (string(argv[i])=="-invbin")
+    {
+      for(int t=0;t<input_volume.tsize();t++)           
+        for(int z=0;z<input_volume.zsize();z++)
+          for(int y=0;y<input_volume.ysize();y++)	    
+	    for(int x=0;x<input_volume.xsize();x++)
+	      input_volume.value(x,y,z,t)=(T)!input_volume.value(x,y,z,t);
+    }
+    /***************************************************************/
     else if (string(argv[i])=="-sqr") input_volume*=input_volume;
+    /***************************************************************/
+    else if (string(argv[i])=="-recip")
+      for(int t=0;t<input_volume.tsize();t++)      
+	{
+          for(int z=0;z<input_volume.zsize();z++) for(int y=0;y<input_volume.ysize();y++) for(int x=0;x<input_volume.xsize();x++)
+            if(input_volume.value(x,y,z,t)!=0)
+	      input_volume.value(x,y,z,t) = (T)1.0 / input_volume.value(x,y,z,t);
+        }          
     /***************************************************************/
     else if (string(argv[i])=="-exp")
     {
@@ -755,6 +659,97 @@ if (!separatenoise)
           for(int y=0;y<input_volume.ysize();y++)	    
 	    for(int x=0;x<input_volume.xsize();x++)
               if (input_volume.value(x,y,z,t)> 0) input_volume.value(x,y,z,t)=(T)log((double)input_volume.value(x,y,z,t));
+    }
+    /* Uncorrected nonparametric P-value, assuming t-dim is perm-dim */
+    else if (string(argv[i])=="-pval" || string(argv[i])=="-pval0")
+    {
+      int IgnoreZeros = string(argv[i])=="-pval0";
+
+      // Reduce to 3D from 4D
+      volume4D<T> temp_volume;
+      temp_volume=input_volume;
+      input_volume.reinitialize(input_volume.xsize(),input_volume.ysize(),input_volume.zsize(),1); 
+      input_volume.copyproperties(temp_volume);
+      
+      // Compute p-value for each voxel
+      float pval; int cnt;
+      for(int z=0;z<input_volume.zsize();z++)
+        for(int y=0;y<input_volume.ysize();y++)     
+          for(int x=0;x<input_volume.xsize();x++) {
+            if (IgnoreZeros && temp_volume.value(x,y,z,0)==0)
+              input_volume.value(x,y,z,0)=(T)0;
+            else {
+              pval=1;
+              if (IgnoreZeros) {
+                cnt=1;
+                for(int t=1;t<temp_volume.tsize();t++)
+                  if (temp_volume.value(x,y,z,t)!=0) {
+                    pval+=(temp_volume.value(x,y,z,0)<=temp_volume.value(x,y,z,t));
+                    cnt++;
+                  }
+		pval/=cnt;
+              } else {
+                for(int t=1;t<temp_volume.tsize();t++)
+                  pval+=(temp_volume.value(x,y,z,0)<=temp_volume.value(x,y,z,t));
+                pval/=temp_volume.tsize();
+              }
+              input_volume.value(x,y,z,0)=(T)pval;
+            }
+          }
+    }
+    /********* Corrected Nonparametric FWE P-value, assuming t-dim is perm-dim  ***************/
+    else if (string(argv[i])=="-cpval")
+    {
+      // Initialize max distribution to min
+      volume<float> max_dist(input_volume.tsize(),1,1);
+      for(int t=0;t<max_dist.xsize();t++)
+        max_dist(t,0,0)=input_volume.min();
+
+      // Compute max distribution (t-dim is perm-dim)
+      for(int t=0;t<input_volume.tsize();t++)
+        for(int z=0;z<input_volume.zsize();z++)
+          for(int y=0;y<input_volume.ysize();y++)           
+            for(int x=0;x<input_volume.xsize();x++)
+              max_dist(t,0,0)=MAX(max_dist(t,0,0),input_volume.value(x,y,z,t));
+
+      // Reduce to 3D from 4D
+      volume4D<T> temp_volume;
+      temp_volume=input_volume;
+      input_volume.reinitialize(input_volume.xsize(),input_volume.ysize(),input_volume.zsize(),1); 
+      input_volume.copyproperties(temp_volume);
+
+      // Compute corrected p-value for each voxel
+      float cpval;
+      for(int z=0;z<input_volume.zsize();z++)
+        for(int y=0;y<input_volume.ysize();y++)     
+          for(int x=0;x<input_volume.xsize();x++) {
+            cpval=0;
+            for(int t=0;t<max_dist.xsize();t++)
+              cpval+=(temp_volume.value(x,y,z,0)<=max_dist(t,0,0));
+            cpval/=temp_volume.tsize();
+            input_volume.value(x,y,z,0)=(T)cpval;
+          }
+    }
+    /***** Uncorrected Parametric P-value for Normal Distribution ********/
+    else if (string(argv[i])=="-ztop")
+    {
+      for(int t=0;t<input_volume.tsize();t++)           
+        for(int z=0;z<input_volume.zsize();z++)
+          for(int y=0;y<input_volume.ysize();y++)           
+            for(int x=0;x<input_volume.xsize();x++)
+              input_volume.value(x,y,z,t)=(T)(1-ndtr((double)input_volume.value(x,y,z,t)));
+    }
+    /***** Inverse Uncorrected Parametric P-value for Normal Distribution ********/
+    else if (string(argv[i])=="-ptoz")
+    {
+      double v;
+      for(int t=0;t<input_volume.tsize();t++)           
+        for(int z=0;z<input_volume.zsize();z++)
+          for(int y=0;y<input_volume.ysize();y++)           
+            for(int x=0;x<input_volume.xsize();x++) {
+              v=input_volume.value(x,y,z,t);
+              input_volume.value(x,y,z,t)=(T)((v<=0 || v>=1)?0:ndtri(1-v));
+            }
     }
     /***************************************************************/
     else if (string(argv[i])=="-abs") input_volume=abs(input_volume);
@@ -822,34 +817,25 @@ if (!separatenoise)
 	float size_power = atof(argv[++i]);
 	int connectivity = atoi(argv[++i]);
 
-	for(int t=0;t<input_volume.tsize();t++)           
-	  {
-	    float maxval=input_volume[t].max();
-	    volume<float> clusterenhance;
-	    copyconvert(input_volume[0],clusterenhance);
-	    clusterenhance=0;
+	for(int t=0;t<input_volume.tsize();t++)
+	  tfce(input_volume[t], height_power, size_power, connectivity, 0, 0);
+      }
 
-	    float delta=0.1;  // this needs fixing!!
-	    for (float thresh=delta; thresh<=maxval; thresh+=delta)
-	      {
-		volume<float> clusters;
-		copyconvert(input_volume[t],clusters);
-		clusters.binarise(thresh);
+// }}}
+    else if (string(argv[i])=="-tfceS")
+      // {{{ TFCE supporting-area option
 
-		ColumnVector clustersizes;  
-		volume<int>tmpvol=connected_components(clusters,clustersizes,connectivity);
-		//int xx=112,yy=144,zz=74;
-		//if (tmpvol(xx,yy,zz)>0) cout << clustersizes(tmpvol(xx,yy,zz)) << " ";
-		clustersizes = pow(clustersizes,size_power) * pow(thresh,height_power);
-		//if (tmpvol(xx,yy,zz)>0) cout << clustersizes(tmpvol(xx,yy,zz)) << endl;
-		for(int z=0;z<input_volume.zsize();z++)
-		  for(int y=0;y<input_volume.ysize();y++)	    
-		    for(int x=0;x<input_volume.xsize();x++)
-		      if (tmpvol.value(x,y,z)>0)
-			clusterenhance.value(x,y,z) += clustersizes(tmpvol.value(x,y,z));
-	      }
-	    copyconvert(clusterenhance,input_volume[t]);
-	  }
+      {
+	float height_power = atof(argv[++i]);
+	float size_power = atof(argv[++i]);
+	int connectivity = atoi(argv[++i]);
+	int X = atoi(argv[++i]);
+	int Y = atoi(argv[++i]);
+	int Z = atoi(argv[++i]);
+	float tfce_thresh = atof(argv[++i]);
+	
+	for(int t=0;t<input_volume.tsize();t++)
+	  tfce_support(input_volume[t], height_power, size_power, connectivity, 0, 0, X, Y, Z, tfce_thresh);
       }
 
 // }}}
@@ -860,7 +846,7 @@ if (!separatenoise)
          for(int z=0;z<input_volume.zsize();z++)
            for(int y=0;y<input_volume.ysize();y++)	    
 	     for(int x=0;x<input_volume.xsize();x++)
-               if ( finite((double)input_volume.value(x,y,z,t))) input_volume.value(x,y,z,t)=0;
+               if ( isfinite((double)input_volume.value(x,y,z,t))) input_volume.value(x,y,z,t)=0;
 	       else input_volume.value(x,y,z,t)=1;
      }
      /******************************************************/
@@ -870,16 +856,64 @@ if (!separatenoise)
          for(int z=0;z<input_volume.zsize();z++)
            for(int y=0;y<input_volume.ysize();y++)	    
 	     for(int x=0;x<input_volume.xsize();x++)
-               if (!finite((double)input_volume.value(x,y,z,t))) input_volume.value(x,y,z,t)=0;     
+               if (!isfinite((double)input_volume.value(x,y,z,t))) input_volume.value(x,y,z,t)=0;     
+     }
+     /******************************************************/
+    else if (string(argv[i])=="-rand")
+     {   
+       double rnd;
+       for(int t=0;t<input_volume.tsize();t++)           
+         for(int z=0;z<input_volume.zsize();z++)
+           for(int y=0;y<input_volume.ysize();y++)          
+             for(int x=0;x<input_volume.xsize();x++) {
+               drand(&rnd);
+               input_volume.value(x,y,z,t) += (T)(rnd-1);
+             }
+     }
+     /******************************************************/
+    else if (string(argv[i])=="-randn")
+     {   
+       double rnd;
+       for(int t=0;t<input_volume.tsize();t++)           
+         for(int z=0;z<input_volume.zsize();z++)
+           for(int y=0;y<input_volume.ysize();y++)          
+             for(int x=0;x<input_volume.xsize();x++) {
+               drand(&rnd);
+               input_volume.value(x,y,z,t) += (T)ndtri(rnd-1);
+             }
      }
      /******************************************************/
     else if (string(argv[i])=="-roi")
-     {   
+     { 
+       int x0=atoi(argv[i+1]);
+       int x1=atoi(argv[i+1])+atoi(argv[i+2]);
+       int y0=atoi(argv[i+3]);
+       int y1=atoi(argv[i+3])+atoi(argv[i+4]);
+       int z0=atoi(argv[i+5]);
+       int z1=atoi(argv[i+5])+atoi(argv[i+6]);
+       int t0=atoi(argv[i+7]);
+       int t1=atoi(argv[i+7])+atoi(argv[i+8]);
+       ColumnVector v0(4), v1(4);
+       v0 << x0 << y0 << z0 << 1.0;
+       v1 << x1 << y1 << z1 << 1.0;
+       v0 = input_volume.niftivox2newimagevox_mat() * v0;
+       v1 = input_volume.niftivox2newimagevox_mat() * v1;
+       x0=MISCMATHS::round(v0(1));
+       y0=MISCMATHS::round(v0(2));
+       z0=MISCMATHS::round(v0(3));
+       x1=MISCMATHS::round(v1(1));
+       y1=MISCMATHS::round(v1(2));
+       z1=MISCMATHS::round(v1(3));
+       // swap back to restore min/max order as necessary
+       int tmp;
+       if (x0>x1) { tmp=x0; x0=x1;  x1=tmp; }
+       if (y0>y1) { tmp=y0; y0=y1;  y1=tmp; }
+       if (z0>z1) { tmp=z0; z0=z1;  z1=tmp; }
        for(int t=0;t<input_volume.tsize();t++)           
          for(int z=0;z<input_volume.zsize();z++)
            for(int y=0;y<input_volume.ysize();y++)	    
 	     for(int x=0;x<input_volume.xsize();x++)
-               if((x<atoi(argv[i+1])) || (x>=atoi(argv[i+1])+atoi(argv[i+2])) || (y<atoi(argv[i+3])) || (y>=atoi(argv[i+3])+atoi(argv[i+4])) || (z<atoi(argv[i+5])) || (z>=atoi(argv[i+5])+atoi(argv[i+6])) || (t<atoi(argv[i+7])) || (t>=atoi(argv[i+7])+atoi(argv[i+8])) )
+               if((x<x0) || (x>=x1) || (y<y0) || (y>=y1) || (z<z0) || (z>=z1) || (t<t0) || (t>=t1) )
                  input_volume.value(x,y,z,t)=0;
        i+=8;
      }
@@ -912,14 +946,119 @@ if (!separatenoise)
 	     for(int x=0;x<input_volume.xsize();x++)
                input_volume.value(x,y,z,t)=(T)(input_volume.value(x,y,z,t)*tmean);
      }
+    else if (string(argv[i])=="-tensor_decomp")
+     { 
+       // {{{ tensor decomposition
+
+       if ( input_volume.tsize() != 6 )
+	 {
+	   cout << "Error: input to tensor option is not a tensor!" << endl;
+	   exit(1);
+	 }
+       volume<float> dti_L1(input_volume.xsize(),input_volume.ysize(),input_volume.zsize()),
+	 dti_L2(input_volume.xsize(),input_volume.ysize(),input_volume.zsize()),
+	 dti_L3(input_volume.xsize(),input_volume.ysize(),input_volume.zsize()),
+	 dti_FA(input_volume.xsize(),input_volume.ysize(),input_volume.zsize()),
+	 dti_MD(input_volume.xsize(),input_volume.ysize(),input_volume.zsize()),
+	 dti_MO(input_volume.xsize(),input_volume.ysize(),input_volume.zsize());
+       volume4D<float> dti_V1(input_volume.xsize(),input_volume.ysize(),input_volume.zsize(),3),
+	 dti_V2(input_volume.xsize(),input_volume.ysize(),input_volume.zsize(),3),
+	 dti_V3(input_volume.xsize(),input_volume.ysize(),input_volume.zsize(),3);
+
+       dti_L1=0; dti_L2=0; dti_L3=0; dti_FA=0; dti_MD=0; dti_MO=0; dti_V1=0; dti_V2=0; dti_V3=0;
+
+       copybasicproperties(input_volume,dti_L1);
+       copybasicproperties(input_volume,dti_L2);
+       copybasicproperties(input_volume,dti_L3);
+       copybasicproperties(input_volume,dti_FA);
+       copybasicproperties(input_volume,dti_MD);
+       copybasicproperties(input_volume,dti_MO);
+       copybasicproperties(input_volume,dti_V1);
+       copybasicproperties(input_volume,dti_V2);
+       copybasicproperties(input_volume,dti_V3);
+
+       for(int z=0;z<input_volume.zsize();z++)
+	 for(int y=0;y<input_volume.ysize();y++)	    
+	   for(int x=0;x<input_volume.xsize();x++)
+	     {
+	       SymmetricMatrix dti_tensor(3);
+	       dti_tensor(1,1) = (float)input_volume.value(x,y,z,0);
+	       dti_tensor(2,1) = (float)input_volume.value(x,y,z,1);
+	       dti_tensor(2,2) = (float)input_volume.value(x,y,z,3); // note strange order because we're filling lower part of matrix
+	       dti_tensor(3,1) = (float)input_volume.value(x,y,z,2); // and the existing tensor coeffients assumed upper
+	       dti_tensor(3,2) = (float)input_volume.value(x,y,z,4);
+	       dti_tensor(3,3) = (float)input_volume.value(x,y,z,5);
+
+	       Matrix dti_V(3,3);
+	       DiagonalMatrix dti_L(3);
+
+	       EigenValues(dti_tensor,dti_L,dti_V);
+
+	       if ( dti_L(3) > 0 )
+		 {
+		   dti_L1.value(x,y,z)=dti_L(3);
+		   dti_L2.value(x,y,z)=dti_L(2);
+		   dti_L3.value(x,y,z)=dti_L(1);
+
+		   float lmean=(dti_L1.value(x,y,z)+dti_L2.value(x,y,z)+dti_L3.value(x,y,z))/3;
+		   float lnum=3*( (dti_L1.value(x,y,z)-lmean)*(dti_L1.value(x,y,z)-lmean) +
+				  (dti_L2.value(x,y,z)-lmean)*(dti_L2.value(x,y,z)-lmean) +
+				  (dti_L3.value(x,y,z)-lmean)*(dti_L3.value(x,y,z)-lmean) );
+		   float lden=2*( dti_L1.value(x,y,z)*dti_L1.value(x,y,z) +
+				  dti_L2.value(x,y,z)*dti_L2.value(x,y,z) +
+				  dti_L3.value(x,y,z)*dti_L3.value(x,y,z) );
+		   dti_FA.value(x,y,z)=sqrt(lnum/lden);
+
+		   dti_MD.value(x,y,z)=lmean;
+
+		   float e1=dti_L1.value(x,y,z)-lmean, e2=dti_L2.value(x,y,z)-lmean, e3=dti_L3.value(x,y,z)-lmean;
+		   float n = (e1 + e2 - 2*e3)*(2*e1 - e2 - e3)*(e1 - 2*e2 + e3);
+		   float d = (e1*e1 + e2*e2 + e3*e3 - e1*e2 - e2*e3 - e1*e3);
+		   d = sqrt(MAX(0, d));
+		   d = 2*d*d*d;
+		   dti_MO.value(x,y,z) = MIN(MAX(d ? n/d : 0.0, -1),1);
+
+		   dti_V1.value(x,y,z,0)=dti_V(1,3);
+		   dti_V1.value(x,y,z,1)=dti_V(2,3);
+		   dti_V1.value(x,y,z,2)=dti_V(3,3);
+		   dti_V2.value(x,y,z,0)=dti_V(1,2);
+		   dti_V2.value(x,y,z,1)=dti_V(2,2);
+		   dti_V2.value(x,y,z,2)=dti_V(3,2);
+		   dti_V3.value(x,y,z,0)=dti_V(1,1);
+		   dti_V3.value(x,y,z,1)=dti_V(2,1);
+		   dti_V3.value(x,y,z,2)=dti_V(3,1);
+		 }
+	       
+	       input_volume.value(x,y,z,0) = (T)dti_FA.value(x,y,z);
+	     }
+       for(int j=5;j>0;j--)
+	 input_volume.deletevolume(j);
+
+       save_volume(dti_L1,string(argv[argc-1])+"_L1");
+       save_volume(dti_L2,string(argv[argc-1])+"_L2");
+       save_volume(dti_L3,string(argv[argc-1])+"_L3");
+       save_volume(dti_FA,string(argv[argc-1])+"_FA");
+       save_volume(dti_MD,string(argv[argc-1])+"_MD");
+       save_volume(dti_MO,string(argv[argc-1])+"_MO");
+       save_volume4D(dti_V1,string(argv[argc-1])+"_V1");
+       save_volume4D(dti_V2,string(argv[argc-1])+"_V2");
+       save_volume4D(dti_V3,string(argv[argc-1])+"_V3");
+
+// }}}
+     }
     else if(string(argv[i])=="-bptf")
      {
        input_volume=bandpass_temporal_filter(input_volume,atof(argv[i+1]),atof(argv[i+2]));
        i+=2;
      }
-    else { cout << "\n Error in command line: unknown option \"" << argv[i] << "\"\n" << endl; print_usage("blah"); return 1; }
+    else { cout << "\n Error in command line: unknown option \"" << argv[i] << "\"\n" << endl; return printUsage("blah"); }
      /******************************************************/
   } 
+
+  double max(input_volume.max()),min(input_volume.min());
+  if ( !forceOutputType && ((int)max-(int)min)==0 && (max-min)!=0 && (output_dt<DT_FLOAT))
+    output_dt=DT_FLOAT;
+  
 
   if (dtype(input_volume)>=DT_FLOAT && output_dt < DT_FLOAT)
   {
@@ -929,7 +1068,7 @@ if (!separatenoise)
 	    for(int x=0;x<input_volume.xsize();x++)
               input_volume.value(x,y,z,t)=(T) MISCMATHS::round(input_volume.value(x,y,z,t));
   }
-
+ 
   FslSetCalMinMax(&vinfo,input_volume.min(),input_volume.max());
   save_volume4D_dtype(input_volume,string(argv[argc-1]),output_dt,vinfo,true);
   return 0;
@@ -938,38 +1077,39 @@ if (!separatenoise)
 
 int main(int argc,char *argv[])
 {
-  if (argc < 2) 
-  { 
-    print_usage(string(argv[0]));
-    return 1; 
-  }
-  short original_dt;
-  if(string(argv[1]) =="-datatype" || string(argv[1])== "-dt")  original_dt = dtype(string(argv[3]));
-  else original_dt = dtype(string(argv[1]));
-  short output_dt=original_dt;
+  if (argc < 2)  
+    return printUsage(string(argv[0])); 
+  
+  bool forceOutputType(false);
+  short inputType;
+  if(string(argv[1]) == "-h" || string(argv[1]) == "--help") { printUsage(string(argv[0])); exit(0); }
+  if(string(argv[1]) =="-datatype" || string(argv[1])== "-dt")  inputType = dtype(string(argv[3]));
+  else inputType = dtype(string(argv[1]));
+  short outputType=inputType;
   if(string(argv[argc-2])=="-output_datatype" || string(argv[argc-2])== "-odt") //output datatype
   {
-    if(string(argv[argc-1])=="char")        output_dt =  DT_UNSIGNED_CHAR;  
-    else if(string(argv[argc-1])=="short")  output_dt =  DT_SIGNED_SHORT;
-    else if(string(argv[argc-1])=="int")    output_dt =  DT_SIGNED_INT;
-    else if(string(argv[argc-1])=="float")  output_dt =  DT_FLOAT;
-    else if(string(argv[argc-1])=="double") output_dt =  DT_DOUBLE;
+    if(string(argv[argc-1])=="char")        outputType =  DT_UNSIGNED_CHAR;  
+    else if(string(argv[argc-1])=="short")  outputType =  DT_SIGNED_SHORT;
+    else if(string(argv[argc-1])=="int")    outputType =  DT_SIGNED_INT;
+    else if(string(argv[argc-1])=="float")  outputType =  DT_FLOAT;
+    else if(string(argv[argc-1])=="double") outputType =  DT_DOUBLE;
     else {cout << "Error: Unknown datatype \"" << argv[argc-1] << "\" - Possible datatypes are: char short int float double" << endl; return 1;}
     argc-=2;
+    forceOutputType=true;
   }
   if(string(argv[1])=="-datatype" || string(argv[1])== "-dt") //input datatype
   {
-    short input_dt=-1;
-     if(string(argv[2])=="input") input_dt=original_dt;
-     else if(string(argv[2])=="char" || input_dt == DT_UNSIGNED_CHAR)     return fmrib_main<char>(argc-2, argv+2,output_dt);
-     else if(string(argv[2])=="short" || input_dt == DT_SIGNED_SHORT)return fmrib_main<short>(argc-2, argv+2,output_dt);
-     else if(string(argv[2])=="int" || input_dt == DT_SIGNED_INT)    return fmrib_main<int>(argc-2, argv+2,output_dt);
-     else if(string(argv[2])=="float" || input_dt == DT_FLOAT)   return fmrib_main<float>(argc-2, argv+2,output_dt); 
-     else if(string(argv[2])=="double" || input_dt == DT_DOUBLE) return fmrib_main<double>(argc-2, argv+2,output_dt); 
-     else {cout << "Error: Unknown datatype \"" << argv[2] <<  "\" - Possible datatypes are: char short int float double input" << endl; return 1;}
+    if(string(argv[2])!="input") inputType=-1;
+    if(string(argv[2])=="char" || inputType == DT_UNSIGNED_CHAR)      return inputParser<char>(argc-2, argv+2,outputType,forceOutputType);
+    else if(string(argv[2])=="short" || inputType == DT_SIGNED_SHORT) return inputParser<short>(argc-2, argv+2,outputType,forceOutputType);
+    else if(string(argv[2])=="int"   || inputType == DT_SIGNED_INT)   return inputParser<int>(argc-2, argv+2,outputType,forceOutputType);
+    else if(string(argv[2])=="float" || inputType == DT_FLOAT)        return inputParser<float>(argc-2, argv+2,outputType,forceOutputType); 
+    else if(string(argv[2])=="double"|| inputType == DT_DOUBLE)       return inputParser<double>(argc-2, argv+2,outputType,forceOutputType); 
+    else if (inputType==-1)
+      { cout << "Error: Unknown datatype \"" << argv[2] <<  "\" - Possible datatypes are: char short int float double input" << endl; return 1;}
   }
-  else if (dtype(string(argv[1]))==DT_DOUBLE) return fmrib_main<double>(argc,argv,output_dt);
-  else return fmrib_main<float>(argc,argv,output_dt);
+  else if (dtype(string(argv[1]))==DT_DOUBLE) return inputParser<double>(argc,argv,outputType,forceOutputType);
+  else return inputParser<float>(argc,argv,outputType,forceOutputType);
 }
 
 

@@ -2,7 +2,7 @@
 
     Adrian Groves, FMRIB Image Analysis Group
 
-    Copyright (C) 2007 University of Oxford  */
+    Copyright (C) 2007-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -90,6 +90,12 @@ class LinearFwdModel : public FwdModel {
     : jacobian(jac), centre(ctr), offset(off) 
     { assert(jac.Nrows() == ctr.Ncols()); assert(jac.Ncols() == off.Ncols()); }
     
+  // Upgrading to a full externally-accessible model type
+  LinearFwdModel(ArgsType& args);
+  virtual string ModelVersion() const;
+  static void ModelUsage();
+  virtual void HardcodedInitialDists(MVNDist& prior, MVNDist& posterior) const;
+
  protected:
   LinearFwdModel() { return; } // Leave uninitialized; derived classes only
 

@@ -1,8 +1,8 @@
-<HTML><HEAD><link REL="stylesheet" TYPE="text/css" href="../fsl.css"><TITLE>FSL</TITLE></HEAD><BODY><hr><TABLE BORDER=0 WIDTH="100%"><TR><TD ALIGN=CENTER><H1>
+<HTML><HEAD><link REL="stylesheet" TYPE="text/css" href="../fsl.css"><TITLE>FUGUE DOCS</TITLE></HEAD><BODY><hr><TABLE BORDER=0 WIDTH="100%"><TR><TD ALIGN=CENTER><H1>
 <STYLE TYPE="text/css">BODY { background-image: url("../images/fugue-bg.jpg") }</STYLE>
 FUGUE EPI Unwarping
 </H1>
-FMRIB's Utility for Geometrically Unwarping EPIs - v2.2 (in c# minor)
+FMRIB's Utility for Geometrically Unwarping EPIs - v2.5 (in d minor)
 <TD ALIGN=RIGHT><a href="../index.html"><IMG BORDER=0 SRC="../images/fsl-logo.jpg"></a></TR></TABLE><HR>
 
 <!-- No Table of Contents -->
@@ -31,8 +31,8 @@ different acquisition techniques can restore signal in these areas.</i>
 <p>
 Furthermore, there are two situations where dealing with these
 distortions: (1) for correcting motion-dependent changes; and (2) for
-registration with non-distorted images (e.g. structurals).  Within
-FEAT, <i>only</i> the second case is dealt with.  The issue of
+registration with non-distorted images (e.g. structurals).  With
+FUGUE, <i>only</i> the second case is dealt with.  The issue of
 motion-dependent signal changes (due to motion-dependent changes in
 field inhomogeneity and distortion directions) is <i>not</i> dealt
 with in the current version.
@@ -79,18 +79,22 @@ be used within FSL using the FSL tools (in particular, PRELUDE and
 FUGUE), please refer to the page on
 <a href="feat_fieldmap.html">preparing fieldmaps for FEAT</a>.
 
-<H3>Software Documentation</H3>
+<H3>GUI and command line software</H3>
 
-<br> The rest of this document gives a brief description of the
-individual command line programs available in the FUGUE component of FSL
-- used for unwarping geometric distortion in EPI images.  At present
-no GUI interface exists for direct application of FUGUE (or PRELUDE),
-but it is now possible to run within FEAT.  See the detailed
-documentation on <a href="../feat5/detail.html">FEAT</a> and
-documentation on using PRELUDE/FUGUE for
-<a href="feat_fieldmap.html">preparing fieldmaps for FEAT</a>.
+<br>  A GUI
+interface exists for applying FUGUE to unwarp images as part of the
+FEAT preprocessing options.  We strongly recommend using the pre-stats
+part of FEAT to do all such processing (note that it is not necessary to
+have fMRI data for this - even single volumes can be processed in FEAT
+by selecting pre-stats only).  See the detailed documentation on <a
+href="../feat5/detail.html">FEAT</a> and documentation on using
+PRELUDE/FUGUE for <a href="feat_fieldmap.html">preparing fieldmaps for
+FEAT</a>. 
 
 <P>
+The rest of this document gives a brief description of the
+individual command line programs available in the FUGUE component of
+FSL - used for unwarping geometric distortion in EPI images. 
 For each of the programs described here, a full list of available options
 can be obtained by running the command with the <FONT COLOR=PURPLE>-h</FONT> 
 option.
@@ -113,11 +117,16 @@ For example, <br>
  
 <I>prelude</I> (Phase Region Expanding Labeller for Unwrapping
 Discrete Estimates) performs 3D phase unwrapping of images.  The input
-can either be a single complex analyse file, or a pair of real analyse
-files giving the phase and absolute values separately.  If the files
-are 4D files, then each 3D volume is unwrapped separately, and the
-result saved as a 4D file of unwrapped phase images.  The output in
+can either be a single complex image (Analyze or Nifti), or a pair of real
+images giving the phase and absolute values separately.  
+Also see <a href="../../avwutils/doc/index.html#fslcomplex">fslcomplex</a> for ways to manipulate complex image formats.
+
+<p>
+If the images
+are 4D images, then each 3D volume is unwrapped separately, and the
+result saved as a 4D image of unwrapped phase images.  The output in
 either case is a real, unwrapped phase image (in radians).
+
 
 <P>
 The two main forms of usage are:
@@ -162,10 +171,10 @@ sequence parameters for the EPI and fieldmap acquisitions: the dwell time for EP
 <P>
 The main forms of usage are:
 <dl>
-<dt> <FONT COLOR=PURPLE>fugue -i epi -p unwrappedphase -d dwelltoasymratio -s 0.5 -u result</FONT> </dt>  
+<dt> <FONT COLOR=PURPLE>fugue -i epi -p unwrappedphase --dwell=dwelltime --asym=asymtime -s 0.5 -u result</FONT> </dt>  
 <dd>fieldmap specified by a 4D file unwrappedphase containing two unwrapped
-phase images - from different echo times - plus the ratio of
-dwell time to echo time difference (asym time) </dd>
+phase images - from different echo times - plus the 
+dwell time and echo time difference (asym time) </dd>
 <dt> <FONT COLOR=PURPLE>fugue -i epi --dwell=dwelltime --loadfmap=fieldmap -u result</FONT> </dt> 
 <dd>uses a previously calculated fieldmap </dd>
 </dl>
@@ -192,7 +201,7 @@ be applied separately or together.  These are:
 <P>
 Some other uses are:
 <dl>
-<dt> <FONT COLOR=PURPLE>fugue -i undistortedimage -p unwrappedphase  -d dwelltoasymratio -s 0.5 -w warpedimage</FONT> </dt> 
+<dt> <FONT COLOR=PURPLE>fugue -i undistortedimage -p unwrappedphase  --dwell=dwelltime --asym=asymtime --nokspace -s 0.5 -w warpedimage</FONT> </dt> 
 <dd>applies the fieldmap as a forward warp, turning an undistorted image into a distorted one - useful for creating a registration target for the EPI from the undistorted absolute fieldmap image </dd>
 </dl>
 
@@ -219,5 +228,5 @@ fieldmap acquisitions </dd>
 
    <HR>
   <!-- No Footnotes -->
-  <H4>Mark Jenkinson  <BR><BR>Copyright &copy; 2001-2006, University of Oxford</H4><BR>
+  <H4>Mark Jenkinson  <BR><BR>Copyright &copy; 2001-2008, University of Oxford</H4><BR>
 </BODY></HTML>

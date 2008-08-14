@@ -69,13 +69,10 @@
 #if !defined(__paradigm_h)
 #define __paradigm_h
 
-#include <iostream>
-#include <fstream>
-#include "newmatap.h"
-#include "newmatio.h"
 #include <string>
+#include <vector>
+#include "newimage/newimageall.h"
 
-using namespace NEWMAT;
 namespace FILM {
   
   class Paradigm
@@ -84,6 +81,7 @@ namespace FILM {
 
       Paradigm() :
 	designMatrix(),
+	doingVoxelwise(false),
 	tcontrasts(0,0),
 	fcontrasts(0,0)
 	{}
@@ -99,25 +97,26 @@ namespace FILM {
       Paradigm(Paradigm& par) { operator=(par); }
 
       // getters and setters:
-      Matrix& getDesignMatrix() { return designMatrix; }
-      void setDesignMatrix(const Matrix& pdesignMatrix) { designMatrix = pdesignMatrix; }
+      NEWMAT::Matrix getDesignMatrix(long voxel=1); 
+      void setDesignMatrix(const NEWMAT::Matrix& pdesignMatrix) { designMatrix = pdesignMatrix; }
+      void setDesignMatrix(const int nTimepoints) { designMatrix.ReSize(nTimepoints,1); designMatrix=1; }
 
-      Matrix& getTContrasts() { return tcontrasts; }
-      Matrix& getFContrasts() { return fcontrasts; }
-      //void setContrasts(const Matrix& pcontrasts) { contrasts = pcontrasts; }
+      NEWMAT::Matrix& getTContrasts() { return tcontrasts; }
+      NEWMAT::Matrix& getFContrasts() { return fcontrasts; }
 
       // useful functions:
       void load(const string& p_paradfname, const string& p_tcontrastfname, const string& p_contrastfname, bool p_blockdesign, int p_sizets);
-
-      static void read_vest_waveform(string p_fname, Matrix& p_mat);
+      void loadVoxelwise(const vector<int>& VoxelwiseEvNumber, const vector<string>& VoxelwiseEvName, const NEWIMAGE::volume<float>& mask);
 
       ~Paradigm() {}
  
     private:
-      
-      Matrix designMatrix;
-      Matrix tcontrasts;
-      Matrix fcontrasts;
+      NEWMAT::Matrix designMatrix;
+      bool doingVoxelwise;
+      NEWMAT::Matrix tcontrasts;
+      NEWMAT::Matrix fcontrasts;
+      vector<NEWMAT::Matrix> voxelwiseEv;
+      vector<int> voxelwiseEvTarget;
     };
 
 }
