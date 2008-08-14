@@ -131,7 +131,7 @@ int vector2affine(const ColumnVector& inparams, int n, const ColumnVector& centr
 
 int vector2affine(const ColumnVector& params, int n, Matrix& aff)
 {
-  return vector2affine(params,n,Globaloptions::getInstance().impair->testvol.cog(),aff);
+  return vector2affine(params,n,Globaloptions::getInstance().impair->testvol.cog("scaled_mm"),aff);
 }
 
 
@@ -155,7 +155,7 @@ int affmat2vector(const Matrix& aff, int n, const ColumnVector& centre,
 
 int affmat2vector(const Matrix& aff, int n, ColumnVector& params)
  {
-   return affmat2vector(aff,n,Globaloptions::getInstance().impair->testvol.cog(),params);
+   return affmat2vector(aff,n,Globaloptions::getInstance().impair->testvol.cog("scaled_mm"),params);
  }
 
 
@@ -399,9 +399,9 @@ void fix2D(volume<float>& vol)
    Tracer tr("correct");
    Globaloptions& globalopts = Globaloptions::getInstance();
    volume<float> testvol, newtestvol, refvol;
-   Matrix offsettrans(4,4), finalmat(4,4);
+   Matrix offsettrans, finalmat(4,4);
 
-   Identity(offsettrans);
+   offsettrans=IdentityMatrix(4);
    int i=globalopts. refnum + direction;
    int stop = -1 - mean_cond;
 
@@ -506,7 +506,7 @@ void fix2D(volume<float>& vol)
    if (globalopts. rmsabsflag){
      rmsabsfile. open(rms_abs_filename.c_str());
      for (int i = 0; i < globalopts. no_volumes; i++){
-       tmp_rms = rms_deviation(Identity(4), mat_array[i],center,rmax);
+       tmp_rms = rms_deviation(IdentityMatrix(4), mat_array[i],center,rmax);
        rmsabsfile << tmp_rms << endl;
        rms_abs_mean += tmp_rms;
      }
@@ -517,12 +517,12 @@ void fix2D(volume<float>& vol)
    for (int i = 0; i < globalopts. no_volumes; i++){
      if (i == globalopts. refnum){
        ostringstream osc;
-       product = Identity(4);
+       product = IdentityMatrix(4);
        osc << "MAT_" << setw(4) << setfill('0') << i;
        if (globalopts. tmpmatflag)
 	 logger.out(osc.str().c_str(), product, false);
        if (globalopts. plotflag) {
-	 decompose_aff(param_vec, product, refvol.cog(), rotmat2euler);
+	 decompose_aff(param_vec, product, refvol.cog("scaled_mm"), rotmat2euler);
 	 if (!outfile) {
 	   cerr << "error: unable to open output file!\n";
 	   exit(0);
@@ -538,7 +538,7 @@ void fix2D(volume<float>& vol)
        if (globalopts. matflag)
 	 logger.out(oscP.str().c_str(), mat_array[i], false);
        if (globalopts. plotflag){
-	 decompose_aff(param_vec, mat_array[i], refvol.cog(), rotmat2euler);
+	 decompose_aff(param_vec, mat_array[i], refvol.cog("scaled_mm"), rotmat2euler);
 	 if (!outfile) {
 	   cerr << "error: unable to open output file!\n";
 	   exit(0);
@@ -638,9 +638,9 @@ int main (int argc,char** argv)
   globalopts. no_volumes = timeseries.tsize();
   
   for (int vol_count = 0; vol_count < globalopts. no_volumes; vol_count++) {
-    mat_array0.push_back(Identity(4));
-    mat_array1.push_back(Identity(4));
-    mat_array2.push_back(Identity(4));
+    mat_array0.push_back(IdentityMatrix(4));
+    mat_array1.push_back(IdentityMatrix(4));
+    mat_array2.push_back(IdentityMatrix(4));
   }
 
   if (globalopts. refnum == -1) globalopts. refnum = globalopts. no_volumes/2;
@@ -679,7 +679,7 @@ int main (int argc,char** argv)
 	anisorefvol = meanvol;
 	globalopts. refnum = -1; // to ensure stopping condition in ::correct subroutine
 	for (int i=0; i < globalopts. no_volumes; i++)
-	  mat_array0[i] = Identity(4);
+	  mat_array0[i] = IdentityMatrix(4);
 	mean_cond = 1;
       }
       
@@ -702,7 +702,7 @@ int main (int argc,char** argv)
 	save_volume(refvol, "grefvol_"+globalopts.outputfname);
       }
       
-      Identity(globalopts.initmat);
+      globalopts.initmat=IdentityMatrix(globalopts.initmat.Nrows());
       if (!globalopts. no_reporting) cerr <<"Registering volumes ... ";
       correct(1, refvol, timeseries, current_scale, new_tolerance, mat_array0, mat_array1, mean_cond);
       correct(-1, refvol, timeseries, current_scale, new_tolerance, mat_array0, mat_array1, mean_cond);
@@ -766,15 +766,9 @@ int main (int argc,char** argv)
 
   Matrix init_trans(4,4);
   if (globalopts.init_transform.size()<1) {
-    init_trans = Identity(4);
+    init_trans = IdentityMatrix(4);
   } else {
-    if (globalopts. reffileflag) {
-      read_matrix(init_trans,globalopts.init_transform,
-                  extrefvol);
-    } else {
-      read_matrix(init_trans,globalopts.init_transform,
-  		  timeseries[globalopts.refnum]);
-    }
+    init_trans = read_ascii_matrix(globalopts.init_transform);
   }
 
   // interpolate with final transform values

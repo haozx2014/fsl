@@ -70,40 +70,20 @@
 #define __fmribmain_h
 
 #include <iostream>
-#include "fslio/fslio.h"
-
-using namespace std;
+#include "newimage/newimageio.h"
 
 template <class T>
 int fmrib_main(int argc, char* argv[]);
 
-
 int call_fmrib_main(short datatype, int argc, char* argv[])
 {
-  switch (datatype) {
-  case DT_UNSIGNED_CHAR:
-  case DT_INT8:
-    return fmrib_main<char>(argc, argv);
-  case DT_SIGNED_SHORT:
-    return fmrib_main<short>(argc, argv);
-  case DT_SIGNED_INT:
-  case DT_UINT16:
-    return fmrib_main<int>(argc, argv);
-  case DT_FLOAT:
-  case DT_UINT32:
-  case DT_INT64:
-  case DT_UINT64:
-    return fmrib_main<float>(argc, argv);
-  case DT_DOUBLE:
-  case DT_FLOAT128:
-    return fmrib_main<double>(argc, argv);
-  case DT_COMPLEX:
-    cerr << "COMPLEX not supported as an independent type" << endl;
-    return -1;
-  default:
-    cerr << "Datatype " << datatype << " is NOT supported - please check your image" << endl;
-    return -1;
-  }
+  datatype=NEWIMAGE::closestTemplatedType(datatype);
+  if ( datatype==DT_UNSIGNED_CHAR ) return fmrib_main<char>(argc, argv);
+  else if ( datatype==DT_SIGNED_SHORT ) return fmrib_main<short>(argc, argv);
+  else if ( datatype==DT_SIGNED_INT ) return fmrib_main<int>(argc, argv);
+  else if ( datatype==DT_FLOAT )  return fmrib_main<float>(argc, argv);
+  else if ( datatype==DT_DOUBLE ) return fmrib_main<double>(argc, argv);
+  return -1;
 }
 
 #endif

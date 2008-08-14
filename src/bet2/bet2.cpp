@@ -728,6 +728,10 @@ int main(int argc, char *argv[]) {
 
   //the real program
 
+  volume<float> testvol;
+  
+  if (read_volume(testvol,in.c_str())<0)  return -1;
+
   double xarg = 0, yarg = 0, zarg = 0;
   if (centerarg.set())
     {
@@ -744,14 +748,15 @@ int main(int argc, char *argv[]) {
 	  xarg = (double) centerarg.value(0);
 	  yarg = (double) centerarg.value(1);
 	  zarg = (double) centerarg.value(2);
+	  ColumnVector v(4);
+	  v << xarg << yarg << zarg << 1.0;
+	  v = testvol.niftivox2newimagevox_mat() * v;
+	  xarg = v(1);  yarg = v(2);  zarg = v(3);
 	}
     }
   
   const double bet_main_parameter = pow(fractional_threshold.value(), .275);
   
-  volume<float> testvol;
-  
-  if (read_volume(testvol,in.c_str())<0)  return -1;
 
   // 2D kludge (worked for bet, but not here in bet2, hohum)
   if (testvol.xsize()*testvol.xdim()<20) testvol.setxdim(200);

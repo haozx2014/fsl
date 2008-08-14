@@ -71,11 +71,10 @@
 #include "glimGls.h"
 #include "miscmaths/miscmaths.h"
 #include "utils/log.h"
-#include "miscmaths/volume.h"
-#include "miscmaths/volumeseries.h"
 
 using namespace MISCMATHS;
 using namespace Utilities;
+using namespace NEWIMAGE;
 
 namespace FILM {
 
@@ -88,11 +87,7 @@ namespace FILM {
     sigmaSquareds(numTS),
     dof(sizeTS - numParams)
   {
-    I.ReSize(sizeTS);
-    for(int i=1; i<=sizeTS; i++)
-      {
-	I(i,i)=1;
-      }
+    I=IdentityMatrix(sizeTS);
   }
   
   void GlimGls::CleanUp()
@@ -115,59 +110,45 @@ namespace FILM {
       r = R*y;
 
       // compute sigma squareds 
-      //      sigmaSquareds(ind) = (r.t()*r/sizeTS).AsScalar();
       sigmaSquareds(ind) = (r.t()*r).AsScalar()/R.Trace();
 
       // set corrections
       SetCorrection(inv_xx, ind);
     }
 
-  void GlimGls::Save(const VolumeInfo& pvolinfo, const ColumnVector& prethreshpos)
+  void GlimGls::Save(volumeinfo vinfo, const volume<float>& mask, const float reftdim=1.0)
     {
       // Need to save b, sigmaSquareds, corrections and dof 
       Log& logger = LogSingleton::getInstance();
 
-      VolumeInfo volinfo = pvolinfo;
 
       // b:
-      Volume peVol;
+      volume4D<float> peVol;
+      copybasicproperties(mask,peVol);
       for(int i = 1; i <= numParams; i++)
 	{
-	  peVol = b.Row(i).AsColumn();
-	  volinfo.intent_code = NIFTI_INTENT_ESTIMATE;
-	  peVol.setInfo(volinfo);
-	  peVol.setPreThresholdPositions(prethreshpos);
-	  peVol.unthreshold();
-	  
-	  // Add param number to "pe" to create filename:
-	  ostringstream osc;
-	  osc << i;
-	  
-	  peVol.writeAsFloat(logger.getDir() + "/pe" + osc.str().c_str());
+	  peVol.setmatrix(b.Row(i),mask);
+	  peVol.set_intent(NIFTI_INTENT_ESTIMATE,0,0,0);
+	  FslSetCalMinMax(&vinfo,peVol.min(),peVol.max());
+	  save_volume(peVol[0],logger.getDir() + "/pe" + num2str(i),vinfo);
 	}
 
       // sigmaSquareds:
-      volinfo.intent_code = NIFTI_INTENT_ESTIMATE;
-      sigmaSquareds.setInfo(volinfo);
-      sigmaSquareds.setPreThresholdPositions(prethreshpos);
-      sigmaSquareds.unthreshold();	
-      sigmaSquareds.writeAsFloat(logger.getDir() + "/sigmasquareds");
-
+      peVol.setmatrix(sigmaSquareds,mask);
+      FslSetCalMinMax(&vinfo,peVol.min(),peVol.max());
+      save_volume(peVol[0],logger.getDir() + "/sigmasquareds",vinfo);
       // dof:
       ColumnVector dofVec(1);
       dofVec = dof;
       write_ascii_matrix(logger.appendDir("dof"), dofVec);
       
-      // corrections (are the pes correlation matrix (x.t()*x).i() reshapen to a vector):
-      VolumeInfo newvolinfo = volinfo;
-      newvolinfo.v = numParams*numParams;
-      newvolinfo.intent_code = NIFTI_INTENT_NONE;
-      //corrections.setInfo(newvolinfo);
-      //corrections.setPreThresholdPositions(prethreshpos);
-      //corrections.unthresholdSeries();
-      //corrections.writeAsFloat(logger.getDir() + "/corrections");
-      corrections.writeThresholdedSeriesAsFloat(newvolinfo,prethreshpos,logger.getDir() + "/corrections");
+      peVol.setmatrix(corrections,mask);
+      peVol.set_intent(NIFTI_INTENT_NONE,0,0,0);
+      peVol.settdim(reftdim);
+      FslSetCalMinMax(&vinfo,peVol.min(),peVol.max());
+      save_volume4D(peVol,logger.getDir() + "/corrections",vinfo);
     }
+
 
   void GlimGls::SetCorrection(const Matrix& corr, const int ind)
     {

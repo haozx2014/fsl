@@ -3,7 +3,7 @@
 #
 #   Stephen Smith & Matthew Webster, FMRIB Analysis Group
 #
-#   Copyright (C) 1999-2007 University of Oxford
+#   Copyright (C) 1999-2008 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -189,6 +189,30 @@ You cannot use this option unless you are carrying out both pre-stats
 and stats in the same FEAT run."
 
 
+frame $w.confoundevs
+checkbutton $w.confoundevs.yn -text "Add additional confound EVs" -variable fmri(confoundevs) -command "feat5:updatemotionevs $w"
+button $w.confoundevs.enter -text "Select confound EVs text file(s)" -command "feat5:multiple_select $w 20 \"Select confound EVs text file(s)\" "
+balloonhelp_for $w.confoundevs "If you want to add other confound EVs than motion parameters, that you
+have precomputed for your data, then turn this option on and then
+enter the filename of a raw text file (or, if you are setting up
+multiple analyses, enter one text file for each input FMRI dataset to
+be processed). The file can contain as many confound EVs as you like,
+each in a separate column in the text file."
+
+pack $w.confoundevs.yn -in $w.confoundevs -side left
+
+
+checkbutton $w.robust -text "Use automatic outlier de-weighting" -variable fmri(robust_yn)
+balloonhelp_for $w.robust "If you turn this on then FLAME will automatically detect outlier
+datapoints (for each voxel, each subject's data is considered with
+respect to the other subjects regarding whether it appears to be an
+outlier). Outliers are then automatically de-weighted in the
+multi-subject statistics.
+
+Outlier de-weighting is only available for the mixed effects options
+as it doesn't make sense in the context of a fixed effects model. It
+inceases the computation time considerably."
+
 button $w.wizard -width 20 -text "Model setup wizard" -command "feat5:wizard $w"
 balloonhelp_for $w.wizard "This lets you easily setup simple common experimental designs.
 
@@ -208,7 +232,7 @@ balloonhelp_for $w.model "This allows complete control of the model-based analys
 
 set fmri(w_model) 0
 
-optionMenu2 $w.mixed fmri(mixed_yn) 3 "Fixed effects" 0 "Mixed effects: Simple OLS" 2 "Mixed effects: FLAME 1" 1 "Mixed effects: FLAME 1+2"
+optionMenu2 $w.mixed fmri(mixed_yn) -command "feat5:updatestats $w 0" 3 "Fixed effects" 0 "Mixed effects: Simple OLS" 2 "Mixed effects: FLAME 1" 1 "Mixed effects: FLAME 1+2"
 
 balloonhelp_for $w.mixed "The main choice here is between fixed effects (FE) and mixed effects (ME) higher-level modelling. FE modelling is more \"sensitive\" to activation than ME, but is restricted in the inferences that can be made from its results; because FE ignores cross-session/subject variance, reported activation is with respect to the group of sessions or subjects present, and not representative of the wider population. ME does model the session/subject variability, and it therefore allows inference to be made about the wider population from which the sessions/subjects were drawn.
 
@@ -393,6 +417,11 @@ You can alternatively choose to use the original lowres functional
 data for the overlays, or the standard-space template image."
 
 #}}}
+
+
+checkbutton $fmri(poststatsf).tsplot_yn -text "Create time series plots" -variable fmri(tsplot_yn)
+balloonhelp_for $fmri(poststatsf).tsplot_yn "If you do not wish to create the time series plots in the web page report, turn this option off."
+pack $fmri(poststatsf).tsplot_yn -in $fmri(poststatsf) -side top -anchor w
 
 #}}}
 #{{{ Registration

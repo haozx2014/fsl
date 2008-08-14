@@ -5,7 +5,7 @@
 
     Christian F. Beckmann, FMRIB Image Analysis Group
     
-    Copyright (C) 1999-2007 University of Oxford */
+    Copyright (C) 1999-2008 University of Oxford */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -330,7 +330,7 @@ namespace Melodic{
     int itt_ctr=1; 
     double minAbsSin = 1.0;
     Matrix Id;
-    Id = Identity(redUMM.Ncols());
+    Id = IdentityMatrix(redUMM.Ncols());
     //cerr << " nonlinearity : " <<    opts.nonlinearity.value() << endl;
 
     do{ // da loop!!!
@@ -374,7 +374,7 @@ namespace Melodic{
     int dim_sym = (int) (dim*(dim+1))/2;  
     int num_CM = dim_sym;
     Matrix CM;
-    Matrix R; R = Identity(dim);
+    Matrix R; R = IdentityMatrix(dim);
     Matrix Qij; Qij = zeros(dim);
     Matrix Xim;
     Matrix Xjm;
@@ -396,7 +396,7 @@ namespace Melodic{
     }
 
     write_ascii_matrix("CM",CM);
-    Matrix redUMM; redUMM = Identity(dim);
+    Matrix redUMM; redUMM = IdentityMatrix(dim);
   
     bool exitloop = false;
     int ctr_itt = 0;

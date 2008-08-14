@@ -75,7 +75,15 @@ nproc=$2
 #$ -V
 #$ -N p_possum
 #$ -m ae
-POSSUMDIR=~/fsldev
+
+echo "POSSUMDIR (before)" $POSSUMDIR
+if [ "${POSSUMDIR}" == "${FSLDEVDIR}" ] ; then
+   echo "POSSUMDIR (during)" $POSSUMDIR
+else
+    export POSSUMDIR=$FSLDIR
+fi
+echo "POSSUMDIR (after)" $POSSUMDIR
+
 run(){
  echo "$1" >> $2/possum.log
  $1 >> $2/possum.log 2>&1
@@ -86,16 +94,25 @@ echo Summing all signal from different proccesses into one total signal
 run "${POSSUMDIR}/bin/possum_sum -i ${subjdir}/diff_proc/signal_proc_ -o ${subjdir}/signal -n $nproc " ${subjdir}
 
 echo Converting the signal into the image
-run "${POSSUMDIR}/bin/signal2image -i ${subjdir}/signal -o ${subjdir}/image -p ${subjdir}/pulse -a " ${subjdir}
+run "${POSSUMDIR}/bin/signal2image -i ${subjdir}/signal -o ${subjdir}/image -p ${subjdir}/pulse -a --homo " ${subjdir}
 
 echo Removing intermediate files
-if [ `imtest ${subjdir}/image_abs` -eq 1 ];then
+if [ -e ${subjdir}/signal ]; then
       rm -rf ${subjdir}/diff_proc
 fi
 
 echo Adding noise
-n=`cat ${subjdir}/noise | awk '{print $1 }'`
-m=`cat ${subjdir}/noise | awk '{print $2 }'`
+n=sigma
+m=0
+if [ -e ${subjdir}/noise ]; then
+  n=`cat ${subjdir}/noise | awk '{print $1 }'`
+  m=`cat ${subjdir}/noise | awk '{print $2 }'`
+fi
+
+if [ `${FSLDIR}/bin/imtest ${subjdir}/image_homo` -eq 1 ]; then
+   imcp image_homo image_abs
+fi
+
 fslmaths ${subjdir}/image_abs -Tmean ${subjdir}/image_mean
 P98=`fslstats ${subjdir}/image_mean -P 98`
 P02=`fslstats ${subjdir}/image_mean -P 2`
@@ -112,7 +129,6 @@ if [ $n = "snr" ]; then
      echo "snr  0" > ${subjdir}/noise
   fi
 else
-  run "echo Entered the loop 2" $subjdir 
   sigma=$m
   if [ $sigma != 0 ]; then
      snr=`echo " ${medint} / ( 2 * ${dim1} * ${sigma} ) "| bc -l`
@@ -121,8 +137,11 @@ else
 fi
 if [ $sigma != 0 ]; then
    mv ${subjdir}/signal ${subjdir}/signal_nonoise
-   run "${POSSUMDIR}/bin/systemnoise --in=${subjdir}/signal_nonoise --out=${subjdir}/signal --sigma=${sigma} " $subjdir
+   run "${POSSUMDIR}/bin/systemnoise --in=${subjdir}/signal_nonoise --out=${subjdir}/signal --sigma=${sigma}" $subjdir
 fi
-run "${POSSUMDIR}/bin/signal2image -i ${subjdir}/signal -o ${subjdir}/image -p ${subjdir}/pulse -a " $subjdir
-rm ${subjdir}/image_mean.nii.gz
+run "${POSSUMDIR}/bin/signal2image -i ${subjdir}/signal -o ${subjdir}/image -p ${subjdir}/pulse -a --homo" $subjdir
+imrm ${subjdir}/image_mean
 
+if [ `${FSLDIR}/bin/imtest ${subjdir}/image_homo` -eq 1 ]; then
+   imrm image_abs
+fi

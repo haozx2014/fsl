@@ -521,7 +521,7 @@ namespace Bint {
     if(power > 9) 
       {
 	cout << "Second derivative zero in hessian calculation" << endl;
-	paraminvcovs << Identity(nparams);
+	paraminvcovs << IdentityMatrix(nparams);
 	//throw Exception("Second derivative zero in hessian calculation");
       }
 

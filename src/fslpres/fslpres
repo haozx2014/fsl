@@ -171,7 +171,7 @@ while ( $i <= $n )
 
     echo $HTML1 "$title" $HTML2 "$title" $HTML3 '<TABLE WIDTH=100% BORDER=0 CELLPADDING=0 CELLSPACING=0>' > tmp$j[$i]
 
-    tail +2 $j[$i] >> tmp$j[$i]
+    tail -n +2 $j[$i] >> tmp$j[$i]
 
     echo '</TABLE>' $HTML4 >> tmp$j[$i]
     echo -n $HTML5 >> tmp$j[$i]

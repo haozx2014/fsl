@@ -15,14 +15,13 @@ content="text/html;charset=utf-8" />
 <h2>The Easy Way</h2>
 <h3>Running the installer</h3>
 <p>
-The <a href="fsl_installer.sh">FSL Installer</a> can be used to automate the process of installing FSL. Download the installer and place it in the same folder as the downloaded FSL distribution tar ball. Then in a terminal window (in Cent OS you can open one of these by right clicking on the Desktop and choosing <i>Open Terminal</i>) change to the folder containing the downloaded file. By example, if you downloaded to your Desktop:</p>
-<pre>cd ~/Desktop</pre>
+We provide an installer script to automate the process of installing FSL, which can be downloaded from this location:</p>
+<ul><li><a href="fsl_installer.sh">fsl_installer.sh</a> - Version 1.0.5 17/1/2008</li></ul>
+<p>Place the installer in the same folder as the downloaded FSL distribution tar ball. Then in a terminal window (in Cent OS you can open one of these by right clicking on the Desktop and choosing <i>Open Terminal</i>) change to this folder and run the installer. By example, if you downloaded the installer and the FSL <i>.tar.gz</i> file to your Desktop:</p>
+<pre>cd ~/Desktop
+bash fsl_installer.sh</pre>
 <p>
- and run it with:
-</p>
-<pre>sh fsl_installer.sh</pre>
-<p>
-Assuming that this folder also contains the FSL distribution tar file and you wish to install into <i>/usr/local</i> then just press <i>Return</i> when the installer asks a question, to accept the defaults.
+If you are happy with installing FSL into <i>/usr/local</i> then just press <i>Return</i>, to accept the defaults, when the installer asks a question.
 </p>
 <p>
 Be aware that you may need Administrator priviledges to install into certain folders on your computer - <i>/usr/local</i> being an example. If this is the case, the installer will attempt to gain these priviledges through the use of the <i>sudo</i> command, which will require you to enter your password for verification. If you don't have any rights to use <i>sudo</i> then the installer will fail and will need to be run as the <i>root</i> user. Should you install as <i>root</i> see the <a href="#autoenv">configuring your account for FSL</a> section for details on how to use the installer to setup your user account for FSL.
@@ -34,7 +33,7 @@ For more information on controlling the installer, run it with the <i>-h</i> opt
 <p>
 In addition to installing the FSL programs, the install script is also capable of configuring your user account to enable you to run the FSL programs. If your user account was used to run the installer when installing the FSL programs, this will have already been done, but you may also want to configure additional accounts. To do this, log in as the user wishing to run FSL and execute the installer with the <i>-e</i> option, eg:
 </p>
-<pre>sh fsl_installer.sh -e</pre>
+<pre>bash fsl_installer.sh -e</pre>
 <p>
 <h2>The Traditional Way</h2>
 <h3>Unpacking</h3>

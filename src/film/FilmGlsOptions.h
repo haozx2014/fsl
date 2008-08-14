@@ -76,6 +76,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "utils/log.h"
+#include <vector>
 
 using namespace Utilities;
 
@@ -90,7 +91,6 @@ class FilmGlsOptions {
   string paradigmfname;
   string epifname;
   string datadir;
-  string susanpath;
 
   string neffsfname;
   
@@ -111,7 +111,9 @@ class FilmGlsOptions {
   float thresh;
   int ms;
   short maxshort;
-  int epith;
+  int epith; 
+  std::vector<int> voxelwise_ev_numbers;
+  std::vector<string> voxelwiseEvFilenames;
 
   void parse_command_line(int argc, char** argv, Log& logger);
 
@@ -139,7 +141,6 @@ inline FilmGlsOptions::FilmGlsOptions()
   // set up defaults
   neffsfname = "neffs";
   datadir = "results";
-  susanpath = "/usr/local/fsl/bin/susan_smooth";
   epifname = "epivolume";
   thresh = 0;
   inputfname = "";  

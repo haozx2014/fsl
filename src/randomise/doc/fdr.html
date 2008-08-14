@@ -40,20 +40,20 @@ fslmaths p1 -mul -1 -add 1 -thr .99660181 -mas ../mask thresh_1_minus_p1
 
 <LI> Output from <b>randomise</b> can be fed directly into fdr; use
 the voxel-based thresholding, uncorrected for multiple comparisons,
-i.e. a <code>*_vox_tstat*</code> image. This is a p-value image from
+i.e. a <code>*_vox_p_tstat*</code> image. This is a p-value image from
 0:1 where 1 is most significant (arranged this way to make display and
 thresholding simple). Therefore this needs to be inverted before
 feeding into fdr. Thus an example would be:
 
 <pre>
-fslmaths grot_vox_tstat1 -mul -1 -add 1 1_minus_grot_vox_tstat1
-fdr -i 1_minus_grot_vox_tstat1 -m mask -q 0.05
+fslmaths grot_vox_p_tstat1 -mul -1 -add 1 1_minus_grot_vox_p_tstat1
+fdr -i 1_minus_grot_vox_p_tstat1 -m mask -q 0.05
 </pre>
 This gives you the threshold that should be applied to the
 p-values. To view this, the easiest thing to do is take 1-threshold
-and threshold the original _vox_tstat1 image:
+and threshold the original _vox_p_tstat1 image:
 <pre>
-fslmaths grot_vox_tstat1 -thr <1 - FDR threshold> thresh_grot_vox_tstat1
+fslmaths grot_vox_p_tstat1 -thr <1 - FDR threshold> thresh_grot_vox_p_tstat1
 </pre>
 
 

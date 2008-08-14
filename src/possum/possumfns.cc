@@ -1148,67 +1148,69 @@ void voxel1(const double x,const double y,double z,
     if (read!=0){
       readstep=readstep+1;
       if (excitation==1 || nospeedup==1){
-      double xval=fabs(glo_cx*(gg1+b0x*tt));
-      double yval=fabs(glo_cy*(gg2+b0y*tt));
-      double zval=fabs(glo_cz*(gg3+b0z*tt));
-      if (v==1 && save_kcoord==1){
-        coord(1,readstep)=gammabar*(gg1+b0x*tt);//to record the distorted coordinatres in the k-space
-        coord(2,readstep)=gammabar*(gg2+b0y*tt);
-        coord(3,readstep)=gammabar*(gg3+b0z*tt);
-      }
-      double tmp;
-#ifdef NOTABLE
-      tmp=m00*exp(-tt*iT2+actint)*Sinc(xval)*Sinc(yval)*Sinc(zval);
-      sreal[readstep-1]+=den*tmp*cos(phase);
-      simag[readstep-1]-=den*tmp*sin(phase);
-#else
-      if (xval<=glo_Dsinc && yval<=glo_Dsinc && zval<=glo_Dsinc){
-        //TABLES for SINC
-	//x
-        double off=xval*glo_idsinc;
-	int nbin=(int) off;
-	off-=nbin;
-	double ts=table_sinc[nbin];
-	double sx=(table_sinc[nbin+1]-ts)*off + ts;
-	//y
-        off=yval*glo_idsinc;
-	nbin=(int) off;
-	off-=nbin;
-	ts=table_sinc[nbin];
-	double sy=(table_sinc[nbin+1]-ts)*off + ts;
-	//z        
-        off=zval*glo_idsinc;
-	nbin=(int) off;
-	off-=nbin;
-	ts=table_sinc[nbin];
-	double sz=(table_sinc[nbin+1]-ts)*off + ts;
-	//CALCULATING TMP
-        tmp=m00*exp(-tt*iT2+actint)*sx*sy*sz;
-	//TESTING 
-	if (opt_test==1 && v==1 && readstep%4096==2081){
-	cout.precision(20);
-	cout<<"table_sinc(xval)= "<<sx<<"; table_sinc(yval)= "<<sy<<"; table_sinc(zval)= "<<sz<<endl;
-	cout<<"sinc-table(xval)= "<<Sinc(xval)-sx<<"; sinc-table(yval)= "<<Sinc(yval)-sy<<"; sinc-tabel(zval)= "<<Sinc(zval)-sz<<endl;
+	double xval=fabs(glo_cx*(gg1+b0x*tt));
+	double yval=fabs(glo_cy*(gg2+b0y*tt));
+	double zval=fabs(glo_cz*(gg3+b0z*tt));
+	if (v==1 && save_kcoord==1){
+	  coord(1,readstep)=gammabar*(gg1+b0x*tt);//to record the distorted coordinatres in the k-space
+	  coord(2,readstep)=gammabar*(gg2+b0y*tt);
+	  coord(3,readstep)=gammabar*(gg3+b0z*tt);
 	}
-      }
-      else {
-        tmp=m00*exp(-tt*iT2+actint)*Sinc(xval)*Sinc(yval)*Sinc(zval);
-      }
-      //TABLES SIN AND COS CALCULATION
-      double phase_2pi;
-      if (phase>0) phase_2pi=phase- ((int) (phase*glo_itwopi))*glo_twopi;//one solution when phase exceedes Dsin , this is faster
-      else phase_2pi=phase- ((int) (phase*glo_itwopi))*glo_twopi+glo_twopi;
-      double off=phase_2pi*glo_idsin;
-      int nphase=(int) off;
-      off-=nphase;
-      double ts1=table_sin[nphase], tc1=table_cos[nphase];
-      double wanted_cos=(table_cos[nphase+1]-tc1)*off+tc1;
-      double wanted_sin=(table_sin[nphase+1]-ts1)*off+ts1;
-      //SIGNAL CALCULATION
-      sreal[readstep-1]+=den*tmp*wanted_cos;
-      simag[readstep-1]-=den*tmp*wanted_sin;
-      //TESTING  
-      if(opt_test==1 && v==1 && readstep%4096==2081){
+	double tmp;
+#ifdef NOTABLE
+	if (v==1 && readstep==1) cout<<"No table sinc calc"<<endl;
+	tmp=m00*exp(-tt*iT2+actint)*Sinc(xval)*Sinc(yval)*Sinc(zval);
+	sreal[readstep-1]+=den*tmp*cos(phase);
+	simag[readstep-1]+=den*tmp*sin(phase);
+#else
+	if (v==1 && readstep==1) cout<<"Table sinc calc"<<endl;
+	if (xval<=glo_Dsinc && yval<=glo_Dsinc && zval<=glo_Dsinc){
+	  //TABLES for SINC
+	  //x
+	  double off=xval*glo_idsinc;
+	  int nbin=(int) off;
+	  off-=nbin;
+	  double ts=table_sinc[nbin];
+	  double sx=(table_sinc[nbin+1]-ts)*off + ts;
+	  //y
+	  off=yval*glo_idsinc;
+	  nbin=(int) off;
+	  off-=nbin;
+	  ts=table_sinc[nbin];
+	  double sy=(table_sinc[nbin+1]-ts)*off + ts;
+	  //z        
+	  off=zval*glo_idsinc;
+	  nbin=(int) off;
+	  off-=nbin;
+	  ts=table_sinc[nbin];
+	  double sz=(table_sinc[nbin+1]-ts)*off + ts;
+	  //CALCULATING TMP
+	  tmp=m00*exp(-tt*iT2+actint)*sx*sy*sz;
+	  //TESTING 
+	  if (opt_test==1 && v==1 && readstep%4096==2081){
+	    cout.precision(20);
+	    cout<<"table_sinc(xval)= "<<sx<<"; table_sinc(yval)= "<<sy<<"; table_sinc(zval)= "<<sz<<endl;
+	    cout<<"sinc-table(xval)= "<<Sinc(xval)-sx<<"; sinc-table(yval)= "<<Sinc(yval)-sy<<"; sinc-tabel(zval)= "<<Sinc(zval)-sz<<endl;
+	  }
+	}
+	else {
+	  tmp=m00*exp(-tt*iT2+actint)*Sinc(xval)*Sinc(yval)*Sinc(zval);
+	}
+	//TABLES SIN AND COS CALCULATION
+	double phase_2pi;
+	if (phase>0) phase_2pi=phase- ((int) (phase*glo_itwopi))*glo_twopi;//one solution when phase exceedes Dsin , this is faster
+	else phase_2pi=phase- ((int) (phase*glo_itwopi))*glo_twopi+glo_twopi;
+	double off=phase_2pi*glo_idsin;
+	int nphase=(int) off;
+	off-=nphase;
+	double ts1=table_sin[nphase], tc1=table_cos[nphase];
+	double wanted_cos=(table_cos[nphase+1]-tc1)*off+tc1;
+	double wanted_sin=(table_sin[nphase+1]-ts1)*off+ts1;
+	//SIGNAL CALCULATION
+	sreal[readstep-1]+=den*tmp*wanted_cos;
+	simag[readstep-1]+=den*tmp*wanted_sin;
+	//TESTING  
+	if(opt_test==1 && v==1 && readstep%4096==2081){
           cout.precision(20);
           cout<<"readstep= "<<readstep<<endl;
           cout<<"gama= "<<gama<<endl;
@@ -1232,9 +1234,9 @@ void voxel1(const double x,const double y,double z,
           cout<<"sreal_1voxel("<<readstep<<")= den*tmp*table_cos[nphase]= "<<sreal[readstep-1]<<endl;
           cout<<"simag_1voxel("<<readstep<<")= den*tmp*table_sin[nphase]= "<<simag[readstep-1]<<endl;
 	  cout<<"-------------------------------------------------------------------------------"<<endl;
-      }
+	}
 #endif
-      }//end of slcnum..
+      }//end of nospeedup
     }//end of if read
   }//end of main loop
   if (v==1 && save_kcoord==1){
@@ -1537,7 +1539,7 @@ void voxel2(const double x,const double y,const double z,
 #ifdef NOTABLE
         tmp=m00*exp(-tt*iT2+actint)*Sinc(xval)*Sinc(yval)*Sinc(zval);
         sreal[readstep-1]+=den*tmp*cos(phase);
-        simag[readstep-1]-=den*tmp*sin(phase);
+        simag[readstep-1]+=den*tmp*sin(phase);
 #else
         if (xval<=glo_Dsinc && yval<=glo_Dsinc && zval<=glo_Dsinc){
           //TABLES for SINC
@@ -1582,7 +1584,7 @@ void voxel2(const double x,const double y,const double z,
         double wanted_sin=(table_sin[nphase+1]-ts1)*off+ts1;
         //END TABLES SIN AND COS CALCULATION
         sreal[readstep-1]+=den*tmp*wanted_cos;
-        simag[readstep-1]-=den*tmp*wanted_sin;
+        simag[readstep-1]+=den*tmp*wanted_sin;
         if(opt_test==1 && readstep%4096==2081 && v==1){
           cout.precision(20);
           cout<<"readstep= "<<readstep<<endl;
@@ -2011,7 +2013,7 @@ void voxel3(const double x,const double y,const double z,
 #ifdef NOTABLE
         tmp=m00*exp(-tt*iT2+actint)*Sinc(xval)*Sinc(yval)*Sinc(zval);
         sreal[readstep-1]+=den*tmp*cos(phase);
-        simag[readstep-1]-=den*tmp*sin(phase);
+        simag[readstep-1]+=den*tmp*sin(phase);
 #else
         if (xval<=glo_Dsinc && yval<=glo_Dsinc && zval<=glo_Dsinc){
         //TABLES for SINC
@@ -2052,7 +2054,7 @@ void voxel3(const double x,const double y,const double z,
       double wanted_sin=(table_sin[nphase+1]-ts1)*off+ts1;
       //CALCULATING SIGNAL
       sreal[readstep-1]+=den*tmp*wanted_cos;
-      simag[readstep-1]-=den*tmp*wanted_sin;
+      simag[readstep-1]+=den*tmp*wanted_sin;
       if(opt_test==1 && readstep%4096==2081 && v==1){
           cout.precision(20);
           cout<<"readstep= "<<readstep<<endl;
@@ -2319,7 +2321,7 @@ void voxel4(const double x,const double y,double z,
 #ifdef NOTABLE
       tmp=m00*exp(-tt*iT2+actint)*Sinc(xval)*Sinc(yval)*Sinc(zval);
       sreal[readstep-1]+=den*tmp*cos(phase);
-      simag[readstep-1]-=den*tmp*sin(phase);
+      simag[readstep-1]+=den*tmp*sin(phase);
 #else
       if (xval<=glo_Dsinc && yval<=glo_Dsinc && zval<=glo_Dsinc){
         //TABLES for SINC
@@ -2365,7 +2367,7 @@ void voxel4(const double x,const double y,double z,
       double wanted_sin=(table_sin[nphase+1]-ts1)*off+ts1;
       //SIGNAL CALCULATION
       sreal[readstep-1]+=den*tmp*wanted_cos;
-      simag[readstep-1]-=den*tmp*wanted_sin;
+      simag[readstep-1]+=den*tmp*wanted_sin;
       //TESTING  
       if(opt_test==1 && v==1 && readstep%4096==2081){
           cout.precision(20);

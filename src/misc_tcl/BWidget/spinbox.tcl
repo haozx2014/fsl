@@ -6,7 +6,7 @@
 # Copyright (c) 2000 by Ajuba Solutions
 # All rights reserved.
 # 
-# RCS: @(#) $Id: spinbox.tcl,v 1.1 2006/11/28 15:34:01 mwebster Exp $
+# RCS: @(#) $Id: spinbox.tcl,v 1.4 2008/07/21 09:59:14 mwebster Exp $
 # -----------------------------------------------------------------------------
 #  Index of commands:
 #     - SpinBox::create
@@ -27,7 +27,7 @@ namespace eval SpinBox {
 
     Widget::bwinclude SpinBox Entry .e \
         remove {-relief -bd -borderwidth -fg -bg} \
-        rename {-foreground -entryfg -background -entrybg} 
+        rename {-foreground -entryfg -background -entrybg}
 
     Widget::declare SpinBox {
         {-range          String ""  0}
@@ -67,8 +67,6 @@ proc SpinBox::create { path args } {
 	[list -highlightthickness 0 -takefocus 0 -class SpinBox]
     Widget::initFromODB SpinBox $path $maps(SpinBox)
 
-
-
     set entry [eval [list Entry::create $path.e] $maps(.e) -relief flat -bd 0]
     bindtags $path.e [linsert [bindtags $path.e] 1 SpinBoxEntry]
 
@@ -88,11 +86,11 @@ proc SpinBox::create { path args } {
 			 -armcommand    [list SpinBox::_modify_value $path previous arm] \
 			 -disarmcommand [list SpinBox::_modify_value $path previous disarm]]]
 
-    #These are new lines to allow correct background and defaults for FEAT
-    $path.e configure -background grey95 -highlightbackground grey95
+     #These are new lines to allow correct background and defaults for FEAT             
+     $path.e configure -background grey95 -highlightbackground grey95
     if { "[Widget::getMegawidgetOption $path -vcmd2]" != "" && [$path.e cget -vcmd] == {} && [Widget::getMegawidgetOption $path -range] != {} } {$path.e configure -vcmd [Widget::getMegawidgetOption $path -vcmd2] }
     if { "[Widget::getMegawidgetOption $path -invcmd2]" != "" &&  [$path.e cget -invcmd] == {} &&  [Widget::getMegawidgetOption $path -range] !={} } {$path.e configure -invcmd [Widget::getMegawidgetOption $path -invcmd2] }
-    
+
     # --- update SpinBox value ---
     _test_options $path
     set val [Entry::cget $path.e -text]
@@ -101,7 +99,6 @@ proc SpinBox::create { path args } {
     } else {
 	set ::SpinBox::_widget($path,curval) $val
     }
-
 
     grid $arrup -in $farr -column 0 -row 0 -sticky nsew
     grid $arrdn -in $farr -column 0 -row 2 -sticky nsew
@@ -198,16 +195,13 @@ proc SpinBox::setvalue { path index } {
 	# Allow zero padding on the value; strip it out for calculation by
 	# scanning the value into a floating point number.
         if {[string is int -strict $vmin] &&[string is int -strict $vmax] && [string is int -strict $incr]   } { scan $value %d value } else { scan $value %f value }
-        #if {[string is int -strict $value] } { scan $value %d value } else { scan $value %f value }
+
         switch -- $index {
             next {
-         
                 if { [catch {expr {double($value-$vmin)/$incr}} idx] } {
                     set newval $_widget($path,curval)
                 } else {
-                    
-                    #set newval [expr {$vmin+(round($idx)+1)*$incr}]
-                    set newval [ expr $value + $incr ]
+		    set newval [ expr $value + $incr ]
                     if { $newval < $vmin } {
                         set newval $vmin
                     } elseif { $newval > $vmax } {
@@ -219,8 +213,7 @@ proc SpinBox::setvalue { path index } {
                 if { [catch {expr {double($value-$vmin)/$incr}} idx] } {
                     set newval $_widget($path,curval)
                 } else {
-                    #set newval [expr {$vmin+(round($idx)-1)*$incr}]
-                    set newval [ expr $value - $incr ]
+		    set newval [ expr $value - $incr ]
                     if { $newval < $vmin } {
                         set newval $vmin
                     } elseif { $newval > $vmax } {

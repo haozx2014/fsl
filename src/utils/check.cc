@@ -66,6 +66,8 @@
 
 namespace Utilities {
 
+  using namespace std;
+
   bool OptionParser::check_compulsory_arguments(bool verbose)
   {
     bool okay = true;
@@ -83,7 +85,7 @@ namespace Utilities {
 	  okay = false;
 	}
 	if(verbose)
-	  cerr << **option << endl;
+	  (*option)->usage(cerr); cerr << endl;
       }
     }
     if(!okay && verbose)

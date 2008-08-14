@@ -88,7 +88,6 @@ class FilmGlsOptionsRes {
   string contrastfname;
   string epifname;
   string datadir;
-  string susanpath;
 
   string neffsfname;
   string zscoresfname;
@@ -144,7 +143,6 @@ inline FilmGlsOptionsRes::FilmGlsOptionsRes()
   zscoresfname = "zstats";
   neffsfname = "neffs";
   datadir = "results";
-  susanpath = "/usr/local/fsl/bin/susan_smooth";
   epifname = "epivolume";
   thresh = 0;
   contrastfname = "";

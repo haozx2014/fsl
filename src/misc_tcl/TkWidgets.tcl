@@ -206,9 +206,9 @@ proc MxPause { string } {
     }
 
     frame $w.f
-    set font [FindFont "-adobe-helvetica-bold-r" 18]
-    message $w.msg -text $string -width 300 \
-	-font $font -justify center
+    #set font [FindFont "-adobe-helvetica-bold-r" 18]
+    #message $w.msg -text $string -width 300 -font $font -justify center
+    message $w.msg -text $string -width 500
     set b [frame $w.buttons -bd 1]
 
     pack $w.msg -in $w.f -side left

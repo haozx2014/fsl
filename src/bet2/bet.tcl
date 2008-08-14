@@ -146,7 +146,7 @@ frame $w.f
     #{{{ input image
 
 if { $argc > 0 && [ string length [ lindex $argv 0 ] ] > 0 } {
-    set inputname [ remove_ext [ imglob -oneperimage [ lindex $argv 0 ] ] ]
+    set inputname [ imglob [ lindex $argv 0 ] ]
     if { [ imtest $inputname ] } {
 	if { [ string first / $inputname ] == 0 || [ string first ~ $inputname ] == 0 } {
 	    set bet($w,input) $inputname

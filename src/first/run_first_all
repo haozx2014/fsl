@@ -92,7 +92,8 @@ imscorr=""
 imsfirst=""
 
 for s in L_Accu L_Amyg L_Caud L_Hipp L_Late L_Pall L_Puta L_Thal R_Accu R_Amyg R_Caud R_Hipp R_Late R_Pall R_Puta R_Thal BrStem; do
-   
+    modelN=336
+    bcorr=1;
     intref=0;
     case "${s:2:4}" in 
 	Accu)
@@ -104,44 +105,64 @@ for s in L_Accu L_Amyg L_Caud L_Hipp L_Late L_Pall L_Puta L_Thal R_Accu R_Amyg R
 	    ;;
 	Caud)
 	    nmodes=30;
-	    intref=1;
+ intref=1;
 	    ;;
 	Hipp)
 	    nmodes=30;
-	    intref=1;
+ intref=1;
 	    ;;
 	Late)
 	    nmodes=40;
-	    intref=1;
+	     modelN=317
+
+ intref=1;
 	    ;;
 	Pall)
 	    nmodes=40;
-	    ;;
+bcorr=0;	   
+ ;;
 	Puta)
 	    nmodes=40;
-	    ;;
+bcorr=0;	
+    ;;
 	Thal)
 	    nmodes=40;
-	    ;;
+bcorr=0;	
+    ;;
 	Stem)
 	    nmodes=40;
+	     modelN=317
 	    ;;
 	*)
 	    echo "Structure unknown"
 	    exit 1
 
     esac
+    
     #run_first , choose between normal and intref
     if [ $intref = 0 ] ; then 
-	echo -n "${FSLDIR}/bin/run_first -i $A -t ${Af}_to_std.mat -n $nmodes -o ${3}-${s}_first -m ${FSLDIR}/data/first/models_317_bin/${s}_bin.bmv" >> $COM
+	if [ $bcorr -eq 1 ] ; then 
+	printf "${FSLDIR}/bin/run_first -i $A -t ${Af}_to_std.mat -n $nmodes -o ${3}-${s}_first -m ${FSLDIR}/data/first/models_${modelN}_bin/${s}_bin.bmv" >> $COM
+	else
+  printf "${FSLDIR}/bin/run_first -i $A -t ${Af}_to_std.mat -n $nmodes -o ${3}-${s}_first -m ${FSLDIR}/data/first/models_${modelN}_bin/05mm/${s}_05mm.bmv" >> $COM
+	    fi
     else
-	echo -n "${FSLDIR}/bin/run_first -i $A -t ${Af}_to_std.mat -n $nmodes -o ${3}-${s}_first -m ${FSLDIR}/data/first/models_317_bin/intref_thal/${s}_bin.bmv -intref ${FSLDIR}/data/first/models_317_bin/${s:0:1}_Thal_bin.bmv" >> $COM
+append=""
+	if [ $modelN -eq 317 ] ; then 
+	    append="_bin"
+fi;
+
+ printf "${FSLDIR}/bin/run_first -i $A -t ${Af}_to_std.mat -n $nmodes -o ${3}-${s}_first -m ${FSLDIR}/data/first/models_${modelN}_bin/intref_thal/${s}${append}.bmv -intref ${FSLDIR}/data/first/models_336_bin/05mm/${s:0:1}_Thal_05mm.bmv" >> $COM
 
     fi
       
-    ##boundary correction 
+    ##boundary correction
+if [ $bcorr -eq 1 ] ; then 
     echo "; ${FSLDIR}/bin/first_utils --singleBoundaryCorr -i ${3}-${s}_first -r $A -p $2 -o ${3}-${s}_corr" >> $COM
-   
+else
+ echo "; ${FSLDIR}/bin/first_utils --singleBoundaryCorr -i ${3}-${s}_first -\
+r $A -p 100000 -o ${3}-${s}_corr" >> $COM
+fi
     imsfirst="${imsfirst} ${3}-${s}_first"
     imscorr="${imscorr} ${3}-${s}_corr"
 
@@ -151,7 +172,7 @@ FIRSTID=`${FSLDIR}/bin/fsl_sub -T 60 -N first -j $FLIRTID -t $COM`
 
 threshnop=`echo ${2} | sed 's/\.//g'`
 
-echo "${FSLDIR}/bin/fslmerge -t ${3}_all_th${threshnop}_first ${imscorr} ; ${FSLDIR}/bin/fslmaths ${3}_all_th${threshnop}_first -Tmean -mul 16 ${3}_all_th${threshnop}_first -odt int ; ${FSLDIR}/bin/fslmerge -t ${3}_all_th${threshnop}_first ${3}_all_th${threshnop}_first  ${imsfirst}" > ${COM}2
+echo "${FSLDIR}/bin/fslmerge -t ${3}_all_th${threshnop}_first ${imscorr} ; ${FSLDIR}/bin/fslmaths ${3}_all_th${threshnop}_first -Tmean -mul 17 ${3}_all_th${threshnop}_first -odt int ; ${FSLDIR}/bin/fslmerge -t ${3}_all_th${threshnop}_first ${3}_all_th${threshnop}_first  ${imsfirst}" > ${COM}2
 
 MERGEID=`fsl_sub -T 15 -N first_post -j $FIRSTID -t ${COM}2`
 

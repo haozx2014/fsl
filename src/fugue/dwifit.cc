@@ -111,8 +111,8 @@ int do_dwifit()
   volume4D<float> invol;
   volume<float> mask;
   volumeinfo vinfo;
-  read_volume4D(invol,involname.value(),vinfo);
-  read_volume(mask,maskvolname.value());
+  read_rad_volume4D(invol,involname.value(),vinfo);
+  read_rad_volume(mask,maskvolname.value());
 
   // make numbers better suited for calculations (only affects S0 term)
   float scalefactor = invol[0].mean();
@@ -216,7 +216,7 @@ int do_dwifit()
       // set up weighting matrix
       W = 0.0;
       for (int m=1; m<=ntime; m++) { 
-	if (noweight.set()) {
+	if (noweight.value()) {
 	  W(m,m) = 1.0;
 	} else {
 	  W(m,m) = Sqr(Y(m,n)) * invnoise2est(m); 

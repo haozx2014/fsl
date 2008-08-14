@@ -2,7 +2,7 @@
 
     Adrian Groves, FMRIB Image Analysis Group
 
-    Copyright (C) 2007 University of Oxford  */
+    Copyright (C) 2007-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -85,7 +85,7 @@ class EasyOptions {
     // options have an effect on code.
     
     string Read(const string& key)
-        { return Read(key, "Missing mandatory option: --" + key); }
+        { return Read(key, "Missing mandatory option: --" + key + "\n"); }
         // Get a mandatory option.
         // throws if option is missing or has no =value clause
     string Read(const string& key, const string& msg);

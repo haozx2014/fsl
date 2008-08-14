@@ -496,12 +496,12 @@ namespace MISCMATHS {
       return std::sqrt(x.SumSquare());
     }
 
-  double norm2(double a, double b, double c)
+  double norm2sq(double a, double b, double c)
     {
 	return a*a + b*b + c*c;
     }
 
-  float norm2(float a, float b, float c)
+  float norm2sq(float a, float b, float c)
     {
 	return a*a + b*b + c*c;
     }
@@ -620,9 +620,9 @@ namespace MISCMATHS {
   ReturnMatrix sqrtaff(const Matrix& mat)
     {
       Tracer tr("sqrtaff");
-      Matrix matnew(4,4), rot(4,4), id4(4,4);
-      Identity(rot);
-      Identity(id4);
+      Matrix matnew(4,4), rot, id4;
+      rot=IdentityMatrix(4);
+      id4=IdentityMatrix(4);
       ColumnVector params(12), centre(3), trans(4);
       centre = 0.0;
       // Quaternion decomposition -> params(1..3) = sin(theta/2)*(unit_axis_vec)
@@ -651,14 +651,12 @@ namespace MISCMATHS {
       rot(2,4) = 0.0;
       rot(3,4) = 0.0;
       
-      Matrix scale(4,4);
-      Identity(scale);
+      Matrix scale=IdentityMatrix(4);
       scale(1,1)=params(7);
       scale(2,2)=params(8);
       scale(3,3)=params(9);
 
-      Matrix skew(4,4);
-      Identity(skew);
+      Matrix skew=IdentityMatrix(4);
       skew(1,2)=params(10);
       skew(1,3)=params(11);
       skew(2,3)=params(12);
@@ -727,6 +725,21 @@ namespace MISCMATHS {
       return r;
     }
 
+  int addrow(Matrix& m, int ncols)
+  {
+    if (m.Nrows()==0) {
+      Matrix mm(1,ncols);
+      mm=0;
+      m = mm;
+    } else {
+      Matrix mm(m.Nrows()+1,ncols);
+      mm = 0;
+      mm.SubMatrix(1,m.Nrows(),1,ncols) = m;
+      m = mm;
+    }
+    return 0;
+  }
+  
   //------------------------------------------------------------------------//
 
 
@@ -739,7 +752,7 @@ namespace MISCMATHS {
       Tracer tr("construct_rotmat_euler");
       ColumnVector angl(3);
       Matrix newaff(4,4);
-      Identity(aff);
+      aff=IdentityMatrix(4);
 
       if (n<=0) return 0;
       // order of parameters is 3 rotation + 3 translation
@@ -786,7 +799,7 @@ namespace MISCMATHS {
 			    const ColumnVector& centre)
     {
       Tracer tr("construct_rotmat_quat");
-      Identity(aff);
+      aff=IdentityMatrix(4);
 
       if (n<=0) return 0;
       // order of parameters is 3 rotation (last 3 quaternion components) 
@@ -838,7 +851,7 @@ namespace MISCMATHS {
     {
       // Matrix rot must be 4x4; angl and orig must be length 3
       Tracer tr("make_rot");
-      Identity(rot);  // default return value
+      rot=IdentityMatrix(4);  // default return value
       float theta;
       theta = norm2(angl);
       if (theta<1e-8) {  // avoid round-off errors and return Identity
@@ -860,8 +873,7 @@ namespace MISCMATHS {
       basischange.SubMatrix(1,3,2,2) = x3;
       basischange.SubMatrix(1,3,3,3) = x1;
 
-      Matrix rotcore(3,3);
-      Identity(rotcore);
+      Matrix rotcore=IdentityMatrix(3);
       rotcore(1,1)=cos(theta);
       rotcore(2,2)=cos(theta);
       rotcore(1,2)=sin(theta);
@@ -869,8 +881,7 @@ namespace MISCMATHS {
 
       rot.SubMatrix(1,3,1,3) = basischange * rotcore * basischange.t();
   
-      Matrix ident3(3,3);
-      Identity(ident3);
+      Matrix ident3=IdentityMatrix(3);
       ColumnVector trans(3);
       trans = (ident3 - rot.SubMatrix(1,3,1,3))*centre;
       rot.SubMatrix(1,3,4,4)=trans;
@@ -882,12 +893,12 @@ namespace MISCMATHS {
     {
       Tracer tr("getrotaxis");
       Matrix residuals(3,3);
-      residuals = rotmat*rotmat.t() - Identity(3);
+      residuals = rotmat*rotmat.t() - IdentityMatrix(3);
       if (residuals.SumSquare() > 1e-4)
 	{ cerr << "Failed orthogonality check!" << endl;  return -1; }
       Matrix u(3,3), v(3,3);
       DiagonalMatrix d(3);
-      SVD(rotmat-Identity(3),d,u,v);
+      SVD(rotmat-IdentityMatrix(3),d,u,v);
       // return column of V corresponding to minimum value of |S|
       for (int i=1; i<=3; i++) {
 	if (fabs(d(i))<1e-4)  axis = v.SubMatrix(1,3,i,i);
@@ -1039,8 +1050,7 @@ namespace MISCMATHS {
   
       if (n<=6)  return 0;
   
-      Matrix scale(4,4);
-      Identity(scale);
+      Matrix scale=IdentityMatrix(4);
       if (n>=7) {
 	scale(1,1)=params(7);
 	if (n>=8) scale(2,2)=params(8);
@@ -1053,8 +1063,7 @@ namespace MISCMATHS {
       strans = centre - scale.SubMatrix(1,3,1,3)*centre;
       scale.SubMatrix(1,3,4,4) = strans;
 
-      Matrix skew(4,4);
-      Identity(skew);
+      Matrix skew=IdentityMatrix(4);
       if (n>=10) {
 	if (n>=10) skew(1,2)=params(10);
 	if (n>=11) skew(1,3)=params(11);
@@ -1077,7 +1086,7 @@ float rms_deviation(const Matrix& affmat1, const Matrix& affmat2,
   Tracer trcr("rms_deviation");
   Matrix isodiff(4,4);
   try {
-    isodiff = affmat1*affmat2.i() - Identity(4);
+    isodiff = affmat1*affmat2.i() - IdentityMatrix(4);
   } catch(...) {
     cerr << "RMS_DEVIATION ERROR:: Could not invert matrix" << endl;  
     exit(-5); 
@@ -1136,7 +1145,7 @@ void get_axis_orientations(const Matrix& sform_mat, int sform_code,
     vox2mm = qform_mat;
   } else {
     // ideally should be sampling_mat(), but for orientation it doesn't matter
-    vox2mm = Identity(4);
+    vox2mm = IdentityMatrix(4);
     vox2mm(1,1) = -vox2mm(1,1);
   }
   mat44 v2mm;
@@ -1169,101 +1178,6 @@ mat44 newmat_to_mat44(const Matrix& inmat)
   return retmat;
 }
  	 
- 	 
-int FslGetLeftRightOrder(int sform_code, const Matrix& sform_mat, 
-			 int qform_code, const Matrix& qform_mat)
-{
-  int retval;
-  // call the function within fslio
-  retval = FslGetLeftRightOrder2(sform_code,newmat_to_mat44(sform_mat),
-				 qform_code,newmat_to_mat44(qform_mat));
-  return retval;
-}
- 	 
-short FslGetVox2mmMatrix(Matrix& vox2mm, 
-			 int sform_code, const Matrix& sform_mat, 
-			 int qform_code, const Matrix& qform_mat, 
-			 float dx, float dy, float dz)
-{
-  int retval;
-  mat44 vox2mm44;
-  // call the function within fslio
-  retval = FslGetVox2mmMatrix2(&vox2mm44,sform_code,newmat_to_mat44(sform_mat),
-			       qform_code,newmat_to_mat44(qform_mat),
-			       dx,dy,dz);
-  vox2mm = mat44_to_newmat(vox2mm44);
-  return retval;
-}
- 	 
-Matrix Vox2FlirtCoord(int sform_code, const Matrix& sform_mat, 
-		      int qform_code, const Matrix& qform_mat, 
-		      float dx, float dy, float dz,
-		      int nx, int ny, int nz) 
-{
-  Matrix v2f(4,4);
-  Identity(v2f);
-  v2f(1,1)=dx;  v2f(2,2)=dy;  v2f(3,3)=dz;
-  if (FslGetLeftRightOrder(sform_code,sform_mat,qform_code,qform_mat) == FSL_NEUROLOGICAL) {
-    Matrix swapx(4,4);
-    Identity(swapx);
-    swapx(1,1)=-1;
-    swapx(1,4)=nx-1;
-    v2f = v2f * swapx;
-  }
-  return v2f;
-}
- 	 
- 	 
-Matrix FslGetVox2VoxMatrix(const Matrix& flirt_in2ref,
-			   int sform_code_in, const Matrix& sform_mat_in, 
-			   int qform_code_in, const Matrix& qform_mat_in, 
-			   float dx_in, float dy_in, float dz_in,
-			   int nx_in, int ny_in, int nz_in,
-			   int sform_code_ref, const Matrix& sform_mat_ref, 
-			   int qform_code_ref, const Matrix& qform_mat_ref, 
-			   float dx_ref, float dy_ref, float dz_ref,
-			   int nx_ref, int ny_ref, int nz_ref)
-{
-  Matrix vox2flirt_in, vox2flirt_ref, vox2vox;
-  vox2flirt_in = Vox2FlirtCoord(sform_code_in,sform_mat_in,qform_code_in,
-				qform_mat_in,dx_in,dy_in,dz_in,
-				nx_in,ny_in,nz_in);
-  vox2flirt_ref = Vox2FlirtCoord(sform_code_ref,sform_mat_ref,qform_code_ref,
-				 qform_mat_ref,dx_ref,dy_ref,dz_ref,
-				 nx_ref,ny_ref,nz_ref);
-  vox2vox = vox2flirt_ref.i() * flirt_in2ref * vox2flirt_in;
-  return vox2vox;
-}
-  
-
-// Added by MWW
-
-//  int getdiag(ColumnVector& diagvals, const Matrix& m)
-//  {
-//    Tracer ts("MiscMaths::diag"); 
-      
-//    int num = m.Nrows();
-//    diagvals.ReSize(num);
-//    for (int j=1; j<=num; j++)
-//      diagvals(j)=m(j,j);
-//    return 0;
-//  }
-
-// float var(const ColumnVector& x)
-// {     
-//   float m = mean(x);
-//   float ssq = (x-m).SumSquare()/(x.Nrows()-1);
-      
-//   return ssq;
-// }
-
-// float mean(const ColumnVector& x)
-// {    
-//   float m = x.Sum()/x.Nrows();
-//   return m;
-// }
-
-
 // Matlab style functions for percentiles, quantiles and median
 // AUG 06 CB
 
@@ -1878,7 +1792,7 @@ ReturnMatrix SD(const Matrix& mat1,const Matrix& mat2)
   return ret;
 }
 
-
+//Deprecate?
 ReturnMatrix vox_to_vox(const ColumnVector& xyz1,const ColumnVector& dims1,const ColumnVector& dims2,const Matrix& xfm){
   ColumnVector xyz1_mm(4),xyz2_mm,xyz2(3);
   xyz1_mm<<xyz1(1)*dims1(1)<<xyz1(2)*dims1(2)<<xyz1(3)*dims1(3)<<1;
@@ -1889,7 +1803,7 @@ ReturnMatrix vox_to_vox(const ColumnVector& xyz1,const ColumnVector& dims1,const
   return xyz2;
 }
 
-
+//Deprecate?
 ReturnMatrix mni_to_imgvox(const ColumnVector& mni,const ColumnVector& mni_origin,const Matrix& mni2img, const ColumnVector& img_dims){
   ColumnVector mni_new_origin(4),img_mm;//homogeneous
   ColumnVector img_vox(3);
@@ -1899,8 +1813,6 @@ ReturnMatrix mni_to_imgvox(const ColumnVector& mni,const ColumnVector& mni_origi
   img_vox.Release();
   return img_vox;
 }
-
-
 
 
 ReturnMatrix remmean(const Matrix& mat, const int dim)
@@ -2119,7 +2031,7 @@ void detrend(Matrix& p_ts, int p_level)
     }
           
   // Form residual forming matrix R:
-  Matrix R = Identity(sizeTS)-a*pinv(a);
+  Matrix R = IdentityMatrix(sizeTS)-a*pinv(a);
 
   for(int t = 1; t <= sizeTS; t++)
     {
@@ -2134,11 +2046,7 @@ ReturnMatrix read_vest(string p_fname)
   ifstream in;
   in.open(p_fname.c_str(), ios::in);
   
-  if(!in)
-    {
-      //cerr << "Unable to open " << p_fname << endl;
-      throw Exception("Unable to open vest file");
-    }
+  if(!in) throw Exception(string("Unable to open "+p_fname).c_str());
   
   int numWaves = 0;
   int numPoints = 0;
@@ -2147,11 +2055,7 @@ ReturnMatrix read_vest(string p_fname)
   
   while(true)
     {
-      if(!in.good())
-	{
-	  cerr << p_fname << "is not a valid vest file"  << endl;
-	  throw Exception("Not a valid vest file");
-	}
+      if(!in.good()) throw Exception(string(p_fname+" is not a valid vest file").c_str());	
       in >> str;
       if(str == "/Matrix")
 	break;
@@ -2171,7 +2075,8 @@ ReturnMatrix read_vest(string p_fname)
     {
       for(int j = 1; j <= numWaves; j++)    
 	{
-	  in >> p_mat(i,j);
+	  if (!in.eof()) in >> p_mat(i,j);
+	  else throw Exception(string(p_fname+" has insufficient data points").c_str());
 	}
     }
   
@@ -2200,7 +2105,7 @@ void ols(const Matrix& data,const Matrix& des,const Matrix& tc, Matrix& cope,Mat
   }  
   Matrix pdes = pinv(des);
   Matrix prevar=diag(tc*pdes*pdes.t()*tc.t());
-  Matrix R=Identity(des.Nrows())-des*pdes;
+  Matrix R=IdentityMatrix(des.Nrows())-des*pdes;
   float tR=R.Trace();
   Matrix pe=pdes*data;
   cope=tc*pe;
@@ -2213,7 +2118,7 @@ void ols(const Matrix& data,const Matrix& des,const Matrix& tc, Matrix& cope,Mat
 
 float ols_dof(const Matrix& des){
   Matrix pdes = pinv(des);
-  Matrix R=Identity(des.Nrows())-des*pdes;
+  Matrix R=IdentityMatrix(des.Nrows())-des*pdes;
   return R.Trace();
 }
 

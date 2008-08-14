@@ -149,6 +149,51 @@ Matrix form_Amat(const Matrix& r,const Matrix& b)
   }
   return A;
 }
+
+
+Matrix form_Amat(const Matrix& r,const Matrix& b, const Matrix & cni )
+{
+  //cni are confound regressors of no interest
+  Matrix A(r.Ncols(),7 + cni.Ncols());
+  Matrix A_noconf(r.Ncols(),7);
+  Matrix tmpvec(3,1), tmpmat;
+  
+  for( int i = 1; i <= r.Ncols(); i++){
+    tmpvec << r(1,i) << r(2,i) << r(3,i);
+    tmpmat = tmpvec*tmpvec.t()*b(1,i);
+    A(i,1) = tmpmat(1,1);
+    A(i,2) = 2*tmpmat(1,2);
+    A(i,3) = 2*tmpmat(1,3);
+    A(i,4) = tmpmat(2,2);
+    A(i,5) = 2*tmpmat(2,3);
+    A(i,6) = tmpmat(3,3);
+    A(i,7) = 1;
+    
+    A_noconf(i,1) = tmpmat(1,1);
+    A_noconf(i,2) = 2*tmpmat(1,2);
+    A_noconf(i,3) = 2*tmpmat(1,3);
+    A_noconf(i,4) = tmpmat(2,2);
+    A_noconf(i,5) = 2*tmpmat(2,3);
+    A_noconf(i,6) = tmpmat(3,3);
+    A_noconf(i,7) = 1;
+    
+    for( int col=1;col<=cni.Ncols();col++){
+      A(i,col+7)=cni(i,col);
+    }
+  }
+  
+  
+  Matrix tmp1=(A_noconf.t()*A_noconf).i();
+  Matrix tmp2=(A.t()*A).i();
+  cout<<"Efficiency loss due to confounds: xx xy xz yy yz zz"<<endl;
+  for( int el=1;el<=6;el++)
+    cout <<tmp2(el,el)/tmp1(el,el)<<" ";
+  cout<<endl;
+
+  return A;
+}
+
+
 inline SymmetricMatrix vec2tens(ColumnVector& Vec){
   SymmetricMatrix tens(3);
   tens(1,1)=Vec(1);
@@ -161,10 +206,10 @@ inline SymmetricMatrix vec2tens(ColumnVector& Vec){
 }
 
 
-void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,ColumnVector& evec3,float& f,float& s0,const Matrix& Amat,const ColumnVector& S)
+void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,ColumnVector& evec3,float& f,float& s0,float& mode,ColumnVector& Dvec, const Matrix& Amat,const ColumnVector& S)
 {
   //Initialise the parameters using traditional DTI analysis
-  ColumnVector logS(S.Nrows()),Dvec(7);
+  ColumnVector logS(S.Nrows());
   SymmetricMatrix tens;   //Basser's Diffusion Tensor;
   //  DiagonalMatrix Dd;   //eigenvalues
   Matrix Vd;   //eigenvectors
@@ -213,6 +258,13 @@ void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,Column
   evec1 << Vd(1,maxind) << Vd(2,maxind) << Vd(3,maxind);
   evec2 << Vd(1,midind) << Vd(2,midind) << Vd(3,midind);
   evec3 << Vd(1,minind) << Vd(2,minind) << Vd(3,minind);
+
+  float e1=Dd(maxind)-mDd, e2=Dd(midind)-mDd, e3=Dd(minind)-mDd;
+  float n = (e1 + e2 - 2*e3)*(2*e1 - e2 - e3)*(e1 - 2*e2 + e3);
+  float d = (e1*e1 + e2*e2 + e3*e3 - e1*e2 - e2*e3 - e1*e3);
+  d = sqrt(MAX(0, d));
+  d = 2*d*d*d;
+  mode = MIN(MAX(d ? n/d : 0.0, -1),1);
 
   float numer=1.5*((Dd(1)-mDd)*(Dd(1)-mDd)+(Dd(2)-mDd)*(Dd(2)-mDd)+(Dd(3)-mDd)*(Dd(3)-mDd));
   float denom=(Dd(1)*Dd(1)+Dd(2)*Dd(2)+Dd(3)*Dd(3));
@@ -280,9 +332,12 @@ int main(int argc, char** argv)
   volume<float> MD(maxx-minx,maxy-miny,maxz-minz);
   volume<float> FA(maxx-minx,maxy-miny,maxz-minz);
   volume<float> S0(maxx-minx,maxy-miny,maxz-minz);
+  volume<float> MODE(maxx-minx,maxy-miny,maxz-minz);
   volume4D<float> V1(maxx-minx,maxy-miny,maxz-minz,3);
   volume4D<float> V2(maxx-minx,maxy-miny,maxz-minz,3);
   volume4D<float> V3(maxx-minx,maxy-miny,maxz-minz,3);
+  volume4D<float> Delements(maxx-minx,maxy-miny,maxz-minz,6);
+
   if(opts.verbose.value()) cout<<"copying input properties to output volumes"<<endl;
   copybasicproperties(data[0],l1);
   copybasicproperties(data[0],l2);
@@ -290,19 +345,29 @@ int main(int argc, char** argv)
   copybasicproperties(data[0],MD);
   copybasicproperties(data[0],FA);
   copybasicproperties(data[0],S0);
+  copybasicproperties(data[0],MODE);
   copybasicproperties(data[0],V1[0]);
   copybasicproperties(data[0],V2[0]);
   copybasicproperties(data[0],V3[0]);
+  copybasicproperties(data[0],Delements[0]);
   if(opts.verbose.value()) cout<<"zeroing output volumes"<<endl;
-  l1=0;l2=0;l3=0;MD=0;FA=0;S0=0;V1=0;V2=0;V3=0;
+  l1=0;l2=0;l3=0;MD=0;FA=0;S0=0;V1=0;V2=0;V3=0;Delements=0;
   if(opts.verbose.value()) cout<<"ok"<<endl;
   DiagonalMatrix evals(3);
   ColumnVector evec1(3),evec2(3),evec3(3);
   ColumnVector S(data.tsize());
-  float fa,s0;
+  float fa,s0,mode;
+  Matrix Amat, cni; 
   if(opts.verbose.value()) cout<<"Forming A matrix"<<endl;
-  Matrix Amat = form_Amat(r,b);
+  if(opts.cni.value()!=""){
+    cni=read_ascii_matrix(opts.cni.value());
+    Amat = form_Amat(r,b,cni);
+  }
+  else{
+    Amat = form_Amat(r,b);
+  }
   if(opts.verbose.value()) cout<<"starting the fits"<<endl;
+  ColumnVector Dvec(7); Dvec=0;
   for(int k = minz; k < maxz; k++){
     cout<<k<<" slices processed"<<endl;
       for(int j=miny; j < maxy; j++){
@@ -313,13 +378,14 @@ int main(int argc, char** argv)
 	    for(int t=0;t < data.tsize();t++){
 	      S(t+1)=data(i,j,k,t);
 	    }
-	    tensorfit(evals,evec1,evec2,evec3,fa,s0,Amat,S);
+	    tensorfit(evals,evec1,evec2,evec3,fa,s0,mode,Dvec,Amat,S);
 	    l1(i-minx,j-miny,k-minz)=evals(1);
 	    l2(i-minx,j-miny,k-minz)=evals(2);
 	    l3(i-minx,j-miny,k-minz)=evals(3);
 	    MD(i-minx,j-miny,k-minz)=(evals(1)+evals(2)+evals(3))/3;
 	    FA(i-minx,j-miny,k-minz)=fa;
 	    S0(i-minx,j-miny,k-minz)=s0;
+	    MODE(i-minx,j-miny,k-minz)=mode;
 	    V1(i-minx,j-miny,k-minz,0)=evec1(1);
 	    V1(i-minx,j-miny,k-minz,1)=evec1(2);
 	    V1(i-minx,j-miny,k-minz,2)=evec1(3);
@@ -329,7 +395,12 @@ int main(int argc, char** argv)
 	    V3(i-minx,j-miny,k-minz,0)=evec3(1);
 	    V3(i-minx,j-miny,k-minz,1)=evec3(2);
 	    V3(i-minx,j-miny,k-minz,2)=evec3(3);
-	    
+	    Delements(i-minx,j-miny,k-minz,0)=Dvec(1);
+	    Delements(i-minx,j-miny,k-minz,1)=Dvec(2);
+	    Delements(i-minx,j-miny,k-minz,2)=Dvec(3);
+	    Delements(i-minx,j-miny,k-minz,3)=Dvec(4);
+	    Delements(i-minx,j-miny,k-minz,4)=Dvec(5);
+	    Delements(i-minx,j-miny,k-minz,5)=Dvec(6);
 
 
 
@@ -369,6 +440,8 @@ int main(int argc, char** argv)
     string v2file=opts.ofile.value()+"_V2";
     string v3file=opts.ofile.value()+"_V3";
     string MDfile=opts.ofile.value()+"_MD";
+    string MOfile=opts.ofile.value()+"_MO";
+    string tensfile=opts.ofile.value()+"_tensor";
     if(opts.littlebit.value()){
       fafile+="littlebit";
       s0file+="littlebit";
@@ -379,18 +452,34 @@ int main(int argc, char** argv)
       v2file+="littlebit";
       v3file+="littlebit";
       MDfile+="littlebit";
+      MOfile+="littlebit";
+      tensfile+="littlebit";
     }
+
+
+
   
+    FslSetCalMinMax(&tempinfo,0,1);
     save_volume(FA,fafile,tempinfo);
+
+    FslSetCalMinMax(&tempinfo,0,S0.max());
     save_volume(S0,s0file,tempinfo);
-    save_volume(l1,l1file,tempinfo);
-    save_volume(l2,l2file,tempinfo);
-    save_volume(l3,l3file,tempinfo);
-    save_volume(MD,MDfile,tempinfo);
+
+    FslSetCalMinMax(&tempinfo,-1,1);
+    save_volume(MODE,MOfile,tempinfo);
     save_volume4D(V1,v1file,tempinfo);
     save_volume4D(V2,v2file,tempinfo);
     save_volume4D(V3,v3file,tempinfo);
 
+    FslSetCalMinMax(&tempinfo,0,l1.max());
+    save_volume(l1,l1file,tempinfo);
+    save_volume(l2,l2file,tempinfo);
+    save_volume(l3,l3file,tempinfo);
+    save_volume(MD,MDfile,tempinfo);
+
+    if(opts.savetensor.value())
+      save_volume4D(Delements,tensfile,tempinfo);
+    
   return 0;
 }
 

@@ -73,10 +73,16 @@
 #define WANT_STREAM
 #define WANT_MATH
 
+#ifndef EXPOSE_TREACHEROUS
+#define EXPOSE_TREACHEROUS
+#endif
+
 #include "newmatap.h"
 #include "newmatio.h"
 #include "miscmaths/miscmaths.h"
 #include "newimage/newimageall.h"
+#include "warpfns/warpfns.h"
+#include "warpfns/fnirt_file_reader.h"
 
 #ifndef NO_NAMESPACE
  using namespace MISCMATHS;
@@ -91,8 +97,9 @@ class globaloptions {
 public:
   string stdfname;
   string imgfname;
-  string xfmfname;
+  string prexfmfname;
   string coordfname;
+  string warpfname;
   bool usestd;
   bool mm;
   int verbose;
@@ -110,7 +117,8 @@ globaloptions::globaloptions()
   stdfname = "";
   imgfname = "";
   coordfname = "";
-  xfmfname = "";
+  prexfmfname = "";
+  warpfname = "";
   verbose = 0;
   usestd = false;
   mm = false;
@@ -128,9 +136,11 @@ void print_usage(int argc, char *argv[])
        << "       " << argv[0] << " -img <invol> <coordinate file>\n"
        << "       " << argv[0] << " -img <invol> - \n\n"
        << "  Options are:\n"
-       << "        -img <example input image filename>   (NB: 3D image, not timeseries)\n"
-       << "        -std <standard image filename>\n"
-       << "        -xfm <image to standard transform filename>\n"
+       << "        -img <filename of input image>\n"
+       << "        -std <filename of standard image>\n"
+       << "        -xfm <filename of affine transform   (e.g. example_func2standard.mat)>\n"
+       << "        -warp <filename of warpfield (e.g. highres2standard_warp.nii.gz)>\n"
+       << "        -premat <filename of pre-warp affine transform  (e.g. example_func2highres.mat)>   (default=identity)\n"
        << "        -vox                                 (input coordinates in voxels - default)\n"
        << "        -mm                                  (input coordinates in mm)\n"
        << "        -v                                   (verbose output)\n"
@@ -211,8 +221,12 @@ void parse_command_line(int argc, char* argv[])
       globalopts.imgfname = argv[n+1];
       n+=2;
       continue;
-    } else if ( arg == "-xfm") {
-      globalopts.xfmfname = argv[n+1];
+    } else if ( ( arg == "-xfm") || ( arg == "-premat") ) {
+      globalopts.prexfmfname = argv[n+1];
+      n+=2;
+      continue;
+    } else if ( arg == "-warp") {
+      globalopts.warpfname = argv[n+1];
       n+=2;
       continue;
     } else { 
@@ -241,6 +255,23 @@ void print_info(const volume<float>& vol, const string& name) {
 
 ////////////////////////////////////////////////////////////////////////////
 
+ColumnVector NewimageCoord2NewimageCoord(const FnirtFileReader& fnirtfile, const Matrix& affmat,
+					 const volume<float>& srcvol, const volume<float>& destvol,
+					 const ColumnVector& srccoord)
+{
+  ColumnVector retvec;
+  if (fnirtfile.IsValid()) {
+    // in the following affmat=example_func2highres.mat, fnirtfile=highres2standard_warp.nii.gz
+    retvec = NewimageCoord2NewimageCoord(affmat,
+					 fnirtfile.FieldAsNewimageVolume4D(true),true,srcvol,destvol,srccoord);
+  } else {
+    retvec = NewimageCoord2NewimageCoord(affmat,srcvol,destvol,srccoord);
+  }
+  return retvec;
+}
+
+////////////////////////////////////////////////////////////////////////////
+
 int main(int argc,char *argv[])
 {
   parse_command_line(argc,argv);
@@ -264,18 +295,17 @@ int main(int argc,char *argv[])
 
   // read matrices
   Matrix affmat(4,4);
-  int returnval;
   bool use_sform=false;
-  if (globalopts.xfmfname.length()>0) {
-    returnval = read_matrix(affmat,globalopts.xfmfname,imgvol,stdvol);
+  if (globalopts.prexfmfname.length()>0) {
+    affmat = read_ascii_matrix(globalopts.prexfmfname);
     use_sform = false;
-    if (returnval<0) {
+    if (affmat.Nrows()<4) {
       cerr << "Cannot read transform file" << endl;
       return -2;
     }
   } else {
     use_sform = true;
-    affmat = Identity(4);
+    affmat = IdentityMatrix(4);
   }
 
     
@@ -283,25 +313,27 @@ int main(int argc,char *argv[])
     cout << " affmat =" << endl << affmat << endl << endl;
   }
 
+  // Read in warps from file (if specified)
+  FnirtFileReader  fnirtfile;
+  AbsOrRelWarps    wt = UnknownWarps;
+  if (globalopts.warpfname != "") {
+    try {
+      fnirtfile.Read(globalopts.warpfname,wt,globalopts.verbose>3);
+    }
+    catch (...) {
+      cerr << "An error occured while reading file: " << globalopts.warpfname << endl;
+      exit(EXIT_FAILURE);
+    }
+  }
+
   /////////////// SET UP MATRICES ////////////////
 
-  Matrix vox2std(4,4);
-
-  if (use_sform) {
-    // set the main matrix
-    vox2std = imgvol.vox2mm_mat();
-    if (imgvol.vox2mm_code()==NIFTI_XFORM_UNKNOWN) { 
-      cerr << "WARNING:: standard coordinates not set in image" << endl; 
-    }
-  } else {
-    // set the main matrix
-    vox2std = stdvol.vox2mm_mat() * Vox2VoxMatrix(affmat,imgvol,stdvol);
-    if (stdvol.vox2mm_code()==NIFTI_XFORM_UNKNOWN) { 
-      cerr << "WARNING:: standard coordinates not set in standard image" << endl; 
-    }
-    if (globalopts.verbose>3) {
-      cout << " stdvox2world =" << endl << stdvol.vox2mm_mat() << endl << endl;
-    }
+  if ( (stdvol.sform_code()==NIFTI_XFORM_UNKNOWN) && 
+       (stdvol.qform_code()==NIFTI_XFORM_UNKNOWN) ) { 
+    cerr << "WARNING:: mm coordinate space not set in standard volume" << endl; 
+  }
+  if (globalopts.verbose>3) {
+    cout << " stdvox2world =" << endl << stdvol.newimagevox2mm_mat() << endl << endl;
   }
 
   // initialise coordinate vectors
@@ -356,9 +388,11 @@ int main(int argc,char *argv[])
     }
     
     if (globalopts.mm) {  // in mm
-      stdcoord = vox2std * imgvol.vox2mm_mat().i() * imgcoord;
+      stdcoord = stdvol.newimagevox2mm_mat() * 
+	NewimageCoord2NewimageCoord(fnirtfile,affmat,imgvol,stdvol,imgvol.newimagevox2mm_mat().i() * imgcoord);
     } else { // in voxels
-      stdcoord = vox2std * imgcoord; 
+      stdcoord = stdvol.newimagevox2mm_mat() * 
+	NewimageCoord2NewimageCoord(fnirtfile,affmat,imgvol,stdvol,imgvol.niftivox2newimagevox_mat() * imgcoord); 
     }
     cout << stdcoord(1) << "  " << stdcoord(2) << "  " << stdcoord(3) << endl;
   }

@@ -3,7 +3,7 @@
 <HTML><HEAD><link REL="stylesheet" TYPE="text/css" href="../fsl.css">
 <TITLE>TBSS - Tract-Based Spatial Statistics</TITLE></HEAD><BODY>
 <hr><TABLE BORDER=0 WIDTH="100%"><TR>
-<TD ALIGN=CENTER><H1>TBSS - Tract-Based Spatial Statistics - v1.1</H1>
+<TD ALIGN=CENTER><H1>TBSS - Tract-Based Spatial Statistics - v1.2</H1>
 
 Voxelwise analysis of multi-subject diffusion data<br><br>
 
@@ -19,6 +19,16 @@ Voxelwise analysis of multi-subject diffusion data<br><br>
 
 <!-- }}} -->
 <!-- {{{ Introduction -->
+
+<hr>
+
+<p><i><b>New version:</b> TBSS v1.2 has switched the nonlinear
+  registration to using <a href=../fnirt/index.html>FNIRT</a> (FMRIB's
+  Nonlinear Registration Tool). FNIRT is about 15 times faster than
+  IRTK on FA data and possibly a little more 'accurate'. A TBSS v1.2
+  analysis is <b>not</b> compatible with an older analysis. To see the
+  full list of changes from the previous version
+  see <a href="#new">what's new</a></i>.
 
 <a name="intro"></a><p><hr><H2>Introduction</H2>
 
@@ -63,26 +73,35 @@ Statistics, [Smith 2006]), part of FSL [Smith 2004]. First, FA images
 were created by fitting a tensor model to the raw diffusion data using
 FDT, and then brain-extracted using BET [Smith 2002]. All subjects' FA
 data were then aligned into a common space using the nonlinear
-registration IRTK [Rueckert 1999,
-www.doc.ic.ac.uk/~dr/software]. Next, the mean FA image was created
-and thinned to create a mean FA skeleton which represents the centres
-of all tracts common to the group. Each subject's aligned FA data was
-then projected onto this skeleton and the resulting data fed into
-voxelwise cross-subject statistics.
+registration tool FNIRT [Andersson 2007a, 2007b], which uses a
+b-spline representation of the registration warp field [Rueckert
+1999]. Next, the mean FA image was created and thinned to create a
+mean FA skeleton which represents the centres of all tracts common to
+the group. Each subject's aligned FA data was then projected onto this
+skeleton and the resulting data fed into voxelwise cross-subject
+statistics.
 
 <font size=-1><em>
 
-<p>[Smith 2006] S.M. Smith, M.&nbsp;Jenkinson, H.&nbsp;Johansen-Berg, D.&nbsp;Rueckert, T.E. Nichols, C.E. Mackay, K.E. Watkins, O.&nbsp;Ciccarelli, M.Z. Cader, P.M. Matthews, and T.E.J. Behrens.
+<p>[Smith 2006] S.M. Smith, M. Jenkinson, H. Johansen-Berg, D. Rueckert, T.E. Nichols, C.E. Mackay, K.E. Watkins, O. Ciccarelli, M.Z. Cader, P.M. Matthews, and T.E.J. Behrens.
 <BR>&nbsp;&nbsp;&nbsp;Tract-based spatial statistics: Voxelwise analysis of multi-subject diffusion data.
 <BR>&nbsp;&nbsp;&nbsp;NeuroImage, 31:1487-1505, 2006.
 
-<p>[Smith 2004] S.M. Smith, M.&nbsp;Jenkinson, M.W. Woolrich, C.F. Beckmann, T.E.J. Behrens, H.&nbsp;Johansen-Berg, P.R. Bannister, M.&nbsp;De&nbsp;Luca, I.&nbsp;Drobnjak, D.E. Flitney, R.&nbsp;Niazy, J.&nbsp;Saunders, J.&nbsp;Vickers, Y.&nbsp;Zhang, N.&nbsp;De&nbsp;Stefano, J.M. Brady, and P.M. Matthews.
+<p>[Smith 2004] S.M. Smith, M. Jenkinson, M.W. Woolrich, C.F. Beckmann, T.E.J. Behrens, H. Johansen-Berg, P.R. Bannister, M. De Luca, I. Drobnjak, D.E. Flitney, R. Niazy, J. Saunders, J. Vickers, Y. Zhang, N. De Stefano, J.M. Brady, and P.M. Matthews.
 <BR>&nbsp;&nbsp;&nbsp;Advances in functional and structural MR image analysis and implementation as FSL.
 <BR>&nbsp;&nbsp;&nbsp;NeuroImage, 23(S1):208-219, 2004.
 
 <P>[Smith 2002] S.M. Smith.
 <BR>&nbsp;&nbsp;&nbsp;Fast robust automated brain extraction.
 <BR>&nbsp;&nbsp;&nbsp;Human Brain Mapping, 17(3):143-155, November 2002.
+
+<p>[Andersson 2007a] J.L.R. Andersson, M. Jenkinson and S. Smith.
+<BR>&nbsp;&nbsp;&nbsp;Non-linear optimisation.
+<BR>&nbsp;&nbsp;&nbsp;FMRIB technical report TR07JA1 from www.fmrib.ox.ac.uk/analysis/techrep
+
+<p>[Andersson 2007b] J.L.R. Andersson, M. Jenkinson and S. Smith.
+<BR>&nbsp;&nbsp;&nbsp;Non-linear registration, aka Spatial normalisation
+<BR>&nbsp;&nbsp;&nbsp;FMRIB technical report TR07JA2 from www.fmrib.ox.ac.uk/analysis/techrep
 
 <P>[Rueckert 1999] D. Rueckert, L. I. Sonoda, C. Hayes, D. L. G. Hill, M. O. Leach, and D. J. Hawkes.
 <BR>&nbsp;&nbsp;&nbsp;Non-rigid registration using free-form deformations: Application to breast MR images.
@@ -159,44 +178,22 @@ ls
   PAT_N03600_dti_data_FA.nii.gz</pre>
 
 You are now nearly ready to run the first TBSS script, which will
-scale the FA values to be between 0 and 10000 and convert the format
-to uncompressed Analyze with positive voxel dimensions (because the
-nonlinear registration software IRTK requires this format). Before
-running the first TBSS script, you need to know approximately what the
-values in your FA data are (e.g. roughly in the range 0:1). If you
-created your FA data using dtifit in FDT then the data will indeed be
-roughly in the range 0:1. You can check this, for example, by:
+erode your FA images slightly and zero the end slices (to remove
+likely outliers from the diffusion tensor fitting). Type:
 
-<pre>fslstats CON_N00300_dti_data_FA -R
- 0.000000 1.148992</pre>
+<pre><b>tbss_1_preproc *.nii.gz</b></pre>
 
-If the range is close to 0:1 then the default scaling of 10000 will be
-correct. Otherwise, you need to tell the script what scaling to apply;
-for example, if your data is in the range 0:1000 then you need a
-scaling of 10, etc. Now run the script, from inside your working TBSS
-directory:
+(the <code>*</code> expands to the list of input images).
 
-<pre><b>tbss_1_preproc *</b></pre>
-
-(the <code>*</code> expands to the list of input images). Or, if you want to apply scaling &lt;SCALE&gt;, instead type:
-
-<pre>tbss_1_preproc -f &lt;SCALE&gt; *</pre>
-
-The script will now scale and convert the data, placing it in a
-newly-created sub-directory called <code>FAi</code>. It will also create
-a sub-directory called <code>origdata</code> and place all your original
-images in there for posterity.
+<p>The script will also move all the images into a new sub-directory
+called <code>FA</code> (where all the registration steps will later
+take place,) and will also create another sub-directory
+called <code>origdata</code> and place all your original images in
+there for posterity.
 
 <p>Finally, the script runs <code>slicesdir</code>, which creates an
-overview webpage containing a static view of each of the preprocessed
-input images, so that you can then quickly view each of them for
-obvious problems.
-
-<!-- <p>Note that the first 3 TBSS scripts (tbss_1_preproc, tbss_2_reg and -->
-<!-- tbss_3_postreg must all be run on computers of the same "type" -->
-<!-- (e.g. all 32-bit linux, or all 64-bit Apple); this is because the -->
-<!-- files used by the IRTK registration software don't always work the -->
-<!-- same on different computer hardware. -->
+overview webpage containing a static view of each of the input images,
+so that you can then quickly view each of them for obvious problems.
 
 <!-- }}} -->
 <!-- {{{ 2 - tbss_2_reg -->
@@ -209,7 +206,7 @@ registrations can either be a pre-defined target, or can be
 automatically chosen to be the most "typical" subject in the study.
 
 <p>In general we recommend using the <a
-href="FMRIB58_FA.html">FMRIB58_FA</a> standard-space image as the
+href="../data/FMRIB58_FA.html">FMRIB58_FA</a> standard-space image as the
 target in TBSS. This involves carrying out just one registration per
 subject and generally gives good alignment results. This option is
 applied by using the <code>-T</code> flag. Alternatively, you can
@@ -227,39 +224,22 @@ subjects are all young children (and hence the adult-derived
 FMRIB58_FA target is inappropriate).
 
 <p>Direct registration to the high resolution FMRIB58_FA image takes
-about 5 hours x N subjects (when running on a single computer). In
-comparison, the all-subjects-to-all-subjects option takes about 20
+about 15 minutes x N subjects (when running on a single computer). In
+comparison, the all-subjects-to-all-subjects option takes about 5
 minutes x N x N. Hence the latter approach can take much longer to run
-than the former. In either case, you can speed up the registrations by
-using multiple computers. This is now described in detail:
+than the former.
 
-<p>If you have several computers that you can run the registration on,
-  this is straightforward as long as they can all see the working data
-  directory and are all of the same "type" (e.g. all 32-bit linux, or
-  all 64-bit Apple); this is because the files used by the IRTK
-  registration software don't always work the same on different
-  computer hardware. In order to use multiple computers, simply log on
-  to each (in a separate terminal window for each), <code>cd</code> to
-  the TBSS working directory, and run the <code>tbss_2_reg</code>
-  script. Each time the script is run it looks for registrations which
-  still need running and, one at a time, runs those which haven't yet
-  been done. Note that if you have computers with more than one CPU,
-  you can open as many terminals as you have CPUs, and run the script
-  in each one.
+<p>If your lab has a batch submission system (e.g., SGE) then you may
+  want to setup FSL to take advantage of this - then all the
+  registration jobs get submitted to the batch system for parallel
+  processing. In this case, ask your system administrator to edit
+  $FSLDIR/bin/fsl_sub in order to setup FSL to make use of your
+  cluster environment. Once this is done, running tbss_2_reg submits
+  all the registrations to your batch system, and you need to watch
+  for them all to complete before moving on to the next stage of TBSS.
 
-<p>Once <b>all</b> the scripts have finished running, you are ready to
-  move onto the next step.
-
-<p>Alternatively, if your lab has a batch submission system (e.g.,
-  SGE) then you may want to amend the TBSS script to take advantage of
-  this - then all the registration jobs get submitted to the batch
-  system for optimal processing. In this case, ask your system
-  administrator to edit $FSLDIR/bin/tbss_2_reg and possibly edit the
-  two lines starting with the one testing for "SGE_ROOT", in order to
-  make the necessary submission to your batch system. In this case you
-  only need to run the TBSS script once; this submits all the
-  registrations to your batch system, and you need to watch for them
-  all to complete before moving on to the next stage of TBSS.
+<p>Once <b>all</b> the registrations have finished running, you are
+  ready to move onto the next step.
 
 <!-- }}} -->
 <!-- {{{ 3 - tbss_3_postreg -->
@@ -311,27 +291,27 @@ study, use the <code>-T</code> option:
 
 <p><img src="eg_skel_all_FA.png" align="right"> The script finishes by
 telling you to check whether a suitable threshold for the mean FA
-skeleton is 2000 (i.e., mean FA of 0.2 in the skeleton - the default
-used by the next script). For example, load the 4D FA data and the
-skeleton into FSLView:
+skeleton is 0.2 (a typical value used by the next script). For
+example, load the 4D FA data and the skeleton into FSLView:
 
 <pre>cd stats
-fslview all_FA mean_FA_skeleton</pre>
+fslview all_FA -b 0,0.8 mean_FA_skeleton -b 0.2,0.8 -l Green</pre>
 
-<p>Then change the colourmap for the skeleton to Green, and set its
-  display range to be 2000:8000. Now turn on the movie loop; you will
-  see the mean FA skeleton on top of each different subject's aligned
-  FA image. If all the processing so far has worked ok the skeleton
-  should look like the examples shown here (see the TBSS paper for
-  more examples of different subjects' results underneath the
-  skeleton). If the registration has worked well you should see that
-  in general each subject's major tracts are reasonably well aligned
-  to the relevant parts of the skeleton. If you set the skeleton
-  threshold (in FSLView, the lower of the display range settings) much
-  lower than 2000, it will extend away towards extremes where there is
-  too much cross-subject variability and where the nonlinear
-  registration has not been able to attain good alignments. Remember
-  the skeleton threshold for the next stage.
+<p>The <code>-b</code> option sets sensible display range options, and
+  in the case of the skeleton image, also controls the thresholding
+  applied. Now turn on the movie loop; you will see the mean FA
+  skeleton on top of each different subject's aligned FA image. If all
+  the processing so far has worked ok the skeleton should look like
+  the examples shown here (see the TBSS paper for more examples of
+  different subjects' results underneath the skeleton). If the
+  registration has worked well you should see that in general each
+  subject's major tracts are reasonably well aligned to the relevant
+  parts of the skeleton. If you set the skeleton threshold (in
+  FSLView, the lower of the display range settings) much lower than
+  0.2, it will extend away towards extremes where there is too much
+  cross-subject variability and where the nonlinear registration has
+  not been able to attain good alignments. Remember the skeleton
+  threshold for the next stage.
 
 <!-- }}} -->
 <!-- {{{ 4 - tbss_4_prestats -->
@@ -341,11 +321,11 @@ fslview all_FA mean_FA_skeleton</pre>
 <p>The last TBSS script carries out the final steps necessary before
   you run the voxelwise cross-subject stats. It thresholds the mean FA
   skeleton image at the chosen threshold - a common value that works
-  well is 2000 (see above). To run, type:
+  well is 0.2 (see above). To run, type:
 
-<pre><b>tbss_4_prestats 2000</b></pre>
+<pre><b>tbss_4_prestats 0.2</b></pre>
 
-replacing the <code>2000</code> with another value if you need to
+replacing the <code>0.2</code> with another value if you need to
 change it.
 
 <p>The resulting binary skeleton mask defines the set of voxels used
@@ -384,11 +364,19 @@ change it.
   file <code>all_FA_skeletonised</code>; check this with:
 
 <pre>
-cd FAi
-ls -1 *FAi.hdr
+cd FA
+imglob *_FA.*
 </pre>
 
-<p>For example, say you have 7 controls (with original filenames
+<p>We recommend using
+  the <a href="http://www.fmrib.ox.ac.uk/analysis/research/tfce">TFCE</a>
+  (Threshold-Free Cluster Enhancement) option in randomise. This is
+  somewhat similar to cluster-based thresholding, but generally more
+  robust and avoids the need for the arbitrary initial cluster-forming
+  threshold. To use this on TBSS-preprocessed data, add
+  the <code>--T2</code> option to randomise.
+
+<p>So, say you have 7 controls (with original filenames
   <code>CON_001_dti_FA.nii.gz</code> etc.) and 11 patients (with
   original filenames <code>PAT_001_dti_FA.nii.gz</code> etc.). You can
   generate design files and run voxelwise statistics and inference
@@ -398,17 +386,17 @@ ls -1 *FAi.hdr
 cd ../stats
 design_ttest2 design 7 11
 
-randomise -i all_FA_skeletonised -o tbss -m mean_FA_skeleton_mask -d design.mat -t design.con -n 5000 -c 3 -V
+randomise -i all_FA_skeletonised -o tbss -m mean_FA_skeleton_mask -d design.mat -t design.con -n 500 --T2 -V
 
-fslview MNI152 mean_FA_skeleton -l Green -b 2000,8000 tbss_tstat1 -l Red-Yellow -b 3,6 tbss_tstat2 -l Blue-Lightblue -b 3,6
+fslview $FSLDIR/data/standard/MNI152_T1_1mm mean_FA_skeleton -l Green -b 0.2,0.8 tbss_tstat1 -l Red-Yellow -b 3,6 tbss_tstat2 -l Blue-Lightblue -b 3,6
 </pre>
 
 <p>In this case, contrast 1 gives the control&gt;patient test and
   contrast 2 gives the control&lt;patient test. The raw
   (unthresholded) tstat images are <code>tbss_tstat1</code>
-  and <code>tbss_tstat2</code> respectively. The cluster p-value
+  and <code>tbss_tstat2</code> respectively. The TFCE p-value
   images (fully corrected for multiple comparisons across space)
-  are <code>tbss_maxc_tstat1</code> and <code>tbss_maxc_tstat2</code>
+  are <code>tbss_tfce_corrp_tstat1</code> and <code>tbss_tfce_corrp_tstat2</code>
   (note, these are actually 1-p for convenience of display, so
   thresholding at .95 gives significant clusters).
 
@@ -438,7 +426,7 @@ fslview MNI152 mean_FA_skeleton -l Green -b 2000,8000 tbss_tstat1 -l Red-Yellow 
 
 <LI>Create a new directory called L2 (or any other name) in your TBSS
   analysis directory (the one that contains the
-  existing <code>origdata</code>, <code>FAi</code>
+  existing <code>origdata</code>, <code>FA</code>
   and <code>stats</code> directories from the FA
   analysis):<br><code>mkdir L2</code>
 
@@ -446,21 +434,15 @@ fslview MNI152 mean_FA_skeleton -l Green -b 2000,8000 tbss_tstat1 -l Red-Yellow 
   are named <b>exactly</b> the same as the original FA images were (look in
   <code>origdata</code> to check the original names).
 
-<LI>Making sure that you are in the L2 directory,
-  run <code>tbss_1_preproc</code>, using a sensible scaling argument
-  (which in general will be different from <a href="#1">the scaling
-  needed for the original FA data</a>), for example:<br><code>cd L2 ;
-  tbss_1_preproc -f 1000000 *.nii.gz</code>
-
-<LI>Now go back up one directory to your top working TBSS directory
-  (the one that now contains FAi, stats and L2 subdirectories) and run
+<LI>Now, making sure that you are in your top working TBSS directory
+  (the one that now contains FA, stats and L2 subdirectories) and run
   the <code>tbss_non_FA</code> script, telling it that the alternate
   data is called L2. This will apply the original nonlinear
   registration to the L2 data, merge all subjects' warped L2 data into
   a 4D file <code>stats/all_L2</code>, project this onto the original
   mean FA skeleton (using the original FA data to find the projection
   vectors), resulting in the 4D projected data
-  <code>stats/all_L2_skeletonised</code>:<br><code>cd .. ; tbss_non_FA
+  <code>stats/all_L2_skeletonised</code>:<br><code>tbss_non_FA
   L2</code>
 
 <LI>You can now run voxelwise stats on the projected 4D
@@ -479,7 +461,7 @@ fslview MNI152 mean_FA_skeleton -l Green -b 2000,8000 tbss_tstat1 -l Red-Yellow 
   the MNI152 background image or your mean_FA study-specific image -
   or you may want to show TBSS results on top of both. If you use your
   mean_FA image as the background, make sure that you set a good
-  display range, for example 0:6000. For the rest of this section
+  display range, for example 0:0.6. For the rest of this section
   we'll assume that you want to show results on top of the MNI152
   image and hence start by loading MNI152 into FSLView.
 
@@ -489,40 +471,41 @@ fslview MNI152 mean_FA_skeleton -l Green -b 2000,8000 tbss_tstat1 -l Red-Yellow 
   multi-subjects statistics. Load mean_FA_skeleton into FSLView and
   set its display range correctly. The lower threshold <b>must</b> be
   set to the threshold that you used in the TBSS analysis, for example
-  2000. The upper level should probably be set to something like 7000,
+  0.2. The upper level should probably be set to something like 0.7,
   so that you can see variation in mean FA values within the
   skeleton. You probably want to change the colourmap, for example to
   Green, and increase the transparency (with the transparency slider)
   so that when you load the stats image in, it is easier to see.
 
-<p>Finally, load the stats image in. If you have used cluster-based
+<p>Finally, load the stats image in. If you have used TFCE-based
   testing in randomise, the raw t-statistic image will be named
   something like <code>tbss_tstat1</code> (which you could view to see
   raw tstats before significance testing), but the image you probably
-  want is <code>tbss_maxc_tstat1</code>, which is the p-value image
-  (actually the values in this image are 1-p for ease of display, so
-  that bigger is "better"). Load this into FSLView, set a colourmap
-  such as Red-Yellow, and set the display range to something like
-  0.95:1, which corresponds to thresholding the results at p<0.05.
+  want is <code>tbss_tfce_corrp_tstat1</code>, which is the corrected
+  p-value image (actually the values in this image are 1-p for ease of
+  display, so that bigger is "better"). Load this into FSLView, set a
+  colourmap such as Red-Yellow, and set the display range to something
+  like 0.95:1, which corresponds to thresholding the results at
+  p<0.05.
 
 <p>All of the above (apart from setting the skeleton transparency,
   which has to be done by hand in the GUI) can be carried out with a
   single command (see first example image):
 
-<p><code>fslview MNI152 mean_FA_skeleton -l Green -b 2000,7000 tbss_maxc_tstat1 -l Red-Yellow -b 0.95,1</code>
+<p><code>fslview $FSLDIR/data/standard/MNI152_T1_1mm mean_FA_skeleton -l Green -b 0.2,0.7 tbss_tfce_corrp_tstat1 -l Red-Yellow -b 0.95,1</code>
 
-<p><img src="stats_eg2.png" align="right">Alternatively, although showing the stats results on the TBSS
-  skeleton is a true representation of the actual analysis carried
-  out, some people find it easier to visualise the results if the
-  skeletonised results are "thickened" somewhat. In order to make such
-  a presentation easy, there is a script <code>tbss_fill</code>, which
-  thickens the thresholded stats image, filling it out into the local
-  "tracts" seen in mean_FA. For example, to apply this to the same
-  example as above and then view in FSLView on top of the mean_FA
-  image, run:
+<p><img src="stats_eg2.png" align="right">Alternatively, although
+  showing the stats results on the TBSS skeleton is a true
+  representation of the actual analysis carried out, some people find
+  it easier to visualise the results if the skeletonised results are
+  "thickened" somewhat. In order to make such a presentation easy,
+  there is a script <code>tbss_fill</code>, which thickens the
+  thresholded stats image, filling it out into the local "tracts" seen
+  in mean_FA. For example, to apply this to the same example as above
+  and then view in FSLView on top of the mean_FA image, run:
 
-<p><code>tbss_fill tbss_maxc_tstat1 0.95 mean_FA tbss_fill<br>
-fslview mean_FA -b 0,6000 mean_FA_skeleton -l Green -b 2000,7000 tbss_fill -l Red-Yellow</code>
+<p><code>tbss_fill tbss_tfce_corrp_tstat1 0.95 mean_FA tbss_fill<br>
+fslview mean_FA -b 0,0.6 mean_FA_skeleton -l Green -b 0.2,0.7 tbss_fill -l Red-Yellow</code>
 
 <!-- }}} -->
 <!-- {{{ back -->
@@ -531,18 +514,14 @@ fslview mean_FA -b 0,6000 mean_FA_skeleton -l Green -b 2000,7000 tbss_fill -l Re
 
 <p>It is possible to take one or more voxels on the mean FA skeleton
   and show where, in each subject's Fa image, those voxels originally
-  came from. This "back projection" is composed of up to three
+  came from. This "back projection" is composed of one or two
   steps. First, the skeleton voxel is projected back from its position
   on the skeleton to the nearby position at the centre of the nearest
   tract in the subject's FA image in standard space (i.e., after the
   FA image had been nonlinearly registered to the target
   image). Second, this point can then be "inverse warped" back into
   the subject's native space, by inverting the nonlinear registration
-  that was originally applied. Finally, the native space image can be
-  padded by a single slice on each side of the image cuboid, to match
-  the original native space data (these end slices were removed when
-  the data in FAi was originally created). The whole process can be
-  viewed thus:
+  that was originally applied. The whole process can be viewed thus:
 
 <p><center><img src="flowchart.png" width="100%"></center>
 
@@ -568,7 +547,7 @@ fslview mean_FA -b 0,6000 mean_FA_skeleton -l Green -b 2000,7000 tbss_fill -l Re
   previous randomise-based statistical analysis of the skeletonised
   data:
 
-<p><pre>fslmaths tbss_maxc_tstat1 -thr 0.95 grot
+<p><pre>fslmaths tbss_tfce_corrp_tstat1 -thr 0.95 grot
 tbss_deproject grot 1
 fslview all_FA grot_to_all_FA -l Red-Yellow</pre>
 
@@ -580,10 +559,10 @@ fslview all_FA grot_to_all_FA -l Red-Yellow</pre>
   turn.
 
 <p><b>Option 2: do the first step and also invert the nonlinear warping, to
-get back to subjects' native space in FAi</b>
+get back to subjects' native space</b>
 
 <p>For an example of complete back-projection to the space of the
-native data in FAi, run the following, first making sure you run the
+native data in FA, run the following, first making sure you run the
 command from within the <code>stats</code> directory. The
 <code>2</code> flag tells the script to take the back-projection back
 to the native space:
@@ -595,17 +574,7 @@ to the native space:
 called <code>subject_001</code>, you would view the results (if you
 are in the <code>stats</code> directory), with:
 
-<p><code>fslview ../FAi/subject_001_FAi subject_001_FAi_grot -l Red-Yellow</code>
-
-<p><b>Option 3: do the first two steps and also pad the end slices to get
-    back to the subjects' native space in orig</b>
-
-<p>If, instead, you want the final output in the original subject's
-native space (this is very similar to the native space in FAi, just
-with the end slices left in):
-
-<p><pre>tbss_deproject grot 3
-fslview ../orig/subject_001 subject_001_orig_grot -l Red-Yellow</pre>
+<p><code>fslview ../FA/subject_001_FA subject_001_FA_grot -l Red-Yellow</code>
 
 <p>This is probably the space you want to transform <code>grot</code>
 into if you are going to use the result to seed tractography analysis.
@@ -619,12 +588,32 @@ space; the advantage of nearest-neighbour is that the exact
 skeleton-space values are maintained, which might be important, for
 example, if they are cluster index numbers.
 
-
-
 <!-- }}} -->
 <!-- {{{ what's new -->
 
 <a name="new"></a><p><hr><H2>What's new in this version</H2>
+
+<p><b>v1.2</b>
+
+<p>This version switched the nonlinear registration from using IRTK to
+  using <a href=../fnirt/index.html>FNIRT</a> (FMRIB's Nonlinear
+  Registration Tool) and as a result there are some minor usage
+  changes. FNIRT is about 15 times faster than IRTK on FA data and
+  possibly a little more 'accurate'. A TBSS v1.2 analysis
+  is <b>not</b> compatible with an older analysis; the data needs to
+  be re-processed starting with running tbss_1_preproc (re-running
+  earlier steps such as eddy correction and dtifit is not
+  necessary). The usage changes are:
+
+<p>tbss_1_preproc now doesn't need a scaling factor to be chosen; FA
+  images no longer need to be converted to be in the range 0:10000.
+
+<p>It is no longer necessary to run tbss_1_preproc before feeding
+  non-FA images into TBSS; the data just needs to be named correctly
+  and put in the right place (see manual).
+
+<p>The threshold entered for tbss_4_prestats is now in the same units
+  of FA, e.g. 0.2, and no longer scaled up by a factor of 10000.
 
 <p><b>v1.1</b>
 
@@ -649,7 +638,7 @@ spaces.
 <!-- }}} -->
 <!-- {{{ end -->
 
-<p><HR><FONT SIZE=1>Copyright &copy; 2005-2007, University of
+<p><HR><FONT SIZE=1>Copyright &copy; 2005-2008, University of
 Oxford. Written by <A
 HREF="http://www.fmrib.ox.ac.uk/~steve/index.html">S. Smith</A>.</FONT>
 

@@ -79,22 +79,23 @@ void print_usage(const string& progname) {
 
 ReturnMatrix calcFFT(const Matrix& Mat)
 {
-  Matrix res;
+  Matrix res(Mat.Nrows()/2,Mat.Ncols()), empty(1,1);
+  empty=0;
+  ColumnVector tmpCol;
+  ColumnVector FtmpCol_real;
+  ColumnVector FtmpCol_imag;
+  ColumnVector tmpPow;
   for(int ctr=1; ctr <= Mat.Ncols(); ctr++)
     {
-      ColumnVector tmpCol;
       tmpCol=Mat.Column(ctr);
-      ColumnVector FtmpCol_real;
-      ColumnVector FtmpCol_imag;
-      ColumnVector tmpPow;
       if(tmpCol.Nrows()%2 != 0){
-	Matrix empty(1,1); empty=0;
 	tmpCol &= empty;}
       RealFFT(tmpCol,FtmpCol_real,FtmpCol_imag);
-      tmpPow = pow(FtmpCol_real,2)+pow(FtmpCol_imag,2);
+      tmpPow = SP(FtmpCol_real,FtmpCol_real)+SP(FtmpCol_imag,FtmpCol_imag);
       tmpPow = tmpPow.Rows(2,tmpPow.Nrows());
       //if(opts.logPower.value()) tmpPow = log(tmpPow);
-      if(res.Storage()==0){res= tmpPow;}else{res|=tmpPow;}
+      //if(res.Storage()==0){res= tmpPow;}else{res|=tmpPow;}
+      res.SubMatrix(1,res.Nrows(),ctr,ctr) = tmpPow;
     }
   res.Release();
   return res;

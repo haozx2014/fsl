@@ -8,9 +8,7 @@ USRLDFLAGS = -L${LIB_PROB} -L${LIB_ZLIB}
 IOLIBS = -lfslio -lniftiio -lznz
 #LIBS = -lss_8UI $(IOLIBS) -lprob -lm -lz
 
-XFILES = whirlgif hist2prob morph_kernel ptoz tmpnam ztop add4bytes
-
-SCRIPTS = correctheader
+XFILES = whirlgif hist2prob morph_kernel ptoz tmpnam ztop 
 
 all: $(XFILES)
 
@@ -31,7 +29,3 @@ tmpnam: tmpnam.c
 
 whirlgif: gifdecod.c gifencod.c whirlgif.c
 	$(CC) $(CFLAGS) -o whirlgif whirlgif.c gifdecod.c gifencod.c
-
-add4bytes: add4bytes.cc
-	$(CXX) $(CFLAGS) -o add4bytes add4bytes.cc 
-
