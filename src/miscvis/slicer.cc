@@ -114,12 +114,10 @@ int fmrib_main(int argc, char* argv[])
   volume<float> vol1, vol2(1,1,1);
 
   read_volume(vol1,string(argv[1]),vol1info);
-  vol1.makeradiological();
 
   int i = 2;
   if ( (argc>i) && (argv[i][0]!='-') ){
     read_volume(vol2,string(argv[i])); i++;
-    vol2.makeradiological();
   }
   
   bool dbgflag = FALSE;

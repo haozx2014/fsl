@@ -76,6 +76,7 @@
 #include <stdio.h>
 #include "utils/options.h"
 #include "utils/log.h"
+#include "commonopts.h"
 
 //#include "newmatall.h"
 using namespace Utilities;
@@ -103,6 +104,7 @@ class probtrackxOptions {
   Option<string> outfile;
   Option<string> rubbishfile;
   Option<string> stopfile;
+  Option<string> prefdirfile;
   Option<string> seeds_to_dti;
   FmribOption<string> skipmask;
   Option<string> seedref;
@@ -121,6 +123,7 @@ class probtrackxOptions {
   Option<bool> loopcheck;
   Option<bool> usef;
   Option<bool> randfib;
+  Option<int> fibst;
   Option<bool> modeuler;
   Option<int> rseed;
   void parse_command_line(int argc, char** argv,Log& logger);
@@ -196,6 +199,9 @@ class probtrackxOptions {
    stopfile(string("--stop"), string(""),
 	       string("Stop tracking at locations given by this mask file"),
 	       false, requires_argument),
+   prefdirfile(string("--prefdir"), string(""),
+	       string("prefered orientation preset in a 4D mask"),
+	       false, requires_argument),
    seeds_to_dti(string("--xfm"), string(""),
 		string("Transform Matrix taking seed space to DTI space default is to use the identity"),false, requires_argument),
    skipmask(string("--no_integrity"), string(""),
@@ -232,10 +238,10 @@ class probtrackxOptions {
 	    string("Number of steps per sample"),
 	    false, requires_argument),
    c_thr(string("-c,--cthr"), 0.2, 
-	 string("Curvature threshold"), 
+	 string("Curvature threshold - default=0.2"), 
 	 false, requires_argument),
   fibthresh(string("--fibthresh"), 0.01, 
-	    string("volume fraction before subsidary fibre orientations are considered (def 0.01)"), 
+	    string("volume fraction before subsidary fibre orientations are considered default=0.01"), 
 	 false, requires_argument),
    steplength(string("--steplength"), 0.5, 
 	 string("steplength"), 
@@ -249,6 +255,9 @@ class probtrackxOptions {
   randfib(string("--randfib"), false, 
 	 string("Select randomly from one of the fibres"), 
 	 false, no_argument),
+  fibst(string("--fibst"),1, 
+	 string("Force a starting fibre for tracking (default=1)"), 
+	 false, requires_argument),
   modeuler(string("--modeuler"), false, 
 	   string("Use modified euler streamlining"), 
 	   false, no_argument),
@@ -285,6 +294,7 @@ class probtrackxOptions {
        options.add(outfile);
        options.add(rubbishfile);
        options.add(stopfile);
+       options.add(prefdirfile);
        options.add(seeds_to_dti);
        options.add(nparticles);
        options.add(nsteps);
@@ -294,6 +304,7 @@ class probtrackxOptions {
        options.add(loopcheck);
        options.add(usef);
        options.add(randfib);
+       options.add(fibst);
        options.add(modeuler);
        options.add(rseed);
      }

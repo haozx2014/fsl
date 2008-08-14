@@ -4,7 +4,7 @@
 #
 #   Gwenaelle Douaud & Stephen Smith, FMRIB Image Analysis Group
 #
-#   Copyright (C) 2007 University of Oxford
+#   Copyright (C) 2007-2008 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -72,8 +72,8 @@ Usage() {
     echo ""
     echo "Usage: fslvbm_2_template [options]"
     echo ""
-    echo "-a  : affine registration (recommended)"
-    echo "-n  : nonlinear registration"
+    echo "-n  : nonlinear registration (recommended)"
+    echo "-a  : affine registration (discouraged)"
     echo ""
     exit 1
 }
@@ -82,78 +82,95 @@ Usage() {
 
 echo [`date`] [`hostname`] [`uname -a`] [`pwd`] [$0 $@] >> .fslvbmlog
 
-HOWLONG=200
+HOWLONG=30
 if [ $1 = -a ] ; then
-    REG="-A"
-    HOWLONG=30
+    REG="-a"
+    HOWLONG=5
 fi
 
-cd FAi
+cd struc
 
-D=${FSLDIR}/bin/DR
-export FSLOUTPUTTYPE=ANALYZE
-
-$FSLDIR/bin/fslmaths ${FSLDIR}/data/standard/tissuepriors/avg152T1_gray T
-$FSLDIR/bin/fslhd -x T | sed "s/sform_code .*/sform_code = \'0\'/g" > grot.xml
-$FSLDIR/bin/fslcreatehd grot.xml T.hdr
-/bin/rm grot.xml
+T=${FSLDIR}/data/standard/tissuepriors/avg152T1_gray
 
 ### segmentation
 /bin/rm -f fslvbm2a
-for g in `$FSLDIR/bin/remove_ext *FAi.hdr` ; do
+for g in `$FSLDIR/bin/imglob *_struc.*` ; do
     echo $g
-    ### Brain segmentation
-    echo -n "$FSLDIR/bin/fast -e -ov ${g}_brain ; " >> fslvbm2a
-    ### Transformation of the GM PVE in 16SI datatype and range 0:1000
-    echo -n "$FSLDIR/bin/fslmaths ${g}_brain_pve_1 -mul 1000 ${g}_GM -odt short ; " >> fslvbm2a
-    ### Creation of the mirror image of each GM
-    echo "$FSLDIR/bin/fslswapdim ${g}_GM -x y z ${g}_GM_xflipped" >> fslvbm2a
+    echo "$FSLDIR/bin/fast -R 0.3 -H 0.1 ${g}_brain ; \
+          $FSLDIR/bin/immv ${g}_brain_pve_1 ${g}_GM" >> fslvbm2a
 done
 chmod a+x fslvbm2a
 fslvbm2a_id=`$FSLDIR/bin/fsl_sub -T 30 -N fslvbm2a -t ./fslvbm2a`
 echo Running segmentation: ID=$fslvbm2a_id
 
-### Estimation of the registration parameters of GM and flipped_GM to grey matter standard template
+### Estimation of the registration parameters of GM to grey matter standard template
 /bin/rm -f fslvbm2b
-for g in *FAi.hdr ; do
-  g=`$FSLDIR/bin/remove_ext $g`
-  echo "${FSLDIR}/bin/tbss_reg ${g}_GM T -a $REG" >> fslvbm2b
-  echo "${FSLDIR}/bin/tbss_reg ${g}_GM_xflipped T -a $REG" >> fslvbm2b
+for g in `$FSLDIR/bin/imglob *_struc.*` ; do
+  echo "${FSLDIR}/bin/fsl_reg ${g}_GM $T ${g}_GM_to_T -a" >> fslvbm2b
 done
 chmod a+x fslvbm2b
 fslvbm2b_id=`$FSLDIR/bin/fsl_sub -j $fslvbm2a_id -T $HOWLONG -N fslvbm2b -t ./fslvbm2b`
-echo Running registration: ID=$fslvbm2b_id
+echo Running initial registration: ID=$fslvbm2b_id
 
 ### Creation of the GM template by averaging all (or following the template_list for) the GM_nl_0 and GM_xflipped_nl_0 images
-
 cat <<stage_tpl3 > fslvbm2c
-
 #!/bin/sh
-
 if [ -f ../template_list ] ; then
     template_list=\`cat ../template_list\`
+    template_list=\`\$FSLDIR/bin/remove_ext \$template_list\`
 else
-    template_list=\`echo *FAi.hdr | sed 's/_FAi//g'\`
+    template_list=\`echo *_struc.* | sed 's/_struc\./\./g'\`
+    template_list=\`\$FSLDIR/bin/remove_ext \$template_list | sort -u\`
     echo "WARNING - study-specific template will be created from ALL input data - may not be group-size matched!!!"
 fi
-
-template_list=\`\$FSLDIR/bin/remove_ext \$template_list\`
-
 for g in \$template_list ; do
-    mergelist="\$mergelist \${g}_FAi_GM_to_T \${g}_FAi_GM_xflipped_to_T"
+    mergelist="\$mergelist \${g}_struc_GM_to_T"
 done
-
-export FSLOUTPUTTYPE=NIFTI_GZ
 \$FSLDIR/bin/fslmerge -t template_4D_GM \$mergelist
-
-export FSLOUTPUTTYPE=ANALYZE
 \$FSLDIR/bin/fslmaths template_4D_GM -Tmean template_GM
-
+\$FSLDIR/bin/fslswapdim template_GM -x y z template_GM_flipped
+\$FSLDIR/bin/fslmaths template_GM -add template_GM_flipped -div 2 template_GM_init
 stage_tpl3
-
 chmod +x fslvbm2c
 fslvbm2c_id=`fsl_sub -j $fslvbm2b_id -T 15 -N fslvbm2c ./fslvbm2c`
-echo Creating template: ID=$fslvbm2c_id
+echo Creating first-pass template: ID=$fslvbm2c_id
 
-echo "Study-specific template will be created, when complete, check FAi/template_4D_GM as a movie loop in fslview"
+### Estimation of the registration parameters of GM to grey matter standard template
+/bin/rm -f fslvbm2d
+T=template_GM_init
+for g in `$FSLDIR/bin/imglob *_struc.*` ; do
+  echo "${FSLDIR}/bin/fsl_reg ${g}_GM $T ${g}_GM_to_T_init $REG -fnirt \"--config=GM_2_MNI152GM_2mm.cnf\"" >> fslvbm2d
+done
+chmod a+x fslvbm2d
+fslvbm2d_id=`$FSLDIR/bin/fsl_sub -j $fslvbm2c_id -T $HOWLONG -N fslvbm2d -t ./fslvbm2d`
+echo Running registration to first-pass template: ID=$fslvbm2d_id
+
+### Creation of the GM template by averaging all (or following the template_list for) the GM_nl_0 and GM_xflipped_nl_0 images
+cat <<stage_tpl4 > fslvbm2e
+#!/bin/sh
+if [ -f ../template_list ] ; then
+    template_list=\`cat ../template_list\`
+    template_list=\`\$FSLDIR/bin/remove_ext \$template_list\`
+else
+    template_list=\`echo *_struc.* | sed 's/_struc\./\./g'\`
+    template_list=\`\$FSLDIR/bin/remove_ext \$template_list | sort -u\`
+    echo "WARNING - study-specific template will be created from ALL input data - may not be group-size matched!!!"
+fi
+for g in \$template_list ; do
+    mergelist="\$mergelist \${g}_struc_GM_to_T_init"
+done
+\$FSLDIR/bin/fslmerge -t template_4D_GM \$mergelist
+\$FSLDIR/bin/fslmaths template_4D_GM -Tmean template_GM
+\$FSLDIR/bin/fslswapdim template_GM -x y z template_GM_flipped
+\$FSLDIR/bin/fslmaths template_GM -add template_GM_flipped -div 2 template_GM
+stage_tpl4
+chmod +x fslvbm2e
+fslvbm2e_id=`fsl_sub -j $fslvbm2d_id -T 15 -N fslvbm2e ./fslvbm2e`
+echo Creating second-pass template: ID=$fslvbm2e_id
+
+echo "Study-specific template will be created, when complete, check results with:"
+echo "fslview struc/template_4D_GM"
+echo "and turn on the movie loop to check all subjects, then run:"
+echo "fslview " ${FSLDIR}/data/standard/tissuepriors/avg152T1_gray " struc/template_GM"
+echo "to check general alignment of mean GM template vs. original standard space template."
 

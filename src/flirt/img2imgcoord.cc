@@ -73,10 +73,17 @@
 #define WANT_STREAM
 #define WANT_MATH
 
+#ifndef EXPOSE_TREACHEROUS
+#define EXPOSE_TREACHEROUS
+#endif
+
 #include "newmatap.h"
 #include "newmatio.h"
 #include "miscmaths/miscmaths.h"
 #include "newimage/newimageall.h"
+#include "warpfns/warpfns.h"
+#include "warpfns/fnirt_file_reader.h"
+
 
 #ifndef NO_NAMESPACE
  using namespace MISCMATHS;
@@ -91,8 +98,9 @@ class globaloptions {
 public:
   string destfname;
   string srcfname;
-  string xfmfname;
+  string prexfmfname;
   string coordfname;
+  string warpfname;
   bool mm;
   int verbose;
 public:
@@ -109,7 +117,8 @@ globaloptions::globaloptions()
   destfname = "";
   srcfname = "";
   coordfname = "";
-  xfmfname = "";
+  prexfmfname = "";
+  warpfname = "";
   mm = false;
 }
 
@@ -122,11 +131,14 @@ void print_usage(int argc, char *argv[])
 {
   cout << "Usage: " << argv[0] << " [options] <filename containing coordinates>\n\n"
        << "  Options are:\n"
-       << "        -src <Source Image filename>         (NB: volume, not timeseries)\n"
-       << "        -dest <Destination Image filename>   (NB: volume, not timeseries)\n"
-       << "        -xfm <Source to Destination transform filename>\n"
-       << "        -vox                                 (all coordinates in voxels - default)\n"
-       << "        -mm                                  (all coordinates in mm)\n"
+       << "        -src <filename of source image>        \n"
+       << "        -dest <filename of destination image>  \n"
+       << "        -xfm <filename of affine transform     (e.g. source2dest.mat)>\n"
+       << "        -warp <filename of warpfield (e.g. intermediate2dest_warp.nii.gz)>\n"
+       << "        -premat <filename of pre-warp affine transform  (e.g. source2intermediate.mat)>   (default=identity)\n"
+       << "        -vox                                   (all coordinates in voxels - default)\n"
+       << "        -mm                                    (all coordinates in mm)\n"
+       << "        -v                                     (verbose)\n"
        << "        -help\n\n"
        << " Note that the first three options are compulsory\n";
 }
@@ -191,8 +203,12 @@ void parse_command_line(int argc, char* argv[])
       globalopts.srcfname = argv[n+1];
       n+=2;
       continue;
-    } else if ( arg == "-xfm") {
-      globalopts.xfmfname = argv[n+1];
+    } else if ( ( arg == "-xfm") || (arg == "-premat") ) {
+      globalopts.prexfmfname = argv[n+1];
+      n+=2;
+      continue;
+    } else if ( arg == "-warp") {
+      globalopts.warpfname = argv[n+1];
       n+=2;
       continue;
     } else { 
@@ -221,6 +237,23 @@ void print_info(const volume<float>& vol, const string& name) {
 
 ////////////////////////////////////////////////////////////////////////////
 
+ColumnVector NewimageCoord2NewimageCoord(const FnirtFileReader& fnirtfile, const Matrix& affmat,
+					 const volume<float>& srcvol, const volume<float>& destvol,
+					 const ColumnVector& srccoord)
+{
+  ColumnVector retvec;
+  if (fnirtfile.IsValid()) {
+    // in the following affmat=src2middle.mat, fnirtfile=middle2dest_warp.nii.gz
+    retvec = NewimageCoord2NewimageCoord(affmat,
+				     fnirtfile.FieldAsNewimageVolume4D(true),true,srcvol,destvol,srccoord);
+  } else {
+    retvec = NewimageCoord2NewimageCoord(affmat,srcvol,destvol,srccoord);
+  }
+  return retvec;
+}
+
+////////////////////////////////////////////////////////////////////////////
+
 int main(int argc,char *argv[])
 {
   parse_command_line(argc,argv);
@@ -244,15 +277,31 @@ int main(int argc,char *argv[])
 
   // read matrices
   Matrix affmat(4,4);
-  int returnval;
-  returnval = read_matrix(affmat,globalopts.xfmfname,srcvol,destvol);
-  if (returnval<0) {
+  if (globalopts.prexfmfname == "") {
+    affmat = IdentityMatrix(4);
+  } else {
+    affmat = read_ascii_matrix(globalopts.prexfmfname);
+  }
+  if (affmat.Nrows()<4) {
     cerr << "Cannot read transform file" << endl;
     return -2;
   }
     
   if (globalopts.verbose>3) {
     cout << " affmat =" << endl << affmat << endl << endl;
+  }
+
+  // Read in warps from file (if specified)
+  FnirtFileReader  fnirtfile;
+  AbsOrRelWarps    wt = UnknownWarps;
+  if (globalopts.warpfname != "") {
+    try {
+      fnirtfile.Read(globalopts.warpfname,wt,globalopts.verbose>3);
+    }
+    catch (...) {
+      cerr << "An error occured while reading file: " << globalopts.warpfname << endl;
+      exit(EXIT_FAILURE);
+    }
   }
 
 
@@ -285,9 +334,9 @@ int main(int argc,char *argv[])
 	matfile >> srccoord(j);
       }
       if (globalopts.mm) {  // in mm
-	destcoord = destvol.vox2mm_mat() * Vox2VoxMatrix(affmat,srcvol,destvol) * srcvol.vox2mm_mat().i() * srccoord; 
+	destcoord = destvol.newimagevox2mm_mat() * NewimageCoord2NewimageCoord(fnirtfile,affmat,srcvol,destvol,srcvol.newimagevox2mm_mat().i() * srccoord); 
       } else { // in voxels
-	destcoord = Vox2VoxMatrix(affmat,srcvol,destvol) * srccoord; 
+	destcoord = destvol.niftivox2newimagevox_mat().i() * NewimageCoord2NewimageCoord(fnirtfile,affmat,srcvol,destvol,srcvol.niftivox2newimagevox_mat() * srccoord); 
       }
       cout << destcoord(1) << "  " << destcoord(2) << "  " << destcoord(3) << endl;
     }
@@ -307,9 +356,9 @@ int main(int argc,char *argv[])
       if (oldsrc == srccoord)  return 0;
       oldsrc = srccoord;
       if (globalopts.mm) {  // in mm
-	destcoord = destvol.vox2mm_mat() * Vox2VoxMatrix(affmat,srcvol,destvol) * srcvol.vox2mm_mat().i() * srccoord; 
+	destcoord = destvol.newimagevox2mm_mat() * NewimageCoord2NewimageCoord(fnirtfile,affmat,srcvol,destvol,srcvol.newimagevox2mm_mat().i() * srccoord); 
       } else { // in voxels
-	destcoord = Vox2VoxMatrix(affmat,srcvol,destvol) * srccoord; 
+	destcoord = destvol.niftivox2newimagevox_mat().i() * NewimageCoord2NewimageCoord(fnirtfile,affmat,srcvol,destvol,srcvol.niftivox2newimagevox_mat() * srccoord);
       }
       cout << destcoord(1) << "  " << destcoord(2) << "  " << destcoord(3) << endl;
     }

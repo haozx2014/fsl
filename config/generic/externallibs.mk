@@ -1,9 +1,10 @@
-# $Id: externallibs.mk,v 1.6 2007/06/29 14:22:27 duncan Exp $
+# $Id: externallibs.mk,v 1.7 2007/07/13 11:00:20 duncan Exp $
 
 # External Library and Include Paths
 
 FSLEXTLIB=${FSLDIR}/extras/lib
 FSLEXTINC=${FSLDIR}/extras/include
+FSLEXTBIN=${FSLDIR}/extras/bin
 
 # CEPHES library
 LIB_CEPHES = ${FSLEXTLIB}

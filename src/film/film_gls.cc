@@ -1,8 +1,8 @@
 /*  film_gls.cc
 
-    Mark Woolrich, FMRIB Image Analysis Group
+    Mark Woolrich and Matthew Webster, FMRIB Image Analysis Group
 
-    Copyright (C) 1999-2000 University of Oxford  */
+    Copyright (C) 1999-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -67,16 +67,10 @@
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
 #include <iostream>
-#include <fstream>
-#include <sstream>
 #define WANT_STREAM
 #define WANT_MATH
 
-#include "newmatap.h"
-#include "newmatio.h"
-#include "miscmaths/volumeseries.h"
-#include "miscmaths/volume.h"
-#include "miscmaths/miscmaths.h"
+#include "newimage/newimageall.h"
 #include "utils/log.h"
 #include "AutoCorrEstimator.h"
 #include "paradigm.h"
@@ -89,6 +83,7 @@ using namespace NEWMAT;
 using namespace FILM;
 using namespace Utilities;
 using namespace MISCMATHS;
+using namespace NEWIMAGE;
 
 int main(int argc, char *argv[])
 {
@@ -102,74 +97,64 @@ int main(int argc, char *argv[])
     globalopts.parse_command_line(argc, argv, logger);
 
     // load data
-    VolumeSeries x;
-    x.read(globalopts.inputfname);
+    volume4D<float> input_data;
+    volumeinfo vinfo;
+    read_volume4D(input_data,globalopts.inputfname,vinfo);
+    int sizeTS = input_data.tsize();
 
-    int sizeTS = x.getNumVolumes();
+    Matrix datam;
+    volume<float> mask(input_data[0]);
 
-    // if needed for SUSAN spatial smoothing, output the halfway volume for use later
-    Volume epivol;
-    if(globalopts.smoothACEst)
-      {
-	epivol = x.getVolume(int(sizeTS/2)).AsColumn();
-	epivol.setInfo(x.getInfo());
-	epivol.writeAsInt(logger.getDir() + "/" + globalopts.epifname);
-      }
+    volume4D<float> reference(mask.xsize(),mask.ysize(),mask.zsize(),1);
+    reference[0]=input_data[int(sizeTS/2)-1];
 
-    // This also removes the mean from each of the time series:
-    x.thresholdSeries(globalopts.thresh, true);
-
-    // if needed for SUSAN spatial smoothing, also threshold the epi volume
-    if(globalopts.smoothACEst)
-      {
-	epivol.setPreThresholdPositions(x.getPreThresholdPositions());
-	epivol.threshold();
-      }
+    for(int t=1;t<input_data.tsize();t++) mask+=input_data[t];
+    mask/=input_data.tsize();
+    input_data-=mask;
+    mask.binarise(globalopts.thresh,mask.max()+1,exclusive);
+    datam=input_data.matrix(mask);
+   
+    int numTS = datam.Ncols();
+    ColumnVector epivol = reference.matrix(mask).t();
     
-    int numTS = x.getNumSeries();
-
     // Load paradigm:
-    Paradigm parad;
+    Paradigm paradigm;
     if(!globalopts.ac_only)
-      {	
-	parad.load(globalopts.paradigmfname, "", "", false, sizeTS);
-      }
+      paradigm.load(globalopts.paradigmfname, "", "", false, sizeTS);
     else
-      {
-	// set design matrix to be one ev with all ones:
-	Matrix mat(sizeTS,1);
-	mat = 1;
-	parad.setDesignMatrix(mat);
-      }
+      paradigm.setDesignMatrix(sizeTS); // set design matrix to be one ev with all ones:
 
     if(globalopts.verbose)
-      {
-	write_vest(logger.appendDir("Gc"), parad.getDesignMatrix());
-      }
+      write_vest(logger.appendDir("Gc"), paradigm.getDesignMatrix());
+
+    if (globalopts.voxelwise_ev_numbers.size()>0 && globalopts.voxelwiseEvFilenames.size()>0)
+      paradigm.loadVoxelwise(globalopts.voxelwise_ev_numbers,globalopts.voxelwiseEvFilenames,mask);
     
 
-    OUT(parad.getDesignMatrix().Nrows());
-    OUT(parad.getDesignMatrix().Ncols());
+    OUT(paradigm.getDesignMatrix().Nrows());
+    OUT(paradigm.getDesignMatrix().Ncols());
     OUT(sizeTS);
     OUT(numTS);
 
     // Setup GLM:
-    int numParams = parad.getDesignMatrix().Ncols();
+    int numParams = paradigm.getDesignMatrix().Ncols();
     GlimGls glimGls(numTS, sizeTS, numParams);
 
     // Residuals container:
-    VolumeSeries residuals(sizeTS, numTS, x.getInfo(), x.getPreThresholdPositions());
+    Matrix residuals(sizeTS, numTS);
 
     // Setup autocorrelation estimator:
     AutoCorrEstimator acEst(residuals);
+
+    acEst.mask=mask;
 
     if(!globalopts.noest)
       {
 	cout << "Calculating residuals..." << endl; 
 	for(int i = 1; i <= numTS; i++)
 	  {						    
-	    glimGls.setData(x.getSeries(i), parad.getDesignMatrix(), i);
-	    residuals.setSeries(glimGls.getResiduals(),i);
+            glimGls.setData(datam.Column(i), paradigm.getDesignMatrix(i), i);
+	    residuals.Column(i)=glimGls.getResiduals();
 	  }
 	cout << "Completed" << endl; 
 	
@@ -177,7 +162,11 @@ int main(int argc, char *argv[])
 		
 	if(globalopts.fitAutoRegressiveModel)
 	  {
-	    acEst.fitAutoRegressiveModel();
+	    volume4D<float> beta;
+	    beta.setmatrix(acEst.fitAutoRegressiveModel(),mask);
+	    copybasicproperties(input_data,beta);
+	    FslSetCalMinMax(&vinfo,beta.min(),beta.max());
+	    save_volume4D(beta,LogSingleton::getInstance().getDir() + "/betas",vinfo);
 	  }
 	else if(globalopts.tukey)
 	  {    
@@ -186,11 +175,9 @@ int main(int argc, char *argv[])
 
 	    acEst.calcRaw();
 
-	    // SUSAN smooth raw estimates:
 	    if(globalopts.smoothACEst)
-	      {
-		acEst.spatiallySmooth(logger.getDir() + "/" + globalopts.epifname, epivol, globalopts.ms, globalopts.epifname, globalopts.susanpath, globalopts.epith, globalopts.tukeysize);		    
-	      }	    
+		acEst.spatiallySmooth(logger.getDir() + "/" + globalopts.epifname, epivol, globalopts.ms, globalopts.epifname, globalopts.epith, reference[0], globalopts.tukeysize);	
+
 		
 	    acEst.tukey(globalopts.tukeysize);
 	  }
@@ -203,11 +190,8 @@ int main(int argc, char *argv[])
 	  {
 	    acEst.calcRaw();
 
-	    // Smooth raw estimates:
 	    if(globalopts.smoothACEst)
-	      { 
-		acEst.spatiallySmooth(logger.getDir() + "/" + globalopts.epifname, epivol, globalopts.ms, globalopts.epifname, globalopts.susanpath, globalopts.epith);		    
-	      }
+		acEst.spatiallySmooth(logger.getDir() + "/" + globalopts.epifname, epivol, globalopts.ms, globalopts.epifname, globalopts.epith, reference[0]);
 	    
 	    acEst.pava();
 	  }
@@ -219,114 +203,76 @@ int main(int argc, char *argv[])
     cout << "Percentage done:" << endl;
     int co = 1;
 
-    Matrix mean_prewhitened_dm(parad.getDesignMatrix().Nrows(),parad.getDesignMatrix().Ncols());
+    Matrix mean_prewhitened_dm(paradigm.getDesignMatrix().Nrows(),paradigm.getDesignMatrix().Ncols());
     mean_prewhitened_dm=0;
-
     for(int i = 1; i <= numTS; i++)
-      {						
-	ColumnVector xw(sizeTS);
-	ColumnVector xprew(sizeTS);
-	   
-	if(!globalopts.noest)
-	  {
-	    acEst.setDesignMatrix(parad.getDesignMatrix());
-	    
-	    // Use autocorr estimate to prewhiten data:
-	    xprew = x.getSeries(i);	
-	    Matrix designmattw;
-	    acEst.preWhiten(xprew, xw, i, designmattw);
-	    
-	    if ( (100.0*i)/numTS > co )
-	      {
-		cout << co << ",";
-		cout.flush();
-		co++;
-	      }
-	    
-	    x.setSeries(xw,i);
-	    
-	    glimGls.setData(x.getSeries(i), designmattw, i);
-
-	    if(globalopts.output_pwdata || globalopts.verbose)
-	      {
-		mean_prewhitened_dm=mean_prewhitened_dm+designmattw;		
-	      }
-	  }
-	else
-	  {
-	    if ( (100.0*i)/numTS > co )
-	      {
-		cout << co << ",";
-		cout.flush();
-		co++;
-	      }
-	    
-	    glimGls.setData(x.getSeries(i), parad.getDesignMatrix(), i);
-	    residuals.setSeries(glimGls.getResiduals(),i);
-
-	    if(globalopts.output_pwdata || globalopts.verbose)
-	      {
-		mean_prewhitened_dm=mean_prewhitened_dm+parad.getDesignMatrix();		
-	      }
-	  }
+    {	
+      Matrix effectiveDesign(paradigm.getDesignMatrix(i));
+      if ( (100.0*i)/numTS > co )
+        cout << co++ << "," << flush;	   
+      if(!globalopts.noest) {
+	acEst.setDesignMatrix(effectiveDesign);
+	// Use autocorr estimate to prewhiten data and design:
+	ColumnVector xw;
+	acEst.preWhiten(datam.Column(i), xw, i, effectiveDesign);   
+        datam.Column(i)=xw;
       }
+      glimGls.setData(datam.Column(i), effectiveDesign, i);
+      residuals.Column(i)=glimGls.getResiduals();
+      if(globalopts.output_pwdata || globalopts.verbose)
+        mean_prewhitened_dm+=effectiveDesign;	
+    }
 
-    if(globalopts.output_pwdata || globalopts.verbose)
-      {
-	mean_prewhitened_dm=mean_prewhitened_dm/numTS;
-      }
+    if(globalopts.output_pwdata || globalopts.verbose) 
+      mean_prewhitened_dm/=numTS;
+     
+    cerr << "Completed" << endl << "Saving results... " << endl;
 
-    cerr << "Completed" << endl;
-
-    cerr << "Saving results... " << endl;
-
-    // write residuals
-    //residuals.unthresholdSeries(x.getInfo(),x.getPreThresholdPositions());
-    //residuals.writeAsFloat(logger.getDir() + "/res4d");
-    residuals.writeThresholdedSeriesAsFloat(x.getInfo(),x.getPreThresholdPositions(),logger.getDir() + "/res4d");
-    residuals.CleanUp();
+    input_data.setmatrix(residuals,mask);
+    FslSetCalMinMax(&vinfo,input_data.min(),input_data.max());
+    save_volume4D(input_data,logger.getDir() + "/res4d",vinfo);
 
     if(globalopts.output_pwdata || globalopts.verbose)
       {
 	// Write out whitened data
-	x.writeThresholdedSeriesAsFloat(x.getInfo(),x.getPreThresholdPositions(),logger.getDir() + "/prewhitened_data");
-
+        input_data.setmatrix(datam,mask);
+	FslSetCalMinMax(&vinfo,input_data.min(),input_data.max());
+        save_volume4D(input_data,logger.getDir() + "/prewhitened_data",vinfo);
 	// Write out whitened design matrix
 	write_vest(logger.appendDir("mean_prewhitened_dm.mat"), mean_prewhitened_dm);
 		
       }
 
-    x.CleanUp();
-
     // Write out threshac:
-    VolumeSeries& threshac = acEst.getEstimates();
+    Matrix& threshacm = acEst.getEstimates();
     int cutoff = sizeTS/2;
-    if(globalopts.tukey)
-      cutoff = globalopts.tukeysize;
-    cutoff = MISCMATHS::Max(1,cutoff);
-    threshac = threshac.Rows(1,cutoff);
-    VolumeInfo volinfo = x.getInfo();
-    volinfo.v = cutoff;
-    volinfo.intent_code = NIFTI_INTENT_ESTIMATE;
-    threshac.unthresholdSeries(volinfo,x.getPreThresholdPositions());
-    threshac.writeAsFloat(logger.getDir() + "/threshac1");
-    threshac.thresholdSeries();
-    threshac.CleanUp();
+    if(globalopts.tukey) cutoff = globalopts.tukeysize;
+    threshacm = threshacm.Rows(1,MISCMATHS::Max(1,cutoff)); 
+
+    input_data.setmatrix(threshacm,mask);
+    input_data.settdim(reference.tdim());
+    input_data.set_intent(NIFTI_INTENT_ESTIMATE,0,0,0);
+    FslSetCalMinMax(&vinfo,input_data.min(),input_data.max());
+    save_volume4D(input_data,logger.getDir() + "/threshac1",vinfo);
+
+    threshacm.CleanUp();
 
     // save gls results:
-    glimGls.Save(x.getInfo(), x.getPreThresholdPositions());
+    glimGls.Save(vinfo,mask,reference.tdim());
     glimGls.CleanUp();
 
     cerr << "Completed" << endl;
   }  
   catch(Exception p_excp) 
-    {
+  {
       cerr << p_excp.what() << endl;
-    }
+      return 1;
+  }
   catch(...)
-    {
+  {
       cerr << "Uncaught exception!" << endl;
-    }
+      return 1;
+  }
 
   return 0;
 }

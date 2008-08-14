@@ -75,6 +75,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "utils/options.h"
+#include "commonopts.h"
 using namespace Utilities;
 
 namespace CCOPS {
@@ -87,6 +88,7 @@ class ccopsOptions {
   Option<bool> help;
   Option<string> inmatrix;
   Option<string> basename;
+  Option<string> directory;
   Option<string> excl_mask;
   Option<bool>  reord1;
   Option<bool>  reord2;
@@ -95,7 +97,7 @@ class ccopsOptions {
   Option<float> power;
   Option<string> mask;
   Option<string> scheme;
-  Option<int>    kmeans;
+  Option<int>    nclusters;
   bool parse_command_line(int argc, char** argv);
   
  private:
@@ -120,12 +122,15 @@ class ccopsOptions {
    help(string("-h,--help"), false,
 	string("display this message"),
 	false, no_argument),
-   inmatrix(string("-i,--in"), string(""),
+   inmatrix(string("-i,--in"), string("fdt_matrix2"),
 	       string("input matrix"),
-	       true, requires_argument),  
+	       false, requires_argument),  
    basename(string("-b,--basename"), string(""),
 	       string("Output basename"),
 	       true, requires_argument),
+   directory(string("-d,--dir"), string("."),
+	       string("Tractography Results Directory"),
+	       false, requires_argument),
    excl_mask(string("-x"), string(""),
 	     string("exclusion mask (in tract space johannes)"),
 	     false, requires_argument),  
@@ -148,9 +153,9 @@ class ccopsOptions {
 	 string("brain mask used to output the clustered roi mask"), 
 	 false, requires_argument),
    scheme(string("-s,--scheme"), "spectral", 
-	 string("Reordering algorithm. Can be either spectral (default) or dpm or kmeans"), 
+	 string("Reordering algorithm. Can be either spectral (default) or kmeans"), 
 	 false, requires_argument),
-   kmeans(string("-K"), 2, 
+   nclusters(string("-k,--nclusters"), 2, 
 	  string("Number of clusters to be used in kmeans"), 
 	  false, requires_argument),
    options("ccops","")
@@ -161,6 +166,7 @@ class ccopsOptions {
        options.add(help);
        options.add(inmatrix);
        options.add(basename);
+       options.add(directory);
        options.add(excl_mask);
        options.add(reord1);
        options.add(reord2);
@@ -169,7 +175,7 @@ class ccopsOptions {
        options.add(power);
        options.add(mask);
        options.add(scheme);
-       options.add(kmeans);
+       options.add(nclusters);
        
      }
      catch(X_OptionError& e) {

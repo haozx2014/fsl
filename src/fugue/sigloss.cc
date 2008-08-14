@@ -73,7 +73,7 @@
 #define POSIX_SOURCE 1
 
 #include "newimage/newimageall.h"
-#include "newimage/warpfns.h"
+#include "warpfns/warpfns.h"
 #include "miscmaths/miscmaths.h"
 #include "utils/options.h"
 

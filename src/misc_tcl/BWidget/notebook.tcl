@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------
 #  notebook.tcl
 #  This file is part of Unifix BWidget Toolkit
-#  $Id: notebook.tcl,v 1.1 2006/11/28 15:34:01 mwebster Exp $
+#  $Id: notebook.tcl,v 1.3 2008/07/19 15:37:31 mwebster Exp $
 # ---------------------------------------------------------------------------
 #  Index of commands:
 #     - NoteBook::create
@@ -333,7 +333,7 @@ proc NoteBook::itemcget { path page option } {
 # ---------------------------------------------------------------------------
 proc NoteBook::bindtabs { path event script } {
     if { $script != "" } {
-	append script " \[NoteBook::_get_page_name [list $path] current 2\]"
+	append script " \[NoteBook::_get_page_name [list $path] current 1\]"
         $path.c bind "page" $event $script
     } else {
         $path.c bind "page" $event {}
@@ -656,7 +656,7 @@ proc NoteBook::_highlight { type path page } {
         }
     }
 }
-#select appropriate colours up here as well as in redraw
+
 
 # ---------------------------------------------------------------------------
 #  Command NoteBook::_select
@@ -729,7 +729,7 @@ proc NoteBook::_draw_page { path page create } {
     variable $path
     upvar 0  $path data
 
-    # --- calculate colours and co-ordinates of tabs ------------------
+    # --- calcul des coordonnees et des couleurs de l'onglet ------------------
     set pos [lsearch -exact $data(pages) $page]
     set bg  [_getoption $path $page -background]
 
@@ -772,16 +772,11 @@ proc NoteBook::_draw_page { path page create } {
 	    #incr xd 2
 	    #incr textOffsetX -2
 	} else {
-        incr xd 5
-         }
-#the incr xd 5 is new code to seperate tabs slightly
+	    incr xd 5
+	}
     } else {
 	# The selected page's text is raised higher than the others
 	incr top -2
-        if { $pos != 0 } {
-        #incr xd 5
-        #this incr allows "left" seperation of selected tabs but need to extend page frame to compensate 
-        }
     }
 
     # Precompute some coord values that we use a lot
@@ -798,6 +793,8 @@ proc NoteBook::_draw_page { path page create } {
     if {$bd < 1} { set bd 1 }
 
     if { $tabsOnBottom } {
+	# adjust to keep bottom edge in view
+	incr h1 -1
 	set top [expr {$top * -1}]
 	set topPlusRadius [expr {$topPlusRadius * -1}]
 	# Hrm... the canvas has an issue with drawing diagonal segments
@@ -807,11 +804,10 @@ proc NoteBook::_draw_page { path page create } {
 		$rightPlusRadius			[expr {$h1-$h-1}] \
 		[expr {$rightPlusRadius - $xBevel}]	[expr {$h1 + $topPlusRadius}] \
 		[expr {$xf - $xBevel}]			[expr {$h1 + $top}] \
-
 		]
         set lb  [list \
-      	        [expr {$leftPlusRadius + $xBevel}]	[expr {$h1 + $top}] \
-                [expr {$xd + $xBevel}]			[expr {$h1 + $topPlusRadius}] \
+		[expr {$leftPlusRadius + $xBevel}]	[expr {$h1 + $top}] \
+		[expr {$xd + $xBevel}]			[expr {$h1 + $topPlusRadius}] \
 		$xd					[expr {$h1-$h-1}] \
 		]
 	# Because we have to do this funky reverse order thing, we have to
@@ -819,16 +815,15 @@ proc NoteBook::_draw_page { path page create } {
 	set tmp $fgt
 	set fgt $fgb
 	set fgb $tmp
-#		[expr {$xf + 1 - $xBevel}] 		[expr {$top + 1}] \
     } else {
 	set lt [list \
 		$xd					$h \
 		[expr {$xd + $xBevel}]			$topPlusRadius \
 		[expr {$leftPlusRadius + $xBevel}]	$top \
 		[expr {$xf + 1 - $xBevel}]		$top \
-		[expr {$rightPlusRadius - $xBevel}]	$topPlusRadius \
 		]
 	set lb [list \
+		[expr {$xf + 1 - $xBevel}] 		[expr {$top + 1}] \
 		[expr {$rightPlusRadius - $xBevel}]	$topPlusRadius \
 		$rightPlusRadius			$h \
 		]
@@ -862,15 +857,15 @@ proc NoteBook::_draw_page { path page create } {
     } else {
         set bd    2
         if { [Widget::cget $path.f$page -state] == "normal" } {
-            set bg [_getoption $path $page -disabledforeground]
+	    set bg [_getoption $path $page -disabledforeground]
             set fg [_getoption $path $page -foreground]
         } else {
-            set fg [_getoption $path $page -background]
+	    set fg [_getoption $path $page -background]
             set bg [_getoption $path $page -disabledforeground]
         }
     }
-    # default and active borderwidths set above
-    # --- creation or modification of tabs (onglet in french) --------------------------------
+
+    # --- creation ou modification de l'onglet --------------------------------
     # Sven
     if { $create } {
 	# Create the tab region
@@ -879,8 +874,10 @@ proc NoteBook::_draw_page { path page create } {
 		-outline	$bg \
 		-fill		$bg \
 		]
-        eval [list $path.c create line] $lt [list -tags [list page p:$page $page:top top] -fill $fgt -width $bd]
-        eval [list $path.c create line] $lb [list -tags [list page p:$page $page:bot bot] -fill $fgb -width $bd]
+        eval [list $path.c create line] $lt [list \
+            -tags [list page p:$page $page:top top] -fill $fgt -width $bd]
+        eval [list $path.c create line] $lb [list \
+            -tags [list page p:$page $page:bot bot] -fill $fgb -width $bd]
         $path.c create text $xtext $ytext 			\
 		-text	[Widget::cget $path.f$page -text]	\
 		-font	[Widget::cget $path -font]		\
@@ -905,10 +902,10 @@ proc NoteBook::_draw_page { path page create } {
     eval [list $path.c coords "$page:poly"] [concat $lt $lb]
     eval [list $path.c coords "$page:top"]  $lt
     eval [list $path.c coords "$page:bot"]  $lb
-    $path.c itemconfigure "$page:poly" -fill $bg  -outline $bg -width [ expr {$bd} ]
-    $path.c itemconfigure "$page:top"  -fill $fgt -width [ expr {$bd} ]							   
-    $path.c itemconfigure "$page:bot"  -fill $fgb -width [ expr {$bd} ]
-    #The above lines control tab line thickness and colours etc replace {2} with $bd for original
+    $path.c itemconfigure "$page:poly" -fill $bg  -outline $bg -width $bd
+    $path.c itemconfigure "$page:top"  -fill $fgt -width $bd
+    $path.c itemconfigure "$page:bot"  -fill $fgb -width $bd
+    
     # Sven end
 
     if { $img != "" } {
@@ -1051,11 +1048,11 @@ proc NoteBook::_draw_area { path } {
     # Sven
     if { [llength [$path.c find withtag rect]] == 0} {
         $path.c create line $xd $y0 $x0 $y0 $x0 $y1 \
-            -tags "rect toprect1"
+            -tags "rect toprect1" 
         $path.c create line $w $y0 $xf $y0 \
-            -tags "rect toprect2" 
+            -tags "rect toprect2"
         $path.c create line 1 $h $w $h $w $y0 \
-            -tags "rect botrect" 
+            -tags "rect botrect"
     }
     if {"$side" == "bottom"} {
         $path.c coords "toprect1" $w $y0 $x0 $y0 $x0 $y1

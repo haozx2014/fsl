@@ -2,9 +2,9 @@
 
 /*  feat_model - create FEAT design matrix, contrasts etc.
 
-    Stephen Smith and Matthew Webster, FMRIB Image Analysis Group
+    Stephen Smith and Matthew Webster, FMRIB Analysis Group
 
-    Copyright (C) 1999-2007 University of Oxford  */
+    Copyright (C) 1999-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -167,10 +167,10 @@ ReturnMatrix feat_svd(const Matrix real_X)
 
       float inv_condition = eigenvals.Minimum() / eigenvals.Maximum();
 
-      // cout << "eigenvals = " << eigenvals << endl;
-      // cout << "inv_condition = " << inv_condition << endl;
+      //cout << "eigenvals = " << eigenvals << endl;
+      //cout << "inv_condition = " << inv_condition << endl;
 
-      if (inv_condition<1e-12)
+      if (inv_condition<1e-7)
 	{
 	  cout << "Warning: at least one EV is (close to) a linear combination of the others. You probably need to alter your design.\n(Design matrix is rank deficient - ratio of min:max eigenvalues in SVD of matrix is " << inv_condition << ")\n" << endl;
 	  //exit(0);
@@ -185,15 +185,15 @@ ReturnMatrix feat_svd(const Matrix real_X)
 // }}}
 // {{{ renorm kernel 
 
-void renorm_kernel(ColumnVector &X)
-{
-  double kernelsum=0;
+// void renorm_kernel(ColumnVector &X)
+// {
+//   double kernelsum=0;
 
-  for(int i=0; i<X.Nrows(); i++)
-    kernelsum += X(i+1); /* maybe this should be fabs(cX[i]), but looking at double-gamma output, I've not done this */
+//   for(int i=0; i<X.Nrows(); i++)
+//     kernelsum += X(i+1); /* maybe this should be fabs(cX[i]), but looking at double-gamma output, I've not done this */
 
-  X /= kernelsum;
-}
+//   X /= kernelsum;
+// }
 
 // }}}
 // {{{ orth_i_wrt_j 
@@ -213,15 +213,23 @@ void orth_i_wrt_j(Matrix &X, int i, int j)
 // }}}
 // {{{ carry out the convolution 
 
-ReturnMatrix do_convolve(const ColumnVector input, const ColumnVector kernel, const int phase)
+ReturnMatrix do_convolve(const ColumnVector input, const ColumnVector kernel, const int phase, const int renorm)
 {
   ColumnVector output(input);
   
   output=0;
 
   for(int t=0; t<input.Nrows(); t++)
-    for(int i=MAX(0,1+t+phase-input.Nrows()); i<MIN(kernel.Nrows(),t+phase+1); i++)
-	output(t+1) += input(t+phase-i+1) * kernel(i+1);
+    {
+      float kernel_norm=0;
+      for(int i=MAX(0,1+t+phase-input.Nrows()); i<MIN(kernel.Nrows(),t+phase+1); i++)
+	{
+	  output(t+1) += input(t+phase-i+1) * kernel(i+1);
+	  kernel_norm += kernel(i+1);
+	}
+      if (renorm)
+	output(t+1) /= kernel_norm;
+    }
 
   output.Release();
   return output;
@@ -630,7 +638,7 @@ int main(int argc, char **argv)
 
 FILE   *ofp, *cofp;
 int    i, t, con, npts, ndelete, mnpts, level, *negpts,
-  orig_evs, orig_ev, real_evs, real_ev, *orig_ev_nreal,
+  orig_evs, orig_ev, real_evs, real_ev, vox_evs, *orig_ev_nreal, *convolve_interaction,
   shape[10000], ncon, nftests, tempfiltyn,
   temphp_yn, templp_yn, f, *G=NULL;
 float  tr, mult, trmult, nltffwhm=0, tmpf, *triggers, maxconvwin=0;
@@ -663,6 +671,7 @@ npts      = atoi(find_line(fn, "fmri(npts)", fl));
 ndelete   = atoi(find_line(fn, "fmri(ndelete)", fl));
 orig_evs  = atoi(find_line(fn, "fmri(evs_orig)", fl))+(motionparams.Ncols()>0);
 real_evs  = atoi(find_line(fn, "fmri(evs_real)", fl))+motionparams.Ncols();
+vox_evs   = atoi(find_line(fn, "fmri(evs_vox)", fl));
 ncon      = atoi(find_line(fn, "fmri(ncon_real)", fl));
 nftests   = atoi(find_line(fn, "fmri(nftests_real)", fl));
 
@@ -697,6 +706,7 @@ for(i=0;i<orig_evs*2*10*npts;i++)
   triggers[i]=-1e7;
 
 negpts=(int*)calloc(orig_evs,sizeof(int));
+convolve_interaction=(int*)calloc(orig_evs,sizeof(int));
 
 float critical_t = z2t( atof(find_line(fn, "fmri(critical_z)", fl)) , MAX(npts-real_evs,1) );
 float noise      = atof(find_line(fn, "fmri(noise)", fl));
@@ -899,7 +909,57 @@ break;
 break;
 
 // }}}
+      case 4:
+	// {{{ interactions
+
+// complication; if the EVs used to feed into the interaction EV don't
+// have the same convolution settings, then we cannot do this
+// interaction before convolving the interaction - we must do the convolutions first....
+
+{
+  orig_X.Column(orig_ev+1)=1;
+  int tmp, convEV=-1, other_convolves=-1;
+  for(tmp=0; tmp<orig_ev; tmp++)
+    {
+      sprintf(key,"fmri(interactions%d.%d)",orig_ev+1,tmp+1);
+      if ( atoi(find_line(fn, key, fl)) )
+	{
+	  float subtraction = orig_X(1,tmp+1) - orig_level(tmp+1);
+
+	  sprintf(key,"fmri(convolve%d)",tmp+1); int convolve=atoi(find_line(fn, key, fl)); convEV=tmp;
+
+	  if (other_convolves==-1)
+	    other_convolves=convolve;
+	  else
+	    if ( other_convolves != convolve )
+	      other_convolves=0;
+
+	  ColumnVector tmpv(mnpts);
+	  tmpv=0;
+	  tmpv.Rows(1, mnpts-negpts[tmp]) = orig_X.SubMatrix(1+negpts[tmp], mnpts, tmp+1, tmp+1);
+
+	  sprintf(key,"fmri(interactionsd%d.%d)",orig_ev+1,tmp+1);
+	  int zero_how = atoi(find_line(fn, key, fl));
+	  if ( zero_how == 1 )
+	    subtraction = ( orig_X.Column(tmp+1).Maximum() + orig_X.Column(tmp+1).Minimum() ) / 2.0;
+	  else if ( zero_how == 2 )
+	    subtraction = orig_X.Column(tmp+1).Sum()/orig_X.Nrows();
+
+	  // cout << "subtraction=" << subtraction <<endl;
+	  orig_X.Column(orig_ev+1) = SP( orig_X.Column(orig_ev+1) , tmpv - subtraction );
+	}
+    }
+
+  if (other_convolves>0)
+    convolve_interaction[orig_ev]=convEV;
+  //cout << orig_ev << " " << convolve_interaction[orig_ev] << endl;
+}
+break;
+
+// }}}
       }
+
+    //cout << orig_X << endl;
 
     orig_level(orig_ev+1) = orig_X(1,orig_ev+1) - orig_X.Column(orig_ev+1).Minimum();
     //cout << "EV" << orig_ev+1 << " min=" << orig_X.Column(orig_ev+1).Minimum() << " t[0]=" << orig_X(1,orig_ev+1) << " level=" << orig_level(orig_ev+1) << endl;
@@ -941,17 +1001,29 @@ break;
   // {{{ convolve and resample down in time 
 
 for(orig_ev=real_ev=0; orig_ev<orig_evs-(motionparams.Ncols()>0); orig_ev++, real_ev++)
-  if (shape[orig_ev]<4)
+  if (shape[orig_ev]<10)
     {
       sprintf(key,"fmri(convolve%d)",orig_ev+1); int convolve=atoi(find_line(fn, key, fl));
 
+      int c_orig_ev=orig_ev; // normally the same as orig_ev except for interactions
+      if (shape[orig_ev] == 4) // i.e. interactions
+	{
+	  if (convolve_interaction[orig_ev]==0)
+	    convolve=0;
+	  else
+	    {
+	      c_orig_ev=convolve_interaction[orig_ev];
+	      sprintf(key,"fmri(convolve%d)",c_orig_ev+1); convolve=atoi(find_line(fn, key, fl));
+	    }
+	}
+
       if (convolve>0)
 	{
-	  sprintf(key,"fmri(convolve_phase%d)",orig_ev+1); int convolve_phase=(int)(atof(find_line(fn, key, fl))*mult);
+	  sprintf(key,"fmri(convolve_phase%d)",c_orig_ev+1); int convolve_phase=(int)(atof(find_line(fn, key, fl))*mult);
 
 	  if ( (convolve>3) && (convolve<8) )
 	    {
-	      sprintf(key,"fmri(basisorth%d)",orig_ev+1);
+	      sprintf(key,"fmri(basisorth%d)",c_orig_ev+1);
 	      basisorth(orig_ev+1)=atoi(find_line(fn, key, fl));
 	    }
 
@@ -961,8 +1033,8 @@ for(orig_ev=real_ev=0; orig_ev<orig_evs-(motionparams.Ncols()>0); orig_ev++, rea
 	      // {{{ Gaussian 
 
 {
-  sprintf(key,"fmri(gausssigma%d)",orig_ev+1); float sigma=atof(find_line(fn, key, fl))*mult;
-  sprintf(key,"fmri(gaussdelay%d)",orig_ev+1); float delay=atof(find_line(fn, key, fl))*mult;
+  sprintf(key,"fmri(gausssigma%d)",c_orig_ev+1); float sigma=atof(find_line(fn, key, fl))*mult;
+  sprintf(key,"fmri(gaussdelay%d)",c_orig_ev+1); float delay=atof(find_line(fn, key, fl))*mult;
 
   int fw = (int)(delay + sigma*5);
   maxconvwin=MAX(fw,maxconvwin);
@@ -976,8 +1048,7 @@ for(orig_ev=real_ev=0; orig_ev<orig_evs-(motionparams.Ncols()>0); orig_ev++, rea
       cX(i+1)=tmpf;
     }
 
-  renorm_kernel(cX);
-  ColumnVector oX = do_convolve(orig_X.Column(orig_ev+1),cX,convolve_phase);
+  ColumnVector oX = do_convolve(orig_X.Column(orig_ev+1),cX,convolve_phase,1);
   do_resample(oX, real_X, real_ev, trmult, negpts[orig_ev]);
 }
 break;
@@ -987,16 +1058,15 @@ break;
 	      // {{{ Gamma 
 
 {
-  sprintf(key,"fmri(gammasigma%d)",orig_ev+1); float sigma=atof(find_line(fn, key, fl));
-  sprintf(key,"fmri(gammadelay%d)",orig_ev+1); float delay=atof(find_line(fn, key, fl));
+  sprintf(key,"fmri(gammasigma%d)",c_orig_ev+1); float sigma=atof(find_line(fn, key, fl));
+  sprintf(key,"fmri(gammadelay%d)",c_orig_ev+1); float delay=atof(find_line(fn, key, fl));
 
   int fw = (int)((delay + sigma*5)*mult);
   maxconvwin=MAX(fw,maxconvwin);
 
   ColumnVector cX = mygammapdf(fw,mult,delay,sigma);
 
-  renorm_kernel(cX);
-  ColumnVector oX=do_convolve(orig_X.Column(orig_ev+1),cX,convolve_phase);
+  ColumnVector oX=do_convolve(orig_X.Column(orig_ev+1),cX,convolve_phase,1);
   do_resample(oX, real_X, real_ev, trmult, negpts[orig_ev]);
 }
 break;
@@ -1015,8 +1085,7 @@ break;
 
   ColumnVector cX = mygammapdf(fw,mult,delay1,sigma1) - mygammapdf(fw,mult,delay2,sigma2)/ratio;
 
-  renorm_kernel(cX);
-  ColumnVector oX=do_convolve(orig_X.Column(orig_ev+1),cX,convolve_phase);
+  ColumnVector oX=do_convolve(orig_X.Column(orig_ev+1),cX,convolve_phase,1);
   do_resample(oX, real_X, real_ev, trmult, negpts[orig_ev]);
 }
 break;
@@ -1028,8 +1097,8 @@ break;
 #define WINDOW_FRAC 0.25
 
 {
-  sprintf(key,"fmri(basisfnum%d)",orig_ev+1);   int fnumber=atoi(find_line(fn, key, fl));
-  sprintf(key,"fmri(basisfwidth%d)",orig_ev+1); int window=(int)(atof(find_line(fn, key, fl))*mult);
+  sprintf(key,"fmri(basisfnum%d)",c_orig_ev+1);   int fnumber=atoi(find_line(fn, key, fl));
+  sprintf(key,"fmri(basisfwidth%d)",c_orig_ev+1); int window=(int)(atof(find_line(fn, key, fl))*mult);
 
   orig_ev_nreal[orig_ev]+=fnumber-1;
 
@@ -1047,8 +1116,7 @@ break;
       for(i=(int)((1-WINDOW_FRAC)*fw); i<fw; i++)
 	cX(i+1) *= 1 - (i-(1-WINDOW_FRAC)*fw)/(WINDOW_FRAC*fw);
 
-      renorm_kernel(cX);
-      ColumnVector oX=do_convolve(orig_X.Column(orig_ev+1),cX,convolve_phase);
+      ColumnVector oX=do_convolve(orig_X.Column(orig_ev+1),cX,convolve_phase,1);
       do_resample(oX, real_X, real_ev, trmult, negpts[orig_ev]);
 
       delay *= 0.5;
@@ -1064,8 +1132,8 @@ break;
 	      // {{{ Sine basis functions 
 
 {
-  sprintf(key,"fmri(basisfnum%d)",orig_ev+1);   int fnumber=atoi(find_line(fn, key, fl));
-  sprintf(key,"fmri(basisfwidth%d)",orig_ev+1); int window=(int)(atof(find_line(fn, key, fl))*mult);
+  sprintf(key,"fmri(basisfnum%d)",c_orig_ev+1);   int fnumber=atoi(find_line(fn, key, fl));
+  sprintf(key,"fmri(basisfwidth%d)",c_orig_ev+1); int window=(int)(atof(find_line(fn, key, fl))*mult);
 
   orig_ev_nreal[orig_ev]+=fnumber-1;
 
@@ -1081,7 +1149,7 @@ break;
 	  cX(i+1)= sin(M_PI*i*fnum/fw);
 	}
 
-      ColumnVector oX=do_convolve(orig_X.Column(orig_ev+1),cX,convolve_phase);
+      ColumnVector oX=do_convolve(orig_X.Column(orig_ev+1),cX,convolve_phase,0);
       do_resample(oX, real_X, real_ev, trmult, negpts[orig_ev]);
 
       real_ev++;
@@ -1096,8 +1164,8 @@ break;
 	      // {{{ FIR basis functions 
 
 {
-  sprintf(key,"fmri(basisfnum%d)",orig_ev+1);   int fnumber=atoi(find_line(fn, key, fl));
-  sprintf(key,"fmri(basisfwidth%d)",orig_ev+1); int window=(int)(atof(find_line(fn, key, fl))*mult);
+  sprintf(key,"fmri(basisfnum%d)",c_orig_ev+1);   int fnumber=atoi(find_line(fn, key, fl));
+  sprintf(key,"fmri(basisfwidth%d)",c_orig_ev+1); int window=(int)(atof(find_line(fn, key, fl))*mult);
 
   orig_ev_nreal[orig_ev]+=fnumber-1;
 
@@ -1113,7 +1181,7 @@ break;
 	else
 	  cX(i+1)=0;
 
-      ColumnVector oX=do_convolve(orig_X.Column(orig_ev+1),cX,convolve_phase);
+      ColumnVector oX=do_convolve(orig_X.Column(orig_ev+1),cX,convolve_phase,0);
       do_resample(oX, real_X, real_ev, trmult, negpts[orig_ev]);
 
       real_ev++;
@@ -1128,8 +1196,8 @@ break;
 	      // {{{ Custom basis functions 
 
 {
-  sprintf(key,"fmri(basisfnum%d)",orig_ev+1);   int fnumber=atoi(find_line(fn, key, fl));
-  sprintf(key,"fmri(bfcustom%d)",orig_ev+1); char bfcustomname[10000]; strcpy(bfcustomname,find_line(fn, key, fl));
+  sprintf(key,"fmri(basisfnum%d)",c_orig_ev+1);   int fnumber=atoi(find_line(fn, key, fl));
+  sprintf(key,"fmri(bfcustom%d)",c_orig_ev+1); char bfcustomname[10000]; strcpy(bfcustomname,find_line(fn, key, fl));
 
   Matrix icX(mnpts,fnumber);
   orig_ev_nreal[orig_ev]+=fnumber-1;
@@ -1159,8 +1227,7 @@ break;
     {
       ColumnVector cX=icX.SubMatrix(1,fw,fnum+1,fnum+1);
 
-      /*renorm_kernel(cX,fw);*/ /* choose not to renorm custom basis functions */
-      ColumnVector oX=do_convolve(orig_X.Column(orig_ev+1),cX,convolve_phase);
+      ColumnVector oX=do_convolve(orig_X.Column(orig_ev+1),cX,convolve_phase,0);
       do_resample(oX, real_X, real_ev, trmult, negpts[orig_ev]);
 
       real_ev++;
@@ -1186,14 +1253,14 @@ principal sinusoid EV already created */
 {
   int nharmonics;
 
-  sprintf(key,"fmri(nharmonics%d)",orig_ev+1); nharmonics=atoi(find_line(fn, key, fl));
+  sprintf(key,"fmri(nharmonics%d)",c_orig_ev+1); nharmonics=atoi(find_line(fn, key, fl));
 
   if (nharmonics>0)
     {
-      sprintf(key,"fmri(skip%d)",orig_ev+1);    int skip=(int)(atof(find_line(fn, key, fl))*mult);
-      sprintf(key,"fmri(period%d)",orig_ev+1);  float period=atof(find_line(fn, key, fl)) * mult * 0.5 / M_PI;
-      sprintf(key,"fmri(phase%d)",orig_ev+1);   float phase=atof(find_line(fn, key, fl)) * mult;
-      sprintf(key,"fmri(stop%d)",orig_ev+1);    int stop=(int)(atof(find_line(fn, key, fl))*mult);
+      sprintf(key,"fmri(skip%d)",c_orig_ev+1);    int skip=(int)(atof(find_line(fn, key, fl))*mult);
+      sprintf(key,"fmri(period%d)",c_orig_ev+1);  float period=atof(find_line(fn, key, fl)) * mult * 0.5 / M_PI;
+      sprintf(key,"fmri(phase%d)",c_orig_ev+1);   float phase=atof(find_line(fn, key, fl)) * mult;
+      sprintf(key,"fmri(stop%d)",c_orig_ev+1);    int stop=(int)(atof(find_line(fn, key, fl))*mult);
 
       if ( (stop<0) || (stop+skip>mnpts) ) stop=mnpts-skip;
 
@@ -1216,10 +1283,10 @@ principal sinusoid EV already created */
     }
 
 // }}}
-  // {{{ interactions
+  // {{{ recomputed interactions
 
 for(orig_ev=real_ev=0; orig_ev<orig_evs-(motionparams.Ncols()>0); real_ev+=orig_ev_nreal[orig_ev], orig_ev++)
-  if (shape[orig_ev]==4)
+  if ( (shape[orig_ev]==4) && (convolve_interaction[orig_ev]==0) )
     {
       real_X.Column(real_ev+1)=1;
 
@@ -1232,8 +1299,11 @@ for(orig_ev=real_ev=0; orig_ev<orig_evs-(motionparams.Ncols()>0); real_ev+=orig_
 	      float subtraction = orig_X(1,tmp+1) - orig_level(tmp+1);
 
 	      sprintf(key,"fmri(interactionsd%d.%d)",orig_ev+1,tmp+1);
-	      if ( atoi(find_line(fn, key, fl)) )
-		subtraction = mean(real_X.Column(tmp_real+1)).AsScalar();
+	      int zero_how = atoi(find_line(fn, key, fl));
+	      if ( zero_how == 1 )
+		subtraction = ( real_X.Column(tmp_real+1).Maximum() + real_X.Column(tmp_real+1).Minimum() ) / 2.0;
+	      else if ( zero_how == 2 )
+		subtraction = real_X.Column(tmp_real+1).Sum()/real_X.Nrows();
 
 	      // cout << "subtraction=" << subtraction <<endl;
 	      real_X.Column(real_ev+1) = SP( real_X.Column(real_ev+1) , real_X.Column(tmp_real+1) - subtraction );
@@ -1490,21 +1560,32 @@ for(con=1; con<=ncon; con++)
 {
   float h2 = real_CON_heights(con); /* from first pass */
 
-  ColumnVector contrast=C.Column(con);
+  ColumnVector dumbregressor = real_X * C.Column(con); /* just in order to test if it's empty */
 
-  Matrix X2 = real_X * Q * contrast * pinv(contrast.t() * Q * contrast);
+  if ( dumbregressor.Maximum() - dumbregressor.Minimum() > 1e-10) /* i.e. not an 'empty' contrast, e.g. from empty EVs */
+    {
+      ColumnVector contrast=C.Column(con);
 
-  // whiten X2
-  X2 = pwA*X2;
+      Matrix X2 = real_X * Q * contrast * pinv(contrast.t() * Q * contrast);
 
-  //view whitening - don't leave this in!!
-  //   real_X.Column(1)=X2;
-  //   ncon=0;
-  //   real_evs=orig_evs=1;
-  //   orig_ev_nreal[0]=1;
+      // whiten X2
+      X2 = pwA*X2;
 
-  float D = h2 / sqrt( (X2.t() * X2).AsScalar() );
-  RE(con) = critical_t * D * noise;
+      //view whitening - don't leave this in!!
+      //       real_X.Column(1)=X2;
+      //       ncon=0;
+      //       real_evs=orig_evs=1;
+      //       orig_ev_nreal[0]=1;
+      
+      float D = h2 / sqrt( (X2.t() * X2).AsScalar() );
+      RE(con) = critical_t * D * noise;
+    }
+  else
+    {
+      real_CON_heights(con)=0;
+      C.Column(con)=0;
+      RE(con) = 0;
+    }
 }
 
 // }}}
@@ -1516,10 +1597,27 @@ for(con=1; con<=ncon; con++)
 
 for(real_ev=0; real_ev<real_evs; real_ev++)
   {
-    for(t=0;t<npts;t++)
+    if (real_ev<real_evs-vox_evs)
+      for(t=0;t<npts;t++)
+	{
+	  sprintf(key,"fmri(evg%d.%d)",t+1,real_ev+1);
+	  real_X(t+1,real_ev+1)=atof(find_line(fn, key, fl));
+	}
+    else
       {
-	sprintf(key,"fmri(evg%d.%d)",t+1,real_ev+1);
-	real_X(t+1,real_ev+1)=atof(find_line(fn, key, fl));
+	volume4D<float> ev_image;
+	sprintf(key,"fmri(evs_vox_%d)",1+real_ev-(real_evs-vox_evs));
+	if ( read_volume4D(ev_image,find_line(fn, key, fl)) )
+	  cout << "Warning: voxelwise EV " << 1+real_ev-vox_evs << " isn't readable" << endl;
+	for(t=0;t<npts;t++)
+	  {
+	    float tmpsum=0;
+	    for (int z=0; z<ev_image.zsize(); z++)
+	      for (int y=0; y<ev_image.ysize(); y++)
+		for (int x=0; x<ev_image.xsize(); x++)
+		  tmpsum+=ev_image(x,y,z,t);
+	    real_X(t+1,real_ev+1)=tmpsum/(ev_image.xsize()*ev_image.ysize()*ev_image.zsize());
+	  }
       }
     orig_ev_nreal[real_ev]=1;
   }
@@ -1527,8 +1625,8 @@ for(real_ev=0; real_ev<real_evs; real_ev++)
 // }}}
   // {{{ orthogonalisation 
 
-for(real_ev=0; real_ev<real_evs; real_ev++)
-  for(int tmp_real_ev=0; tmp_real_ev<real_evs; tmp_real_ev++)
+for(real_ev=0; real_ev<real_evs-vox_evs; real_ev++)
+  for(int tmp_real_ev=0; tmp_real_ev<real_evs-vox_evs; tmp_real_ev++)
     if (tmp_real_ev!=real_ev)
       {
 	sprintf(key,"fmri(ortho%d.%d)",real_ev+1,tmp_real_ev+1);
@@ -1542,6 +1640,7 @@ for(real_ev=0; real_ev<real_evs; real_ev++)
 
 // first do real rank deficiency test
 eigenvals = feat_svd(real_X);
+//eigenvals = feat_svd(real_X.Columns(1,real_evs-vox_evs));
 
 // now do "meaningful" rank deficiency test
 
@@ -2057,7 +2156,7 @@ for(orig_ev=real_ev=0; orig_ev<orig_evs; orig_ev++)
 	strcpy(the_string,find_line(fn, key, fl));
       }
     else
-      sprintf(the_string,"%s","motion");
+      sprintf(the_string,"%s","conf");
 
     for(i=0; i<orig_ev_nreal[orig_ev]; i++)
       {

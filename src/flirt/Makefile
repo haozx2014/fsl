@@ -4,10 +4,10 @@ include ${FSLCONFDIR}/default.mk
 
 PROJNAME = flirt
 
-USRINCFLAGS = -I${INC_NEWMAT} -I${INC_ZLIB}
+USRINCFLAGS = -I${INC_NEWMAT} -I${INC_ZLIB} -I${INC_BOOST}
 USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_ZLIB}
 
-LIBS = -lnewimage -lmiscmaths -lprob -lfslio -lniftiio -lznz -lnewmat -lutils -lm -lz
+LIBS = -lwarpfns -lbasisfield -lnewimage -lmiscmaths -lprob -lfslio -lniftiio -lznz -lnewmat -lutils -lm -lz
 
 FL_OBJS = globaloptions.o flirt.o 
 C_OBJS = convert_xfm.o
@@ -32,7 +32,8 @@ all:	${XFILES} schedule
 
 schedule:
 	@if [ ! -d ${DESTDIR}/etc ] ; then ${MKDIR} ${DESTDIR}/etc ; ${CHMOD} g+w ${DESTDIR}/etc ; fi
-	${CP} -rf flirtsch ${DESTDIR}/etc
+	@if [ ! -d ${DESTDIR}/etc/flirtsch ] ; then ${MKDIR} ${DESTDIR}/etc/flirtsch ; ${CHMOD} g+w ${DESTDIR}/etc/flirtsch ; fi
+	${CP} -rf flirtsch/* ${DESTDIR}/etc/flirtsch/.
 
 flirt:    	${FL_OBJS}
 	        $(CXX)  ${CXXFLAGS} ${LDFLAGS} -o $@ ${FL_OBJS} ${LIBS}

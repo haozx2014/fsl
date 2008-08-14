@@ -81,9 +81,9 @@ class ConvergenceDetector;
 
 class VariationalBayesInferenceTechnique : public InferenceTechnique {
    public:
-      VariationalBayesInferenceTechnique() 
-            : conv(NULL), initialFwdPrior(NULL),
-             initialFwdPosterior(NULL) { return; }
+      VariationalBayesInferenceTechnique() : conv(NULL), 
+        initialFwdPrior(NULL), initialFwdPosterior(NULL), 
+        initialNoisePrior(NULL), initialNoisePosterior(NULL) { return; }
       virtual void Setup(ArgsType& args);
       //  virtual void SetOutputFilenames(ArgsType& args);
       virtual void DoCalculations(const DataSet& data);    
@@ -92,7 +92,17 @@ class VariationalBayesInferenceTechnique : public InferenceTechnique {
       ConvergenceDetector* conv;
       const MVNDist* initialFwdPrior;
       const MVNDist* initialFwdPosterior;
+      const NoiseParams* initialNoisePrior;
+      const NoiseParams* initialNoisePosterior;
       
+      // These are used for resuming a previous calculation
+      string continueFromFile; // if empty, use initial posterior dists above
+      bool continueFwdOnly; // Only have fwd-model information
+      
+      // Reduce this to a linear problem, using the given 
+      // voxelwise linearizations (probably loaded from an MVN)
+      string lockedLinearFile; 
+
       bool haltOnBadVoxel;
       bool printF;
       bool needF;

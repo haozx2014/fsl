@@ -70,18 +70,15 @@
 #include <fstream>
 #define WANT_STREAM
 #define WANT_MATH
-#include "fslio/fslio.h"
 
-#include "newmatap.h"
-#include "newmatio.h"
-#include "miscmaths/miscmaths.h"
+#include "newimage/newimageall.h"
 
 #include "miscmaths/t2z.h"
-#include "miscmaths/volume.h"
 #include <string>
 
 using namespace NEWMAT;
 using namespace MISCMATHS;
+using namespace NEWIMAGE;
 
 // the real defaults are provided in the function parse_command_line
 
@@ -182,30 +179,28 @@ int main(int argc,char *argv[])
   try{
     parse_command_line(argc, argv);
     
-    Volume vars, cbs, dofs;
-    vars.read(globalopts.varsfname.c_str());
-    cbs.read(globalopts.cbsfname.c_str());
+    volume4D<float> input;
+    volumeinfo vinfo;
+    ColumnVector varsm,cbsm,dofsm;
 
-    int numTS = vars.Nrows();
-    //    cerr << numTS << endl;
+    read_volume4D(input,globalopts.cbsfname);
+    cbsm=input.matrix().AsColumn();
+    read_volume4D(input,globalopts.varsfname,vinfo);
+    varsm=input.matrix().AsColumn();
 
-    if(FslFileExists(globalopts.doffile.c_str())){ //dof1 is avw file
-      dofs.read(globalopts.doffile); 
-    }
-    else {
-      dofs = vars;
-      dofs = atof(globalopts.doffile.c_str());
-    }
+    int numTS = varsm.Nrows();
 
-    Volume zs(numTS);
-    T2z::ComputeZStats(vars, cbs, dofs, zs);
+    if(FslFileExists(globalopts.doffile.c_str())) read_volume4D(input,globalopts.doffile);
+    else input = atof(globalopts.doffile.c_str());
+    dofsm=input.matrix().AsColumn();
 
-    VolumeInfo volinfo = vars.getInfo();
-    volinfo.intent_code = NIFTI_INTENT_ZSCORE;
-    volinfo.intent_p1 = 0.0;    
-    zs.setInfo(volinfo);
-    zs.writeAsFloat(globalopts.zscoresfname.c_str());
+    ColumnVector zs(numTS);
+    T2z::ComputeZStats(varsm, cbsm, dofsm, zs);
 
+    input.setmatrix(zs.AsRow());
+    FslSetCalMinMax(&vinfo,input.min(),input.max());
+    input.set_intent(NIFTI_INTENT_ZSCORE,0,0,0);
+    save_volume4D(input,globalopts.zscoresfname,vinfo);
   }
   catch(Exception p_excp) 
     {

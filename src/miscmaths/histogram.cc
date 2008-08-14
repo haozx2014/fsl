@@ -69,7 +69,6 @@
 #include "miscmaths.h"
 #include "histogram.h"
 
-#include <strstream>
 using namespace std;
 
 #ifndef NO_NAMESPACE
@@ -115,31 +114,45 @@ namespace MISCMATHS {
 
       // smooth in i direction
       newhist=0;
+      ColumnVector kernel(3); 
+      // corresponds to Gaussian with sigma=0.8 voxels
+      //       kernel(1)=0.5;
+      //       kernel(2)=0.2283;      
+      //       kernel(3)=0.0219;
+      // corresponds to Gaussian with sigma=0.6 voxels
+      //       kernel(1)=0.6638;
+      //       kernel(2)=0.1655;      
+      //       kernel(3)=0.0026;
+
+      //gauss(0.5,5,1)
+      kernel(1)=0.7866;
+      kernel(2)=0.1065;      
+      kernel(3)=0.0003;
 
       for(int i=1; i<=bins; i++)
 	  {
 	    float val=0.5*histogram(i);
-	    float norm=0.5;
+	    float norm=kernel(1);
 
 	    if(i>1)
 	      {
-		val+=0.2283*(histogram(i-1));
-		norm+=0.2283;
+		val+=kernel(2)*(histogram(i-1));
+		norm+=kernel(2);
 	      }
 	    if(i>2)
 	      {
-		val+=0.0219*(histogram(i-2));
-		norm+=0.0219;		
+		val+=kernel(3)*(histogram(i-2));
+		norm+=kernel(3);		
 	      }
 	    if(i<bins)
 	      {
-		val+=0.2283*(histogram(i+1));
-		norm+=0.2283;
+		val+=kernel(2)*(histogram(i+1));
+		norm+=kernel(2);
 	      }
 	    if(i<bins-1)
 	      {
-		val+=0.0219*(histogram(i+2));
-		norm+=0.0219;		
+		val+=kernel(3)*(histogram(i+2));
+		norm+=kernel(3);		
 	      }
 	    val/=norm;
 

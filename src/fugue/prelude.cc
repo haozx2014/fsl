@@ -161,22 +161,22 @@ int do_unwrapping()
       absmaps.addvolume(abs(rvol[n],ivol[n]));
     }
   } else {
-    if (verbose.value()) cerr << "Loading volumes" << endl;
+    if (verbose.value()) cout << "Loading volumes" << endl;
     read_volume4D(phasemaps,phasevol.value(),vinfo);
-    if (verbose.value()) cerr << "Phase loaded" << endl;
+    if (verbose.value()) cout << "Phase loaded" << endl;
     read_volume4D(absmaps,absvol.value());
-    if (verbose.value()) cerr << "Magnitude loaded" << endl;
+    if (verbose.value()) cout << "Magnitude loaded" << endl;
   }
 
   bool threshset = thresh.set();
   float threshval = thresh.value();
-  int imgstart=0, imgend, maskend;
+  int imgstart=0, imgend, maskend=0;
   imgend = phasemaps.maxt(); 
   if (startimno.set())  imgstart = startimno.value();
   if (endimno.set())    imgend = endimno.value();
   if (inmask.set()) {
     read_volume4D(masks,inmask.value());
-    if (verbose.value()) cerr << "Mask loaded" << endl;
+    if (verbose.value()) cout << "Mask loaded" << endl;
     maskend = masks.maxt();
     if (!threshset) {
       threshset = true;

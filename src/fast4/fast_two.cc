@@ -75,9 +75,9 @@
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-string title="FAST4 (Version 4.0)\nCopyright(c) 2004-7, University of Oxford (John Vickers)";
-string examples="fast4 [options] file(s)";
-string examples_multi_channel="fast4 [options] <image> [<image2> ... <imagen>]";
+string title="FAST ( Version 4.1 )\nCopyright(c) 2004-8, University of Oxford";
+string examples="fast [options] file(s)";
+string examples_multi_channel="fast [options] <image> [<image2> ... <imagen>]";
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Each (global) object below specificies as option and can be accessed
 // anywhere in this file (since they are global).  The order of the
@@ -106,24 +106,20 @@ Option<int> initfixity(string("-O,--fixed"), 4,
 Option<float> fbeta(string("-f,--fHard"), 0.02,
 		  string("initial segmentation spatial smoothness (during bias field estimation); default=0.02"),
 		  false, requires_argument);
-Option<float> Hyp(string("-H,--Hyper"), 0.3,
-		  string("segmentation spatial smoothness; default=0.3, set < 0 for automatic estimation"),
+Option<float> Hyp(string("-H,--Hyper"), 0.1,
+		  string("segmentation spatial smoothness; default=0.1"),
 		  false, requires_argument);
-Option<float> fpveMRFmixeltype(string("-R,--mixel"), 0.1,
-		  string("spatial smoothness for mixeltype; default=0.1"),
+Option<float> fpveMRFmixeltype(string("-R,--mixel"), 0.3,
+		  string("spatial smoothness for mixeltype; default=0.3"),
 		  false, requires_argument);
 Option<float> nblowpass(string("-l,--lowpass"), 20,
 		  string("bias field smoothing extent (FWHM) in mm; default=20"),
 		  false, requires_argument);
-
-Option<int> typeofimage(string("-t,--type"), 0,
-		  string("type of image 0=T1, 1=T2, 2=PD; default=T1"),
+Option<int> typeofimage(string("-t,--type"), 1,
+		  string("type of image 1=T1, 2=T2, 3=PD; default=T1"),
 		  false, requires_argument);
 Option<int> nclass(string("-n,--class"), 3,
 		  string("number of tissue-type classes; default=3"),
-		  false, requires_argument);
-Option<string> inname1(string("-i,--in1"), string(""),  //not used by user any more but still needed internally
-		  string("first input filename"),
 		  false, requires_argument);
 Option<string> outname(string("-o,--out"), string(""),
 		  string("output basename"),
@@ -131,48 +127,39 @@ Option<string> outname(string("-o,--out"), string(""),
 Option<int> nchannel(string("-S,--channels"), 1,
 		  string("number of input images (channels); default 1"),
 		  false, requires_argument);
-Option<bool> multichannel(string("-m,--multi"), false, //not used by user any more but still needed internally
-		  string("uses multi channel segmentation"),
-		  false, no_argument);
-
-
 Option<bool> nopve(string("--nopve"), false,
 		  string("turn off PVE (partial volume estimation)"),
 		  false, no_argument);
 Option<int> pve(string("--pvestep"), 100,
 		  string("discretisation levels of pve values; default=100"),
 		  false, requires_argument);
-
 Option<bool> segments(string("-g,--segments"), false,
 		  string("outputs a separate binary image for each tissue type"),
 		  false, no_argument);
-
-Option<bool> out_probs(string("-r,--outprobs"), false, //not used by user any more but still needed internally
-		  string("outputs individual probability maps"),
+Option<bool> outputProbabilities(string("-p"), false, //not used by user any more but still needed internally
+		  string("\toutputs individual probability maps"),
 		  false, no_argument);
-
-Option<bool> biasrem(string("-N,--nobias"), false,
+Option<bool> removeBias(string("-N,--nobias"), false,
 		  string("do not remove bias field"),
 		  false, no_argument);
-Option<bool> out_bias(string("-b,--outbias"), false,
-		  string("output bias field correction image"),
+Option<bool> outputBias(string("-b"), false,
+		  string("\toutput estimated bias field"),
 		  false, no_argument);
-
+Option<bool> outputCorrected(string("-B"), false,
+		  string("\toutput bias-corrected image"),
+		  false, no_argument);
 Option<string> bapriori(string("-a"), "",
 		  string("~<standard2input.mat> initialise using priors; you must supply a FLIRT transform"),
 		  false, requires_argument);
 Option<bool> talaraichiterations(string("-P,--Prior"), false,
 		  string("use priors throughout; you must also set the -a option"),
 		  false, no_argument);
-Option<string> anotherstdspace(string("-A"), "",
+Option<string> alternatePriors(string("-A"), "",
 		  string("~<prior1> <prior2> <prior3>    alternative prior images"),
 		  false, requires_3_arguments);
-
-
 Option<string> manualsegmentation(string("-s,--manualseg"), "",
 		  string("~<filename> Filename containing intensities"),
 		  false, requires_argument);
-
 Option<bool> verbose(string("-v,--verbose"), false, 
 		     string("switch on diagnostic messages"), 
 		     false, no_argument);
@@ -184,18 +171,20 @@ Option<bool> help(string("-h,--help"), false,
 // Local functions
 int prior_registration(string inname, string main_prior_vol, NEWIMAGE::volume<float>& pCSF, NEWIMAGE::volume<float>& pGM, NEWIMAGE::volume<float>& pWM)
 {
-  string name1, name2, name3;
-  if(anotherstdspace.unset())
-    {
-      string fname=string(getenv("FSLDIR")) + "/data/standard/tissuepriors/avg152T1_";
-      name1 = fname+"csf";
-      name2 = fname+"gray";
-      name3 = fname+"white";
-    } else {
-      name1 = anotherstdspace.value(0);
-      name2 = anotherstdspace.value(1);
-      name3 = anotherstdspace.value(2);
-    }
+string csfPriorName, grayPriorName, whitePriorName;
+  if(alternatePriors.unset())
+  {
+    string priorRootName=string(getenv("FSLDIR")) + "/data/standard/tissuepriors/avg152T1_";
+    csfPriorName = priorRootName+"csf";
+    grayPriorName = priorRootName+"gray";
+    whitePriorName = priorRootName+"white";
+  } 
+  else 
+  {
+    csfPriorName = alternatePriors.value(0);
+    grayPriorName = alternatePriors.value(1);
+    whitePriorName = alternatePriors.value(2);
+  }
 
   int bapused=0;
   if((bapriori.value()!=""))
@@ -207,94 +196,81 @@ int prior_registration(string inname, string main_prior_vol, NEWIMAGE::volume<fl
     }
   if(bapused>0)
     {
-      string GMpath, WMpath, CSFpath;
-
-      if(fsl_imageexists(name1))
-	read_volume(pCSF, name1);
+      if(fsl_imageexists(csfPriorName))
+	read_volume(pCSF, csfPriorName);
       else
         {
-	  cerr<< "prior image " << name1 << " is not found! priors are not used!\n";
+	  cerr<< "prior image " << csfPriorName << " is not found! priors are not used!\n";
 	  bapused = 0;
         }
 
-      if(fsl_imageexists(name2))
-	read_volume(pGM, name2);
+      if(fsl_imageexists(grayPriorName))
+	read_volume(pGM, grayPriorName);
       else
         {  
-	  cerr<< "prior image " << name2 << " is not found! priors are not used!\n";
+	  cerr<< "prior image " << grayPriorName << " is not found! priors are not used!\n";
 	  bapused = 0;
         }
 
-      if(fsl_imageexists(name3))
-	read_volume(pWM, name3);
+      if(fsl_imageexists(whitePriorName))
+	read_volume(pWM, whitePriorName);
       else
         {  
-	  cerr<< "prior image " << name3 << " is not found! priors are not used!\n";
+	  cerr<< "prior image " << whitePriorName << " is not found! priors are not used!\n";
 	  bapused = 0;
         }
     }
     if(bapused>0)
       {
 	char reg[1024];
-	sprintf(reg, "%s/bin/flirt -ref %s -in %s -out %s -applyxfm -init %s", getenv("FSLDIR"), inname.c_str(), name1.c_str(), (main_prior_vol+"_csf_stdspace").c_str(),  bapriori.value().c_str());
+	sprintf(reg, "%s/bin/flirt -ref %s -in %s -out %s -applyxfm -init %s", getenv("FSLDIR"), inname.c_str(), csfPriorName.c_str(), (main_prior_vol+"_csf_stdspace").c_str(),  bapriori.value().c_str());
         if(verbose.value())
 	  cout<<reg<<endl;
 	system(reg);
-	sprintf(reg, "%s/bin/flirt -ref %s -in %s -out %s -applyxfm -init %s", getenv("FSLDIR"), inname.c_str(), name2.c_str(), (main_prior_vol+"_gm_stdspace").c_str(),  bapriori.value().c_str());
+	sprintf(reg, "%s/bin/flirt -ref %s -in %s -out %s -applyxfm -init %s", getenv("FSLDIR"), inname.c_str(), grayPriorName.c_str(), (main_prior_vol+"_gm_stdspace").c_str(),  bapriori.value().c_str());
 	if(verbose.value())
 	  cout<<reg<<endl;
         system(reg);
-	sprintf(reg, "%s/bin/flirt -ref %s -in %s -out %s -applyxfm -init %s", getenv("FSLDIR"), inname.c_str(), name3.c_str(), (main_prior_vol+"_wm_stdspace").c_str(),  bapriori.value().c_str());
+	sprintf(reg, "%s/bin/flirt -ref %s -in %s -out %s -applyxfm -init %s", getenv("FSLDIR"), inname.c_str(), whitePriorName.c_str(), (main_prior_vol+"_wm_stdspace").c_str(),  bapriori.value().c_str());
 	if(verbose.value())
-	  cout<<reg<<endl;
+	  cout << reg << endl;
 	system(reg);
       }
       if(bapused>0)
-	{
-	  if(fsl_imageexists((main_prior_vol+"_csf_stdspace")))
-	    {
-	      read_volume(pCSF, (main_prior_vol+"_csf_stdspace"));
-	    }
-	  else
-	    {  
-	      cerr << "csf prior image not transformed correctly! priors are not used!\n";
-	      bapused = 0;
-	      return -1;
-	    }
-	  if(fsl_imageexists(main_prior_vol+"_gm_stdspace"))
-	    {
-	      read_volume(pGM, main_prior_vol+"_gm_stdspace");
-	    }
-	  else
-	    {  
-	      cerr << "grey matter prior image not transformed correctly! priors are not used!\n";
-	      bapused = 0;
-	      return -1;
-	    }
-	  if(fsl_imageexists(main_prior_vol+"_wm_stdspace"))
-	    {
-	      read_volume(pWM, main_prior_vol+"_wm_stdspace");
-	    }
-	  else
-	    {  
-	      cerr << "white matter prior image not transformed correctly! priors are not used!\n";
-	      bapused = 0;
-	      return -1;
-	    }
-	  if(talaraichiterations.value())
-	    {
-	      bapused=2;
-	    }
-
+      {
+	if(fsl_imageexists((main_prior_vol+"_csf_stdspace")))
+	  read_volume(pCSF, (main_prior_vol+"_csf_stdspace"));	    
+	else
+        {  
+          cerr << "csf prior image not transformed correctly! priors are not used!\n";
+          bapused = 0;
+          return -1;
 	}
- 
+	if(fsl_imageexists(main_prior_vol+"_gm_stdspace"))
+	  read_volume(pGM, main_prior_vol+"_gm_stdspace");	    
+	else
+	{  
+	  cerr << "grey matter prior image not transformed correctly! priors are not used!\n";
+	  bapused = 0;
+	  return -1;
+	}
+	if(fsl_imageexists(main_prior_vol+"_wm_stdspace"))
+	  read_volume(pWM, main_prior_vol+"_wm_stdspace");
+	else
+	{  
+	  cerr << "white matter prior image not transformed correctly! priors are not used!\n";
+	  bapused = 0;
+	  return -1;
+	}
+	if(talaraichiterations.value())
+	bapused=2;
+      }
       else
-	{
-	  pCSF=volume<float>();
-	  pGM=volume<float>();
-	  pWM=volume<float>();
-	}
-
+      {
+        pCSF=volume<float>();
+	pGM=volume<float>();
+	pWM=volume<float>();
+      }
       return bapused;
 }
 
@@ -302,121 +278,110 @@ int prior_registration(string inname, string main_prior_vol, NEWIMAGE::volume<fl
 
 //Single channel main call
 
-int do_work(int argc, char* argv[]) 
+int segmentSingleChannel(int argc, char* argv[]) 
 { 
-  float pixdim[3];
-  int bapused=0;
-  volume<float> pCSF, pGM, pWM;
-  int width, height, depth;
-  int al=0;
+  volume<float> inputImage,pCSF, pGM, pWM;
+  volumeinfo inputinfo;
 
-  if (verbose.value()) { cout << "Starting Single Image Segmentation" << endl; }
+  if (verbose.value()) cout << "Starting Single Image Segmentation" << endl; 
 
-  inname1.set_value(string(argv[argc-1]));
-  if (outname.unset()) {
-    outname.set_value(inname1.value());
+  string inputName(argv[argc-1]);
+  if (outname.unset()) 
+    outname.set_value(inputName);
+  
+  string tempName=outname.value();
+  make_basename(tempName);
+  outname.set_value(tempName);
+
+  if(read_volume(inputImage,inputName,inputinfo)!=0)
+  {
+    cerr<<"Image cannot be found";
+    return 1;
   }
   string tempName=outname.value();
   make_basename(tempName);
   outname.set_value(tempName);
 
 
-  ZMRISegmentation	mri;
-  volume<float> inputimage;
-  volumeinfo inputinfo;
-  if(read_volume(inputimage,inname1.value(),inputinfo)!=0)
-    {
-      cerr<<"Image cannot be found";
-      return 1;
-    }
-  width=inputimage.xsize();
-  height=inputimage.ysize();
-  depth=inputimage.zsize();
-  pixdim[0]=inputimage.xdim();
-  pixdim[1]=inputimage.ydim();
-  pixdim[2]=inputimage.zdim();
-
-  if(inputimage.min()<0.0)
+  if(inputImage.min()<0.0)
   {
-    if(inputimage.percentile(0.02)<0.0) inputimage-=inputimage.min();
-    else inputimage.threshold(0,inputimage.max(),inclusive);
+    if(inputImage.percentile(0.02)<0.0) inputImage-=inputImage.min();
+    else inputImage.threshold(0,inputImage.max(),inclusive);
   }
 
   if(verbose.value()) 
-    { 
-      switch(typeofimage.value())
-	{
-	default:
-	case 0:
-	  if(verbose.value())
-	    cout<< "T1-weighted image" << endl;
-	  break;
-	case 1:
-	  if(verbose.value())
-	    cout << "T2-weighted image" << endl;
-	  break;
-	case 2:
-	  if(verbose.value())
-	    cout << "PD-weighted image" << endl;
-	  break;
-	}
-      if(verbose.value())
-	{
-	  cout<< "Imagesize : " << width << " x " << height << " x " << depth << endl;
-	  cout<< "Pixelsize : " << pixdim[0] << " x " << pixdim[1] << " x "  << pixdim[2] << endl << endl;
-	}
+  { 
+    switch(typeofimage.value())
+    {
+      default:
+      case 1:
+	if(verbose.value())
+	  cout<< "T1-weighted image" << endl;
+	break;
+      case 2:
+	if(verbose.value())
+	  cout << "T2-weighted image" << endl;
+	break;
+      case 3:
+	if(verbose.value())
+	  cout << "PD-weighted image" << endl;
+	break;
     }
-  bapused=prior_registration(inname1.value(),outname.value(), pCSF, pGM, pWM);
-  if(bapused==0)
-    al=0;
-  bool biasf=true;
-  if(biasrem.value())
-    biasf=false;
-  mri.TanakaCreate(inputimage, fbeta.value(), nclass.value(), nblowpass.value(), biasf, pve.value(), fpveMRFmixeltype.value(), nbiter.value(),initfixity.value(), inititer.value(), bapused, Hyp.value(), verbose.value(),manualsegmentation.value(),typeofimage.value());
+    if(verbose.value())
+    {
+      cout<< "Imagesize : " << inputImage.xsize() << " x " << inputImage.ysize() << " x " << inputImage.zsize() << endl;
+      cout<< "Pixelsize : " << inputImage.xdim() << " x " << inputImage.ydim() << " x "  << inputImage.zdim() << endl << endl;
+    }
+  }
+  int bapused=prior_registration(inputName,outname.value(), pCSF, pGM, pWM);
+
+  ZMRISegmentation	mri;
+  mri.TanakaCreate(inputImage, fbeta.value(), nclass.value(), nblowpass.value(),!removeBias.value(), pve.value(), fpveMRFmixeltype.value(), nbiter.value(),initfixity.value(), inititer.value(), bapused, Hyp.value(), verbose.value(),manualsegmentation.value(),typeofimage.value());
   if (mri.TanakaMain(pCSF, pGM, pWM)) return -1;
   save_volume(mri.m_Segment,outname.value()+"_seg");
-  
+  FslSetCalMinMax(&inputinfo,0,0);
   if(segments.value())
+  {
+    volume<int> ind_segments;
+    for(int i=1; i<=nclass.value(); i++)
     {
-      volume<int> ind_segments;
-      for(int i=1; i<=nclass.value(); i++)
-	{
-	  ind_segments=mri.m_Segment;
-	  for(int z=0;z<depth;z++)
-	    {
-	      for(int y=0;y<height;y++)
-		{
-		  for(int x=0;x<width;x++)
-		    {
-		      ind_segments.value(x, y, z) = (ind_segments.value(x, y, z)==i);
-		    }
-		}
-	    }
-	  save_volume(ind_segments,outname.value()+"_seg_"+num2str(i),inputinfo); 
-	}
+      ind_segments=mri.m_Segment;
+      for(int z=0;z<inputImage.zsize();z++)
+	for(int y=0;y<inputImage.ysize();y++)
+	  for(int x=0;x<inputImage.xsize();x++)
+	    ind_segments.value(x, y, z) = (ind_segments.value(x, y, z)==i);	 
+       save_volume(ind_segments,outname.value()+"_seg_"+num2str(i-1),inputinfo); 
     }
+  }
   
-  if(out_probs.value())
-    {
-      for(int i=1; i<=nclass.value(); i++)
-	{
-	  save_volume(mri.members[i-1],outname.value()+"_prob_"+num2str(i),inputinfo); 
-	}
-    }
+  if(outputProbabilities.value())
+    for(int i=1; i<=nclass.value(); i++)
+      save_volume(mri.members[i-1],outname.value()+"_prob_"+num2str(i-1),inputinfo); 
+	
+    
   
   if(pve.value())
-    {
-      for(int i=1; i<=nclass.value(); i++)
-	{
-	  save_volume(mri.m_pve[i],outname.value()+"_pve_"+num2str(i),inputinfo); 
-	}
-      save_volume(mri.m_pveSegment,outname.value()+"_pveseg",inputinfo);
-      save_volume(mri.hardPV, outname.value()+"_mixeltype", inputinfo);	  
-    }
-  
-  if(out_bias.value())
-    save_volume(mri.m_Finalbias,outname.value()+"_bias",inputinfo);
-  
+  {
+    for(int i=1; i<=nclass.value(); i++)
+      save_volume(mri.m_pve[i],outname.value()+"_pve_"+num2str(i-1),inputinfo); 	
+    save_volume(mri.m_pveSegment,outname.value()+"_pveseg",inputinfo);
+    save_volume(mri.hardPV, outname.value()+"_mixeltype", inputinfo);	  
+  }
+
+  if(outputCorrected.value())
+  {
+    inputImage*=mri.m_Finalbias;
+    save_volume(inputImage,outname.value()+"_restore",inputinfo);
+  }
+
+  if(outputBias.value())
+  {
+    volume<float> estimatedField(mri.m_Finalbias);
+    estimatedField=1;
+    estimatedField/=mri.m_Finalbias;
+    save_volume(estimatedField,outname.value()+"_bias",inputinfo);
+  }
+
   return 0;
 
 }
@@ -426,116 +391,95 @@ int do_work(int argc, char* argv[])
 
 //Multi channel main call
 
-int do_work_multi(int argc, char* argv[]) 
+int segmentMultiChannel(int argc, char* argv[]) 
 { 
-
-  float pixdim[3];
-  int bapused=0;
   volume<float> pCSF, pGM, pWM;
-  int width, height, depth;
+  string inputName;
 
-  if (verbose.value()) { cout << "Starting Multi Image Segmentation" << endl; }
+  if (verbose.value()) cout << "Starting Multi Image Segmentation" << endl; 
 
   if(nchannel.value()>=2)
-    {
-     int al=0;
-
-      ZMRIMULTISegmentation mri;
-
+  {
       volume<float>* images=new volume<float>[nchannel.value()];
       volumeinfo inputinfo;
 
       for(int c=0;c<=nchannel.value()-1;c++)
-	{
-	  if (c==0) {
-	    inname1.set_value(string(argv[argc-c-1]));
-	    if (outname.unset()) {
-	      outname.set_value(inname1.value());
-	    }
-	    string tempName=outname.value();
-	    make_basename(tempName);
-	    outname.set_value(tempName);
-	  }
-	  if(read_volume(images[c], argv[argc-c-1], inputinfo)!=0)
-	    {
-	      cerr<<"Image cannot be found";
-	      return 1;
-	    }
-	  else
-	    {
-	      if(images[c].min()<0.0)
-	      {
-		if(images[c].percentile(0.02)<0.0) images[c]-=images[c].min();
-		else images[c].threshold(0,images[c].max(),inclusive);
-	      }
-	    }
+      {
+	if (c==0) {
+	  inputName=string(argv[argc-c-1]);
+	  if (outname.unset()) 
+	    outname.set_value(inputName);
+	    
+	  string tempName=outname.value();
+	  make_basename(tempName);
+	  outname.set_value(tempName);
 	}
-      width=images[0].xsize();
-      height=images[0].ysize();
-      depth=images[0].zsize();
-      pixdim[0]=images[0].xdim();
-      pixdim[1]=images[0].ydim();
-      pixdim[2]=images[0].zdim();
-      bapused=prior_registration(inname1.value(),outname.value(), pCSF, pGM, pWM);
-      if(bapused==0)
-	al=0;
-      bool biasf=true;
-      if(biasrem.value())
-	biasf=false;
+	if(read_volume(images[c], argv[argc-c-1], inputinfo)!=0)
+	{
+	   cerr<<"Image cannot be found";
+	   return 1;
+	}
+	else
+        {
+	  if(images[c].min()<0.0)
+	  {
+	    if (images[c].percentile(0.02)<0.0) images[c]-=images[c].min();
+	    else images[c].threshold(0,images[c].max(),inclusive);
+	  }
+	}
+      }
+      int bapused=prior_registration(inputName,outname.value(), pCSF, pGM, pWM);
 
-      mri.TanakaCreate(images, nclass.value(), false, nbiter.value(), nblowpass.value(), fbeta.value(), bapused, pve.value(), nchannel.value(), al, biasf,initfixity.value(), verbose.value(), pve.value(), inititer.value(),fpveMRFmixeltype.value(), Hyp.value(),manualsegmentation.value(),typeofimage.value());
+      ZMRIMULTISegmentation mri;
+      mri.TanakaCreate(images, nclass.value(), false, nbiter.value(), nblowpass.value(), fbeta.value(), bapused, pve.value(), nchannel.value(),!removeBias.value(),initfixity.value(), verbose.value(), pve.value(), inititer.value(),fpveMRFmixeltype.value(), Hyp.value(),manualsegmentation.value(),typeofimage.value());
       if (mri.TanakaMain(pCSF, pGM, pWM)) return -1;
-      
-
-
+     
       save_volume(mri.m_Segment, outname.value()+"_seg");
 
       if(segments.value())
+      {
+	volume<int> ind_segments;
+	for(int i=1; i<=nclass.value(); i++)
 	{
-	  volume<int> ind_segments;
-	  for(int i=1; i<=nclass.value(); i++)
-	    {
-	      ind_segments=mri.m_Segment;
-	      for(int z=0;z<depth;z++)
-		{
-		  for(int y=0;y<height;y++)
-		    {
-		      for(int x=0;x<width;x++)
-			{
-			  ind_segments.value(x, y, z) = (ind_segments.value(x, y, z)==i);
-			}
-		    }
-		}
-	      save_volume(ind_segments,outname.value()+"_seg_"+num2str(i),inputinfo); 
-	    }
+	  ind_segments=mri.m_Segment;
+	  for(int z=0;z<images[0].zsize();z++)
+	    for(int y=0;y<images[0].ysize();y++)
+	      for(int x=0;x<images[0].xsize();x++)
+		ind_segments.value(x, y, z) = (ind_segments.value(x, y, z)==i);
+		  
+	  save_volume(ind_segments,outname.value()+"_seg_"+num2str(i-1),inputinfo); 
 	}
+      }
 
-      if(out_probs.value())
-	{
-	  for(int i=1; i<=nclass.value(); i++)
-	    {
-	      save_volume(mri.members[i-1],outname.value()+"_prob_"+num2str(i),inputinfo); 
-	    }
-	}
+      if(outputProbabilities.value())
+	for(int i=1; i<=nclass.value(); i++)
+	  save_volume(mri.members[i-1],outname.value()+"_prob_"+num2str(i-1),inputinfo); 
+	    
       if(pve.value())
       {
 	  volume<float> ind_pve;
 	  for(int i=1; i<=nclass.value(); i++)
-	    {
-	      save_volume(mri.m_pve[i],outname.value()+"_pve_"+num2str(i),inputinfo); 
-	    }
+	    save_volume(mri.m_pve[i],outname.value()+"_pve_"+num2str(i-1),inputinfo); 	    
 	  save_volume(mri.m_pveSegment,outname.value()+"_pveseg",inputinfo);
 	  save_volume(mri.hardPV, outname.value()+"_mixeltype", inputinfo);
-     }
-     if(out_bias.value())
-       {
-	 for(int i=1;i<nchannel.value()+1;i++)
-	   {
-	     save_volume(mri.m_Finalbias[i],outname.value()+"_bias_"+num2str(i),inputinfo);
-	   }
-       }
+      }
 
+      if(outputCorrected.value())
+	for(int i=1;i<nchannel.value()+1;i++)
+	{
+	  images[i-1]*=mri.m_Finalbias[i];
+	  save_volume(images[i-1],outname.value()+"_restore_"+num2str(i),inputinfo);
+	}
 
+      if(outputBias.value())
+	for(int i=1;i<nchannel.value()+1;i++)
+	{
+	  volume<float> estimatedField(mri.m_Finalbias[i]);
+	  estimatedField=1;
+	  estimatedField/=mri.m_Finalbias[i];
+	  save_volume(estimatedField,outname.value()+"_bias_"+num2str(i),inputinfo);
+	}
+	   
       delete[] images;
       return 0;   
     }
@@ -550,13 +494,11 @@ int do_work_multi(int argc, char* argv[])
 int main(int argc,char *argv[])
 {
   Tracer tr("main");
-  int nonoptarg;
   OptionParser options(title, examples);
   try 
     {
       // must include all wanted options here (the order determines how
       // the help message is printed)
-      //      options.add(inname1);
       options.add(nclass);
       options.add(nbiter);;
       options.add(nblowpass);
@@ -564,10 +506,11 @@ int main(int argc,char *argv[])
       options.add(fbeta);
       options.add(segments);
       options.add(bapriori);
-      options.add(anotherstdspace);
+      options.add(alternatePriors);
       options.add(nopve);
-      options.add(out_bias);
-      options.add(biasrem);
+      options.add(outputBias);
+      options.add(outputCorrected);
+      options.add(removeBias);
       options.add(nchannel);
       options.add(outname);
       options.add(talaraichiterations);
@@ -578,16 +521,15 @@ int main(int argc,char *argv[])
       options.add(verbose);
       options.add(help);
       options.add(manualsegmentation);
+      options.add(outputProbabilities);
       // line below stops the program if the help was requested or 
       // a compulsory option was not set
-      nonoptarg = options.parse_command_line(argc, argv);
+      options.parse_command_line(argc, argv);
       if ( argc<2 || (help.value()) || (!options.check_compulsory_arguments(true)) )
-	{
-	  options.usage();
-	  exit(EXIT_FAILURE);
-	}
-      if (nchannel.value()>1) multichannel.set_value("true");
-
+      {
+	options.usage();
+	exit(EXIT_FAILURE);
+      }
       if (nopve.value()) pve.set_value("0");
     }
   catch(X_OptionError& e)
@@ -600,11 +542,14 @@ int main(int argc,char *argv[])
     {
       cerr << e.what() << endl;
     } 
-
+  if (Hyp.value()<0) 
+  {
+    cerr << "ERROR: Segmentation smoothness must be positive. Exiting" << endl;;
+    return(1);
+  }
   // Call the local functions
-  if(!multichannel.value())
-    return do_work(argc,argv);
-  else
-    return do_work_multi(argc, argv);
+  if(nchannel.value()==1)
+    return segmentSingleChannel(argc,argv);
+  return segmentMultiChannel(argc, argv);
 }
 

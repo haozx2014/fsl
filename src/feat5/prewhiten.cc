@@ -148,6 +148,8 @@ again - there is more detail in the paper (and the source code ;-)
 /* {{{ defines, includes and typedefs */
 
 #include "featlib.h"
+using namespace NEWMAT;
+using namespace NEWIMAGE;
 
 /* }}} */
 /* {{{ usage */

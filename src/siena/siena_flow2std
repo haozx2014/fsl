@@ -118,10 +118,9 @@ ${FSLDIR}/bin/convert_xfm -omat ${A}_halfwayto_${B}_to_std.mat -concat ${A}_to_s
 # dilate flow image, -> standard space -> mask with ss edge image -> blur -> remask
 ${FSLDIR}/bin/fslmaths ${A}_to_${B}_flow -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM ${A}_to_${B}_flow_dil
 ${FSLDIR}/bin/fslmaths ${B}_to_${A}_flow -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM -dilM ${A}_to_${B}_flow_dilback
-${FSLDIR}/bin/fslmaths ${A}_to_${B}_flow_dil -sub ${A}_to_${B}_flow_dilback -div 2 ${A}_to_${B}_flow_dil
-${FSLDIR}/bin/imrm ${A}_to_${B}_flow_dilback
-${FSLDIR}/bin/flirt -in ${A}_to_${B}_flow_dil -ref ${FSLDIR}/data/standard/MNI152_T1_2mm_brain -out ${A}_to_${B}_flow_to_std -applyxfm -init ${A}_halfwayto_${B}_to_std.mat
-${FSLDIR}/bin/fslmaths ${A}_to_${B}_flow_to_std -mas ${FSLDIR}/data/standard/MNI152_T1_2mm_edges ${A}_to_${B}_flow_to_std
+${FSLDIR}/bin/flirt -in ${A}_to_${B}_flow_dil     -ref ${FSLDIR}/data/standard/MNI152_T1_2mm_brain -out ${A}_to_${B}_flow_dil     -applyxfm -init ${A}_halfwayto_${B}_to_std.mat
+${FSLDIR}/bin/flirt -in ${A}_to_${B}_flow_dilback -ref ${FSLDIR}/data/standard/MNI152_T1_2mm_brain -out ${A}_to_${B}_flow_dilback -applyxfm -init ${A}_halfwayto_${B}_to_std.mat
+${FSLDIR}/bin/fslmaths ${A}_to_${B}_flow_dil -sub ${A}_to_${B}_flow_dilback -div 2 -mas ${FSLDIR}/data/standard/MNI152_T1_2mm_edges ${A}_to_${B}_flow_to_std
 
 if [ $smooth != 0 ] ; then
     ${FSLDIR}/bin/fslmaths ${FSLDIR}/data/standard/MNI152_T1_2mm_edges -bin -s $smooth ${A}_masksmooth -odt float
@@ -130,6 +129,7 @@ fi
 
 # cleanup
 if [ $debug = 0 ] ; then
-    /bin/rm -f ${A}_halfwayto_${B}_inv.mat `$FSLDIR/bin/imglob -oneperimage ${A}_masksmooth ${A}_brain.* ${A}_to_${B}_flow_dil.* ${A}_to_std.*`
+    $FSLDIR/bin/imrm ${A}_masksmooth ${A}_brain ${A}_to_${B}_flow_dil ${A}_to_${B}_flow_dilback ${A}_to_std
+    /bin/rm -f ${A}_halfwayto_${B}_inv.mat
 fi
 

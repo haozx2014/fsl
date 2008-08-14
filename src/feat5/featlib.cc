@@ -70,7 +70,6 @@
 
 /* }}} */
 /* {{{ defines, includes and typedefs */
-
 #include "featlib.h"
 
 /* }}} */
@@ -153,7 +152,7 @@ void prewhiten_data(const ColumnVector& data, ColumnVector& pwdata, ColumnVector
 /* }}} */
 /* {{{ prewhiten_model */
 
-void prewhiten_model(const ColumnVector& ac, double *model, double *pwmodel, int nevs, int npts)
+void prewhiten_model(const ColumnVector& ac,vector<double>& model,vector<double>& pwmodel, int nevs, int npts)
 {
   Matrix dm(npts, nevs), pwdm(npts, nevs);
 
@@ -202,109 +201,69 @@ void prewhiten_timeseries(const ColumnVector& ac, const ColumnVector& ts, Column
 /* }}} */
 /* {{{ read_model */
 
-double *read_model(char *filename, int *nevs, int *npts)
+vector<double> read_model(const string& filename, int *nevs, int *npts)
 {
-  FILE *designfp;
+  FILE *designFile;
   char control_line[1010];
-  double *model;
+  vector<double> model;
   int i;
 
-  if((designfp=fopen(filename,"r"))==NULL)
+  if((designFile=fopen(filename.c_str(),"r"))==NULL)
     {
       *npts=0;
-      return NULL;
+      return model;
     }
 
-  *nevs=(int)atof(find_key(designfp,control_line,"/NumWaves"));
-  *npts=(int)atof(find_key(designfp,control_line,"/NumPoints"));
+  *nevs=(int)atof(find_key(designFile,control_line,"/NumWaves"));
+  *npts=(int)atof(find_key(designFile,control_line,"/NumPoints"));
 
-  atof(find_key(designfp,control_line,"/Matrix"));
+  atof(find_key(designFile,control_line,"/Matrix"));
 
-  model=(double*)malloc(sizeof(double)* *nevs * *npts);
+  model.resize( *nevs * *npts );
 
   for(i=0; i<*nevs * *npts; i++)
-    fscanf(designfp,"%lf",&model[i]);
+    fscanf(designFile,"%lf",&model[i]);
 
   return model;
 }
 
 /* }}} */
-/* {{{ read_contrasts */
-
-double *read_contrasts(char *filename, int *nevs, int *ncon)
-{
-  FILE *designfp;
-  char control_line[1010];
-  double *contrasts;
-  int i;
-
-  if((designfp=fopen(filename,"r"))==NULL)
-    {
-      fprintf(stderr,"Can't open %s\n",filename);
-      exit(1);
-    }
-
-  *nevs=(int)atof(find_key(designfp,control_line,"/NumWaves"));
-  *ncon=(int)atof(find_key(designfp,control_line,"/NumContrasts"));
-
-  atof(find_key(designfp,control_line,"/Matrix"));
-
-  contrasts=(double*)malloc(sizeof(double)* *nevs * *ncon);
-
-  for(i=0; i<*nevs * *ncon; i++)
-    fscanf(designfp,"%lf",&contrasts[i]);
-
-  return contrasts;
-}
-
-/* }}} */
 /* {{{ read_ftests */
 
-void read_ftests(char *filename, int *nftests)
+void read_ftests(const string& filename, int *nftests)
 {
   FILE *designfp;
   char control_line[1010];
 
   *nftests=0;
 
-  if((designfp=fopen(filename,"r"))!=NULL)
+  if((designfp=fopen(filename.c_str(),"r"))!=NULL)
     *nftests=(int)atof(find_key(designfp,control_line,"/NumContrasts"));
 }
 
 /* }}} */
 /* {{{ read_triggers */
 
-int read_triggers(char *featdir, float **triggers, int nevs, int npts)
+bool read_triggers(const string& filename,vector<double>& triggers, int nevs, int npts)
 {
-  FILE *ifp;
-  char *thestring=(char*)malloc(1000000), *ts;
-  int ev;
-
-  sprintf(thestring,"%s/design.trg",featdir);
-
-  if((ifp=fopen(thestring,"r"))!=NULL)
+  ifstream triggerFile(filename.c_str());
+  if ( triggerFile.is_open() )
+  {
+    triggers.resize(nevs*2*npts);
+    for(int ev=0;ev<nevs;ev++)
     {
-      *triggers = (float*)malloc(nevs*2*npts * sizeof(float));
-
-      for(ev=0;ev<nevs;ev++)
-	{
-	  int i=1;
-	  fgets(thestring,1000000,ifp);
-	  ts=strtok(thestring," ");
-	  while (ts)
-	    {
-	      *(*triggers+i*nevs+ev)=atof(ts);
-	      i++;
-	      ts=strtok(NULL," ");
-	    }
-	  *(*triggers+ev)=i-2;
-	}
-
-      fclose(ifp);
-      return 1;
+      int i=1;
+      string input;
+      getline(triggerFile,input);
+      stringstream inputStream(input);
+      while (inputStream >> input)
+	triggers[(i++)*nevs+ev]=atof(input.c_str());
+      triggers[ev]=i-2;
     }
-  else
-    return 0;
+    triggerFile.close();
+    return true;
+  }
+  return false;
 }
 
 /* }}} */

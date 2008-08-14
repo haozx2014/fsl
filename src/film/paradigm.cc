@@ -66,77 +66,27 @@
     University, to negotiate a licence. Contact details are:
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
+#include <fstream>
 #include "paradigm.h"
 #include "utils/log.h"
-#include "miscmaths/miscmaths.h"
-#include <fstream>
+#include "newimage/newimageall.h"
 
 using namespace FILM;
+using namespace NEWIMAGE;
+using namespace MISCMATHS;
 
 namespace FILM {
-
-  void Paradigm::read_vest_waveform(string p_fname, Matrix& p_mat)
-  {
-    ifstream in;
-    in.open(p_fname.c_str(), ios::in);
-    
-    if(!in)
-      {
-	cerr << "Unable to open " << p_fname << endl;
-	throw;
-      }
-    
-    int numWaves = 0;
-    int numPoints = 0;
-  
-    string str;
-
-    while(true)
-      {
-	in >> str;
-	if(str == "/Matrix")
-	  break;
-	else if(str == "/NumWaves")
-	  {
-	    in >> numWaves;
-	  }
-	else if(str == "/NumPoints" || str == "/NumContrasts")
-	  {
-	    in >> numPoints;
-	  }
-      }
-
-    if(numWaves != 0)
-      {
-	p_mat.ReSize(numPoints, numWaves);
-      }
-    else
-      {
-	numWaves = p_mat.Ncols();
-	numPoints = p_mat.Nrows();
-      }
-      
-    for(int i = 1; i <= numPoints; i++)
-      {
-	for(int j = 1; j <= numWaves; j++)    
-	  {
-	    in >> p_mat(i,j);
-	  }
-      }
-
-    in.close();
-  }
   
   void Paradigm::load(const string& p_paradfname, const string& p_tcontrastfname, const string& p_fcontrastfname, bool p_blockdesign, int p_sizets)
     {
       if(p_paradfname != "")
-	read_vest_waveform(p_paradfname, designMatrix);
+	designMatrix=read_vest(p_paradfname);
 
       if(p_tcontrastfname != "")
-	read_vest_waveform(p_tcontrastfname, tcontrasts);       
+	tcontrasts=read_vest(p_tcontrastfname);       
 
       if(p_fcontrastfname != "")
-	read_vest_waveform(p_fcontrastfname, fcontrasts);   
+	fcontrasts=read_vest(p_fcontrastfname);   
        
       // Check time series match up with design
       if(p_paradfname != "" && designMatrix.Nrows() != p_sizets)
@@ -170,9 +120,28 @@ namespace FILM {
   
 }
 
+void Paradigm::loadVoxelwise(const vector<int>& voxelwiseEvNumber, const vector<string>& voxelwiseEvName, const volume<float>& mask)
+{
+  volume4D<float> input;
+  voxelwiseEvTarget=voxelwiseEvNumber;
+  voxelwiseEv.resize(voxelwiseEvNumber.size());
+  for(unsigned int i=0; i<voxelwiseEvNumber.size(); i++) {
+    if(voxelwiseEvTarget[i]>designMatrix.Ncols())
+      throw Exception("voxelwiseEvTarget is greater than number of design EVs)");
+    read_volume4D(input,voxelwiseEvName.at(i));
+    voxelwiseEv[i]=input.matrix(mask);
+  }
+  doingVoxelwise=true;
+}
 
-
-
+NEWMAT::Matrix Paradigm::getDesignMatrix(long voxel) 
+{ 
+  Matrix output=designMatrix;
+  if (doingVoxelwise) 
+    for (unsigned int ev=0; ev<voxelwiseEvTarget.size(); ev++)
+      output.Column(voxelwiseEvTarget[ev])=voxelwiseEv[ev].Column(voxel);
+  return output; 
+}
 
 
 
