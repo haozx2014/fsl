@@ -37,17 +37,4 @@ Octave
   (see the 'addpath' command).
 
 
-Missing Functionality
----------------------
-
-Unfortunately the TBSS module of FSL [0] is still not immediately usable. The
-reason is that TBSS depends on IRTK [1] and the source code of IRTK is not
-available. Users of the Debian package who need TBSS, have to get the IRTK
-binaries manually from a tarball of a precompiled version of FSL or download
-the binaries separately from [2] (i386 platform only).
-
-[0] http://www.fmrib.ox.ac.uk/fsl/tbss/index.html
-[1] http://www.doc.ic.ac.uk/~dr/software/index.html
-[2] http://wwwhomes.doc.ic.ac.uk/~dr/software/download.html
-
- -- Michael Hanke <michael.hanke@gmail.com>, Wed, 2 Jan 2008 12:50:18 +0200
+ -- Michael Hanke <michael.hanke@gmail.com>, Thu, 14 Aug 2008 19:49:40 +0200
