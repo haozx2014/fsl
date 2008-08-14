@@ -4,7 +4,7 @@
 #
 #   Stephen Smith, FMRIB Image Analysis Group
 #
-#   Copyright (C) 2005-2007 University of Oxford
+#   Copyright (C) 2005-2008 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -70,55 +70,38 @@
 
 Usage() {
     echo ""
-    echo "Usage: tbss_1_preproc [-f <intensity_scaling_factor>] <image1> <image2> ..."
-    echo ""
-    echo "-f <intensity_scaling_factor>   : scale intensities of all input data by <intensity_scaling_factor>"
-    echo "                                  this should result in a final intensity range of 0:10000"
+    echo "Usage: tbss_1_preproc <image1> <image2> ..."
     echo ""
     exit 1
 }
 
-[ "$2" = "" ] && Usage
+[ "$1" = "" ] && Usage
 
 echo [`date`] [`hostname`] [`uname -a`] [`pwd`] [$0 $@] >> .tbsslog
 
-FACTOR=10000
-if [ $1 = -f ] ; then
-    FACTOR=$2
-    shift 2
-fi
-echo Using multiplicative factor of $FACTOR
-
-export FSLOUTPUTTYPE=ANALYZE
-
-mkdir -p FAi
+mkdir -p FA
 mkdir -p origdata
 
-for f in `$FSLDIR/bin/imglob -oneperimage $@` ; do
+for f in `$FSLDIR/bin/imglob $@` ; do
 
-    f=`$FSLDIR/bin/remove_ext $f`
     echo processing $f
 
-    # scale intensities then erode a little
-    $FSLDIR/bin/fslmaths $f -mul $FACTOR -ero FAi/${f}_FAi -odt short
+    # erode a little and zero end slices
+    X=`${FSLDIR}/bin/fslval $f dim1`; X=`echo "$X 2 - p" | dc -`
+    Y=`${FSLDIR}/bin/fslval $f dim2`; Y=`echo "$Y 2 - p" | dc -`
+    Z=`${FSLDIR}/bin/fslval $f dim3`; Z=`echo "$Z 2 - p" | dc -`
+    $FSLDIR/bin/fslmaths $f -min 1 -ero -roi 1 $X 1 $Y 1 $Z 0 1 FA/${f}_FA
 
-    $FSLDIR/bin/fslhd -x $f | sed "s/sform_code .*/sform_code = \'0\'/g" | sed "s/qform_code .*/qform_code = \'0\'/g" > grot.xml
-    $FSLDIR/bin/fslcreatehd grot.xml FAi/${f}_FAi.hdr
-    /bin/rm grot.xml
-
-    # delete end slices
-    X=`${FSLDIR}/bin/fslval FAi/${f}_FAi dim1` ; X=`echo "$X 2 - p" | dc -`
-    Y=`${FSLDIR}/bin/fslval FAi/${f}_FAi dim2` ; Y=`echo "$Y 2 - p" | dc -`
-    Z=`${FSLDIR}/bin/fslval FAi/${f}_FAi dim3` ; Z=`echo "$Z 2 - p" | dc -`
-    $FSLDIR/bin/fslroi FAi/${f}_FAi FAi/${f}_FAi 1 $X 1 $Y 1 $Z 
+    # create mask (for use in FLIRT & FNIRT)
+    $FSLDIR/bin/fslmaths FA/${f}_FA -bin FA/${f}_FA_mask
 
     $FSLDIR/bin/immv $f origdata
 	
 done
 
-echo "Now running \"slicesdir\" to generate report of all converted images"
-cd FAi
-$FSLDIR/bin/slicesdir *.hdr > grot 2>&1
+echo "Now running \"slicesdir\" to generate report of all input images"
+cd FA
+$FSLDIR/bin/slicesdir `$FSLDIR/bin/imglob *_FA.*` > grot 2>&1
 cat grot | tail -n 2
 /bin/rm grot
 

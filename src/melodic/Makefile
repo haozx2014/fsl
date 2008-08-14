@@ -12,7 +12,7 @@ USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_PROB} -L${LIB_GD} -L${LIB_GDC} -L${LIB_PNG}
 
 LIBS = -lutils -lnewimage -lmiscplot -lmiscpic -lmiscmaths -lfslio -lniftiio -lznz -lnewmat -lprob -lm  -lgdc -lgd -lpng -lz
 
-TEST_OBJS = melhlprfns.o test.o  
+TEST_OBJS = test.o test2.o
 
 GGMIX_OBJS = ggmix.o
 

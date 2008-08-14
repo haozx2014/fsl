@@ -1,8 +1,8 @@
-/*  fwdmodel_linear.h - Linear forward model and related classes
+/*  fwdmodel_linear.cc - Linear forward model and related classes
 
     Adrian Groves, FMRIB Image Analysis Group
 
-    Copyright (C) 2007 University of Oxford  */
+    Copyright (C) 2007-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -71,6 +71,61 @@
 #include "newmatio.h"
 #include <stdexcept>
 #include "easylog.h"
+#include "newimage/newimageall.h"
+using namespace NEWIMAGE;
+
+string LinearFwdModel::ModelVersion() const
+{
+  return "$Id: fwdmodel_linear.cc,v 1.17 2008/03/17 13:00:49 adriang Exp $";
+}
+
+void LinearFwdModel::ModelUsage()
+{
+  cout << "\nUsage info for --model=linear:\n"
+       << "Required options:\n"
+       << "--basis=<design_file>\n"
+    ;
+}
+
+LinearFwdModel::LinearFwdModel(ArgsType& args)
+{
+  Tracer_Plus tr("LinearFwdModel::LinearFwdModel(args)");
+  string designFile = args.Read("basis");
+  LOG_ERR("    Reading design file: " << designFile << endl);
+  jacobian = read_vest(designFile);
+
+  const int Ntimes = jacobian.Nrows();
+  const int Nbasis = jacobian.Ncols();
+
+  LOG_ERR("      Loaded " << jacobian.Ncols() 
+	  << " basis functions of length " << Ntimes << endl);
+
+  centre.ReSize(Nbasis); 
+  centre = 0;
+  offset.ReSize(Ntimes);
+  offset = 0;
+
+  if (args.ReadBool("add-ones-regressor"))
+    {
+      LOG_ERR("      Plus an additional regressor of all ones\n");
+      ColumnVector ones(Ntimes); ones = 1.0;
+      jacobian = jacobian | ones;
+      centre.ReSize(Nbasis+1);
+    }
+  // Warning: Nbasis is now wrong!
+}
+
+void LinearFwdModel::HardcodedInitialDists(MVNDist& prior, 
+					   MVNDist& posterior) const
+{
+  Tracer_Plus tr("LinearFwdModel::HardcodedInitialDists");
+  assert(prior.means.Nrows() == NumParams());
+
+  prior.means = 0;
+  prior.SetPrecisions(IdentityMatrix(NumParams()) * 1e-12);
+  posterior = prior;
+
+}
 
 void LinearFwdModel::Evaluate(const ColumnVector& params,
 	               		    ColumnVector& result) const
@@ -80,13 +135,16 @@ void LinearFwdModel::Evaluate(const ColumnVector& params,
 
 void LinearizedFwdModel::ReCentre(const ColumnVector& about)
 {
+  Tracer_Plus tr("LinearizedFwdModel::ReCentre");
+  assert(about == about); // isfinite
+
   // Store new centre & offset
   centre = about;
   fcn->Evaluate(centre, offset);
   if (0*offset != 0*offset) 
     {
-      LOG << "about:\n" << about.t();
-      LOG << "offset:\n" << offset.t();    
+      LOG_ERR("about:\n" << about);
+      LOG_ERR("offset:\n" << offset.t());
       throw overflow_error("ReCentre: Non-finite values found in offset");
     }
 
@@ -147,7 +205,6 @@ void LinearFwdModel::NameParams(vector<string>& names) const
     for (int i = 1; i <= NumParams(); i++)
         names.push_back("Parameter_" + stringify(i));
 }
-
 
 void LinearizedFwdModel::DumpParameters(const ColumnVector& vec,
                                     const string& indent) const

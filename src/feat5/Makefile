@@ -12,7 +12,7 @@ XFILES = feat_model tsplot prewhiten
 
 RUNTCLS = Feat Renderhighres Featquery Glm
 
-SCRIPTS = easythresh feat mccutup renderhighres featregapply featquery fslerrorreport updatefeatreg estnoise perfusion_subtract
+SCRIPTS = easythresh feat mccutup renderhighres featregapply featquery fslerrorreport invfeatreg updatefeatreg estnoise perfusion_subtract match_smoothing fsl_motion_outliers feat_gm_prepare
 
 all: feat_model tsplot prewhiten defaultfiles
 
@@ -35,3 +35,7 @@ prewhiten: prewhiten.cc featlib.o featlib.h
 
 feat_model: feat_model.cc featlib.o
 	$(CXX) $(CXXFLAGS) -o feat_model featlib.o feat_model.cc $(LDFLAGS) $(LIBS)
+
+retroicor_evs: retroicor_evs.cc 
+	$(CXX) $(CXXFLAGS) -o retroicor_evs retroicor_evs.cc $(LDFLAGS) $(LIBS)
+

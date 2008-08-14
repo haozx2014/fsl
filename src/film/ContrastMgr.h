@@ -76,10 +76,8 @@
 
 #include "newmatap.h"
 #include "newmatio.h"
-#include "miscmaths/volumeseries.h"
-#include "miscmaths/volume.h"
 #include "paradigm.h"
-#include "miscmaths/miscmaths.h"
+#include "newimage/newimageall.h"
 
 using namespace NEWMAT;
 using namespace MISCMATHS;
@@ -136,21 +134,23 @@ namespace FILM {
       Paradigm parad;
 
       // Loaded data:
-      VolumeSeries corrections;
+      Matrix corrections;
       Matrix b;
-      Volume dof;
-      Volume sigmaSquareds;
+      ColumnVector dof;
+      ColumnVector sigmaSquareds;
 
       // Calculated data:
-      Volume varcb;
-      Volume cb;
-      Volume neff;      
-      Volume tstat;
-      Volume fstat;
-      Volume zstat;
+      ColumnVector varcb;
+      ColumnVector cb;
+      ColumnVector neff;      
+      ColumnVector tstat;
+      ColumnVector fstat;
+      ColumnVector zstat;
 
       // Other:
       int numTS;
+      NEWIMAGE::volumeinfo vinfo;
+      NEWIMAGE::volume<float> mask;
       bool is_avw_corrections;
     };
 

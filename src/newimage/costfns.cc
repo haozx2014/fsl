@@ -135,6 +135,29 @@ namespace NEWIMAGE {
     }
 
 
+  int q_get_neighbours(const volume<float>& v, 
+		       const float x, const float y, const float z,
+		       float& v000, float& v001, float& v010, float& v011,
+		       float& v100, float& v101, float& v110, float& v111,
+		       float& dx, float& dy, float& dz)
+  {
+    int ix, iy, iz;
+    ix=(int) x; iy=(int) y; iz=(int) z;
+    dx=x-ix; dy=y-iy; dz=z-iz;
+#ifdef SAFE_FLIRT
+    if ( (ix>=0) && (iy>=0) && (iz>=0) 
+	 && (ix<v.maxx()) && (iy<v.maxy()) && (iz<v.maxz()) ) {
+#endif
+      v.getneighbours(ix,iy,iz, v000,v001,v010,v011,v100,v101,v110,v111);
+#ifdef SAFE_FLIRT
+    } else {
+      v000=v001=v010=v011=v100=v101=v110=v111=v.getpadvalue();
+    }
+#endif
+    return 0;
+  }
+
+
    /////////////////////////////////////////////////////////////////////////
 
    float q_sinc(float x)
@@ -290,6 +313,13 @@ namespace NEWIMAGE {
 	    retval = this->leastsquares(affmat);
 	  }
 	  break;
+	case LabelDiff:  // Minimise label difference (any mismatch is equal)
+	  if (smoothsize > 0.0) {
+	    retval = this->labeldiff_smoothed(affmat);
+	  } else {
+	    retval = this->labeldiff(affmat);
+	  }
+	  break;
 	case CorrRatio:  // MAXimise corr
 	  if (smoothsize > 0.0) {
 	    retval = 1.0 - this->corr_ratio_smoothed(affmat);
@@ -340,6 +370,10 @@ namespace NEWIMAGE {
 	  break;
        case LeastSq:  // Minimise square
 	 retval = 1.0-this->leastsquares_fully_weighted(affmat,refweight,
+							testweight);
+	 break;
+       case LabelDiff:  // Minimise label difference (any mismatch is equal)
+	 retval = 1.0-this->labeldiff_fully_weighted(affmat,refweight,
 							testweight);
 	 break;
        case CorrRatio:  // MAXimise corr
@@ -2314,6 +2348,331 @@ namespace NEWIMAGE {
 
   ///////////////////////////////////////////////////////////////////////
 
+  float p_labeldiff(const volume<float>& vref, const volume<float>& vtest,
+		    const Matrix& aff)
+    {
+      // Do everything in practice via the inverse transformation
+      // That is, for every point in vref, calculate the pre-image in
+      //  vtest to which it corresponds, and interpolate vtest to get the
+      //  value there.
+      // Also, the sampling transformations must be accounted for:
+      //     T_vox1->vox2 = (T_samp2)^-1 * T_world * T_samp1
+      Matrix iaffbig = vtest.sampling_mat().i() * aff.i() *
+	                     vref.sampling_mat();  
+      Matrix iaff=iaffbig.SubMatrix(1,3,1,3);
+      unsigned int xb1=vref.xsize()-1, yb1=vref.ysize()-1, zb1=vref.zsize()-1;
+      float  xb2 = ((float) vtest.xsize())-1.0001,
+	yb2=((float) vtest.ysize())-1.0001, zb2=((float) vtest.zsize())-1.0001;
+
+      float a11=iaff(1,1), a12=iaff(1,2), a13=iaff(1,3), a14=iaffbig(1,4),
+	a21=iaff(2,1), a22=iaff(2,2), a23=iaff(2,3), a24=iaffbig(2,4),
+	a31=iaff(3,1), a32=iaff(3,2), a33=iaff(3,3), a34=iaffbig(3,4), o1,o2,o3;
+
+      float v000, v001, v010, v011, v100, v101, v110, v111;
+
+      float lsq=0.0;
+      float sum=0.0, sumA=0.0, sumB=0.0, lsum=0.0;
+      float valx=0.0, dx, dy, dz;
+      long int num=0;
+
+      unsigned int xmin, xmax;
+
+      // The matrix algebra below has been hand-optimized from
+      //  [o1 o2 o3] = a * [x y z]  at each iteration
+
+      for (unsigned int z=0; z<=zb1; z++) { 
+	for (unsigned int y=0; y<=yb1; y++) { 
+
+	  o1= y*a12 + z*a13 + a14;  // x=0
+	  o2= y*a22 + z*a23 + a24;  // x=0
+	  o3= y*a32 + z*a33 + a34;  // x=0
+	
+	  // determine range
+	  findrangex(xmin,xmax,o1,o2,o3,a11,a21,a31,xb1,yb1,zb1,xb2,yb2,zb2);
+
+	  o1 += xmin * a11;
+	  o2 += xmin * a21;
+	  o3 += xmin * a31;
+
+	  for (unsigned int x=xmin; x<=xmax; x++) {
+
+	    if ( !((x==xmin) || (x==xmax)) 
+		 || in_interp_bounds(vtest,o1,o2,o3) )
+	      {
+		// do the cost function record keeping...
+		num++;
+		valx = vref(x,y,z);
+		q_get_neighbours(vtest,o1,o2,o3,v000,v001,v010,v011,v100,v101,v110,v111,
+				 dx, dy, dz);
+		lsum=0.0;
+		if (fabs(v000-valx)>0.5) lsum += (1.0-dx)*(1.0-dy)*(1.0-dz);
+		if (fabs(v001-valx)>0.5) lsum += (1.0-dx)*(1.0-dy)*dz;
+		if (fabs(v011-valx)>0.5) lsum += (1.0-dx)*dy*dz;
+		if (fabs(v010-valx)>0.5) lsum += (1.0-dx)*dy*(1.0-dz);
+		if (fabs(v110-valx)>0.5) lsum += dx*dy*(1.0-dz);
+		if (fabs(v100-valx)>0.5) lsum += dx*(1.0-dy)*(1.0-dz);
+		if (fabs(v101-valx)>0.5) lsum += dx*(1.0-dy)*dz;
+		if (fabs(v111-valx)>0.5) lsum += dx*dy*dz;
+		sum += lsum;
+	      }
+
+	    o1 += a11;
+	    o2 += a21;
+	    o3 += a31;
+	  }
+	  sumA+=sum; sum=0.0;
+	}
+	sumB+=sumA; sumA=0.0;
+      }
+      assert(fabs(sumA+sum)<1e-9);
+      sum = sumB;
+
+      if (num>1) {
+	lsq = sum/((float) num);
+      } else {
+	  // return the worst cost = (max-min)^2
+	lsq = (Max(vref.max(),vtest.max())-Min(vref.min(),vtest.min()));
+	lsq = lsq*lsq;
+      }
+      
+      return lsq;
+    }
+
+
+  ///////////////////////////////////////////////////////////////////////
+
+
+  float p_labeldiff_smoothed(const volume<float>& vref, 
+			     const volume<float>& vtest,
+			     const Matrix& aff, const float smoothsize)
+    {
+      // Do everything in practice via the inverse transformation
+      // That is, for every point in vref, calculate the pre-image in
+      //  vtest to which it corresponds, and interpolate vtest to get the
+      //  value there.
+      // Also, the sampling transformations must be accounted for:
+      //     T_vox1->vox2 = (T_samp2)^-1 * T_world * T_samp1
+      Matrix iaffbig = vtest.sampling_mat().i() * aff.i() *
+	                     vref.sampling_mat();  
+      Matrix iaff=iaffbig.SubMatrix(1,3,1,3);
+      unsigned int xb1=vref.xsize()-1, yb1=vref.ysize()-1, zb1=vref.zsize()-1;
+      float  xb2 = ((float) vtest.xsize())-1.0001,
+	yb2=((float) vtest.ysize())-1.0001, zb2=((float) vtest.zsize())-1.0001;
+
+      float a11=iaff(1,1), a12=iaff(1,2), a13=iaff(1,3), a14=iaffbig(1,4),
+	a21=iaff(2,1), a22=iaff(2,2), a23=iaff(2,3), a24=iaffbig(2,4),
+	a31=iaff(3,1), a32=iaff(3,2), a33=iaff(3,3), a34=iaffbig(3,4), o1,o2,o3;
+
+      float smoothx, smoothy, smoothz, weight;
+      smoothx = smoothsize / vtest.xdim();
+      smoothy = smoothsize / vtest.ydim();
+      smoothz = smoothsize / vtest.zdim();
+
+      float v000, v001, v010, v011, v100, v101, v110, v111;
+      float lsq=0.0;
+      float sum=0.0, sumA=0.0, sumB=0.0, lsum=0.0;
+      float valx=0.0, dx, dy, dz;
+      float num=0.0, numA=0.0, numB=0.0;
+
+      unsigned int xmin, xmax;
+
+      // The matrix algebra below has been hand-optimized from
+      //  [o1 o2 o3] = a * [x y z]  at each iteration
+
+      for (unsigned int z=0; z<=zb1; z++) { 
+	for (unsigned int y=0; y<=yb1; y++) { 
+
+	  o1= y*a12 + z*a13 + a14;  // x=0
+	  o2= y*a22 + z*a23 + a24;  // x=0
+	  o3= y*a32 + z*a33 + a34;  // x=0
+	
+	  // determine range
+	  findrangex(xmin,xmax,o1,o2,o3,a11,a21,a31,xb1,yb1,zb1,xb2,yb2,zb2);
+
+	  o1 += xmin * a11;
+	  o2 += xmin * a21;
+	  o3 += xmin * a31;
+
+	  for (unsigned int x=xmin; x<=xmax; x++) {
+
+	    if ( !((x==xmin) || (x==xmax)) 
+		 || in_interp_bounds(vtest,o1,o2,o3) )
+	      {
+
+		valx = vref(x,y,z);
+	
+		// do the cost function record keeping...
+		weight=1.0;
+		if (o1<smoothx)  weight*=o1/smoothx;
+		else if ((xb2-o1)<smoothx) weight*=(xb2-o1)/smoothx;
+		if (o2<smoothy)  weight*=o2/smoothy;
+		else if ((yb2-o2)<smoothy) weight*=(yb2-o2)/smoothy;
+		if (o3<smoothz)  weight*=o3/smoothz;
+		else if ((zb2-o3)<smoothz) weight*=(zb2-o3)/smoothz;
+		if (weight<0.0)  weight=0.0;
+		
+		num+=weight;
+		q_get_neighbours(vtest,o1,o2,o3,v000,v001,v010,v011,v100,v101,v110,v111,
+				 dx, dy,dz);
+		lsum=0.0;
+		if (fabs(v000-valx)>0.5) lsum += (1.0-dx)*(1.0-dy)*(1.0-dz);
+		if (fabs(v001-valx)>0.5) lsum += (1.0-dx)*(1.0-dy)*dz;
+		if (fabs(v011-valx)>0.5) lsum += (1.0-dx)*dy*dz;
+		if (fabs(v010-valx)>0.5) lsum += (1.0-dx)*dy*(1.0-dz);
+		if (fabs(v110-valx)>0.5) lsum += dx*dy*(1.0-dz);
+		if (fabs(v100-valx)>0.5) lsum += dx*(1.0-dy)*(1.0-dz);
+		if (fabs(v101-valx)>0.5) lsum += dx*(1.0-dy)*dz;
+		if (fabs(v111-valx)>0.5) lsum += dx*dy*dz;
+
+		sum += weight*lsum;
+	      }
+
+	    o1 += a11;
+	    o2 += a21;
+	    o3 += a31;
+	  }
+	  sumA+=sum; sum=0.0;
+	  numA+=num; num=0.0;
+	}
+	sumB+=sumA; sumA=0.0;
+	numB+=numA; numA=0.0;
+      }
+      assert(fabs(sumA+sum)<1e-9);
+      sum = sumB;  num = numB;
+  
+      
+      if (num>1.0) {
+	lsq = sum/num;
+      } else {
+	  // return the worst cost = (max-min)^2
+	lsq = (Max(vref.max(),vtest.max())-Min(vref.min(),vtest.min()));
+	lsq = lsq*lsq;
+      }
+      
+      return lsq;
+    }
+
+
+  ///////////////////////////////////////////////////////////////////////
+
+
+  float p_labeldiff_fully_weighted(const volume<float>& vref, 
+				   const volume<float>& vtest,
+				   const volume<float>& refweight, 
+				   const volume<float>& testweight,
+				   const Matrix& aff, const float smoothsize)
+  {
+      // Do everything in practice via the inverse transformation
+      // That is, for every point in vref, calculate the pre-image in
+      //  vtest to which it corresponds, and interpolate vtest to get the
+      //  value there.
+      // Also, the sampling transformations must be accounted for:
+      //     T_vox1->vox2 = (T_samp2)^-1 * T_world * T_samp1
+      Matrix iaffbig = vtest.sampling_mat().i() * aff.i() *
+	                     vref.sampling_mat();  
+      Matrix iaff=iaffbig.SubMatrix(1,3,1,3);
+      unsigned int xb1=vref.xsize()-1, yb1=vref.ysize()-1, zb1=vref.zsize()-1;
+      float  xb2 = ((float) vtest.xsize())-1.0001,
+	yb2=((float) vtest.ysize())-1.0001, zb2=((float) vtest.zsize())-1.0001;
+
+      float a11=iaff(1,1), a12=iaff(1,2), a13=iaff(1,3), a14=iaffbig(1,4),
+	a21=iaff(2,1), a22=iaff(2,2), a23=iaff(2,3), a24=iaffbig(2,4),
+	a31=iaff(3,1), a32=iaff(3,2), a33=iaff(3,3), a34=iaffbig(3,4), o1,o2,o3;
+
+      float wval=0, smoothx, smoothy, smoothz, weight;
+      smoothx = smoothsize / vtest.xdim();
+      smoothy = smoothsize / vtest.ydim();
+      smoothz = smoothsize / vtest.zdim();
+
+      float v000, v001, v010, v011, v100, v101, v110, v111;
+      float lsq=0.0;
+      float sum=0.0, sumA=0.0, sumB=0.0, lsum=0.0;
+      float valx=0.0, dx, dy, dz;
+      float num=0.0, numA=0.0, numB=0.0;
+
+      unsigned int xmin, xmax;
+
+      // The matrix algebra below has been hand-optimized from
+      //  [o1 o2 o3] = a * [x y z]  at each iteration
+
+      for (unsigned int z=0; z<=zb1; z++) { 
+	for (unsigned int y=0; y<=yb1; y++) { 
+
+	  o1= y*a12 + z*a13 + a14;  // x=0
+	  o2= y*a22 + z*a23 + a24;  // x=0
+	  o3= y*a32 + z*a33 + a34;  // x=0
+	
+	  // determine range
+	  findrangex(xmin,xmax,o1,o2,o3,a11,a21,a31,xb1,yb1,zb1,xb2,yb2,zb2);
+
+	  o1 += xmin * a11;
+	  o2 += xmin * a21;
+	  o3 += xmin * a31;
+
+	  for (unsigned int x=xmin; x<=xmax; x++) {
+
+	    if ( !((x==xmin) || (x==xmax)) 
+		 || in_interp_bounds(vtest,o1,o2,o3) )
+	      {
+		wval = q_tri_interpolation(testweight,o1,o2,o3);
+		
+		// do the cost function record keeping...
+		weight=wval*refweight(x,y,z);
+		if (o1<smoothx)  weight*=o1/smoothx;
+		else if ((xb2-o1)<smoothx) weight*=(xb2-o1)/smoothx;
+		if (o2<smoothy)  weight*=o2/smoothy;
+		else if ((yb2-o2)<smoothy) weight*=(yb2-o2)/smoothy;
+		if (o3<smoothz)  weight*=o3/smoothz;
+		else if ((zb2-o3)<smoothz) weight*=(zb2-o3)/smoothz;
+		if (weight<0.0)  weight=0.0;
+		
+		valx = vref(x,y,z);
+
+		num+=weight;
+		q_get_neighbours(vtest,o1,o2,o3,v000,v001,v010,v011,v100,v101,v110,v111,
+				 dx,dy,dz);
+		lsum=0.0;
+		if (fabs(v000-valx)>0.5) lsum += (1.0-dx)*(1.0-dy)*(1.0-dz);
+		if (fabs(v001-valx)>0.5) lsum += (1.0-dx)*(1.0-dy)*dz;
+		if (fabs(v011-valx)>0.5) lsum += (1.0-dx)*dy*dz;
+		if (fabs(v010-valx)>0.5) lsum += (1.0-dx)*dy*(1.0-dz);
+		if (fabs(v110-valx)>0.5) lsum += dx*dy*(1.0-dz);
+		if (fabs(v100-valx)>0.5) lsum += dx*(1.0-dy)*(1.0-dz);
+		if (fabs(v101-valx)>0.5) lsum += dx*(1.0-dy)*dz;
+		if (fabs(v111-valx)>0.5) lsum += dx*dy*dz;
+
+		sum += weight*lsum;
+	      }
+
+	    o1 += a11;
+	    o2 += a21;
+	    o3 += a31;
+	  }
+	  sumA+=sum; sum=0.0;
+	  numA+=num; num=0.0;
+	}
+	sumB+=sumA; sumA=0.0;
+	numB+=numA; numA=0.0;
+      }
+      assert(fabs(sumA+sum)<1e-9);
+      sum = sumB;  num = numB;
+  
+      
+      if (num>1.0) {
+	lsq = sum/num;
+      } else {
+	  // return the worst cost = (max-min)^2
+	lsq = (Max(vref.max(),vtest.max())-Min(vref.min(),vtest.min()));
+	lsq = lsq*lsq;
+      }
+      
+      return lsq;
+    }
+
+
+  ///////////////////////////////////////////////////////////////////////
+
+
   void calc_entropy(const volume<float>& vref, const volume<float>& vtest,
 		    int *bindex,  const Matrix& aff,
 		    const float mintest, const float maxtest,
@@ -3022,11 +3381,16 @@ namespace NEWIMAGE {
       fjointhist = new float[(no_bins+1)*(no_bins+1)];
       fmarghist1 = new float[no_bins+1];
       fmarghist2 = new float[no_bins+1];
-      unsigned long int N = this->refvol.nvoxels();
+      int N = this->refvol.nvoxels();
       float p=0.0;
       try {
         plnp.ReSize(Min((unsigned long int) 10000, (unsigned long int) (10*N/(no_bins+1))));
-      } catch(...) { cerr<<"ERROR: failed on plnp.Resize("<<Min((unsigned long int) 10000, (unsigned long int) (10*N/(no_bins+1)))<<")"<<endl;}
+      } catch(...) { 
+	cerr<<"ERROR: failed on plnp.Resize("
+	    <<Min((unsigned long int) 10000, (unsigned long int) (10*N/(no_bins+1)))
+	    <<")"<<endl;
+	cerr <<"Probably out of memory" << endl;
+      }
       for (int num=1; num<=plnp.Nrows(); num++) {
 	p = ((float) num) / ((float) N);
 	plnp(num) = -p*log(p);
@@ -3107,6 +3471,30 @@ namespace NEWIMAGE {
    {
      p_count++;
      return p_leastsquares_fully_weighted(this->refvol,this->testvol,
+					refweight,testweight,
+					aff,this->smoothsize);
+   }
+
+
+  float Costfn::labeldiff(const Matrix& aff) const
+    {
+      p_count++;
+     return p_labeldiff(this->refvol,this->testvol,aff);
+    }
+
+  float Costfn::labeldiff_smoothed(const Matrix& aff) const
+    {
+      p_count++;
+      return p_labeldiff_smoothed(this->refvol,this->testvol,aff, 
+				   this->smoothsize);
+    }
+
+   float Costfn::labeldiff_fully_weighted(const Matrix& aff, 
+				     const volume<float>& refweight, 
+				     const volume<float>& testweight) const
+   {
+     p_count++;
+     return p_labeldiff_fully_weighted(this->refvol,this->testvol,
 					refweight,testweight,
 					aff,this->smoothsize);
    }

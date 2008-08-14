@@ -181,6 +181,7 @@ ReturnMatrix normpdf(const RowVector& vals, const float mu, const float var)
   return res;
 }
 
+
 ReturnMatrix normcdf(const RowVector& vals, const float mu, const float var)
 {
   RowVector res(vals);
@@ -232,7 +233,15 @@ ReturnMatrix gammapdf(const RowVector& vals, const float mu, const float var)
   return res;
 }
 
-
+  float normpdf(const float val, const float mu, const float var)
+  {
+    return std::exp(-0.5*(std::pow(val-mu,2)/var))*std::pow(2*M_PI*var,-0.5);
+  }
+  float lognormpdf(const float val, const float mu, const float var)
+  {
+    return -0.5*(std::pow(val-mu,2)/var+std::log(2*M_PI*var));
+  }
+    
 ReturnMatrix normpdf(const RowVector& vals, const RowVector& mu, const RowVector& var)
 {
   Matrix res(mu.Ncols(),vals.Ncols());
@@ -259,10 +268,29 @@ ReturnMatrix mvnrnd(const RowVector& mu, const SymmetricMatrix& covar, int nsamp
   return mvn.next(nsamp);
 }
 
+ float mvnpdf(const RowVector& vals, const RowVector& mu, const SymmetricMatrix& covar)
+ {
+   if(vals.Ncols()==2)
+     return bvnpdf(vals,mu,covar);
+   else
+     return std::exp(-0.5*((vals-mu)*covar.i()*(vals-mu).t()).AsScalar())/(std::pow(covar.Determinant(),0.5)*std::pow(2*M_PI,vals.Ncols()/2.0));
+ }
+
+ float bvnpdf(const RowVector& vals, const RowVector& mu, const SymmetricMatrix& covar)
+ {
+   // bivariate normal pdf
+   double det=covar(1,1)*covar(2,2)-Sqr(covar(1,2));
+   float m1=vals(1)-mu(1);
+   float m2=vals(2)-mu(2);
+   float ss=(Sqr(m1)*covar(2,2)-2*m1*m2*covar(1,2)+Sqr(m2)*covar(1,1))/det;
+
+   return std::exp(-0.5*ss)/(std::pow(det,0.5)*std::pow(2*M_PI,vals.Ncols()/2.0));
+ }
+
 // ReturnMatrix gammarnd(const int dim1, const int dim2, 
 // 			const float a, const float b)
 // {
-//   // Marsaglia, G. and Tsang, W.W. (2000) "A Simple Method for Generating Gamma Variables", ACM Trans. Math. Soft. 26(3):363-372.
+//   // Marsaglia, G. and Tsang, W.W. (2000) "A Simple Method for Generating Gamma Variables", Acm Trans. Math. Soft. 26(3):363-372.
 
 //   int tdim = dim2;
 //   if(tdim<0){tdim=dim1;}

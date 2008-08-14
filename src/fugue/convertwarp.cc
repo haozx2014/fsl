@@ -1,8 +1,8 @@
 /*  convertwarp.cc
 
-    Mark Jenkinson, FMRIB Image Analysis Group
+    Mark Jenkinson and Jesper Anderson, FMRIB Image Analysis Group
 
-    Copyright (C) 2001-2007 University of Oxford  */
+    Copyright (C) 2001-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -67,7 +67,8 @@
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
 #include "utils/options.h"
-#include "newimage/warpfns.h"
+#include "warpfns/warpfns.h"
+#include "warpfns/fnirt_file_reader.h"
 
 #define _GNU_SOURCE 1
 #define POSIX_SOURCE 1
@@ -79,8 +80,8 @@ using namespace NEWIMAGE;
 
 // COMMAND LINE OPTIONS
 
-string title="convertwarp (Version 2.0)\nCopyright(c) 2001-2007, University of Oxford (Mark Jenkinson)";
-string examples="convertwarp -m affine_matrix_file -r refvol -o output_warp\nconvertwarp --premat=mat1 --warp1=vol1 --warp2=vol2 --postmat=mat2 -o output_warp\nconvertwarp -s shiftmapvol -o output_warp";
+string title="convertwarp (Version 2.1)\nCopyright(c) 2001-2008, University of Oxford";
+string examples="convertwarp -m affine_matrix_file -r refvol -o output_warp\nconvertwarp --ref=refvol --premat=mat1 --warp1=vol1 --warp2=vol2 --postmat=mat2 --out=output_warp\nconvertwarp -r refvol -s shiftmapvol -o output_warp";
 
 Option<bool> verbose(string("-v,--verbose"), false, 
 		     string("switch on diagnostic messages"), 
@@ -113,13 +114,13 @@ Option<float> jmax(string("--jmax"), 100.0,
 			string("maximum acceptable Jacobian value for constraint (default 100.0)"),
 			false, requires_argument);
 Option<string> prematname(string("-m,--premat"), string(""),
-			  string("filename of pre-affine transform (not MEDx)"),
+			  string("filename of pre-affine transform"),
 			  false, requires_argument);
 Option<string> midmatname(string("--midmat"), string(""),
-			  string("filename of mid-warp-affine transform (not MEDx)"),
+			  string("filename of mid-warp-affine transform"),
 			  false, requires_argument);
 Option<string> postmatname(string("--postmat"), string(""),
-			  string("filename of post-affine transform (not MEDx)"),
+			  string("filename of post-affine transform"),
 			  false, requires_argument);
 Option<string> shiftmapname(string("-s,--shiftmap"), string(""),
 		       string("filename for shiftmap (applied last)"),
@@ -130,18 +131,18 @@ Option<string> warp1name(string("-w,--warp1"), string(""),
 Option<string> warp2name(string("--warp2"), string(""),
 		       string("filename for secondary warp (after initial warp, before post-affine)"),
 		       false, requires_argument);
-Option<string> refname(string("-r,--ref"), string(""),
-		       string("filename for reference image"),
-		       false, requires_argument);
-Option<string> outname(string("-o,--out"), string(""),
-		       string("filename for output (warp) image"),
-		       false, requires_argument);
 Option<string> shiftdir(string("-d,--shiftdir"), string("y"),
 		       string("direction to apply shiftmap {x,y,z,x-,y-,z-}"),
 		       false, requires_argument);
 Option<string> jacobianname(string("-j,--jacobian"), string("y"),
 		       string("calculate and save Jacobian of final warp field"),
 		       false, requires_argument);
+Option<string> refname(string("-r,--ref"), string(""),
+		       string("filename for reference image"),
+		       true, requires_argument);
+Option<string> outname(string("-o,--out"), string(""),
+		       string("filename for output (warp) image"),
+		       true, requires_argument);
 
 bool abs_warp = true;
 
@@ -160,11 +161,11 @@ void update_warp(volume4D<float>& totalwarp,  const volume4D<float>& newwarp,
   }
 }
 
-
+/*
 bool getabswarp(volume4D<float>& warpvol) {
   bool absw = false;
-  if (abswarp.set()) { absw = true; }
-  else if (relwarp.set()) { absw = false; }
+  if (abswarp.value()) { absw = true; }
+  else if (relwarp.value()) { absw = false; }
   else {
     if (verbose.value()) { 
       cout << "Automatically determining relative/absolute warp conventions" << endl; 
@@ -177,64 +178,58 @@ bool getabswarp(volume4D<float>& warpvol) {
   }
   return absw;
 }
-
+*/
 
 int convert_warp()
 {
   volume<float> refvol;
+  read_volume(refvol,refname.value());
 
-  if (refname.set()) {
-    read_volume(refvol,refname.value());
-  } else if (warp2name.set()) {
-    read_volume(refvol,warp2name.value());  // only reads first volume
-  } else if (warp1name.set()) {
-    read_volume(refvol,warp1name.value());  // only reads first volume
-  } else if (shiftmapname.set()) {
-    read_volume(refvol,shiftmapname.value());  // only reads first volume
-  } else {
-    cerr << "Cannot determine size of output warp!" << endl;
-    cerr << "Must specify a reference volume (using -r)" << endl;
-    exit(EXIT_FAILURE);
-  }
+  AbsOrRelWarps      spec_wt=UnknownWarps;        // Specified warp convention
+  if (abswarp.value()) spec_wt=AbsoluteWarps;
+  else if (relwarp.value()) spec_wt=RelativeWarps;
 
-  volume4D<float> nextwarp, finalwarp;
-  bool warpset = false;
+  Matrix             skrutt=IdentityMatrix(4);    // Not used
+  volume4D<float>    nextwarp, finalwarp;
+  bool               warpset = false;
 
   // Note that internally everything works with absolute warps
 
   Matrix premat, midmat, postmat;
-  premat = Identity(4);
-  midmat = Identity(4);
-  postmat = Identity(4);
+  premat = IdentityMatrix(4);
+  midmat = IdentityMatrix(4);
+  postmat = IdentityMatrix(4);
 
   if (prematname.set()) {
-    read_ascii_matrix(premat,prematname.value());
+    premat = read_ascii_matrix(prematname.value());
     affine2warp(premat,nextwarp,refvol);
     update_warp(finalwarp,nextwarp,warpset);
   }
 
+  FnirtFileReader warp1file;
   if (warp1name.set()) {
-    read_volume4D(nextwarp,warp1name.value());
-    abs_warp = getabswarp(nextwarp);
-    if (!abs_warp) { convertwarp_rel2abs(nextwarp); }
+    warp1file.Read(warp1name.value(),spec_wt,verbose.set());
+    nextwarp = warp1file.FieldAsNewimageVolume4D(true);
+    convertwarp_rel2abs(nextwarp);
     update_warp(finalwarp,nextwarp,warpset);
   }
 
   if (midmatname.set()) {
-    read_ascii_matrix(midmat,midmatname.value());
+    midmat = read_ascii_matrix(midmatname.value());
     affine2warp(midmat,nextwarp,refvol);
     update_warp(finalwarp,nextwarp,warpset);
   }
 
+  FnirtFileReader warp2file;
   if (warp2name.set()) {
-    read_volume4D(nextwarp,warp2name.value());
-    abs_warp = getabswarp(nextwarp);
-    if (!abs_warp) { convertwarp_rel2abs(nextwarp); }
+    warp2file.Read(warp2name.value(),spec_wt,verbose.set());
+    nextwarp = warp2file.FieldAsNewimageVolume4D(true);
+    convertwarp_rel2abs(nextwarp);
     update_warp(finalwarp,nextwarp,warpset);
   }
 
   if (postmatname.set()) {
-    read_ascii_matrix(postmat,postmatname.value());
+    postmat = read_ascii_matrix(postmatname.value());
     affine2warp(postmat,nextwarp,refvol);
     update_warp(finalwarp,nextwarp,warpset);
   }
@@ -249,7 +244,7 @@ int convert_warp()
 
   // force the final warp to be the same size as refvol (if it isn't already)
   if (!samesize(finalwarp[0],refvol)) {
-    affine2warp(Identity(4),nextwarp,refvol);
+    affine2warp(IdentityMatrix(4),nextwarp,refvol);
     update_warp(finalwarp,nextwarp,warpset);
   }
    
@@ -272,16 +267,17 @@ int convert_warp()
     constrain_topology(finalwarp,jmin.value(),jmax.value());
   }
 
-  if (relwarpout.set() || (abswarpout.unset() && !abs_warp)) {
-    // convert output to relative
-    convertwarp_abs2rel(finalwarp);
+  
+  if (relwarpout.value() || (!abswarpout.value() && (warp1file.AbsOrRel()==RelativeWarps || warp2file.AbsOrRel()==RelativeWarps))) {
+    convertwarp_abs2rel(finalwarp);   // convert output to relative
   }
+  
 
   if (outname.set()) {
     save_volume4D(finalwarp,outname.value());
   }
   
-  return 0;
+  return(EXIT_SUCCESS);
 }
 
 
@@ -316,7 +312,13 @@ int main(int argc, char* argv[])
     options.add(verbose);
     options.add(help);
     
-    options.parse_command_line(argc, argv);
+    int nparsed = options.parse_command_line(argc, argv);
+    if (nparsed < argc) {
+      for (; nparsed<argc; nparsed++) {
+        cerr << "Unknown input: " << argv[nparsed] << endl;
+      }
+      exit(EXIT_FAILURE);
+    }
 
     if ( (argc<2) || (help.value()) || (!options.check_compulsory_arguments(true)) )
       {
@@ -330,6 +332,15 @@ int main(int argc, char* argv[])
   } catch(std::exception &e) {
     cerr << e.what() << endl;
   } 
+
+  if (abswarp.value() && relwarp.value()) {
+    cerr << "--abs and --rel flags cannot both be set" << endl;
+    exit(EXIT_FAILURE);
+  }
+  if (abswarpout.value() && relwarpout.value()) {
+    cerr << "--absout and --relout flags cannot both be set" << endl;
+    exit(EXIT_FAILURE);
+  }
 
   return convert_warp();
 }

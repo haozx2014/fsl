@@ -125,7 +125,7 @@ while [ _$1 != _ ] ; do
 	sdo="$sdo -2"
         shift
     elif [ $1 = -t2 ] ; then
-	is_t2=" -s -t2"
+	is_t2=" -s -t 2"
         shift
     elif [ $1 = -m ] ; then
 	stdmask=1
@@ -164,7 +164,7 @@ echo "-----------------------------------------------------------------------" >
 echo ""                                                                        >> report.siena
 echo " SIENA - Structural Image Evaluation, using Normalisation, of Atrophy"   >> report.siena
 echo " part of FSL www.fmrib.ox.ac.uk/fsl"                                     >> report.siena
-echo " running longitudinal atrophy measurement: siena version 2.5"            >> report.siena
+echo " running longitudinal atrophy measurement: siena version 2.6"            >> report.siena
 echo " siena $@"                                                               >> report.siena
 echo ""                                                                        >> report.siena
 

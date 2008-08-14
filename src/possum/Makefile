@@ -1,12 +1,14 @@
-# $Id: Makefile,v 1.53 2007/08/06 09:29:54 steve Exp $
+# $Id: Makefile,v 1.56 2007/11/15 09:15:01 ivana Exp $
 include ${FSLCONFDIR}/default.mk
 
 PROJNAME = possum
 
 #USRINCFLAGS = -I${INC_NEWMAT} -I${INC_PROB} -I${INC_CEPHES}
 #USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_PROB} -L${LIB_CEPHES}
-#with the next line it will do table version automatically when I do make possum
-#USRCXXFLAGS = -DTABLE
+
+#with the next line it will not do the table version automatically
+#USRCXXFLAGS = -DNOTABLE
+
 USRINCFLAGS = -I${INC_NEWMAT} -I${INC_PROB} -I${INC_ZLIB}
 USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_PROB} -L${LIB_ZLIB}
 

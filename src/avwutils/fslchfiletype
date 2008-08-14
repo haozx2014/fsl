@@ -1,11 +1,11 @@
 #!/bin/sh
 
-#   basic image handling scripts
+#   data format conversion script (between various nifti and Analyze flavours)
 #
 #   Mark Jenkinson
 #   FMRIB Image Analysis Group
 #
-#   Copyright (C) 1999-2004 University of Oxford
+#   Copyright (C) 1999-2008 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -79,10 +79,6 @@ if [ $# -lt 2 ] ; then
 fi
 
 
-storedval=$FSLOUTPUTTYPE
-FSLOUTPUTTYPE=$1
-export FSLOUTPUTTYPE
-
 oldfile=`$FSLDIR/bin/remove_ext $2`
 
 if [ $# -ge 3 ] ; then
@@ -93,19 +89,8 @@ else
   inplace=1
 fi
 
-# determine if it is a complex image or not
-iscomplex=0;
-dtype=`$FSLDIR/bin/fslval $oldfile datatype`;
-if [ X$dtype =   X32 ] ; then iscomplex=1; fi
-if [ X$dtype = X1792 ] ; then iscomplex=1; fi
-if [ X$dtype = X2048 ] ; then iscomplex=1; fi
-
 # do the copy / type conversion
-if [ $iscomplex = 1 ] ; then
-    $FSLDIR/bin/fslcomplex -copyonly $oldfile $newfile
-else
-    $FSLDIR/bin/fslmaths $oldfile $newfile
-fi
+$FSLDIR/bin/fslchfiletype_exe $1 $oldfile $newfile
 
 # for inplace stuff remove and copy old one
 # exact mechanism is to be careful not to remove old IF a new one isn't writable in this place (eg over quota)
@@ -118,7 +103,4 @@ if [ $inplace = 1 ] ; then
       fi
   fi
 fi
-
-FSLOUTPUTTYPE=$storedval
-export FSLOUTPUTTYPE
 

@@ -1,6 +1,66 @@
 /*  Copyright (C) 1999-2004 University of Oxford  */
 
-/*  CCOPYRIGHT */
+/*  Part of FSL - FMRIB's Software Library
+    http://www.fmrib.ox.ac.uk/fsl
+    fsl@fmrib.ox.ac.uk
+    
+    Developed at FMRIB (Oxford Centre for Functional Magnetic Resonance
+    Imaging of the Brain), Department of Clinical Neurology, Oxford
+    University, Oxford, UK
+    
+    
+    LICENCE
+    
+    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    Oxford (the "Software")
+    
+    The Software remains the property of the University of Oxford ("the
+    University").
+    
+    The Software is distributed "AS IS" under this Licence solely for
+    non-commercial use in the hope that it will be useful, but in order
+    that the University as a charitable foundation protects its assets for
+    the benefit of its educational and research purposes, the University
+    makes clear that no condition is made or to be implied, nor is any
+    warranty given or to be implied, as to the accuracy of the Software,
+    or that it will be suitable for any particular purpose or for use
+    under any specific conditions. Furthermore, the University disclaims
+    all responsibility for the use which is made of the Software. It
+    further disclaims any liability for the outcomes arising from using
+    the Software.
+    
+    The Licensee agrees to indemnify the University and hold the
+    University harmless from and against any and all claims, damages and
+    liabilities asserted by third parties (including claims for
+    negligence) which arise directly or indirectly from the use of the
+    Software or the sale of any products based on the Software.
+    
+    No part of the Software may be reproduced, modified, transmitted or
+    transferred in any form or by any means, electronic or mechanical,
+    without the express permission of the University. The permission of
+    the University is not required if the said reproduction, modification,
+    transmission or transference is done without financial return, the
+    conditions of this Licence are imposed upon the receiver of the
+    product, and all original and amended source code is included in any
+    transmitted product. You may be held legally responsible for any
+    copyright infringement that is caused or encouraged by your failure to
+    abide by these terms and conditions.
+    
+    You are not permitted under this Licence to use this Software
+    commercially. Use for which any financial return is received shall be
+    defined as commercial use, and includes (1) integration of all or part
+    of the source code or the Software into a product for sale or license
+    by or on behalf of Licensee to third parties or (2) use of the
+    Software or any derivative of it for research with the final aim of
+    developing software products for sale or license to a third party or
+    (3) use of the Software or any derivative of it for research with the
+    final aim of developing non-software products for sale or license to a
+    third party, or (4) use of the Software to provide any service to an
+    external organisation for which payment is received. If you are
+    interested in using the Software commercially, please contact Isis
+    Innovation Limited ("Isis"), the technology transfer company of the
+    University, to negotiate a licence. Contact details are:
+    innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
 #include "options.h"
 
@@ -39,14 +99,22 @@ namespace Utilities {
 	value_ = false;
 	unset_=false;
       }
-    return unset_;
+    return !unset_;
   }
 
-//   template<typename T> bool Option<T>::set_value(const string& s)
-//   {
-//     cout << "Bummer!" << endl;
-//     return false;
-//   }
+  template<> ostream& Option<bool>::print(ostream& os) const 
+  {
+    os << "# " << help_text() << endl;
+    if(set())
+      os << config_key().substr(0, config_key().find("=")); 
+
+    return os;
+  }
+  
+  ostream& operator<<(ostream& os, const BaseOption& o)
+  {
+    return o.print(os);
+  }
 
   bool string_to_T(bool& b, const string& s) {
     b = false;
@@ -118,14 +186,6 @@ namespace Utilities {
     return true;
   }
 
-  std::ostream& operator<<(std::ostream& os, const BaseOption& o)
-  {
-    os << "# " << o.help_text() << std::endl 
-       << o.config_key() << o.value_string();
-
-    return os;
-  }
-
 //   ostream& operator<<(ostream &os, const BaseOption& o) {
 //     string test=o.help_text();
 //     if ((test.length()>=1) && (test[0]=='~')) {
@@ -136,15 +196,6 @@ namespace Utilities {
 //     }
 //   }
 
-  ostream& operator<<(ostream& os, const Option<bool>& o)
-  {
-    if(o.set())
-      os << "# " << o.help_text() << endl
-	 << o.config_key().substr(0, o.config_key().find("=")); // Lop off any trailing "=" symbol
-
-    return os;
-  }
-  
   void BaseOption::usage(ostream& os) const {
     string test(help_text());
      if ((test.length()>=1) && (test[0]=='~')) {

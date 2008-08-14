@@ -1,8 +1,8 @@
 /*  fsl_regfilt - 
 
-    Christian Beckmann, FMRIB Image Analysis Group
+    Christian F. Beckmann, FMRIB Image Analysis Group
 
-    Copyright (C) 2006-2007 University of Oxford  */
+    Copyright (C) 2006-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -83,7 +83,7 @@ using namespace std;
 // printed out as the help or usage message
 
   string title=string("fsl_regfilt (Version 1.0)")+
-		string("\n\n Copyright(c) 2007, University of Oxford (Christian F. Beckmann)\n")+
+		string("\n\n Copyright(c) 2008, University of Oxford (Christian F. Beckmann)\n")+
 		string(" Data de-noising by regressing out part of a design matrix\n")+
 		string(" using simple OLS regression on 4D images");
   string examples="fsl_regfilt -i <input> -d <design> -f <components> -o <out> [options]";

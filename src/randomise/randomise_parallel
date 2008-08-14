@@ -1,0 +1,90 @@
+#!/bin/sh
+
+if [ $# -le 3 ] ; then
+  echo "randomisePar <randomise options>"
+  echo ""
+  echo "Actual number of permutations performed may differ slightly from those 
+  requested due to tasking an equal number of permutations per fragment."
+  echo ""
+  echo "Caution: if a design has less unique permutations than those requested, 
+  the defragment script will not work correctly!"
+  exit 1
+fi
+
+RANDOMISE_OUTPUT=`$FSLDIR/bin/randomise $@ -Q`
+if [ $? != 0 ] ; then 
+  echo "ERROR: Randomise could not succesfully initialise with the command line given. Submission aborted."
+  exit 1
+fi 
+
+PERMS=`echo $RANDOMISE_OUTPUT | awk '{print $1}'`
+CONTRASTS=`echo $RANDOMISE_OUTPUT | awk '{print $2}'`
+ROOTNAME=`echo $RANDOMISE_OUTPUT | awk '{print $3}'`
+
+PERMS_PER_SLOT=`expr 300 / $CONTRASTS`
+REQUESTED_SLOTS=`expr $PERMS / $PERMS_PER_SLOT`
+PERMS_PER_CONTRAST=`expr $PERMS_PER_SLOT \* $REQUESTED_SLOTS`
+
+if [ $PERMS_PER_CONTRAST -lt $PERMS ] ; then
+  REQUESTED_SLOTS=`expr $REQUESTED_SLOTS + 1`
+fi
+PERMS_PER_CONTRAST=`expr $PERMS_PER_SLOT \* $REQUESTED_SLOTS`
+      
+CORRECTED_PERMS=`expr $PERMS_PER_CONTRAST - $REQUESTED_SLOTS`
+CORRECTED_PERMS=`expr $CORRECTED_PERMS + 1`
+
+echo "Generating" $REQUESTED_SLOTS "fragments of" $PERMS_PER_SLOT "permutation per contrast." 
+echo "The total number of permutations per contrast will be" $PERMS_PER_CONTRAST "."
+
+#stage 1:
+CURRENT_SEED=1
+if [ -e ${ROOTNAME}.generate ] ; then
+  /bin/rm ${ROOTNAME}.generate
+fi
+while [ $CURRENT_SEED -le $REQUESTED_SLOTS ] ; do
+  SLEEPTIME=`expr 5 \* $CURRENT_SEED`
+  echo "sleep $SLEEPTIME ; ${FSLDIR}/bin/randomise $@ -n $PERMS_PER_SLOT -o ${ROOTNAME}_SEED${CURRENT_SEED} --seed=$CURRENT_SEED" >> ${ROOTNAME}.generate
+  CURRENT_SEED=`expr $CURRENT_SEED + 1`
+done
+chmod a+x ${ROOTNAME}.generate
+GENERATE_ID=`$FSLDIR/bin/fsl_sub -T 20 -N ${ROOTNAME}.generate -t ${ROOTNAME}.generate`
+
+#stage2:
+cat <<combineScript > ${ROOTNAME}.defragment
+#!/bin/sh
+for FIRSTSEED in ${ROOTNAME}_SEED1_*_p_*.nii.gz ${ROOTNAME}_SEED1_*_corrp_*.nii.gz ; do 
+  ADDCOMMAND=""
+  ACTIVESEED=1
+  if [ -e \$FIRSTSEED ] ; then
+    while [ \$ACTIVESEED -le $REQUESTED_SLOTS ] ; do
+      ADDCOMMAND=\`echo \$ADDCOMMAND -add \${FIRSTSEED/_SEED1_/_SEED\${ACTIVESEED}_}\`
+      ACTIVESEED=\`expr \$ACTIVESEED + 1\`
+    done
+    ADDCOMMAND=\${ADDCOMMAND#-add}
+    \$FSLDIR/bin/fslmaths \$ADDCOMMAND -mul $PERMS_PER_SLOT -div $CORRECTED_PERMS \${FIRSTSEED/_SEED1/}
+  fi
+done
+
+for FIRSTSEED in ${ROOTNAME}_SEED1_*_p_*.txt ${ROOTNAME}_SEED1_*_corrp_*.txt ; do 
+  ACTIVESEED=1
+  if [ -e \$FIRSTSEED ] ; then
+    while [ \$ACTIVESEED -le $REQUESTED_SLOTS ] ; do
+      cat \${FIRSTSEED/_SEED1_/_SEED\${ACTIVESEED}_} >> \${FIRSTSEED/_SEED1/}
+      ACTIVESEED=\`expr \$ACTIVESEED + 1\`
+    done
+  fi
+done
+
+for TYPE in _ _tfce_ ; do
+  for FIRSTSEED in ${ROOTNAME}_SEED1\${TYPE}tstat*.nii.gz ${ROOTNAME}_SEED1\${TYPE}fstat*.nii.gz ; do 
+    if [ -e \$FIRSTSEED ] ; then
+      cp \$FIRSTSEED \${FIRSTSEED/_SEED1/}
+    fi
+  done
+done
+
+rm -rf ${ROOTNAME}_SEED*
+
+combineScript
+chmod +x ${ROOTNAME}.defragment
+fsl_sub -j $GENERATE_ID -T 20 -N ${ROOTNAME}.defragment ./${ROOTNAME}.defragment

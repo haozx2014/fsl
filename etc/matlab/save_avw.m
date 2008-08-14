@@ -30,7 +30,7 @@ tmpname = tempname;
      end
    end
          
-%% Convert volume from Analyze format to user default
+%% Convert volume from NIFTI_PAIR format to user default
 tmp=sprintf('sh -c ". ${FSLDIR}/etc/fslconf/fsl.sh; $FSLDIR/bin/fslmaths %s %s"\n',tmpname,fname);
 system(tmp);
 

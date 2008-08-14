@@ -79,7 +79,7 @@ ZMRIMULTISegmentation::ZMRIMULTISegmentation(){}
 
 const float PI=3.14159265;
 
-void ZMRIMULTISegmentation::TanakaCreate(const NEWIMAGE::volume<float>* images,  int nclasses, bool b2d, int nbiter,float nblowpass, float fbeta, int bapused, bool pveboolean, int nchan, int altype, bool bbias, int initinitfixed, bool verb, int biterationspve, int winit, float fpveMRFmixeltyp, float Hyp,string mansegfle, int typeoffile)
+void ZMRIMULTISegmentation::TanakaCreate(const NEWIMAGE::volume<float>* images,  int nclasses, bool b2d, int nbiter,float nblowpass, float fbeta, int bapused, bool pveboolean, int nchan, bool bbias, int initinitfixed, bool verb, int biterationspve, int winit, float fpveMRFmixeltyp, float Hyp,string mansegfle, int typeoffile)
 {
   mansegfile=mansegfle; 
   verboseusage=verb;
@@ -316,9 +316,9 @@ void ZMRIMULTISegmentation::pveClassification(int x, int y, int z)
 
 void ZMRIMULTISegmentation::pveClassification()
 {
-   for(int x=1;x<m_nWidth;x++)
-     for(int y=1;y<m_nHeight;y++)
-       for(int z=1;z<m_nDepth;z++)
+   for(int x=0;x<m_nWidth;x++)
+     for(int y=0;y<m_nHeight;y++)
+       for(int z=0;z<m_nDepth;z++)
 	 pveClassification(x, y, z);
 }
 
@@ -543,11 +543,11 @@ void ZMRIMULTISegmentation::PVClassificationStep()
   Matrix invsig(numberofchannels, numberofchannels);
   if(noclasses==3)
     {
-      for(int z=1;z<m_nDepth-1;z++)
+      for(int z=0;z<m_nDepth;z++)
 	{
-	  for(int y=1;y<m_nHeight-1;y++)
+	  for(int y=0;y<m_nHeight;y++)
 	    {
-	      for(int x=1;x<m_nWidth-1;x++)
+	      for(int x=0;x<m_nWidth;x++)
 		{ 
 		  if(m_mask.value(x, y, z)==1)
 		    {
@@ -620,11 +620,11 @@ void ZMRIMULTISegmentation::PVClassificationStep()
 		}
 	      float detsig=sig.Determinant();
 	      invsig=sig.i();
-	      for(int z=1;z<m_nDepth-1;z++)
+	      for(int z=0;z<m_nDepth;z++)
 		{
-		  for(int y=1;y<m_nHeight-1;y++)
+		  for(int y=0;y<m_nHeight;y++)
 		    {
-		      for(int x=1;x<m_nWidth-1;x++)
+		      for(int x=0;x<m_nWidth;x++)
 			{ 
 			  if(m_mask.value(x, y, z)==1)
 			    {
@@ -638,11 +638,11 @@ void ZMRIMULTISegmentation::PVClassificationStep()
     }
   if(noclasses>3)
     {
-      for(int z=1;z<m_nDepth-1;z++)
+      for(int z=0;z<m_nDepth;z++)
 	{
-	  for(int y=1;y<m_nHeight-1;y++)
+	  for(int y=0;y<m_nHeight;y++)
 	    {
-	      for(int x=1;x<m_nWidth-1;x++)
+	      for(int x=0;x<m_nWidth;x++)
 		{ 
 		  if(m_mask.value(x, y, z)==1)
 		    {
@@ -685,11 +685,11 @@ void ZMRIMULTISegmentation::PVClassificationStep()
 		}
 	      float detsig=sig.Determinant();
 	      invsig=sig.i();
-	      for(int z=1;z<m_nDepth-1;z++)
+	      for(int z=0;z<m_nDepth;z++)
 		{
-		  for(int y=1;y<m_nHeight-1;y++)
+		  for(int y=0;y<m_nHeight;y++)
 		    {
-		      for(int x=1;x<m_nWidth-1;x++)
+		      for(int x=0;x<m_nWidth;x++)
 			{ 
 			  if(m_mask.value(x, y, z)==1)
 			    {
@@ -711,11 +711,11 @@ void ZMRIMULTISegmentation::PVClassificationStep()
 		mu(i, 1)=m_mean(type+1, i);
 	      invsig=m_co_variance[type+1].i();
 	      float detsig=m_co_variance[type+1].Determinant();
-	      for(int z=1;z<m_nDepth-1;z++)
+	      for(int z=0;z<m_nDepth;z++)
 		{
-		  for(int y=1;y<m_nHeight-1;y++)
+		  for(int y=0;y<m_nHeight;y++)
 		    {
-		      for(int x=1;x<m_nWidth-1;x++)
+		      for(int x=0;x<m_nWidth;x++)
 			{ 
 			  if(m_mask.value(x, y, z)==1)
 			    {
@@ -742,11 +742,11 @@ void ZMRIMULTISegmentation::PVClassificationStep()
 		      }
 		    float detsig=sig.Determinant();
 		    invsig=sig.i();
-		    for(int z=1;z<m_nDepth-1;z++)
+		    for(int z=0;z<m_nDepth;z++)
 		      {
-			for(int y=1;y<m_nHeight-1;y++)
+			for(int y=0;y<m_nHeight;y++)
 			  {
-			    for(int x=1;x<m_nWidth-1;x++)
+			    for(int x=0;x<m_nWidth;x++)
 			      { 
 				if(m_mask.value(x, y, z)==1)
 				  {
@@ -789,11 +789,11 @@ void ZMRIMULTISegmentation::ICMPV()
   if(noclasses>3)
     mixnum=2*noclasses-1;
   float* clique=new float[mixnum];
-  for(int z=1;z<m_nDepth-1;z++)
+  for(int z=0;z<m_nDepth;z++)
     {
-      for(int y=1;y<m_nHeight-1;y++)
+      for(int y=0;y<m_nHeight;y++)
 	{
-	  for(int x=1;x<m_nWidth-1;x++)
+	  for(int x=0;x<m_nWidth;x++)
 	    { 
 	      if(m_mask.value(x, y, z)==1)
 		    {
@@ -812,11 +812,11 @@ void ZMRIMULTISegmentation::ICMPV()
     }
   for(int iter=0;iter<1;iter++)
     {
-      for(int z=1;z<m_nDepth-1;z++)
+      for(int z=0;z<m_nDepth;z++)
 	{
-	  for(int y=1;y<m_nHeight-1;y++)
+	  for(int y=0;y<m_nHeight;y++)
 	    {
-	      for(int x=1;x<m_nWidth-1;x++)
+	      for(int x=0;x<m_nWidth;x++)
 		{ 
 		  if(m_mask.value(x, y, z)==1)
 		    {
@@ -973,11 +973,11 @@ void ZMRIMULTISegmentation::PVestimation()
   float step=(float)(1.0f/(float)(iterationspve));
   Matrix mu(numberofchannels, 1);
   Matrix sig(numberofchannels, numberofchannels);  
-  for(int z=1;z<m_nDepth-1;z++)
+  for(int z=0;z<m_nDepth;z++)
     {
-      for(int y=1;y<m_nHeight-1;y++)
+      for(int y=0;y<m_nHeight;y++)
 	{
-	  for(int x=1;x<m_nWidth-1;x++)
+	  for(int x=0;x<m_nWidth;x++)
 	    { 
 	     if(m_mask.value(x, y, z)>0)
 	       {
@@ -1259,6 +1259,7 @@ void ZMRIMULTISegmentation::InitSimple(const NEWIMAGE::volume<float>& pcsf, cons
 	    }
 	}
     }
+  UpdateMembers(m_post);
   MeansVariances(noclasses);
 }
 
@@ -1315,7 +1316,7 @@ void ZMRIMULTISegmentation::MeansVariances(int numberofclasses)
   float* normtemp=new float[noclasses+1];
   for(int c=1;c<noclasses+1;c++)
     normtemp[c]=0.0f;
-  for(int c=1;c<numberofchannels+1;c++)
+  for(int c=1;c<noclasses+1;c++)
     {
       m_co_variance[c]=0.0f;
       for(int i=1;i<=numberofchannels;i++)
@@ -1642,7 +1643,7 @@ int ZMRIMULTISegmentation::qsort()
     Matrix* tempvar=new Matrix[noclasses+1];
     Matrix* invvarcopy=new Matrix[noclasses+1];
     Matrix* tempinvvar=new Matrix[noclasses+1];
-    if(imagetype==1) // for a T2 image reverse the intensity order of _master image_
+    if(imagetype==2) // for a T2 image reverse the intensity order of _master image_
       for(c=1; c<noclasses+1; c++)
 	m_mean(c,1)*=-1.0f;
     for(c=1; c<noclasses+1; c++)
@@ -1682,7 +1683,7 @@ int ZMRIMULTISegmentation::qsort()
         m_inv_co_variance[c]=tempinvvar[c];
 	m_co_variance[c]=tempvar[c];   
       }
-    if(imagetype==1)
+    if(imagetype==2)
       for(c=1; c<noclasses+1; c++)
 	  m_mean(c,1)*=-1.0f;
   return 0;
@@ -1801,8 +1802,6 @@ float ZMRIMULTISegmentation::M_2PI(int numberofchan)
 {
   float val=1.0;
   for(int i=0;i<numberofchan;i++)
-    {
-      val=val*2*PI;
-    }
+    val=val*2*PI;
   return val;
 }

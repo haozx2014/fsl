@@ -87,7 +87,6 @@ class FilmOlsOptions {
   string paradigmfname;
   string datadir;
   string epifname;
-  string susanpath;
 
   bool verbose;
   bool detrend;
@@ -131,7 +130,6 @@ inline FilmOlsOptions::FilmOlsOptions()
   epifname = "epivolume";
   inputfname = "";  
   paradigmfname = "";
-  susanpath = "/usr/local/fsl/bin/susan_smooth";
   
   thresh = 0;
   ms = 4;

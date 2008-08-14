@@ -2,7 +2,7 @@
 
     Adrian Groves, FMRIB Image Analysis Group
 
-    Copyright (C) 2007 University of Oxford  */
+    Copyright (C) 2007-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -87,9 +87,9 @@ void EasyLog::StartLog(const string& basename)
   int count = 0;
   while(true)
     {
-      if(count >= 20)
+      if(count >= 50) // I'm using a lot for some things
 	{
-	  throw Runtime_error(("Cannot create directory (too many + signs):\n    " + outDir).c_str());
+	  throw Runtime_error(("Cannot create directory (bad path, or too many + signs?):\n    " + outDir).c_str());
 	}
       
       // not portable!
@@ -116,7 +116,13 @@ void EasyLog::StartLog(const string& basename)
       throw runtime_error("Cannot open logfile!");
     }
 
+  // Might be useful for jobs running on the queue:
+  system( ("uname -a > " + outDir + "/uname.txt").c_str() );
+
   // try to make a link to the latest version
+  // REMOVED because it's annoying, not terribly useful, and implemented 
+  // badly (only really works output dir is in current dir).
+  // PUT BACK because Michael uses it and finds it useful!
   system(("ln -sfn '" + outDir + "' '" + basename + "_latest'").c_str());
   // If this fails, it doesn't really matter.  This'll fail (hopefully silently) in Windows.
 }
@@ -147,3 +153,35 @@ void EasyLog::StopLog(bool gzip)
   outDir = "";
 }
 
+
+// Basically a private global variable, initially empty:
+map<string,int> Warning::issueCount;
+
+// Note that we have to use LOG_ERR_SAFE because warnings could be issued when there's no valid logfile yet.
+
+void Warning::IssueOnce(const string& text)
+{
+  if (++issueCount[text] == 1)
+    LOG_ERR_SAFE("WARNING ONCE: " << text << endl);
+}
+
+void Warning::IssueAlways(const string& text)
+{
+  ++issueCount[text];
+  LOG_ERR_SAFE("WARNING ALWAYS: " << text << endl);
+}
+
+void Warning::ReissueAll()
+{
+  if (issueCount.size() == 0) 
+    return; // avoid issuing pointless message
+
+  LOG_ERR_SAFE("\nSummary of warnings (" << issueCount.size() << " distinct warnings)\n");
+  for (map<string,int>::iterator it = issueCount.begin();
+       it != issueCount.end(); it++)
+    LOG_ERR_SAFE("Issued " << 
+	    ( (it->second==1)?
+	      " once: " :
+	      stringify(it->second)+" times: "
+	      ) << it->first << endl);
+}

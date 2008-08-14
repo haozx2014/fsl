@@ -71,16 +71,13 @@
 #define WANT_STREAM
 #define WANT_MATH
 
-#include "newmatap.h"
-#include "newmatio.h"
-
+#include "newimage/newimageall.h"
 #include "miscmaths/t2z.h"
-#include "miscmaths/volume.h"
 #include <string>
-#include "miscmaths/miscmaths.h"
 
 using namespace NEWMAT;
 using namespace MISCMATHS;
+using namespace NEWIMAGE;
 
 // the real defaults are provided in the function parse_command_line
 
@@ -178,25 +175,29 @@ void parse_command_line(int argc, char* argv[])
 
 int main(int argc,char *argv[])
 { 
-  try{
-    cerr << log(10) << endl;
+ try{
     parse_command_line(argc, argv);
     
-    Volume vars, cbs;
-    vars.read(globalopts.varsfname.c_str());
-    cbs.read(globalopts.cbsfname.c_str());
+    volume4D<float> input;
+    volumeinfo vinfo;
+    ColumnVector vars,cbs;
+
+    read_volume4D(input,globalopts.cbsfname);
+    cbs=input.matrix().AsColumn();
+    read_volume4D(input,globalopts.varsfname,vinfo);
+    vars=input.matrix().AsColumn();
 
     int numTS = vars.Nrows();
-    cerr << numTS << endl;
 
-    Volume ps(numTS);
+    ColumnVector ps(numTS);
     T2z::ComputePs(vars, cbs, globalopts.dof, ps);
-    
-    VolumeInfo volinfo = vars.getInfo();
-    volinfo.intent_code = NIFTI_INTENT_LOGPVAL;
-    ps.setInfo(volinfo);
-    ps.writeAsFloat(globalopts.logpfname.c_str());
+
+    input.setmatrix(ps.AsRow());
+    FslSetCalMinMax(&vinfo,input.min(),input.max());
+    input.set_intent(NIFTI_INTENT_LOGPVAL,0,0,0);
+    save_volume4D(input,globalopts.logpfname.c_str(),vinfo);
   }
+
   catch(Exception p_excp) 
     {
       cerr << p_excp.what() << endl;

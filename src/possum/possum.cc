@@ -250,7 +250,7 @@ int compute_volume(int argc, char *argv[])
   cout<<"Reading the pulse sequence..."<<endl;
   Matrix pulse;
   pulse=read_binary_matrix(opt_pulse.value());
-  RowVector pulseinfo(18);
+  RowVector pulseinfo;
   pulseinfo=read_ascii_matrix(opt_pulse.value()+".info");//[SeqType,TE,TR,TRslc,Nx,Ny,dx,dy,maxG,RiseT,BWrec, Nvol,Nslc,SlcThk,SlcDir,Gap,zstart,FlipAngle]
   cout<<"[SeqType,TE,TR,TRslc,Nx,Ny,dx,dy,maxG,RiseT,BW,Nvol,Nslc,SlcThk,SlcDir,Gap,zstart,FA]"<<endl;
   cout<<pulseinfo<<endl;
@@ -287,6 +287,7 @@ int compute_volume(int argc, char *argv[])
   double gap=pulseinfo(16);// gap (m)
   int resX=(int) (pulseinfo(5));
   int resY=(int) (pulseinfo(6));
+  int kspacestart=(int) (pulseinfo(22));
   int nrf=numslc*numvol;//number of rf pulses 
   int motionsize=motion.Nrows();
   double tzmax, tzmin, txmax, txmin, tymax,tymin, rxmaxabs, rymaxabs, rzmaxabs; 
@@ -360,7 +361,7 @@ int compute_volume(int argc, char *argv[])
   cout<<"Extra voxels on - side:"<<extra_down_vox<<"& Extra voxels on + side (mm):"<<extra_up_vox<<endl;
   cout<<"Extra slices on - side:"<<extra_down_slc<<" &  Extra slices on + side:"<< extra_up_slc<<endl;//
   int nospeedup=0;
-  if (opt_nospeedup.set())nospeedup=1;//when no speed up used for slices
+  if (opt_nospeedup.value())nospeedup=1;//when no speed up used for slices
   //counter endings for the main loop
   int xstart=0;
   int xend=Nx;
@@ -496,7 +497,7 @@ int compute_volume(int argc, char *argv[])
   //TESTING
   ///////////////////////////////////////////////////////////////////////
   int opt_test=0;
-  if (verbose.set()) {
+  if (verbose.value()) {
     opt_test=1;
     cout<<"Verbose is ON"<<endl;
   }
@@ -504,7 +505,7 @@ int compute_volume(int argc, char *argv[])
   //K-SPACE COORDINATES
   ///////////////////////////////////////////////////////////////////////
   int save_kcoord=0;
-  if (opt_kcoord.set()){ 
+  if (opt_kcoord.value()){ 
     save_kcoord=1;
     cout<<"k-space coordinates will be saved"<<endl;
   } 
@@ -513,7 +514,7 @@ int compute_volume(int argc, char *argv[])
   // SIGNAL                                                             
   /////////////////////////////////////////////////////////////////////////
   cout<<"Calculating the signal..."<<endl;
-  int nreadp=resX*resY*numslc*numvol;
+  int nreadp=resX*(resY-kspacestart+1)*numslc*numvol;
   cout<<"Number of read out points is "<<nreadp<<endl;
   Matrix signal(2,nreadp);//two rows, one real and one complex for the signal in sum
   signal=0;

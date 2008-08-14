@@ -70,7 +70,6 @@
 #define POSIX_SOURCE 1
 
 #include "newimage/newimageall.h"
-#include "miscmaths/miscmaths.h"
 
 using namespace MISCMATHS;
 using namespace NEWIMAGE;
@@ -93,7 +92,7 @@ int main(int argc,char *argv[]){
     {
       for(int t=0; t<data.tsize(); t++)
 	datam(t+1)=data(x,y,z,t);
-      datam=(Identity(confound.Nrows())-confound*pinv(confound))*datam;
+      datam=(IdentityMatrix(confound.Nrows())-confound*pinv(confound))*datam;
       for(int t=0; t<data.tsize(); t++)
 	data(x,y,z,t)=datam(t+1);
     }

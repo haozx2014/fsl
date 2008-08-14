@@ -12,10 +12,10 @@ content="text/html;charset=utf-8" />
 
 <h1>Running FSL under Windows XP and Vista</h1>
 <p>
-We recommend using a unix-based computer (such as a Linux PC, Apple or
+We recommend using a UNIX-based computer (such as a Linux PC, Apple or
 Sun) for carrying out data analysis. However, if this is not available
 then you can use FSL on a Windows computer by running the Linux
-version of FSL inside a "virtual linux machine" (a VM), using a freely
+version of FSL inside a "virtual Linux machine" (a VM), using a freely
 available program called VMware Player. This is fairly easy to setup,
 and we provide basic installation instructions below, but please note
 that we cannot in general offer further help for the setup and
@@ -30,7 +30,7 @@ the running of FSL.
 <li>Minimum 10GB, up to 30GB, of free disc space (VM image expands as 
 necessary up to this limit)</li>
 </ul>
-<h2>Introduction and Dependancies</h2>
+<h2>Introduction and Dependencies</h2>
 <p>The software package VMware Player emulates the core hardware of 
 an x86 machine allowing you to run a second operating system 'in a 
 window'. Virtualisation technology allows the programs running in this 
@@ -41,7 +41,7 @@ Windows, as the CPU instruction set doesn't need to be emulated.
 The FSL VM (FSLvm) is configured with 1GB of RAM, a virtual hard disk 
 that can grow to 30GB in size, shared (<i>NAT</i>) networking (ie it 
 shares the network connection of your local computer), virtual sound 
-hardware and virtual CDROM and floppy drives.
+hardware and virtual CD-ROM and floppy drives.
 </p>
 <p>Before you can run the FSL virtual machine, you need to install a 
 Virtual Machine player package. We support the use of version 2 of 
@@ -55,7 +55,7 @@ to complete initial setup.
 <h2>The FSL Virtual Machine</h2>
 <p>
 Once VMware Player is installed, download the FSLvm from below.
-The FSLvm is compatable with both Windows XP and Windows Vista:</p>
+The FSLvm is compatible with both Windows XP and Windows Vista:</p>
 <p class="centred"><a href="http://www.fmrib.ox.ac.uk/fsldownloads/FSLvm32.zip">FSLvm [32bit]</a></p>
 <!--
 <h4>64 bit Support - Coming soon...</h4>
@@ -110,7 +110,7 @@ you would like to change the <i>UUID</i> of the device, choose
 <i>Create</i>. This will ensure that the FSLvm generates a new 
 unique network hardware identifier.
 </p>
-<p>Depending on your Windows coputer's hardware, you may also 
+<p>Depending on your Windows computer's hardware, you may also 
 receive additional messages like...</p>
 <blockquote>
 Cannot connect to virtual device floppy0. No corresponding device 
@@ -142,7 +142,7 @@ environment.
 the correct keyboard layout. The FSLvm is configured with a British
 keyboard; users with a different keyboard layout can change by visiting
 <i>System->Preferences->Keyboard</i> from the menu at the top of the screen.
-This will the keyboard configurator. Switch to the <i>Layouts</i> tab and
+This will open the keyboard configurator. Switch to the <i>Layouts</i> tab and
 click the large <i>+</i> symbol to add a keyboard layout.</p>
 <div class="floatright"><img src="images/linux_keyboard.png" alt="Linux keyboard configuration" title="Linux keyboard configuration" /></div>
 <p>In the windows that appears choose an appropriate layout from the 
@@ -190,7 +190,7 @@ exit
 <h4>Installing FSL</h4>
 <p>You can now install FSL using the <a href="linux.html">Linux instructions</a></p>
 <h4>Accessing your Windows files</h4>
-<p>There are four options for transfering/accessing files stored on 
+<p>There are four options for transferring/accessing files stored on 
 your Windows disk in the FSLvm, presented in order of ease of use:</p>
 <ol>
   <li>Drag-and-drop
@@ -212,7 +212,7 @@ the VMware Player menu and open the <i>Shared Folders...</i> dialogue.</p>
 
   <p class="floatright"><img src="images/browseforfoldertoshare.jpg" alt="Browse to the folder to share" title="Browse to the folder to share" /></p>
   <p>&nbsp;</p>
-  <p>To enable sharing permenantly select the <i>Always Enabled</i> radio 
+  <p>To enable sharing permanently select the <i>Always Enabled</i> radio 
 button. Now select the pre-configured share and click on the 
 <i>Properties</i> button. This will open another dialogue box allowing you 
 to change the name the share will appear as in Linux and to change the 
@@ -246,7 +246,7 @@ storing files that you are actively accessing with the FSL tools.</b>
 </ol>
 <h4>Network access</h4>
 <p>The FSLvm is configured to share your network connection, and so has 
-full access to the internet out of the box. You can also access your FSLvm 
+full access to the Internet out of the box. You can also access your FSLvm 
 from Windows over this internal network with tools like 
 <a href="http://www.chiark.greenend.org.uk/~sgtatham/putty/">puTTY</a> 
 (a SSH terminal client).</p>
@@ -282,5 +282,35 @@ terminal window. Within this window type vmware-tools-upgrader. You will
 now be asked a series of questions. Hit return to accept the default to 
 all of the questions. Once the installation is complete you should reboot 
 the FSLvm to allow the changes to take effect.</p>
+<h3>Increasing the amount of memory available to FSLvm</h3>
+<p>The default allocation of 1GB is only suitable for light use of the FSL 
+software suite. For more demanding analyses you will need to increase the 
+amount of available memory allocated to the virtual machine. Before you 
+change this setting you should find out how much memory your computer. Under
+Windows XP, open the Start menu and right click on <i>My Computer</i>. From
+the pop-up menu choose <i>Properties</i> and look in the Computer information 
+area, note this value.</p>
+<div class="centred">
+<img src="images/winxp_properties.png" alt="Right click on My Computer and select Properties..." />
+<img src="images/winxp_memory.png" alt="Look here for your memory total" />
+</div>
+<p>Under Vista, follow the <a href="http://windowshelp.microsoft.com/Windows/en-US/help/479a7531-57ad-43c1-91b1-3f46a0e1761e1033.mspx">instructions available on Microsoft's support site</a> to find out your total 
+memory capacity.</p>
+<p>With this in mind, you can calculate the amount of memory you can safely
+allocate to the FSLvm by following the advice below.</p>
+<dl>
+<dt>Windows XP</dt><dd>Take 1024MB off the value reported</dd>
+<dt>Windows Vista</dt><dd>Take 2048MB off the value reported</dd>
+</dl>
+<p>By way of example if you have a Windows Vista computer with 4GB of RAM you
+can safely increase the FSLvm memory allocation to 2GB.</p>
+<p>To change the memory allocation of FSLvm, start the VM and then from the 
+<i>Player</i> menu, choose <i>Change Memory Allocation...</i> from the 
+<i>Troubleshoot</i> sub-menu. In the dialogue that opens type the value you have
+calculated as being optimal into the memory total box. As indicated in this
+window once you have clicked <i>OK</i> you will need to restart the VM.</p>
+<div class="centred"><img src="images/vmplayer_tsmenu.png" alt="Opening the Change Memory Allocation dialoge" />
+<img src="images/changemem.png" alt="Changing the memory allocation" />
+</div>
 </body>
 </html>

@@ -6,7 +6,7 @@
 #
 #   Stephen Smith, FMRIB Image Analysis Group
 #
-#   Copyright (C) 2002-2007 University of Oxford
+#   Copyright (C) 2002-2008 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -185,7 +185,7 @@ set fq ${fqroot}/report.html
 set fqtxt ${fqroot}/report.txt
 set logout ${fqroot}/report.log
 
-fsl:echo $fq "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"file:${FSLSLASH}${FSLDIR}/doc/fsl.css\">
+fsl:echo $fq "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\"../.files/fsl.css\">
 <TITLE>FSL</TITLE></HEAD><BODY>
 <STYLE TYPE=\"text/css\">BODY { font-size: small }</STYLE>
 <STYLE TYPE=\"text/css\">TABLE { font-size: x-small }</STYLE>
@@ -206,7 +206,7 @@ if { [ lindex $argv [ expr $pm + 1 ] ] != "" } {
     set cZ [ lindex $argv [ expr $pm + 4 ] ]
 
     if { [ string compare [ lindex $argv [ expr $pm + 1 ] ] -mm ] == 0 } {
-	catch { exec sh -c "echo $cX $cY $cZ | $FSLDIR/bin/std2imgcoord -img $mask -vox -" } thevals
+	catch { exec sh -c "echo $cX $cY $cZ | $FSLDIR/bin/std2imgcoord -img $mask -std $mask -vox - | tail -n 1" } thevals
 	set cX [ lindex $thevals 0 ]
 	set cY [ lindex $thevals 1 ]
 	set cZ [ lindex $thevals 2 ]
@@ -214,7 +214,7 @@ if { [ lindex $argv [ expr $pm + 1 ] ] != "" } {
 
     fsl:echo $fq "Using co-ordinates $cX $cY $cZ. "
 
-    fsl:exec "${FSLDIR}/bin/fslmaths $mask -mul 0 -add 1 -roi $cX 1 $cY 1 $cZ 1 0 1 ${fqroot}/mask"
+    fsl:exec "${FSLDIR}/bin/fslmaths $mask -mul 0 -add 100 -roi $cX 1 $cY 1 $cZ 1 0 1 -s 5 ${fqroot}/mask -odt float"
     
     set mask ${fqroot}/mask
 }
@@ -269,7 +269,14 @@ if { [ string compare $spaces example_func ] != 0 } {
 	fq_exit "Error - transform to take mask into space of example_func does not exist in the FEAT directory - run FEAT registration"
     }
 
-    fsl:exec "${FSLDIR}/bin/flirt -in $mask -ref example_func -out ${fqroot}/mask -applyxfm -init reg/${spaces}2example_func.mat -datatype float"
+    if { [ string compare $spaces standard ] == 0 && [ imtest reg/highres2standard_warp ] } {
+	fsl:exec "${FSLDIR}/bin/invfeatreg $featdir"
+	fsl:exec "${FSLDIR}/bin/fslmaths $mask ${fqroot}/mask -odt float"
+	fsl:exec "${FSLDIR}/bin/applywarp --ref=example_func --in=${fqroot}/mask --out=${fqroot}/mask --warp=reg/highres2standard_warp_inv --postmat=reg/highres2example_func.mat"
+    } else {
+	fsl:exec "${FSLDIR}/bin/flirt -in $mask -ref example_func -out ${fqroot}/mask -applyxfm -init reg/${spaces}2example_func.mat -datatype float"
+    }
+
     set mask ${fqroot}/mask
 
     if { $coords == 1 } {
@@ -298,7 +305,7 @@ if { $percent } {
     if { ! [ imtest mean_func ] } {
 	fsl:exec "${FSLDIR}/bin/fslmaths filtered_func_data -Tmean mean_func"
     }
-    fsl:echo $fq "<p>PE/COPE values converted into %."
+    fsl:echo $fq "<p>PE/COPE values converted into % (VARCOPE into %<sup>2</sup>)."
 }
 
 #}}}
@@ -326,8 +333,8 @@ if { $atlas > 0 } {
 }
 
 fsl:echo $fq "<p><table border=1 cellspacing=3>
-<tr><th>stats image<th> # voxels <th colspan=6> image statistics <th colspan=7> position of max </tr>
-<tr><th><th><th> min <th> 10% <th> mean <th> median <th> 90% <th> max <th colspan=3> vox (FMRI space) <th colspan=3> mm (standard space) <th>max voxel atlas results</tr>
+<tr><th>stats image<th> # voxels <th colspan=7> image statistics <th colspan=7> position of max </tr>
+<tr><th><th><th> min <th> 10% <th> mean <th> median <th> 90% <th> max <th> stddev <th colspan=3> vox (FMRI space) <th colspan=3> mm (standard space) <th>max voxel atlas results</tr>
 "
 
 #}}}
@@ -341,15 +348,15 @@ if { $percent } {
 
     set thename   [ string trimright [ file tail $statsimage ] "0123456789" ]
 
-    if { $thename == "cope" || $thename == "pe" } {
+    if { $thename == "cope" || $thename == "pe" || $thename == "varcope" } {
 
 	set height_file design.mat
-	if { $thename == "cope" } {
+	if { $thename == "cope" || $thename == "varcope" } {
 	    set height_file design.con
 	}
     
 	# get pe or cope number
-	set thenumber [ expr 1 + [ string trimleft  [ file tail $statsimage ] "cope" ] ]
+	set thenumber [ expr 1 + [ string trimleft  [ file tail $statsimage ] "varcope" ] ]
 
 	# get higher-level contrast height if it exists (this is the mean of lower-level contrast heights)
 	set higherheight 1
@@ -373,6 +380,12 @@ if { $percent } {
 	if { [ imtest mean_func ] } {
 	    set percentcommand "$percentcommand -div mean_func"
 	}
+
+	# square it all for varcopes
+	if { $thename == "varcope" } {
+	    set percentcommand "$percentcommand $percentcommand"
+	}
+
     }
 }
 
@@ -387,7 +400,7 @@ if { $threshstat == "" } {
     fsl:exec "${FSLDIR}/bin/fslmaths $statsimage -thr $threshstat -bin -mul ${fqroot}/mask ${fqroot}/tmpmask"
 }
 
-catch { exec sh -c "${FSLDIR}/bin/fslstats ${fqroot}/tmp -k ${fqroot}/tmpmask -m -R -V -p 10 -p 50 -p 90 -x" } thevals
+catch { exec sh -c "${FSLDIR}/bin/fslstats ${fqroot}/tmp -k ${fqroot}/tmpmask -m -R -V -p 10 -p 50 -p 90 -x -s" } thevals
 
 set themean  [ format %.4g [ lindex $thevals 0 ] ]
 set themin   [ format %.4g [ lindex $thevals 1 ] ]
@@ -396,6 +409,7 @@ set thecount [ lindex $thevals 3 ]
 set perc10   [ format %.4g [ lindex $thevals 5 ] ]
 set perc50   [ format %.4g [ lindex $thevals 6 ] ]
 set perc90   [ format %.4g [ lindex $thevals 7 ] ]
+set thestd   [ format %.4g [ lindex $thevals 11 ] ]
 set maxx     [ lindex $thevals 8 ]
 set maxy     [ lindex $thevals 9 ]
 set maxz     [ lindex $thevals 10 ]
@@ -406,17 +420,13 @@ set SSmaxz ""
 set atlasstring ""
 if { $higherlevel || ( [ imtest reg/standard ] && [ file exists reg/example_func2standard.mat ] ) && $maxx != 0  && $maxy != 0  && $maxz != 0 } {
     if { $higherlevel } {
-	set SSmax [ fsl:exec "echo $maxx $maxy $maxz | ${FSLDIR}/bin/img2stdcoord -img example_func -vox -" ]	    
-	# 	    set atlasx $maxx
-	# 	    set atlasy $maxy
-	# 	    set atlasz $maxz
+	set SSmax [ fsl:exec "echo $maxx $maxy $maxz | ${FSLDIR}/bin/img2stdcoord -img example_func -std example_func -vox -" ]	    
     } else {
-	set SSmax [ fsl:exec "echo $maxx $maxy $maxz | ${FSLDIR}/bin/img2stdcoord -img example_func -std reg/standard -xfm reg/example_func2standard.mat -vox -" ]
-	# 	    fsl:echo ${fqroot}/.coords "$maxx $maxy $maxz" -o
-	# 	    set AtlasSSmax [ fsl:exec "${FSLDIR}/bin/img2imgcoord -src example_func -dest reg/standard -xfm reg/example_func2standard.mat ${fqroot}/.coords" ]
-	# 	    set atlasx [ expr round ( [ lindex $AtlasSSmax 0 ] ) ]
-	# 	    set atlasy [ expr round ( [ lindex $AtlasSSmax 1 ] ) ]
-	# 	    set atlasz [ expr round ( [ lindex $AtlasSSmax 2 ] ) ]
+	set stdxfm "-xfm reg/example_func2standard.mat"
+	if { [ imtest reg/highres2standard_warp ] } {
+	    set stdxfm "-premat reg/example_func2highres.mat -warp reg/highres2standard_warp"
+	}
+	set SSmax [ fsl:exec "echo $maxx $maxy $maxz | ${FSLDIR}/bin/img2stdcoord -img example_func -std reg/standard $stdxfm -vox -" ]
     }
     set SSmaxx [ format %.1f [ lindex $SSmax 0 ] ]
     set SSmaxy [ format %.1f [ lindex $SSmax 1 ] ]
@@ -441,9 +451,9 @@ if { [ imtest filtered_func_data ] } {
 #}}}
 	#{{{ main stats text outputs to html and raw text files
 
-fsl:echo $fq "<tr><td> $txtfiletxt <td> $thecount <td> $themin <td> $perc10 <td> $themean <td> $perc50 <td> $perc90 <td> $themax <td> $maxx <td> $maxy <td> $maxz <td> $SSmaxx <td> $SSmaxy <td> $SSmaxz <td width=\"40%\"> $atlasstring</tr>"
+fsl:echo $fq "<tr><td> $txtfiletxt <td> $thecount <td> $themin <td> $perc10 <td> $themean <td> $perc50 <td> $perc90 <td> $themax <td> $thestd <td> $maxx <td> $maxy <td> $maxz <td> $SSmaxx <td> $SSmaxy <td> $SSmaxz <td width=\"40%\"> $atlasstring</tr>"
 
-fsl:echo $fqtxt "$f $statsimage $thecount $themin $perc10 $themean $perc50 $perc90 $themax $maxx $maxy $maxz $SSmaxx $SSmaxy $SSmaxz"
+fsl:echo $fqtxt "$f $statsimage $thecount $themin $perc10 $themean $perc50 $perc90 $themax $thestd $maxx $maxy $maxz $SSmaxx $SSmaxy $SSmaxz"
 
 #}}}
     }
