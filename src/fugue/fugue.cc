@@ -2,7 +2,7 @@
 
     Mark Jenkinson, FMRIB Image Analysis Group
 
-    Copyright (C) 2000 University of Oxford  */
+    Copyright (C) 2000-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -66,6 +66,10 @@
     University, to negotiate a licence. Contact details are:
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
+#ifndef EXPOSE_TREACHEROUS
+#define EXPOSE_TREACHEROUS
+#endif
+
 #include "unwarpfns.h"
 #include "utils/options.h"
 
@@ -74,7 +78,7 @@
 
 using namespace Utilities;
 
-string title="fugue (Version 2.2 in c# minor)\nFMRIB's Utility for Geometric Unwarping of EPIs\nCopyright(c) 2000, University of Oxford (Mark Jenkinson)";
+string title="fugue (Version 2.5 in d minor)\nFMRIB's Utility for Geometric Unwarping of EPIs\nCopyright(c) 2000-2008, University of Oxford (Mark Jenkinson)";
 string examples="fugue -i <epi> -p <unwrapped phase map> -d <dwell-to-asym-ratio> -u <result> [options]\nfugue  -i <unwarped-image> -p <unwrapped phase map> -d <dwell-to-asym-ratio> -w <epi-like-result> [options]\nfugue -p <unwrapped phase map> -d <dwell-to-asym-ratio> --saveshift=<shiftmap> [options]";
 
 Option<bool> verbose(string("-v,--verbose"), false, 
@@ -153,7 +157,7 @@ Option<float> dwelltoasym(string("-d,--dwelltoasym"), 0.295,
 			  string("set the dwell to asym time ratio"),
 			  false, requires_argument);
 Option<float> dwell(string("--dwell"), 0.0,
-		    string("set the EPI dwell time per phase-encode line (sec)"),
+		    string("set the EPI dwell time per phase-encode line - same as echo spacing - (sec)"),
 		    false, requires_argument);
 Option<float> asym(string("--asym"), 1.0,
 		   string("set the fieldmap asymmetric spin echo time (sec)"),
@@ -173,6 +177,8 @@ Option<string> savefmap(string("--savefmap"), string(""),
 Option<string> loadfmap(string("--loadfmap"), string(""),
 			 string("filename for loading fieldmap (rad/s)"),
 			 false, requires_argument);
+
+string unwarpdir_value;
 
 ////////////////////////////////////////////////////////////////////////////
 
@@ -245,7 +251,7 @@ volume<float> warplikeepi(const volume<float>& absfmap,
   epii = absfmap*0;
   float tab, Nxsize = absfmap.xsize(), Nysize=absfmap.ysize();
   // convert to k-space
-  cerr << "Z-limits are "<<absfmap.minz()<<" and "<<absfmap.maxz()<<endl;
+  cout << "Z-limits are "<<absfmap.minz()<<" and "<<absfmap.maxz()<<endl;
   for (int z=absfmap.minz(); z<=absfmap.maxz(); z++) { 
     for (int b=0; b<Nysize; b++) {
       for (int a=0; a<Nxsize; a++) {
@@ -261,9 +267,9 @@ volume<float> warplikeepi(const volume<float>& absfmap,
 	}
       }
     }
-    if (verbose.value()) { cerr << "."; }
+    if (verbose.value()) { cout << "."; }
   }
-  if (verbose.value()) { cerr << endl; }
+  if (verbose.value()) { cout << endl; }
 
 //    fftshift(kre);
 //    fftshift(kim);
@@ -282,9 +288,9 @@ volume<float> warplikeepi(const volume<float>& absfmap,
 	}
       }
     }
-    if (verbose.value()) { cerr << "."; }
+    if (verbose.value()) { cout << "."; }
   }
-  if (verbose.value()) { cerr << endl; }
+  if (verbose.value()) { cout << endl; }
   
   float normalisefac = 1.0/((float) Nxsize * Nysize);
   return abs(epir,epii) * normalisefac;
@@ -355,9 +361,9 @@ volume<float> warplikeepi1D_imspace(const volume<float>& undistvol,
 	}
       }
     }
-    if (verbose.value()) { cerr << "."; }
+    if (verbose.value()) { cout << "."; }
   }
-  if (verbose.value()) { cerr << endl; }
+  if (verbose.value()) { cout << endl; }
   return distvol;
 }
 
@@ -401,9 +407,9 @@ volume<float> warplikeepi1D_kspace(const volume<float>& absfmap,
       }
     }
     
-    if (verbose.value()) { cerr << "."; }
+    if (verbose.value()) { cout << "."; }
   }
-  if (verbose.value()) { cerr << endl; }
+  if (verbose.value()) { cout << endl; }
 
   fre *= 0.0f;
   fim *= 0.0f;
@@ -432,9 +438,9 @@ volume<float> warplikeepi1D_kspace(const volume<float>& absfmap,
       }
     }
 
-    if (verbose.value()) { cerr << "."; }
+    if (verbose.value()) { cout << "."; }
   }
-  if (verbose.value()) { cerr << endl; }
+  if (verbose.value()) { cout << endl; }
 
   float normalisefac = 1.0/((float) Nxsize * Nysize);
   return abs(epir,epii) * normalisefac;
@@ -492,9 +498,9 @@ volume<float> unwarpPhaseConj1D(const volume<float>& absfmap,
       }
     }
     
-    if (verbose.value()) { cerr << "."; }
+    if (verbose.value()) { cout << "."; }
   }
-  if (verbose.value()) { cerr << endl; }
+  if (verbose.value()) { cout << endl; }
 
   fre *= 0.0f;
   fim *= 0.0f;
@@ -525,9 +531,9 @@ volume<float> unwarpPhaseConj1D(const volume<float>& absfmap,
       }
     }
 
-    if (verbose.value()) { cerr << "."; }
+    if (verbose.value()) { cout << "."; }
   }
-  if (verbose.value()) { cerr << endl; }
+  if (verbose.value()) { cout << endl; }
 
   float normalisefac = 1.0/((float) Nxsize * Nysize);
   return abs(uepir,uepii) * normalisefac;
@@ -578,9 +584,9 @@ volume<float> unwarpMatrixInverse1D(const volume<float>& warpedvol,
 	unwarpedvol(x,n,z) = sqrt(Sqr(Unwarpedr(n+1))+Sqr(Unwarpedi(n+1)));
       }
     }
-    if (verbose.value()) { cerr << "."; }
+    if (verbose.value()) { cout << "."; }
   }
-  if (verbose.value()) { cerr << endl; }
+  if (verbose.value()) { cout << endl; }
   return unwarpedvol;
 }
 
@@ -651,9 +657,9 @@ void regularise_pixshift(volume<float>& pixshift,
 			 volume<float>& validmask,
 			 volume<float>& filledmask) 
 {
-  if (unwarpdir.set()) swapdirections(pixshift,unwarpdir.value());
-  if (unwarpdir.set()) swapdirections(validmask,unwarpdir.value());
-  if (unwarpdir.set()) swapdirections(filledmask,unwarpdir.value());
+  if (unwarpdir.set()) swapdirections(pixshift,unwarpdir_value);
+  if (unwarpdir.set()) swapdirections(validmask,unwarpdir_value);
+  if (unwarpdir.set()) swapdirections(filledmask,unwarpdir_value);
 
   if (!nofill.value()) {
     pixshift = extrapolate_volume(pixshift,validmask,filledmask);
@@ -702,9 +708,9 @@ void regularise_pixshift(volume<float>& pixshift,
     rigidextend_y(pixshift,filledmask);
   }
 
-  if (unwarpdir.set()) swapdirections(pixshift,unwarpdir.value());       
-  if (unwarpdir.set()) swapdirections(validmask,unwarpdir.value());
-  if (unwarpdir.set()) swapdirections(filledmask,unwarpdir.value());
+  if (unwarpdir.set()) swapdirections(pixshift,unwarpdir_value);       
+  if (unwarpdir.set()) swapdirections(validmask,unwarpdir_value);
+  if (unwarpdir.set()) swapdirections(filledmask,unwarpdir_value);
 
   return;
 }
@@ -782,6 +788,14 @@ int do_unwarping()
     return -1;
   }
 
+  unwarpdir_value = unwarpdir.value();
+  // swap x direction for neurological files (to keep consistent with
+  //  original nifti voxel coordinates)
+  if ((invol.tsize()>0) && (!invol[0].RadiologicalFile)) {
+    if (unwarpdir_value=="x") { unwarpdir_value="x-"; }
+    else if (unwarpdir_value=="x-") { unwarpdir_value="x"; }
+  }
+
   if (maskfname.set()) {
     if (verbose.value()) { cout << "Reading mask volume" << endl; }
     read_volume(mask1,maskfname.value());
@@ -811,19 +825,19 @@ int do_unwarping()
     if (verbose.value()) { cout << "Calculating pixel-shift map" << endl; }
     fmap = calc_fmap(uphase[0],uphase[1],mask1,mask2,asymval);
     if (inputname.unset()) { invol.addvolume(fmap); }  // needed for voxdims
-    pixshift = fmap * fmap2pixshift_factor(invol[0],dwellval,unwarpdir.value());
+    pixshift = fmap * fmap2pixshift_factor(invol[0],dwellval,unwarpdir_value);
   } 
   else { // LOAD SHIFTMAP or FIELDMAP
     if (loadshift.set()) {
       if (verbose.value()) { cout << "Reading pixel-shift map" << endl; }
       read_volume(pixshift,loadshift.value());
       if (inputname.unset()) { invol.addvolume(pixshift); }// needed for voxdims
-      fmap = pixshift/fmap2pixshift_factor(invol[0],dwellval,unwarpdir.value());
+      fmap = pixshift/fmap2pixshift_factor(invol[0],dwellval,unwarpdir_value);
     } else if (loadfmap.set()) {
       if (verbose.value()) { cout << "Reading fieldmap" << endl; }
       read_volume(fmap,loadfmap.value());
       if (inputname.unset()) { invol.addvolume(fmap); }  // needed for voxdims
-      pixshift = fmap * fmap2pixshift_factor(invol[0],dwellval,unwarpdir.value());
+      pixshift = fmap * fmap2pixshift_factor(invol[0],dwellval,unwarpdir_value);
     } else {
       cerr << "Must be able to get pixshift map from file or phasemap" << endl;
       cerr << "Re-run with either --loadshift or --phasemap set" << endl;
@@ -860,8 +874,7 @@ int do_unwarping()
   // regularise the pixshift map if required
   if (verbose.value()) { cout << "Regularising the fieldmap" << endl; }
   regularise_pixshift(pixshift,validmask,filledmask);
-  if (invol.tsize()<1) { invol.addvolume(fmap); }
-  fmap = pixshift / fmap2pixshift_factor(invol[0],dwellval,unwarpdir.value());
+  fmap = pixshift / fmap2pixshift_factor(invol[0],dwellval,unwarpdir_value);
 
   // pixshift is now fully filtered
   if (saveshift.set()) {
@@ -894,8 +907,8 @@ int do_unwarping()
     resvol = invol;
     for (int t0=invol.mint(); t0<=invol.maxt(); t0++) {
       if (unwarpdir.set()) { 
-	swapdirections(invol[t0],unwarpdir.value()); 
-	swapdirections(pixshift,unwarpdir.value());       
+	swapdirections(invol[t0],unwarpdir_value); 
+	swapdirections(pixshift,unwarpdir_value);       
       }      
       if (phaseconj.value()) {
 	// Phase Conjugate method
@@ -918,9 +931,9 @@ int do_unwarping()
 	}
       }
       if (unwarpdir.set()) { 
-	swapdirections(resvol[t0],unwarpdir.value()); 
-	swapdirections(invol[t0],unwarpdir.value()); 
-	swapdirections(pixshift,unwarpdir.value());       
+	swapdirections(resvol[t0],unwarpdir_value); 
+	swapdirections(invol[t0],unwarpdir_value); 
+	swapdirections(pixshift,unwarpdir_value);       
       }      
     }
     // save_volume(derivshift,unwarpfname.value()+"_deriv");
@@ -935,14 +948,14 @@ int do_unwarping()
     for (int t0=invol.mint(); t0<=invol.maxt(); t0++) {
       // warp invol to look like an EPI acquired volume    
       if (unwarpdir.set()) { 
-	swapdirections(invol[t0],unwarpdir.value()); 
-	swapdirections(fmap,unwarpdir.value());       
+	swapdirections(invol[t0],unwarpdir_value); 
+	swapdirections(fmap,unwarpdir_value);       
       }      
       resvol[t0] = warplikeepi1D(invol[t0],fmap,dwellval,!nokspace.value());
       if (unwarpdir.set()) { 
-	swapdirections(resvol[t0],unwarpdir.value()); 
-	swapdirections(invol[t0],unwarpdir.value()); 
-	swapdirections(fmap,unwarpdir.value());       
+	swapdirections(resvol[t0],unwarpdir_value); 
+	swapdirections(invol[t0],unwarpdir_value); 
+	swapdirections(fmap,unwarpdir_value);       
       }      
     }    
     save_volume4D(resvol,warpfname.value(),in_info);
@@ -1009,6 +1022,15 @@ int main(int argc,char *argv[])
 	     << endl;
 	exit(EXIT_FAILURE);
       }
+
+    if (unwarpdir.value()!="x" && unwarpdir.value()!="y" && 
+	unwarpdir.value()!="z" && unwarpdir.value()!="x-" && 
+	unwarpdir.value()!="y-" && unwarpdir.value()!="z-") 
+     {
+	cerr << "Illegal value for unwarpdir!" << endl
+   	     << "Use x, y, z, x-, y- or z- only." << endl;
+  	exit(EXIT_FAILURE);
+     }
     
   }  catch(X_OptionError& e) {
     options.usage();

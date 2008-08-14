@@ -2,7 +2,7 @@
 
     Adrian Groves, FMRIB Image Analysis Group
 
-    Copyright (C) 2007 University of Oxford  */
+    Copyright (C) 2007-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -80,8 +80,8 @@ void InferenceTechnique::Setup(ArgsType& args)
 	  << model->ModelVersion() << endl);
 
   noise = NoiseModel::NewFromName(args.Read("noise"), args);
-  noise->LoadPrior(args.ReadWithDefault("noise-prior","hardcoded"));
-  noise->Dump("  ");
+//  noise->LoadPrior(args.ReadWithDefault("noise-prior","hardcoded"));
+//  noise->Dump("  ");
 
   saveModelFit = args.ReadBool("save-model-fit");
   saveResiduals = args.ReadBool("save-residuals");
@@ -93,61 +93,52 @@ void InferenceTechnique::SaveResults(const DataSet& data) const
 {
   Tracer_Plus tr("InferenceTechnique::SaveResults");
     LOG << "    Preparing to save results..." << endl;
-    
+
+  
     // Save the resultMVNs as two NIFTI files
     // Note: I should probably use a single NIFTI file with
     // NIFTI_INTENT_NORMAL -- but I can't find the detailed 
     // documentation!  (Ordering for a multivariate norm).
 
-    VolumeSeries means;
-    VolumeSeries precisions;
-
     const Volume& mask = data.GetMask();
-
     int nVoxels = resultMVNs.size();
-    assert(nVoxels > 0 && resultMVNs.at(0) != NULL);   
-    int nParams = resultMVNs.at(0)->means.Nrows();
-    
-    means.ReSize(nParams, nVoxels);
-    precisions.ReSize(nParams*(nParams+1)/2, nVoxels);
-    for (int vox = 1; vox <= nVoxels; vox++)
+
+cout << "Saving!\n";
+    MVNDist::Save(resultMVNs, outputDir + "/finalMVN", mask);
+
+    if (resultMVNsWithoutPrior.size() > 0)
       {
-        means.Column(vox) = resultMVNs.at(vox-1)->means;
-        precisions.Column(vox) = 
-	  resultMVNs.at(vox-1)->GetCovariance().AsColumn();
-	// AsColumn uses row ordering on the lower triangular part, 
-	// as NIFTI_INTENT_SYMMATRIX specifies: (1,1) (2,1) (2,2) (3,1)...
+	assert(resultMVNsWithoutPrior.size() == (unsigned)nVoxels);
+	MVNDist::Save(resultMVNsWithoutPrior, outputDir + "/finalMVNwithoutPrior", mask);
       }
 
-    //LOG << "    Writing means..." << endl;
+    /* Some validation code -- checked, Save then Load 
+       produced identical results (to single precision)
+       cout << "Creating!\n";    
+       vector<MVNDist*> test(resultMVNs.size(), NULL);
+       cout << "Loading!\n";    
+       MVNDist::Load(test, outputDir + "/finalMVN", mask);
 
-    // Save means
-    VolumeInfo info = mask.getInfo();
-    info.v = means.Nrows();
-    // Note: this is an abuse of NIFTI_INTENT_VECTOR
-    // vector terms should be in 5th dim, not 4th.
-    // Also, can I attach names somehow?
-    info.intent_code = NIFTI_INTENT_VECTOR;
-    means.setInfo(info);
-    means.setPreThresholdPositions(mask.getPreThresholdPositions());
-    means.unthresholdSeries();
-    means.writeAsFloat(outputDir + "/finalMeans");
-    means.CleanUp();
-    
-    //LOG << "    Writing covariance matrices..." << endl;
-      
-    // Save precision matrices
-    info = mask.getInfo();
-    info.v = precisions.Nrows();
-    // Note: this is an abuse of NIFTI_INTENT_SYMMATRIX becuase
-    // matrix terms should be in 5th dim, not 4th.
-    info.intent_code = NIFTI_INTENT_SYMMATRIX;
-    info.intent_p1 = nParams;
-    precisions.setInfo(info);
-    precisions.setPreThresholdPositions(mask.getPreThresholdPositions());
-    precisions.unthresholdSeries();
-    precisions.writeAsFloat(outputDir + "/finalCovariance");
-    precisions.CleanUp();
+       assert(test[0] != NULL);
+
+       cout << "Verifying MVNDists are identical!!!";    
+       // won't be identical because they're written as floats.
+       for (unsigned i = 1; i <= test.size(); i++)
+       {
+       cout << i << endl;
+       test.at(i-1); resultMVNs.at(i-1);
+       cout << 'a'<< endl;
+       assert(resultMVNs[i-1] != NULL);
+       assert(test[i-1] != NULL);
+       cout << resultMVNs[i-1]->means.t() << test[i-1]->means.t();
+       //        assert(resultMVNs[i-1]->means == test[i-1]->means);
+       cout << 'b' << endl;
+       cout << resultMVNs[i-1]->GetCovariance();
+       cout << test[i-1]->GetCovariance();
+       //        assert(resultMVNs[i-1]->GetCovariance() == test[i-1]->GetCovariance());
+       cout << 'c' << endl;
+       }
+    */
 
     // Write the parameter names into paramnames.txt
     
@@ -161,7 +152,7 @@ void InferenceTechnique::SaveResults(const DataSet& data) const
         paramFile << paramNames[i] << endl;
     }
     paramFile.close();
-
+    
     LOG << "    Same information using DumpParameters:" << endl;
     ColumnVector indices(model->NumParams());
     for (int i = 1; i <= indices.Nrows(); i++)
@@ -203,11 +194,36 @@ void InferenceTechnique::SaveResults(const DataSet& data) const
         paramZstat.CleanUp();
     }        
 
+    // Save the Free Energy estimates
+    if (!resultFs.empty())
+      {
+	assert((int)resultFs.size() == nVoxels);
+	VolumeSeries freeEnergy;
+	freeEnergy.ReSize(1, nVoxels);
+	for (int vox = 1; vox <= nVoxels; vox++)
+	  {
+	    freeEnergy(1,vox) = resultFs.at(vox-1);
+	  }
+	
+	VolumeInfo info = mask.getInfo();
+	info.v = 1;
+	info.intent_code = NIFTI_INTENT_NONE;
+	freeEnergy.setInfo(info);
+	freeEnergy.setPreThresholdPositions(mask.getPreThresholdPositions());
+	freeEnergy.unthresholdSeries();
+	freeEnergy.writeAsFloat(outputDir + "/freeEnergy");
+	freeEnergy.CleanUp();
+      }
+    else
+      {
+	LOG_ERR("Free energy wasn't recorded, so no freeEnergy.nii.gz created.\n");
+      }
+    
     if (saveModelFit || saveResiduals)
-    {
+      {
         LOG << "    Writing model fit/residuals..." << endl;
         // Produce the model fit and residual volumeserieses
-
+	
         VolumeSeries modelFit, residuals;
         modelFit.ReSize(model->NumOutputs(), nVoxels);
 	ColumnVector tmp;
@@ -216,6 +232,7 @@ void InferenceTechnique::SaveResults(const DataSet& data) const
             model->Evaluate(resultMVNs.at(vox-1)->means.Rows(1,model->NumParams()), tmp);
             modelFit.Column(vox) = tmp;
         }
+        VolumeInfo info = mask.getInfo(); // reset info
         info.v = model->NumOutputs();
         info.intent_code = NIFTI_INTENT_NONE; // just data values
         if (saveResiduals)
@@ -251,10 +268,16 @@ InferenceTechnique::~InferenceTechnique()
       delete resultMVNs.back();
       resultMVNs.pop_back();
     }
+  while (!resultMVNsWithoutPrior.empty())
+    {
+      delete resultMVNsWithoutPrior.back();
+      resultMVNsWithoutPrior.pop_back();
+    }
 }
 
 #include "inference_vb.h"
 #include "inference_spatialvb.h"
+#include "inference_nlls.h"
 
 // Whenever you add a new class to inference.h, update this too.
 InferenceTechnique* InferenceTechnique::NewFromName(const string& method)
@@ -268,6 +291,10 @@ InferenceTechnique* InferenceTechnique::NewFromName(const string& method)
   else if (method == "spatialvb")
     {
       return new SpatialVariationalBayes;
+    }
+  else if (method == "nlls")
+    {
+      return new NLLSInferenceTechnique;
     }
   else if (method == "")
     {

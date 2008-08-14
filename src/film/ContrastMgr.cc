@@ -70,15 +70,15 @@
 #include <fstream>
 #include "ContrastMgr.h"
 #include "ContrastMgrOptions.h"
-#include "miscmaths/miscmaths.h"
+#include "newimage/newimageall.h"
 #include "utils/log.h"
 #include "gaussComparer.h"
 #include "miscmaths/t2z.h"
 #include "miscmaths/f2z.h"
 #include "paradigm.h"
 #include "utils/tracer_plus.h"
-#include "fslio/fslio.h"
 
+using namespace NEWIMAGE;
 using namespace Utilities;
 using namespace MISCMATHS;
 using namespace std;
@@ -130,7 +130,6 @@ namespace FILM {
   void ContrastMgr::run()
   {
     Tracer_Plus ts("ContrastMgr::run");
-
     Load();
 
     // Loop through tcontrasts:
@@ -176,52 +175,42 @@ namespace FILM {
     Tracer_Plus ts("ContrastMgr::Load");
     // Need to read in b, sigmaSquareds, corrections and dof 
     Log& logger = LogSingleton::getInstance();
-
     // Load contrasts:     
     parad.load("", ContrastMgrOptions::getInstance().contrastfname, ContrastMgrOptions::getInstance().fcontrastfname, false, 0);
        
     numParams = parad.getTContrasts().Ncols(); 
-    
     if(ContrastMgrOptions::getInstance().verbose)
       {
 	cerr << "T Contrasts:" << endl << parad.getTContrasts();
 	cerr << "F Contrasts:" << endl << parad.getFContrasts();
       }
+    volume4D<float> input_data;
+    read_volume4D(input_data,logger.getDir() + "/sigmasquareds",vinfo);
 
-    // sigmaSquareds:
-    sigmaSquareds.read(logger.getDir() + "/sigmasquareds");
-    sigmaSquareds.threshold(0.0);
-    numTS = sigmaSquareds.getVolumeSize();    
- 
+    mask=input_data[0];
+    mask.binarise(0.0,mask.max()+1,exclusive);
+    sigmaSquareds=input_data.matrix(mask).AsColumn();
+    numTS = sigmaSquareds.Nrows();    
     // b:
-    Volume peVol;
+    ColumnVector peVol;
     b.ReSize(numTS, numParams);
     for(int i = 1; i <= numParams; i++)
       { 
 	// Add param number to "pe" to create filename:
 	ostringstream osc;
 	osc << i;
-	  
-	peVol.read(logger.getDir() + "/pe" + osc.str().c_str());
-
-	peVol.setInfo(sigmaSquareds.getInfo());
-	peVol.setPreThresholdPositions(sigmaSquareds.getPreThresholdPositions());
-	peVol.threshold();
-	  
+	read_volume4D(input_data,logger.getDir() + "/pe" + osc.str().c_str());
+	peVol=input_data.matrix(mask).AsColumn();
 	b.Column(i) = peVol; 
       }
 
     // dof: - maybe single value ASCII or avw file:
     ifstream in;
     in.open(string(logger.getDir() + "/dof").c_str(), ios::in);    
-    if(!in)
+    if(!in) //avw format
       {
-	// avw format	
-	dof.read(logger.getDir() + "/dof");	
-
-	// threshold avw
-	dof.setPreThresholdPositions(sigmaSquareds.getPreThresholdPositions());
-	dof.threshold();
+	read_volume4D(input_data,logger.getDir() + "/dof");
+	dof=input_data.matrix(mask).AsColumn();
       }
     else
       {
@@ -239,13 +228,8 @@ namespace FILM {
       {
 	// avw format
 	is_avw_corrections = true;
-	corrections.read(logger.getDir() + "/corrections");
-	if(corrections.getInfo().x == sigmaSquareds.getInfo().x)
-	  {
-	    // unthresholded avw
-	    corrections.setPreThresholdPositions(sigmaSquareds.getPreThresholdPositions());
-	    corrections.thresholdSeries();
-	  }
+	read_volume4D(input_data,logger.getDir() + "/corrections");
+	corrections=input_data.matrix(mask);
       }
     else
       {
@@ -253,7 +237,7 @@ namespace FILM {
 	in.close();      
 	is_avw_corrections = false;
 	corrections.ReSize(numTS,numParams*numParams);
-	parad.read_vest_waveform(logger.getDir() + "/corrections", corrections);
+	corrections=read_vest(logger.getDir() + "/corrections");
 	corrections = corrections.t();
       }
   }
@@ -266,82 +250,45 @@ namespace FILM {
     // prepare contrast number:
     ostringstream osc;
     osc << suffix << c_counter;
-   
-    VolumeInfo tmpinfo;
-
-    // Write out fstat:
-    tmpinfo = sigmaSquareds.getInfo();
-    tmpinfo.intent_code = NIFTI_INTENT_FTEST;
-    tmpinfo.intent_p1 = 0.0;
-    fstat.setInfo(tmpinfo);
-    fstat.setPreThresholdPositions(sigmaSquareds.getPreThresholdPositions());
-    fstat.unthreshold();
-    fstat.writeAsFloat(logger.getDir() + "/fstat" + osc.str().c_str());
-
-    // Write out zstat:
-    tmpinfo = sigmaSquareds.getInfo();
-    tmpinfo.intent_code = NIFTI_INTENT_ZSCORE;
-    tmpinfo.intent_p1 = 0.0;
-    zstat.setInfo(tmpinfo);
-    zstat.setPreThresholdPositions(sigmaSquareds.getPreThresholdPositions());
-    zstat.unthreshold();
-    zstat.writeAsFloat(logger.getDir() + "/zfstat" + osc.str().c_str());
+    volume4D<float> output;
+    output.setmatrix(fstat.AsRow(),mask);
+    FslSetCalMinMax(&vinfo,output.min(),output.max());
+    output.set_intent(NIFTI_INTENT_FTEST,0,0,0);
+    save_volume4D(output,logger.getDir() + "/fstat" + osc.str().c_str(),vinfo);
+    output.setmatrix(zstat.AsRow(),mask);
+    FslSetCalMinMax(&vinfo,output.min(),output.max());
+    output.set_intent(NIFTI_INTENT_ZSCORE,0,0,0);
+    save_volume4D(output,logger.getDir() + "/zfstat" + osc.str().c_str(),vinfo);
   }
 
   void ContrastMgr::SaveTContrast(const string& suffix)
   {
     Tracer_Plus ts("ContrastMgr::SaveTContrast");
     Log& logger = LogSingleton::getInstance();
-    
     // prepare contrast number:
     ostringstream osc;
     osc << suffix << c_counter;
-
-    VolumeInfo tmpinfo;
-
-    // Write out neffs:
-    tmpinfo = sigmaSquareds.getInfo();
-    tmpinfo.intent_code = NIFTI_INTENT_NONE;
-    neff.setInfo(tmpinfo);
-    neff.setPreThresholdPositions(sigmaSquareds.getPreThresholdPositions());
-    neff.unthreshold();
-    neff.writeAsFloat(logger.getDir() + "/neff" + osc.str().c_str());
-
-    // Write out cope:
-    tmpinfo = sigmaSquareds.getInfo();
-    tmpinfo.intent_code = NIFTI_INTENT_ESTIMATE;
-    tmpinfo.intent_p1 = 0.0;
-    cb.setInfo(tmpinfo);
-    cb.setPreThresholdPositions(sigmaSquareds.getPreThresholdPositions());
-    cb.unthreshold();
-    cb.writeAsFloat(logger.getDir() + "/cope" + osc.str().c_str());
-
-    // Write out varcope:
-    tmpinfo = sigmaSquareds.getInfo();
-    tmpinfo.intent_code = NIFTI_INTENT_ESTIMATE;
-    tmpinfo.intent_p1 = 0.0;
-    varcb.setInfo(tmpinfo);
-    varcb.setPreThresholdPositions(sigmaSquareds.getPreThresholdPositions());
-    varcb.unthreshold();
-    varcb.writeAsFloat(logger.getDir() + "/varcope" + osc.str().c_str());
-
-    // Write out tstat:
-    tmpinfo = sigmaSquareds.getInfo();
-    tmpinfo.intent_code = NIFTI_INTENT_TTEST;
-    tmpinfo.intent_p1 = 0.0;
-    tstat.setInfo(tmpinfo);
-    tstat.setPreThresholdPositions(sigmaSquareds.getPreThresholdPositions());
-    tstat.unthreshold();
-    tstat.writeAsFloat(logger.getDir() + "/tstat" + osc.str().c_str());
-
-    // Write out zstat:
-    tmpinfo = sigmaSquareds.getInfo();
-    tmpinfo.intent_code = NIFTI_INTENT_ZSCORE;
-    tmpinfo.intent_p1 = 0.0;
-    zstat.setInfo(tmpinfo);
-    zstat.setPreThresholdPositions(sigmaSquareds.getPreThresholdPositions());
-    zstat.unthreshold();
-    zstat.writeAsFloat(logger.getDir() + "/zstat" + osc.str().c_str());
+    volume4D<float> output;
+    output.setmatrix(neff.AsRow(),mask);
+    FslSetCalMinMax(&vinfo,output.min(),output.max());
+    output.set_intent(NIFTI_INTENT_NONE,0,0,0);
+    save_volume4D(output,logger.getDir() + "/neff" + osc.str().c_str(),vinfo);
+    output.setmatrix(cb.AsRow(),mask);
+    FslSetCalMinMax(&vinfo,output.min(),output.max());
+    output.set_intent(NIFTI_INTENT_ESTIMATE,0,0,0);
+    save_volume4D(output,logger.getDir() + "/cope" + osc.str().c_str(),vinfo);
+    output.setmatrix(varcb.AsRow(),mask);
+    FslSetCalMinMax(&vinfo,output.min(),output.max());
+    output.set_intent(NIFTI_INTENT_ESTIMATE,0,0,0);
+    save_volume4D(output,logger.getDir() + "/varcope" + osc.str().c_str(),vinfo);
+    output.setmatrix(tstat.AsRow(),mask);
+    FslSetCalMinMax(&vinfo,output.min(),output.max());
+    output.set_intent(NIFTI_INTENT_TTEST,0,0,0);
+    save_volume4D(output,logger.getDir() + "/tstat" + osc.str().c_str(),vinfo);
+    output.setmatrix(zstat.AsRow(),mask);
+    FslSetCalMinMax(&vinfo,output.min(),output.max());
+    output.set_intent(NIFTI_INTENT_ZSCORE,0,0,0);
+    save_volume4D(output,logger.getDir() + "/zstat" + osc.str().c_str(),vinfo);
   }
 
 
@@ -352,7 +299,6 @@ namespace FILM {
     // puts ColumnVector of length p*p from correction
     // into Matrix corr which is p*p:
     corr.ReSize(numParams, numParams);
-
     for (int i = 1; i <= numParams; i++)
       {
 	for (int j = 1; j <= numParams; j++)

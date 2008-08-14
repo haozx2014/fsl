@@ -6,7 +6,7 @@
 
     Christian F. Beckmann, FMRIB Image Analysis Group
     
-    Copyright (C) 1999-2007 University of Oxford */
+    Copyright (C) 1999-2008 University of Oxford */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -115,6 +115,7 @@ class MelodicOptions {
   	Option<string> pca_est;
   	Option<bool>   joined_whiten;
   	Option<bool>   joined_vn;
+		Option<float>	 vn_level;
   	Option<int>    numICs;
   	Option<string> approach;
   	Option<string> nonlinearity;
@@ -246,8 +247,11 @@ class MelodicOptions {
 	   string("switch on separate whitening"), 
 	   false, no_argument),
 	 joined_vn(string("--sep_vn"), true,
-		   string("switch off joined variance nomalisation"), 
-		   false, no_argument, false),
+		 string("switch off joined variance nomalisation"), 
+		 false, no_argument),
+	 vn_level(string("--vn_level"), float(2.3),
+		 string("variance nomalisation threshold level (Z> value is ignored)"), 
+		 false, requires_argument, false),
    numICs(string("-n,--numICs"), -1,
 	   string("numer of IC's to extract (for deflation approach)"), 
 	   false, requires_argument),
@@ -439,6 +443,7 @@ class MelodicOptions {
 	    options.add(pca_est);
 	    options.add(joined_whiten);
 	    options.add(joined_vn);
+	    options.add(vn_level);
 	    options.add(numICs);
 	    options.add(approach);
 	    options.add(nonlinearity);

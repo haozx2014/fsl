@@ -82,16 +82,21 @@ Usage() {
 [ "${1}_" = "_"  ] && Usage
 
 num=$#
-echo $num
+echo "total number of image: " $num
 num=`echo "${num}/2 " | bc`
-echo $num
+echo "number of image pairs: " $num
 
 #this loop creates the paired list  
+i=1;
+while [ $i -le ${num} ] ; do 
 
-for i in `seq 1 ${num}`; do
     pout=`echo $@ | awk '{ print $'$i' }'`
+    
     imind=`echo ${i} + ${num} | bc`
     imlb=`echo $@ | awk '{ print $'$imind' }'`
+      imlbout=`echo $imlb | awk -F / '{ print $NF }'`
+      imlbout=`remove_ext $imlbout `
+
     roi=`${FSLDIR}/bin/fslstats $imlb -w` 
 
     xmin=`echo $roi | awk '{ print $1 }'`
@@ -114,12 +119,18 @@ for i in `seq 1 ${num}`; do
 
     pout=`remove_ext $pout`
     imlb=`remove_ext $imlb`
+    
+    pout2=`echo $pout | awk -F / '{ print $NF }'`
+    pout2=`remove_ext $pout2`
+    echo $i $pout2
 
-    ${FSLDIR}/bin/fslroi $pout ${prefix}t1grot${i} $roi
-    ${FSLDIR}/bin/fslroi $imlb ${prefix}${imlb}lbgrot${i} $roi
-    pairlist=${pairlist}" "${prefix}t1grot${i}" "${prefix}${imlb}lbgrot${i}
-
+    ${FSLDIR}/bin/fslroi $pout ${pout2}_t1grot${i} $roi
+    ${FSLDIR}/bin/fslroi $imlb ${imlbout}lbgrot${i} $roi
+    pairlist=${pairlist}" "${pout2}_t1grot${i}" "${imlbout}lbgrot${i}
+   
+    let i=i+1; 
 done
+
 echo "run slicesdir"
 ${FSLDIR}/bin/slicesdir -o ${pairlist}
 
@@ -128,7 +139,7 @@ ${FSLDIR}/bin/slicesdir -o ${pairlist}
 echo "removing files..."
 for i in $pairlist; do 
     echo $i; 
-    ${FSLDIR}/bin/imrm $i; 
+   ${FSLDIR}/bin/imrm $i; 
 done
 
 

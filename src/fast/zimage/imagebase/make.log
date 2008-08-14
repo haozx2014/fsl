@@ -1,6 +1,0 @@
-c++ -O3 -ansi -pedantic -Wall -I../include -c imagebase.cpp
-c++ -O3 -ansi -pedantic -Wall -I../include -c image.cpp
-c++ -O3 -ansi -pedantic -Wall -I../include -c palette.cpp
-c++ -O3 -ansi -pedantic -Wall -I../include -c imagehelper.cpp
-ar cr libImageBase.a imagebase.o image.o palette.o imagehelper.o
-mv libImageBase.a ../lib

@@ -1,8 +1,8 @@
 /*  AutoCorrEstimator.cc
 
-    Mark Woolrich, FMRIB Image Analysis Group
+    Mark Woolrich and Matthew Webster, FMRIB Image Analysis Group
 
-    Copyright (C) 1999-2000 University of Oxford  */
+    Copyright (C) 1999-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -71,11 +71,8 @@
 #define WANT_STREAM
 
 #include "AutoCorrEstimator.h"
-#include "miscmaths/miscmaths.h"
 #include "utils/log.h"
-#include "miscmaths/volume.h"
 #include "miscmaths/histogram.h"
-#include "miscmaths/miscmaths.h"
 #include "newimage/newimageall.h"
 #include "glm.h"
 
@@ -89,7 +86,6 @@ namespace FILM {
   void AutoCorrEstimator::setDesignMatrix(const Matrix& dm) {
     Tracer tr("AutoCorrEstimator::setDesignMatrix");
 
-    int sizeTS = xdata.getNumVolumes();
     int numPars = dm.Ncols();
     
     dminFFTReal.ReSize(zeropad, numPars);
@@ -119,20 +115,18 @@ namespace FILM {
       } 
   }
 
-  void AutoCorrEstimator::preWhiten(ColumnVector& in, ColumnVector& ret, int i, Matrix& dmret, bool highfreqremovalonly) {
+  void AutoCorrEstimator::preWhiten(const ColumnVector& in, ColumnVector& ret, int i, Matrix& dmret, bool highfreqremovalonly) {
       Tracer tr("AutoCorrEstimator::preWhiten");
 
-      int sizeTS = xdata.getNumVolumes();
-      int numPars = dminFFTReal.getNumSeries();
+      int numPars = dminFFTReal.Ncols();
 
       ret.ReSize(sizeTS);
       dmret.ReSize(sizeTS, numPars);
-
       // FFT auto corr estimate
       dummy = 0;
       vrow = 0;
-      vrow.Rows(1,sizeTS/2) = acEst.getSeries(i).Rows(1,sizeTS/2);
-      vrow.Rows(zeropad - sizeTS/2 + 2, zeropad) = acEst.getSeries(i).Rows(2, sizeTS/2).Reverse();
+      vrow.Rows(1,sizeTS/2) = acEst.Column(i).Rows(1,sizeTS/2);
+      vrow.Rows(zeropad - sizeTS/2 + 2, zeropad) = acEst.Column(i).Rows(2, sizeTS/2).Reverse();
 
       FFT(vrow, dummy, ac_fft_real, ac_fft_im);      
 
@@ -187,8 +181,8 @@ namespace FILM {
       // filter design matrix
       for(int k = 1; k <= numPars; k++)
 	{
-	  dm_fft_real = dminFFTReal.getSeries(k);
-	  dm_fft_imag = dminFFTImag.getSeries(k);
+	  dm_fft_real = dminFFTReal.Column(k);
+	  dm_fft_imag = dminFFTImag.Column(k);
 	  FFTI(SP(ac_fft_real, dm_fft_real), SP(ac_fft_real, dm_fft_imag), realifft, dummy);
 
 	  // place result into ret:
@@ -205,75 +199,7 @@ namespace FILM {
 
     }
 
-  void AutoCorrEstimator::preWhiten(VolumeSeries& in, VolumeSeries& ret)
-    {
-      Tracer tr("AutoCorrEstimator::preWhiten");
-
-      cerr << "Prewhitening... ";
-
-      int sizeTS = xdata.getNumVolumes();
-      int numTS = xdata.getNumSeries();
-
-      ret.ReSize(sizeTS, numTS);
-
-      // make sure p_vrow is cyclic (even function)
-      ColumnVector vrow, xrow;
-      vrow.ReSize(zeropad);
-      xrow.ReSize(zeropad);
-
-      ColumnVector x_fft_real, ac_fft_real;
-      ColumnVector x_fft_im, ac_fft_im;
-      ColumnVector dummy(zeropad);    
-      ColumnVector realifft(zeropad);
-      int co = 1;
-
-      for(int i = 1; i <= numTS; i++)
-	{
-	  // FFT auto corr estimate
-	  dummy = 0;
-	  vrow = 0;
-	  vrow.Rows(1,sizeTS/2) = acEst.getSeries(i).Rows(1,sizeTS/2);
-	  vrow.Rows(zeropad - sizeTS/2 + 2, zeropad) = acEst.getSeries(i).Rows(2, sizeTS/2).Reverse();
-	  FFT(vrow, dummy, ac_fft_real, ac_fft_im);      
-
-	  // FFT x data
-	  dummy = 0;
-	  xrow = 0;
-	  xrow.Rows(1,sizeTS/2) = in.getSeries(i).Rows(1,sizeTS/2);
-	  xrow.Rows(zeropad - sizeTS/2 + 2, zeropad) = in.getSeries(i).Rows(2, sizeTS/2).Reverse();
-	  FFT(xrow, dummy, x_fft_real, x_fft_im);
-
-	  // inverse auto corr to give prewhitening filter:
-	  // no DC component so set first value to 0;
-	  ac_fft_real(1) = 0.0;	 
-	  
-	  for(int j = 2; j <= zeropad; j++)
-	    {
-	      ac_fft_real(j) = 1.0/ac_fft_real(j);
-	    }
-
-	  // normalise ac_fft such that sum(j)(ac_fft_real)^2 = 1
-	  ac_fft_real /= sqrt(ac_fft_real.SumSquare()/zeropad);
-	  
-	  // Do filtering and inverse FFT:
-	  FFTI(SP(ac_fft_real, x_fft_real), SP(ac_fft_real, x_fft_im), realifft, dummy);
-	
-	  // place result into ret:
-	  ret.Column(i) = realifft.Rows(1,sizeTS);
-
-	  if(co > 100)
-	    {
-	      co = 1;
-	      cerr << (float)i/(float)numTS << ",";
-	    }
-	  else
-	    co++;
-	}
-
-      cerr << " Completed" << endl;
-    }
-
-  void AutoCorrEstimator::fitAutoRegressiveModel()
+  Matrix AutoCorrEstimator::fitAutoRegressiveModel()
     {
       Tracer trace("AutoCorrEstimator::fitAutoRegressiveModel");
       
@@ -281,14 +207,11 @@ namespace FILM {
       
       const int maxorder = 15;
       const int minorder = 1;
-
-      int sizeTS = xdata.getNumVolumes();
-      int numTS = xdata.getNumSeries();
       
       // setup temp variables
       ColumnVector x(sizeTS);
       ColumnVector order(numTS);
-      VolumeSeries betas(maxorder, numTS);
+      Matrix betas(maxorder, numTS);
       betas = 0;
       acEst.ReSize(sizeTS, numTS);
       acEst = 0;
@@ -296,7 +219,7 @@ namespace FILM {
        
       for(int i = 1; i <= numTS; i++)
 	{
-	  x = xdata.getSeries(i).AsColumn();
+	  x = xdata.Column(i);
 	  ColumnVector betastmp;
 
 	  order(i) = pacf(x, minorder, maxorder, betastmp);
@@ -329,8 +252,6 @@ namespace FILM {
 		  else
 		    Kinv.SubMatrix(j,j,1,j) = Krow.Rows(sizeTS-j+1,sizeTS).t();		  
 		}
-	     
-	      //MISCMATHS::write_ascii_matrix(Kinv,"Kinv");
 
 	      // Kinv now becomes V:
 	      if(order(i)!=1)
@@ -349,24 +270,16 @@ namespace FILM {
 	}
       
       write_ascii_matrix(LogSingleton::getInstance().appendDir("order"), order);
-
-      // output betas:
       write_ascii_matrix(LogSingleton::getInstance().appendDir("betas"), betas);
-
-      VolumeInfo vinfo = xdata.getInfo();
-      vinfo.v = maxorder;
-      betas.unthresholdSeries(vinfo,xdata.getPreThresholdPositions());
-      betas.writeAsFloat(LogSingleton::getInstance().getDir() + "/betas");
-
       countLargeE = 0;
       cerr << " Completed" << endl; 
+      return(betas);
     }
 
   int AutoCorrEstimator::pacf(const ColumnVector& x, int minorder, int maxorder, ColumnVector& betas)
     { 
       Tracer ts("pacf");
       int order = -1;
-      int sizeTS = x.Nrows();
 
       // Set c
       Matrix c(1,1);
@@ -402,11 +315,10 @@ namespace FILM {
       return order; 
     }
  
-  int AutoCorrEstimator::establishUsanThresh(const Volume& epivol)
+  int AutoCorrEstimator::establishUsanThresh(const ColumnVector& epivol)
     {
       int usanthresh = 100;      
-      int num = epivol.getVolumeSize();
-
+      int num = epivol.Nrows();
       Histogram hist(epivol, num/200);
       hist.generate();
       float mode = hist.mode();
@@ -418,7 +330,7 @@ namespace FILM {
       // Work out standard deviation from mode for values greater than mode:
       for(int i = 1; i <= num; i++) {
 	if(epivol(i) > mode) {
-	  sum = sum + (epivol(i) - mode)*(epivol(i) - mode);
+	  sum += (epivol(i) - mode)*(epivol(i) - mode);
 	  count++;
 	}
       }
@@ -431,54 +343,37 @@ namespace FILM {
       return usanthresh;
     } 
 
-  void AutoCorrEstimator::spatiallySmooth(const string& usanfname, const Volume& epivol, int masksize, const string& epifname, const string& susanpath, int usan_thresh, int lag) {
+  void AutoCorrEstimator::spatiallySmooth(const string& usanfname, const ColumnVector& epivol, int masksize, const string& epifname, int usan_thresh, const volume<float>& usan_vol, int lag) {
     Tracer trace("AutoCorrEstimator::spatiallySmooth");
     
-    if(xdata.getNumSeries()<=1)
+    if(numTS<=1)
       {
-	cerr << "Warning: Number of voxels = " << xdata.getNumSeries() << ". Spatial smoothing of autocorrelation estimates is not carried out" << endl;
+	cerr << "Warning: Number of voxels = " << numTS << ". Spatial smoothing of autocorrelation estimates is not carried out" << endl;
       }
     else
       {
 	
 	if(lag==0)
-	  lag = MISCMATHS::Min(40,int(xdata.getNumVolumes()/4));
-	
-	if(usan_thresh == 0)
-	  {
-	    // Establish epi thresh to use:
-	    usan_thresh = establishUsanThresh(epivol);
-	  }
+	  lag = MISCMATHS::Min(40,int(sizeTS/4));
 
-	volume<float> susan_vol(xdata.getInfo().x,xdata.getInfo().y,xdata.getInfo().z);
-	volume<float> usan_area(xdata.getInfo().x,xdata.getInfo().y,xdata.getInfo().z);
-	volume<float> usan_vol;
-	read_volume(usan_vol,usanfname);
+	if(usan_thresh == 0) usan_thresh = establishUsanThresh(epivol); // Establish epi thresh to use:
+
+	volume4D<float> susan_vol(mask.xsize(),mask.ysize(),mask.zsize(),1);
+	volume<float> usan_area(mask.xsize(),mask.ysize(),mask.zsize());
 	volume<float> kernel;
-	kernel = gaussian_kernel3D(masksize,xdata.getInfo().vx,xdata.getInfo().vy,xdata.getInfo().vz);	
-	
-	// Setup volume for reading and writing volumes:
-	Volume vol(acEst.getNumSeries(), xdata.getInfo(), xdata.getPreThresholdPositions());
-
-	int i = 2;
+	kernel = gaussian_kernel3D(masksize,mask.xdim(),mask.ydim(),mask.zdim(),2.0);	
 	int factor = 10000;
 	cerr << "Spatially smoothing auto corr estimates" << endl;
 	
-	for(; i <= lag; i++)
+	for(int i=2 ; i <= lag; i++)
 	  {
 	    // setup susan input
-	    vol = acEst.getVolume(i).AsColumn()*factor;
-	    vol.unthreshold();
-	    susan_vol.insert_vec(vol);
-
-	    // call susan
-	    susan_vol=susan_convolve(susan_vol,kernel,1,0,1,&usan_area,usan_vol,usan_thresh*usan_thresh);
-	    
+	    susan_vol.setmatrix(acEst.Row(i),mask); 
+	    susan_vol*=factor;
+	    susan_vol[0]=susan_convolve(susan_vol[0],kernel,1,0,1,&usan_area,usan_vol,usan_thresh*usan_thresh);
 	    // insert output back into acEst
-	    vol=susan_vol.vec();
-	    vol.threshold();
-	    acEst.setVolume(static_cast<RowVector>((vol/factor).AsRow()), i);
-
+            susan_vol/=factor;
+	    acEst.Row(i)=susan_vol.matrix(mask);
 	    cerr << ".";
 	  }
 	
@@ -513,14 +408,13 @@ namespace FILM {
     ColumnVector fft_im;
     ColumnVector dummy(zeropad);    
     ColumnVector realifft(zeropad);
-    int sizeTS = xdata.getNumVolumes();
 
-    for(int i = 1; i <= xdata.getNumSeries(); i++)
+    for(int i = 1; i <= numTS; i++)
       {
 	dummy = 0;
 	vrow = 0;
-	vrow.Rows(1,sizeTS/2) = acEst.getSeries(i).Rows(1,sizeTS/2);
-	vrow.Rows(zeropad - sizeTS/2 + 2, zeropad) = acEst.getSeries(i).Rows(2, sizeTS/2).Reverse();
+	vrow.Rows(1,sizeTS/2) = acEst.Column(i).Rows(1,sizeTS/2);
+	vrow.Rows(zeropad - sizeTS/2 + 2, zeropad) = acEst.Column(i).Rows(2, sizeTS/2).Reverse();
       
 	FFT(vrow, dummy, fft_real, fft_im);
 
@@ -538,8 +432,6 @@ namespace FILM {
     Tracer tr("AutoCorrEstimator::multitaper");
     
     cerr << "Multitapering... ";
-    int sizeTS = xdata.getNumVolumes();
-    int numTS = xdata.getNumSeries();
 
     Matrix slepians;
     getSlepians(M, sizeTS, slepians);
@@ -564,10 +456,8 @@ namespace FILM {
 	// Compute FFT for each slepian taper
 	for(int k = 1; k <= slepians.Ncols(); k++) 
 	  {
-	    x.Rows(1,sizeTS) = SP(slepians.Column(k), xdata.getSeries(i));
-	    
-	    //LogSingleton::getInstance().out("x", xdata.getSeries(i), false);
-
+	    x.Rows(1,sizeTS) = SP(slepians.Column(k), xdata.Column(i));
+	   
 	    FFT(x, dummy, fft_real, fft_im);
 	    for(int j = 1; j <= zeropad; j++)
 	    {
@@ -592,7 +482,7 @@ namespace FILM {
 	//LogSingleton::getInstance().out("fftreal", fft_real);
 	
 	float varx = MISCMATHS::var(ColumnVector(x.Rows(1,sizeTS))).AsScalar();
-	acEst.setSeries(realifft.Rows(1,sizeTS)/varx, i);
+	acEst.Column(i)=realifft.Rows(1,sizeTS)/varx;
       }
     countLargeE = 0;
     cerr << "Completed" << endl;
@@ -631,7 +521,6 @@ namespace FILM {
     cerr << "Tukey M = " << M << endl;
 
     cerr << "Tukey estimates... ";
-    int sizeTS = xdata.getNumVolumes();
 	
     ColumnVector window(M);
 
@@ -640,7 +529,7 @@ namespace FILM {
 	window(j) = 0.5*(1+cos(M_PI*j/(float(M))));
       }
     
-    for(int i = 1; i <= xdata.getNumSeries(); i++) {
+    for(int i = 1; i <= xdata.Ncols(); i++) {
 	
 	acEst.SubMatrix(1,M,i,i) = SP(acEst.SubMatrix(1,M,i,i),window);
 	acEst.SubMatrix(M+1,sizeTS,i,i) = 0;
@@ -656,8 +545,7 @@ namespace FILM {
     
     cerr << "Using New PAVA on AutoCorr estimates... ";
 
-    for(int i = 1; i <= xdata.getNumSeries(); i++) {
-	int sizeTS = xdata.getNumVolumes();
+    for(int i = 1; i <= numTS; i++) {
 	int stopat = (int)sizeTS/2;
 
 	// 5% point of distribution of autocorr about zero
@@ -743,9 +631,8 @@ namespace FILM {
 
     cerr << "Applying constraints to AutoCorr estimates... ";
 
-    for(int i = 1; i <= xdata.getNumSeries(); i++)
+    for(int i = 1; i <= numTS; i++)
       {
-	int sizeTS = xdata.getNumVolumes();
 	int j = 3;
 	int stopat = (int)sizeTS/4;
 
@@ -800,11 +687,11 @@ namespace FILM {
     {
       Tracer tr("AutoCorrEstimator::getMeanEstimate");
 
-      ret.ReSize(acEst.getNumVolumes());
+      ret.ReSize(acEst.Nrows());
       // Calc global Vrow:
-      for(int i = 1; i <= acEst.getNumVolumes(); i++)
+      for(int i = 1; i <= acEst.Nrows(); i++)
 	{
-	  ret(i) = MISCMATHS::mean(ColumnVector(acEst.getVolume(i).AsColumn())).AsScalar();
+	  ret(i) = MISCMATHS::mean(ColumnVector(acEst.Row(i).AsColumn())).AsScalar();
 	}
     }
 }

@@ -49,10 +49,12 @@ public:
   ~BFMatrixException() throw() {}
 };
 
+enum BFMatrixPrecisionType {BFMatrixDoublePrecision, BFMatrixFloatPrecision};
+
 class BFMatrix
 {
 protected:
-virtual void print(const NEWMAT::Matrix& m, const std::string& fname) const;
+
 public:
   // Constructors, destructors and stuff
   BFMatrix() {}
@@ -70,7 +72,8 @@ public:
   virtual void Print(const std::string fname=std::string("")) const = 0;
 
   // Setting, deleting or resizing the whole sparse matrix.
-  virtual void SetMatrix(const MISCMATHS::SpMat<double>& M) = 0;
+  // virtual void SetMatrix(const MISCMATHS::SpMat<double>& M) = 0;
+  // virtual void SetMatrix(const MISCMATHS::SpMat<float>& M) = 0;
   virtual void SetMatrix(const NEWMAT::Matrix& M) = 0;
   virtual void Clear() = 0;
   virtual void Resize(unsigned int m, unsigned int n) = 0;
@@ -85,7 +88,7 @@ public:
   virtual void AddTo(unsigned int x, unsigned int y, double val) = 0;  
 
   // Transpose
-  virtual boost::shared_ptr<BFMatrix> Transpose(boost::shared_ptr<BFMatrix>& pA) const = 0;
+  virtual boost::shared_ptr<BFMatrix> Transpose() const = 0;
 
   // Concatenation. Note that desired polymorphism prevents us from using BFMatrix->NEWMAT::Matrix conversion
   // Concatenate two matrices yielding a third
@@ -114,26 +117,27 @@ public:
                                          int                         miter=200) const = 0;  
 };
 
+template<class T>
 class SparseBFMatrix : public BFMatrix
 {
 private:
-  boost::shared_ptr<MISCMATHS::SpMat<double> >    mp;
-  
+  boost::shared_ptr<MISCMATHS::SpMat<T> >    mp;
+
 public:
   // Constructors, destructor and assignment
   SparseBFMatrix() 
-  : mp(boost::shared_ptr<MISCMATHS::SpMat<double> >(new MISCMATHS::SpMat<double>())) {}
+  : mp(boost::shared_ptr<MISCMATHS::SpMat<T> >(new MISCMATHS::SpMat<T>())) {}
   SparseBFMatrix(unsigned int m, unsigned int n) 
-  : mp(boost::shared_ptr<MISCMATHS::SpMat<double> >(new MISCMATHS::SpMat<double>(m,n))) {}
+  : mp(boost::shared_ptr<MISCMATHS::SpMat<T> >(new MISCMATHS::SpMat<T>(m,n))) {}
   SparseBFMatrix(unsigned int m, unsigned int n, const unsigned int *irp, const unsigned int *jcp, const double *sp)
-  : mp(boost::shared_ptr<MISCMATHS::SpMat<double> >(new MISCMATHS::SpMat<double>(m,n,irp,jcp,sp))) {}
-  SparseBFMatrix(const MISCMATHS::SpMat<double>& M) 
-  : mp(boost::shared_ptr<MISCMATHS::SpMat<double> >(new MISCMATHS::SpMat<double>(M))) {}
+  : mp(boost::shared_ptr<MISCMATHS::SpMat<T> >(new MISCMATHS::SpMat<T>(m,n,irp,jcp,sp))) {}
+  SparseBFMatrix(const MISCMATHS::SpMat<T>& M) 
+  : mp(boost::shared_ptr<MISCMATHS::SpMat<T> >(new MISCMATHS::SpMat<T>(M))) {}
   SparseBFMatrix(const NEWMAT::Matrix& M) 
-  : mp(boost::shared_ptr<MISCMATHS::SpMat<double> >(new MISCMATHS::SpMat<double>(M))) {}
+  : mp(boost::shared_ptr<MISCMATHS::SpMat<T> >(new MISCMATHS::SpMat<T>(M))) {}
   virtual ~SparseBFMatrix() {}
-  virtual const SparseBFMatrix& operator=(const SparseBFMatrix& M) {
-    mp = boost::shared_ptr<MISCMATHS::SpMat<double> >(new MISCMATHS::SpMat<double>(*(M.mp))); return(*this);
+  virtual const SparseBFMatrix& operator=(const SparseBFMatrix<T>& M) {
+    mp = boost::shared_ptr<MISCMATHS::SpMat<T> >(new MISCMATHS::SpMat<T>(*(M.mp))); return(*this);
   }
 
   // Access as NEWMAT::Matrix
@@ -144,14 +148,15 @@ public:
   virtual unsigned int Ncols() const {return(mp->Ncols());}
 
   // Print matrix (for debugging)
-  virtual void Print(const std::string fname=std::string("")) const {print(mp->AsNEWMAT(),fname);}
+  virtual void Print(const std::string fname=std::string("")) const {mp->Print(fname);}
 
   // Setting, deleting or resizing the whole sparse matrix.
-  virtual void SetMatrix(const MISCMATHS::SpMat<double>& M) {mp = boost::shared_ptr<MISCMATHS::SpMat<double> >(new MISCMATHS::SpMat<double>(M));}
-  virtual void SetMatrix(const NEWMAT::Matrix& M) {mp = boost::shared_ptr<MISCMATHS::SpMat<double> >(new MISCMATHS::SpMat<double>(M));}
-  virtual void SetMatrixPtr(boost::shared_ptr<MISCMATHS::SpMat<double> >& mptr) {mp = mptr;}
-  virtual void Clear() {mp = boost::shared_ptr<MISCMATHS::SpMat<double> >(new MISCMATHS::SpMat<double>());}
-  virtual void Resize(unsigned int m, unsigned int n) {mp = boost::shared_ptr<MISCMATHS::SpMat<double> >(new MISCMATHS::SpMat<double>(m,n));}
+  virtual void SetMatrix(const MISCMATHS::SpMat<T>& M) {mp = boost::shared_ptr<MISCMATHS::SpMat<T> >(new MISCMATHS::SpMat<T>(M));}
+  // virtual void SetMatrix(const MISCMATHS::SpMat<float>& M) {mp = boost::shared_ptr<MISCMATHS::SpMat<float> >(new MISCMATHS::SpMat<float>(M));}
+  virtual void SetMatrix(const NEWMAT::Matrix& M) {mp = boost::shared_ptr<MISCMATHS::SpMat<T> >(new MISCMATHS::SpMat<T>(M));}
+  virtual void SetMatrixPtr(boost::shared_ptr<MISCMATHS::SpMat<T> >& mptr) {mp = mptr;}
+  virtual void Clear() {mp = boost::shared_ptr<MISCMATHS::SpMat<T> >(new MISCMATHS::SpMat<T>());}
+  virtual void Resize(unsigned int m, unsigned int n) {mp = boost::shared_ptr<MISCMATHS::SpMat<T> >(new MISCMATHS::SpMat<T>(m,n));}
 
   // Accessing values
   virtual double Peek(unsigned int r, unsigned int c) const {return(mp->Peek(r,c));}
@@ -162,7 +167,7 @@ public:
   virtual void AddTo(unsigned int x, unsigned int y, double val) {mp->AddTo(x,y,val);}
 
   // Transpose. 
-  virtual boost::shared_ptr<BFMatrix> Transpose(boost::shared_ptr<BFMatrix>& pA) const {throw BFMatrixException("SparseBFMatrix::Transpose: Not yet implemented");}
+  virtual boost::shared_ptr<BFMatrix> Transpose() const;
   
   // Concatenation of two matrices returning a third
   // AB = [*this B] in Matlab lingo
@@ -210,16 +215,18 @@ public:
   }
 
   virtual NEWMAT::ReturnMatrix AsMatrix() const {NEWMAT::Matrix ret; ret = *mp; ret.Release(); return(ret);}
+  virtual const NEWMAT::Matrix& ReadAsMatrix() const {return(*mp);} 
 
   // Basic properties
   virtual unsigned int Nrows() const {return(mp->Nrows());}
   virtual unsigned int Ncols() const {return(mp->Ncols());}
 
   // Print matrix (for debugging)
-  virtual void Print(const std::string fname=std::string("")) const {print(*mp,fname);}
+  virtual void Print(const std::string fname=std::string("")) const;
 
   // Setting, deleting or resizing the whole matrix.
   virtual void SetMatrix(const MISCMATHS::SpMat<double>& M) {mp = boost::shared_ptr<NEWMAT::Matrix>(new NEWMAT::Matrix(M.AsNEWMAT()));} 
+  virtual void SetMatrix(const MISCMATHS::SpMat<float>& M) {mp = boost::shared_ptr<NEWMAT::Matrix>(new NEWMAT::Matrix(M.AsNEWMAT()));} 
   virtual void SetMatrix(const NEWMAT::Matrix& M) {mp = boost::shared_ptr<NEWMAT::Matrix>(new NEWMAT::Matrix(M));}
   virtual void SetMatrixPtr(boost::shared_ptr<NEWMAT::Matrix>& mptr) {mp = mptr;}
   virtual void Clear() {mp->ReSize(0,0);}
@@ -234,7 +241,7 @@ public:
   virtual void AddTo(unsigned int x, unsigned int y, double val) {(*mp)(x,y)+=val;}
 
   // Transpose. 
-  virtual boost::shared_ptr<BFMatrix> Transpose(boost::shared_ptr<BFMatrix>& pA) const;
+  virtual boost::shared_ptr<BFMatrix> Transpose() const;
   
   // Concatenation of two matrices returning a third
   virtual void HorConcat(const BFMatrix& B, BFMatrix& AB) const;
@@ -264,6 +271,218 @@ public:
                                          int                         miter) const;
     
 };
+
+//
+// Here comes member functions for SparseBFMatrix. Since it is templated
+// these need to go here rather than in bfmatrix.cpp.
+//
+
+//
+// Member functions for SparseBFMatrix
+//
+
+//
+// Transpose
+//
+
+template<class T>
+boost::shared_ptr<BFMatrix> SparseBFMatrix<T>::Transpose() const
+{
+  boost::shared_ptr<SparseBFMatrix<T> >   tm(new SparseBFMatrix<T>(mp->t()));
+  return(tm);
+}
+
+//
+// Concatenation of two matrices returning a third
+//
+template<class T>
+void SparseBFMatrix<T>::HorConcat(const BFMatrix& B, BFMatrix& AB) const
+{
+  if (B.Nrows() && Nrows() != B.Nrows()) {throw BFMatrixException("SparseBFMatrix::HorConcat: Matrices must have same # of rows");}
+
+  SparseBFMatrix<T> *pAB = dynamic_cast<SparseBFMatrix<T> *>(&AB);
+  if (pAB) { // Means that output is sparse of type T
+    *pAB = *this;
+    pAB->HorConcat2MyRight(B);
+  }
+  else {
+    FullBFMatrix *fpAB = dynamic_cast<FullBFMatrix *>(&AB);        
+    if (fpAB) { // Means that output is full 
+      *fpAB = FullBFMatrix(this->AsMatrix());
+      fpAB->HorConcat2MyRight(B);
+    }
+    else throw BFMatrixException("SparseBFMatrix::HorConcat: dynamic cast error"); 
+  }
+}
+
+template<class T>
+void SparseBFMatrix<T>::HorConcat(const NEWMAT::Matrix& B, BFMatrix& AB) const
+{
+  if (B.Nrows() && int(Nrows()) != B.Nrows()) {throw BFMatrixException("SparseBFMatrix::HorConcat: Matrices must have same # of rows");}
+
+  SparseBFMatrix<T> *pAB = dynamic_cast<SparseBFMatrix<T> *>(&AB);   
+  if (pAB) { // Means that output is sparse
+    *pAB = *this;
+    pAB->HorConcat2MyRight(B);
+  }
+  else {
+    FullBFMatrix *fpAB = dynamic_cast<FullBFMatrix *>(&AB);     
+    if (fpAB) {// Means that output is full
+      *fpAB = FullBFMatrix(this->AsMatrix());
+      fpAB->HorConcat2MyRight(B);
+    }
+    else throw BFMatrixException("SparseBFMatrix::HorConcat: dynamic cast error"); 
+  }
+}
+
+template<class T>
+void SparseBFMatrix<T>::VertConcat(const BFMatrix& B, BFMatrix& AB) const
+{
+  if (B.Ncols() && Ncols() != B.Ncols()) {throw BFMatrixException("SparseBFMatrix::VertConcat: Matrices must have same # of columns");}
+
+  SparseBFMatrix<T> *pAB = dynamic_cast<SparseBFMatrix<T> *>(&AB);      
+  if (pAB) { // Means that output is sparse
+    *pAB = *this;
+    pAB->VertConcatBelowMe(B);
+  }
+  else {
+    FullBFMatrix *fpAB = dynamic_cast<FullBFMatrix *>(&AB);        
+    if (fpAB) { // Means that output is full
+      *fpAB = FullBFMatrix(this->AsMatrix());
+      fpAB->VertConcatBelowMe(B);
+    }
+    else throw BFMatrixException("SparseBFMatrix::VertConcat: dynamic cast error"); 
+  }
+}
+
+template<class T>
+void SparseBFMatrix<T>::VertConcat(const NEWMAT::Matrix& B, BFMatrix& AB) const
+{
+  if (B.Ncols() && int(Ncols()) != B.Ncols()) {throw BFMatrixException("SparseBFMatrix::VertConcat: Matrices must have same # of columns");}
+
+  SparseBFMatrix<T> *pAB = dynamic_cast<SparseBFMatrix<T> *>(&AB);      
+  if (pAB) { // Means that output is sparse
+    *pAB = *this;
+    pAB->VertConcatBelowMe(B);
+  }
+  else {
+    FullBFMatrix *fpAB = dynamic_cast<FullBFMatrix *>(&AB);        
+    if (fpAB) { // Means that output is full
+      *fpAB = FullBFMatrix(this->AsMatrix());
+      fpAB->VertConcatBelowMe(B);
+    }
+    else throw BFMatrixException("SparseBFMatrix::VertConcat: dynamic cast error"); 
+  }
+}
+
+//
+// Concatenate another matrix to *this
+//
+template<class T>
+void SparseBFMatrix<T>::HorConcat2MyRight(const BFMatrix& B)
+{
+  if (!B.Nrows()) return;
+
+  if (Nrows() != B.Nrows()) {throw BFMatrixException("SparseBFMatrix::HorConcat2MyRight: Matrices must have same # of rows");}
+
+  const SparseBFMatrix<T> *pB = dynamic_cast<const SparseBFMatrix<T> *>(&B);   
+  if (pB) { // Means that we want to concatenate a sparse matrix
+    *mp |= *(pB->mp);
+  }
+  else {
+    const FullBFMatrix *fpB = dynamic_cast<const FullBFMatrix *>(&B);     
+    if (fpB) { // Means that we want to concatenate a full
+      this->HorConcat2MyRight(fpB->AsMatrix());
+    }
+    else throw BFMatrixException("SparseBFMatrix::HorConcat2MyRight: dynamic cast error");
+  }
+}
+
+template<class T>
+void SparseBFMatrix<T>::HorConcat2MyRight(const NEWMAT::Matrix& B)
+{
+  if (!B.Nrows()) return;
+
+  if (int(Nrows()) != B.Nrows()) {throw BFMatrixException("SparseBFMatrix::HorConcat2MyRight: Matrices must have same # of rows");}
+  *mp |= B;
+}
+
+template<class T>
+void SparseBFMatrix<T>::VertConcatBelowMe(const BFMatrix& B)
+{
+  if (!B.Ncols()) return;
+
+  if (Ncols() != B.Ncols()) {throw BFMatrixException("SparseBFMatrix::VertConcatBelowMe: Matrices must have same # of columns");}
+
+  const SparseBFMatrix<T> *pB = dynamic_cast<const SparseBFMatrix<T> *>(&B);   
+  if (pB) { // Means that we want to concatenate a sparse matrix
+    *mp &= *(pB->mp);
+  }
+  else {
+    const FullBFMatrix *fpB = dynamic_cast<const FullBFMatrix *>(&B);     
+    if (fpB) { // Means that we want to concatenate a full
+      this->VertConcatBelowMe(fpB->AsMatrix());
+    }
+    else throw BFMatrixException("SparseBFMatrix::VertConcatBelowMe: dynamic cast error");
+  }
+}
+
+template<class T>
+void SparseBFMatrix<T>::VertConcatBelowMe(const NEWMAT::Matrix& B)
+{
+  if (!B.Ncols()) return;
+
+  if (int(Ncols()) != B.Ncols()) {throw BFMatrixException("SparseBFMatrix::VertConcatBelowMe: Matrices must have same # of columns");}
+  *mp &= B;
+}
+
+// Multiply by vector
+template<class T>
+NEWMAT::ReturnMatrix SparseBFMatrix<T>::MulByVec(const NEWMAT::ColumnVector& invec) const
+{
+  if (invec.Nrows() != int(Ncols())) {throw BFMatrixException("Matrix-vector size mismatch");}
+  NEWMAT::ColumnVector   outvec = *mp * invec;
+  outvec.Release();
+  return(outvec);
+}
+
+// Add another matrix to this one
+template<class T>
+void SparseBFMatrix<T>::AddToMe(const BFMatrix& M, double s)
+{
+  if (Ncols() != M.Ncols() || Nrows() != M.Nrows()) {
+    throw BFMatrixException("SparseBFMatrix::AddToMe: Matrix size mismatch");
+  }
+
+  const SparseBFMatrix<T> *pM = dynamic_cast<const SparseBFMatrix<T> *>(&M);  
+  if (pM) { // Add sparse matrix to this sparse matrix
+    if (s == 1.0) *mp += *(pM->mp);
+    else *mp += s * *(pM->mp);
+  }
+  else {
+    const FullBFMatrix *fpM = dynamic_cast<const FullBFMatrix *>(&M);      
+    if (fpM) { // Add full matrix to this sparse matrix
+      if (s == 1.0) *mp += SpMat<T>(fpM->ReadAsMatrix());
+      else *mp += s * SpMat<T>(fpM->ReadAsMatrix());
+    }
+    else throw BFMatrixException("SparseBFMatrix::AddToMe: dynamic cast error"); 
+  }
+}
+
+// Given A*x=b, solve for x
+template<class T>
+NEWMAT::ReturnMatrix SparseBFMatrix<T>::SolveForx(const NEWMAT::ColumnVector& b,
+					          MISCMATHS::MatrixType       type,
+					          double                      tol,
+                                                  int                         miter) const
+{
+  if (b.Nrows() != int(Nrows())) {
+    throw BFMatrixException("SparseBFMatrix::SolveForx: Matrix-vector size mismatch");
+  }
+  NEWMAT::ColumnVector  x = mp->SolveForx(b,type,tol,miter);
+  x.Release();
+  return(x);
+}
 
 } // End namespace MISCMATHS
 

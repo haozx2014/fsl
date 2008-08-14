@@ -4,7 +4,7 @@
 #
 #   Stephen Smith, FMRIB Image Analysis Group
 #
-#   Copyright (C) 2005-2007 University of Oxford
+#   Copyright (C) 2005-2008 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -93,29 +93,27 @@ fi
 
 echo [`date`] [`hostname`] [`uname -a`] [`pwd`] [$0 $@] >> .tbsslog
 
-cd FAi
+cd FA
 
 /bin/rm -f all.msf
 
-if [ -f target.hdr ] ; then
+if [ `${FSLDIR}/bin/imtest target` = 1 ] ; then
     echo "using pre-chosen target for registration"
     best=target
 else
     echo "finding best target"
 
-    n=`echo *_FAi.hdr | wc -w`
+    n=`$FSLDIR/bin/imglob *_FA.nii* *_FA.img* *_FA.hdr* | wc -w`
 
-    for f in *_FAi.hdr ; do
-	f=`$FSLDIR/bin/remove_ext $f`
+    for f in `$FSLDIR/bin/imglob *_FA.nii* *_FA.img* *_FA.hdr*` ; do
 
 	meanscore=0
 	medianscore=0
 
-	for g in *_FAi.hdr ; do
-	    g=`$FSLDIR/bin/remove_ext $g`
+	for g in `$FSLDIR/bin/imglob *_FA.nii* *_FA.img* *_FA.hdr*` ; do
 	
-	    thismeanscore=`cat ${g}_to_${f}_nonlinear.msf | awk '{print $1}'`
-	    thismedianscore=`cat ${g}_to_${f}_nonlinear.msf | awk '{print $2}'`
+	    thismeanscore=`cat ${g}_to_${f}_warp.msf | awk '{print $1}'`
+	    thismedianscore=`cat ${g}_to_${f}_warp.msf | awk '{print $2}'`
 
 	    meanscore=`echo "10 k $meanscore $thismeanscore + p" | dc -`
 	    medianscore=`echo "10 k $medianscore $thismedianscore + p" | dc -`
@@ -132,45 +130,39 @@ else
     best=`cat all.msf | sort -k 2 -n | head -n 1 | awk '{print $1}'`
     echo "best target is $best - now registering this to standard space"
 
+    $FSLDIR/bin/imcp $best target
 fi
 
 echo $best > best.msf
 
 mkdir -p ../stats
 
-# create NIFTI-format MNI152 at 1x1x1mm for later usage
-$FSLDIR/bin/imcp $FSLDIR/data/standard/MNI152_T1_1mm ../stats/MNI152
-
-# is target already in MNI152 space?
-if [ `$FSLDIR/bin/fslval $best dim1` = 182 -a `$FSLDIR/bin/fslval $best dim2` = 218 -a `$FSLDIR/bin/fslval $best dim3` = 182 ] ; then
+# is target already in MNI152 space? (kludge)
+if [ `${FSLDIR}/bin/imtest target` = 1 -a `$FSLDIR/bin/fslval $best dim1` = 182 -a `$FSLDIR/bin/fslval $best dim2` = 218 -a `$FSLDIR/bin/fslval $best dim3` = 182 ] ; then
 
     echo "transforming all FA images into MNI152 space"
-    for f in `$FSLDIR/bin/remove_ext *FAi.hdr` ; do
+    for f in `$FSLDIR/bin/imglob *_FA.nii* *_FA.img* *_FA.hdr*` ; do
 	echo $f
-	$FSLDIR/bin/applywarp -i $f -o ${f}_to_target_nonlinear_hr -r target -w ${f}_to_target_nonlinear --rel
+	$FSLDIR/bin/applywarp -i $f -o ${f}_to_target -r target -w ${f}_to_target_warp --rel
     done
 
 else
 
-    $FSLDIR/bin/fslmaths $best ../stats/target
-    cd ../stats
-
     echo "affine-registering target to MNI152 space"
-    $FSLDIR/bin/flirt -in target -ref MNI152 -omat target_to_MNI152.mat -out target_to_MNI152
+    $FSLDIR/bin/fslmaths target -bin target_mask
+    $FSLDIR/bin/flirt -in target -inweight target_mask -ref $FSLDIR/data/standard/FMRIB58_FA_1mm -omat target_to_MNI152.mat -out target_to_MNI152
 
     echo "transforming (and upsampling) all FA images into MNI152 space"
-    cd ../FAi
-    for f in `$FSLDIR/bin/remove_ext *FAi.hdr` ; do
+    for f in `$FSLDIR/bin/imglob *_FA.nii* *_FA.img* *_FA.hdr*` ; do
 	echo $f
-	$FSLDIR/bin/applywarp -i $f -o ${f}_to_${best}_nonlinear_hr -r ../stats/MNI152 -w ${f}_to_${best}_nonlinear --rel --postmat=../stats/target_to_MNI152.mat
+	$FSLDIR/bin/applywarp -i $f -o ${f}_to_target -r $FSLDIR/data/standard/FMRIB58_FA_1mm -w ${f}_to_${best}_warp --postmat=target_to_MNI152.mat
     done
 
 fi
 
 echo "merging all upsampled FA images into single 4D image"
-${FSLDIR}/bin/fslmerge -t ../stats/all_FA `$FSLDIR/bin/imglob -oneperimage *_nonlinear_hr.*`
+${FSLDIR}/bin/fslmerge -t ../stats/all_FA `$FSLDIR/bin/imglob *_FA_to_target.*`
 cd ../stats
-$FSLDIR/bin/fslcpgeom MNI152 all_FA -d
 
 # create mean FA
 echo "creating valid mask and mean FA"
@@ -189,6 +181,6 @@ else
     $FSLDIR/bin/imcp $FSLDIR/data/standard/FMRIB58_FA-skeleton_1mm mean_FA_skeleton
 fi
 
-echo "now view mean_FA_skeleton to check whether the default threshold of 2000 needs changing, when running:"
-echo "tbss_4_prestats [threshold]"
+echo "now view mean_FA_skeleton to check whether the default threshold of 0.2 needs changing, when running:"
+echo "tbss_4_prestats <threshold>"
 

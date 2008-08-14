@@ -1,8 +1,8 @@
-/*  avwswapdim.cc
+/*  fslswapdim.cc
 
-    Mark Jenkinson, FMRIB Image Analysis Group
+    Mark Jenkinson and Matthew Webster, FMRIB Image Analysis Group
 
-    Copyright (C) 2003-2004 University of Oxford  */
+    Copyright (C) 2003-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -97,7 +97,7 @@ int fmrib_main(int argc,char *argv[])
 
   volumeinfo volinfo;
   volume4D<T> invol;
-  read_volume4D(invol,inname,volinfo);
+  read_orig_volume4D(invol,inname,volinfo);
 
   Matrix affmat;
   affmat = invol.swapmat(newx,newy,newz);
@@ -107,14 +107,14 @@ int fmrib_main(int argc,char *argv[])
   }
 
   if (affmat.Determinant()<0.0) {
-    cerr << "WARNING:: Flipping Left/Right orientation (as det < 0)" << endl;
+    cout << "WARNING:: Flipping Left/Right orientation (as det < 0)" << endl;
   }
   
   invol.swapdimensions(newx,newy,newz);
 
   int retval=0;
   if (outname!="") {
-    retval = save_volume4D(invol,outname,volinfo);
+    retval = save_orig_volume4D(invol,outname,volinfo);
   }
   return retval;
 }

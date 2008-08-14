@@ -1,0 +1,23 @@
+# $Id: Makefile,v 1.3 2008/08/10 17:13:44 brian Exp $
+include ${FSLCONFDIR}/default.mk
+
+PROJNAME = fslvtkio
+
+USRINCFLAGS = -I${INC_NEWMAT} -I${INC_ZLIB} 
+USRLDFLAGS = -L${LIB_NEWMAT}  -L${LIB_ZLIB} 
+
+LIBS= -lmeshclass -lnewimage -lmiscmaths -lfslio -lniftiio -lznz -lnewmat -lutils -lz
+
+SHAPEOBJS=fslvtkio.o
+ 
+MODELOBJS=fslvtkio.o
+
+
+all: fslvtkio.a 
+
+fslvtkio.a: ${SHAPEOBJS}
+	${AR} -r libfslvtkio.a ${SHAPEOBJS}
+
+
+
+

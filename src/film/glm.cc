@@ -92,8 +92,8 @@ namespace FILM {
       Computeb();
 
       // r = (I - x(x'x)-1x')y
-      Matrix I(sizeTS, sizeTS);
-      Identity(I);      
+      Matrix I;
+      I=IdentityMatrix(sizeTS);
       r = (I-d*inv_xx*d.t())*(y->Column(1));
 	
       return r;

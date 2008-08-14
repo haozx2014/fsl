@@ -1,8 +1,8 @@
-<HTML><HEAD><link REL="stylesheet" TYPE="text/css" href="../fsl.css">
+'mn<HTML><HEAD><link REL="stylesheet" TYPE="text/css" href="../fsl.css">
 <TITLE>FIRST</TITLE></HEAD><BODY>
 <TABLE BORDER=0 WIDTH="100%"><TR>
 <TD ALIGN=LEFT><IMG SRC="egseg.png">
-<TD ALIGN=CENTER><H1>FIRST &nbsp; v1.0</H1>
+<TD ALIGN=CENTER><H1>FIRST &nbsp; v1.1</H1>
 FMRIB's Integrated Registration and Segmentation Tool<br><br>
 subcortical brain segmentation using Bayesian shape &amp; appearance models
 <TD ALIGN=RIGHT><a href="../index.html"><IMG BORDER=0
@@ -23,30 +23,34 @@ in terms of meshes; the deformable surfaces are constrained to
 preserve vertex correspondence across the training data.  Furthermore,
 normalized intensities along the surface normals are sampled and
 modelled. The shape and appearance model is based on multivariate
-Gaussian assumptions.  Shape is then expressed as a mean with modes of
+Gaussian assumptions. Shape is then expressed as a mean with modes of
 variation (principal components). Based on our learned models, FIRST
 searches through linear combinations of shape modes of variation for
 the most probable shape instance given the observed intensities in
 your T1 image.
 
 <p>For more information on FIRST, see the
-FMRIB <A
-HREF="http://www.fmrib.ox.ac.uk/analysis/techrep/tr07bp1/tr07bp1.pdf">technical
-report</a>.
+D.Phil. <A
+HREF="http://users.fmrib.ox.ac.uk/~brian/brianp_thesis.pdf">thesis</a> or the FMRIB technical <A
+HREF="http://www.fmrib.ox.ac.uk/analysis/techrep/tr07bp1/tr07bp1.pdf">report</a>. The thesis provides a more 
+thorough and complete description.
 
 <hr><b>Referencing </b>
 <br>
 <br>
-Currently please reference the technical report and HBM 2007 abstract:
+Currently, the thesis is the best reference for FIRST. We've also included the HBM 2007 and 2008 abstract references:
 <br>
 <br>
-1. Brian Patenaude, Stephen Smith, David Kennedy, and Mark Jenkinson. FIRST - FMRIB's 
+1. Brian Patenaude. Bayesian Statistical Models of Shape and Appearance for Subcortical Brain Segmentation. D.Phil. Thesis. University of Oxford. 2007.
+<br>
+<br>
+2. Brian Patenaude, Stephen Smith, David Kennedy, and Mark Jenkinson. Improved Surface Models for FIRST. In Human 
+Brian Mapping Conference, 2008.
+<br>
+<br>
+3. Brian Patenaude, Stephen Smith, David Kennedy, and Mark Jenkinson. FIRST - FMRIB's 
 integrated registration and segmentation tool. In Human Brain Mapping Conference, 
 2007. 
-<br>
-<br>
-2.Brian Patenaude, Stephen Smith, David Kennedy, and Mark Jenkinson. Bayesian shape 
-and appearance models. Technical report TR07BP1, FMRIB Centre - University of Oxford, 2007. 
 <br>
 <br>
 <font size=-1><em>
@@ -60,7 +64,7 @@ for Morphometric Analysis, Harvard; Bruce Fischl, Martinos Center for
 Biomedical Imaging, MGH; Janis Breeze and Jean Frazier, Child and
 Adolescent Neuropsychiatric Research Program, Cambridge Health
 Alliance; Larry Seidman and Jill Goldstein, Department of Psychiatry
-of Harvard Medical School.
+of Harvard Medical School; Barry Kosofsky, Weill Cornell Medical Center.
 
 <a name="overview"></a><p><hr><H2>Running FIRST</H2>
 
@@ -69,9 +73,12 @@ of Harvard Medical School.
   that you run <b>run_first</b> to segment a single structure
   (re-running it for each further structure that you
   require). Alternatively, you can use <b>run_first_all</b>, which
-  does all of the above for you, including running run_first on evey
+  does all of the above for you, including running run_first on every
   subcortical structure in the models, and producing a summary
   segmentation image for all structures.
+  
+  **Please note, if the first stage fails then the models fitting will not work.
+  run_first_all continues to run regardless of gross errors in registration.
 
 <UL>
 
@@ -81,10 +88,23 @@ these instructions that the image is named im1.nii.gz). The first
 stage is a standard 12 degree of freedom registration to the template.
 The second stage applies a 12 degrees of freedom registration using an
 MNI152 sub-cortical mask to exclude voxels outside the sub-cortical
-regions.
+regions. 
+<br>
+<br>
 
-<p>first_flirt should be used on whole-head (non-betted)
-images. Although this option is generally discouraged the flag "-b"
+The <b>first_flirt</b> script now registers to the non-linear MNI152 template. The new models that 
+are located in <b>${FSLDIR}/data/first/models_336_bin/</b> were all trained using that template for normalization.
+This should have minimal effect on the performance of the previous models (<b>${FSLDIR}/data/first/models_317_bin/</b>). The newer models 
+also include 19 additional subjects in the training data.
+<br>
+<br>
+Included with FIRST, are models for the left and right cerebellum. Instead of using a subcortical 
+mask in the second stage of the registration procedure, a mask of the brain was used. When fitting the cerebellum models, you will need 
+to input a different transformation matrix than that used for the other structures. <b>first_flirt</b> will not perform 
+the necessary registration by default, the <b>-cort</b> flag must be specified.The cerebellum uses the putamen intensities to normalize its intensity samples (use the -intref option).
+
+<p><b>first_flirt</b> should be used on whole-head (non-betted)
+images. Although this option is generally discouraged the flag <b>-b</b>
 will allow first_flirt to be used on brain extracted data.
 
 <p>Example usage: 
@@ -106,6 +126,11 @@ steps. This is used for debugging purposes.
 <p>The [ -inweight ] specifies a mask to weight the input image in the
 first stage of the registration.
 
+<p>The [ -cort ] option will indicate to first_flirt to perform the alternate "second stage" in addition 
+to the standard procedure ("_cort" will be appended to the output name). Rather than 
+using a subcortical mask, a brain mask is used. This option should be used if intending to run the cerebellum
+models.
+
 <p>You should verify that the registrations were successful prior to
 further processing (e.g. using ${FSLDIR}/bin/slicesdir -p
 ${FSLDIR}/data/standard/MNI152_T1_1mm.nii.gz im*_to_std_sub.nii.gz).
@@ -121,9 +146,9 @@ number of modes of variation and (-m) the model.
 <p>Example usage:
 
 
-<p><b> run_first</b> -i im1 -t im1_to_std_sub.mat -n 40 -o output -m ${FSLDIR}/data/first/models_317_bin/L_Hipp_bin.bmv
+<p><b> run_first</b> -i im1 -t im1_to_std_sub.mat -n 40 -o output -m ${FSLDIR}/data/first/models_336_bin/L_Hipp_bin.bmv
 <br>or
-<br><b> run_first</b> -i im1 -t im1_to_std_sub.mat -n 40 -o output -m ${FSLDIR}/data/first/models_317_bin/L_Hipp_bin.bmv -loadvars seg_first.bvars -shcond st1_given_st2.bmap -intref modelRef.bmv
+<br><b> run_first</b> -i im1 -t im1_to_std_sub.mat -n 40 -o output -m ${FSLDIR}/data/first/models_336_bin/L_Hipp_bin.bmv -loadvars seg_first.bvars -shcond st1_given_st2.bmap -intref modelRef.bmv
 
 <p><b>Main options:</b>
 
@@ -140,14 +165,14 @@ to run. The current suggested number of modes is for each structure is
 given in <a href="./cma_subcortical_label.html">sub-cortical
 labels</a>. The suggested number of modes is based on leave-one-out
 cross-validation run on the training set. The maximum number of modes
-available is 317.
+available is either 317 or 336, depending on the model.
 
 <p><b>-o</b> : the (<b>output_name</b>) from FIRST. Three files are
 output <b>output_name.vtk</b>, <b>output_name.nii.gz</b>
 and <b>output_name.bvars</b>.
 
 <p><b>-m</b> : precedes the model file (e.g. <b>L_Hipp_bin.bmv</b>) ;
-they are located in <b>${FSLDIR}/data/first/models_317_bin/</b>.  You
+they are located in <b>${FSLDIR}/data/first/models_336_bin/</b>.  You
 will need to use the full path to the model.
 
 <p><b>Optional options:</b>
@@ -161,7 +186,7 @@ previously segmented structure. "-shcond" precedes the mapping file
 that maps the mode parameters into the conditional mode
 parameters. The [ -loadBvars ] must be used to indicate the
 segmentation result of the previous structure. The mapping matrices
-are found in <b>${FSLDIR}/data/first/models_317_bin/condMaps/</b>. The
+are found in <b>${FSLDIR}/data/first/models_317_bin/condMaps/</b> (only for use with the 317 models). The
 direction of the conditional is important, for
 example, <b>L_CaudCondThal.bmap</b> is used for the left caudate
 conditioned on the left thalamus, i.e. the thalamus is segmented first
@@ -174,9 +199,35 @@ the model files that will be used for reference. The model file used
 the particular reference structure. We currently only provide model
 files for the Caudate, Hippocampus, Lateral Ventricles and Amygdala;
 they are located
-in <b>${FSLDIR}/data/first/models_317_bin/intref/</b>. They all use
-the thalamus as reference.
+in <b>${FSLDIR}/data/first/models_336_bin/intref/</b>, except the Lateral Ventricles which are located in  <b>${FSLDIR}/data/first/models_317_bin/intref/</b>. They all use
+the thalamus as reference. The cerebellum is now included in <b>${FSLDIR}/data/first/models_336_bin/05mm/</b>, it used the putamen as a reference.
 
+<p><b>-multipleImages</b>: This options allows first to run on multiple image by inputting a list of images, 
+transformation matrices and output basenames. For a single structure, FIRST will be run on each image independently.
+There should be some computational savings due to the fact that the model does not need to be re-read from 
+file for each image; the option is primarily included for convenience. When using this option, you should not include the transformation 
+matrix with the <b>-t</b> option. The output name specified by the <b>-o</b> option will be appended onto the output name specified in the input 
+list. The input list is a plain, 3 column text file. The first column specifies the images (advisable to include full paths), 
+the second column is the transformation matrices output by <b>first_flirt</b>, the third column is the base output name.
+
+
+
+<P> Example usage:
+
+<p><b>run_first</b> -i image_xfm_output_list.txt -n 40 -o L_Thal_n40 \<br>
+ &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp -m ${FSLDIR}/data/first/models_336_bin/05mm/L_Thal_05mm.bmv
+<br>
+<br>
+where  <b>image_xfm_output_list.txt</b> may look like,
+<br>
+<br>
+subject_1_t1 &nbsp &nbsp subject_1_t1_to_mni.mat  &nbsp &nbsp  subject_1<br>
+subject_2_t1   &nbsp &nbsp  subject_2_t1_to_mni.mat   &nbsp &nbsp  subject_2<br>
+subject_3_t1   &nbsp &nbsp  subject_3_t1_to_mni.mat  &nbsp &nbsp   subject_3<br>
+<br>
+By using the above command, FIRST would fit <b>L_Thal_05mm.bmv</b> to <b>subject_1</b>, <b>subject_2</b>, and <b>subject_3</b>. The output would 
+be a nifti <b>image</b>, <b>.bvars</b> and <b>.vtk</b> output files, with the base names <b>subject_1_L_Thal_n40</b>, <b>subject_2_L_Thal_n40</b>, and 
+<b>subject_3_L_Thal_n40</b> respectively.
 
 
 <LI><b>run_first_all</b> - This script will run FIRST on all the
@@ -186,7 +237,9 @@ first time point contains the boundary corrected segmentations of all
 structures combined. The consecutive time points are each structure's
 segmentation. The script is written such that if you have FSL setup to
 use local cluster computing it will automatically parallelise the
-fitting of each structure.
+fitting of each structure. 
+
+<b>*This script uses different models from the previous release.</b>
 
 <P> Example usage:
 
@@ -194,16 +247,18 @@ fitting of each structure.
 
 <p> The first input is the original T1-weighted structural image.
 
-<p> The second input (<b>3</b>) is the z-value used to threshold the boundary voxels.
+<p> The second input (<b>3</b>) is the z-value used to threshold the boundary voxels. In this release, this is
+not used for the thalamus, putamen, and pallidum. 
 
-<p> The third input (<b>output_name</b>) is the outpu basename. <b>
+<p> The third input (<b>output_name</b>) is the output basename. <b>
 run_first_all</b> will append the number of modes of variation and
 threshold used to the file name.  For example, the command above would
 produce output_name_m60_3_first.nii.gz.
 
 <p> Please be aware that there is no explicit guarantee that
 neighbouring structures will not overlap. In the case where there is
-overlap the script will add the labels together.
+overlap the script will add the labels together. Also, even though voxels may overlap, 
+it does not necessarily mean that the surfaces intersect.
 
 </UL>
 
@@ -232,9 +287,15 @@ It may also be used as input for multivariate analysis tools.
 <UL>
 
 <LI> The shape/appearance models used are stored in <b>
-${FSLDIR}/data/first/models_317_bin/ </b>. The models were constructed
-from 317 subjects consisting of children and adults, normals and
-subjects with pathologies.
+${FSLDIR}/data/first/models_317_bin/ </b> and <b>${FSLDIR}/data/first/models_336_bin/ </b>. 
+The models were constructed from 317 and 336 subjects respectively, consisting of children and adults, normals and
+subjects with pathologies. The structures for which a 336 model was provided, the 317 model has no longer been included.
+<br>
+<LI> The models in the <b>intref_thal/</b> subdirectories use the intensities from within
+the thalamus to normalize the structures' intensities.
+<br>
+<LI>The models in the <b>05mm/</b> subdirectory (only for the 336 subject models) do not require 
+boundary correction (all boundary voxels are considered part of the structure).
 
 <LI> The posterior horns of the lateral ventricles are not yet fully
 modelled, so there may be areas of the ventricle horns not labelled as
@@ -268,6 +329,12 @@ label. <b>first_utils</b> only works on a single structure at a time.
 
 </UL>
 
+
+<p> For the models contained in <b>${FSLDIR}/data/first/models_336_bin/05mm/</b>, all boundary 
+voxels are considered as belonging to the structure. <b>fslmaths</b> can be used to combine the boundary 
+and interior voxels (e.g. fslmaths subject_1_L_Thal -bin -mul 10 subject_1_L_Thal_bcorr).
+
+
 <a name="Future"></a><p><hr><H2>first_utils</H2>
 
 first_utils may also be used to fill meshes, calculate Dice overlap,
@@ -296,7 +363,7 @@ Usage:
 <LI> <b>-o</b> : Name of output volume.
 <br>
 <br>
-<LI> <b>-l</b> : Label with which to fill the mesh (boundary voxels will bve assigned label+100).
+<LI> <b>-l</b> : Label with which to fill the mesh (boundary voxels will be assigned label+100).
 <br>
 <br>
 </UL>
@@ -361,7 +428,7 @@ at the integer "number_of_modes".
 <br>
 <br>
 Usage:
-<b>first_utils</b> --usebvars -m mesh.vtk -i im1.nii.gz -l fill_value -o output_name -d design.mat [--useReconNative -f flirt_matrices] [--usexReconMNI] [--usePCAfilter -n number_of_modes] [--useRigidAlign] [--useNorm -g norm.txt]
+<b>first_utils</b> --usebvars -m mesh.vtk -i im1.nii.gz -l fill_value -o output_name -d design.mat -p bcorr_thresh [--useReconNative -f flirt_matrices] [--usexReconMNI] [--usePCAfilter -n number_of_modes] [--useRigidAlign] [--useNorm -g norm.txt]
 <br>
 <br>
 The output will be of the form <b>output_name.vols</b> which contains subject name and volumes. Also a <b>output_nameN.tstat</b>
@@ -379,10 +446,13 @@ the t-statistic for the main effect of that EV.
 <LI> <b>-o</b> : Name of output volume.
 <br>
 <br>
-<LI> <b>-l</b> : Label with which to fill the mesh (boundary voxels will bve assigned label+100).
+<LI> <b>-l</b> : Label with which to fill the mesh (boundary voxels will be assigned label+100).
 <br>
 <br>
 <LI> <b>-d design.mat </b> : FSL design matrix.
+<br>
+<br>
+<LI> <b>-p</b> : Boundary correction threshold.
 <br>
 <br>
 <LI> <b>--useNorm</b> : Used in conjunction with <b>-g norm.txt</b>. It allows for the scaling of each volume measure (as specified by norm.txt) prior to running the GLM.

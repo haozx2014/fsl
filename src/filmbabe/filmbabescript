@@ -96,7 +96,7 @@ $FSLDIR/bin/contrast_mgr -f design.fts filmbabe design.con
 
 cd filmbabe
 
-files=`$FSLDIR/bin/imglob -oneperimage zfstat*.*`
+files=`$FSLDIR/bin/imglob zfstat*.*`
 files=`$FSLDIR/bin/remove_ext $files`
 
 echo "<HTML> <TITLE>Filmbabe results for $featdir </TITLE>" > report.html

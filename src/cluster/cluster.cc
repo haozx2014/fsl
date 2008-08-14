@@ -2,7 +2,7 @@
 
     Mark Jenkinson & Matthew Webster, FMRIB Image Analysis Group
 
-    Copyright (C) 2000-2007 University of Oxford  */
+    Copyright (C) 2000-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -66,6 +66,10 @@
     University, to negotiate a licence. Contact details are:
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
+#ifndef EXPOSE_TREACHEROUS
+#define EXPOSE_TREACHEROUS
+#endif    
+
 #include <vector>
 #include <algorithm>
 #include <iomanip>
@@ -73,15 +77,19 @@
 #include "newimage/newimageall.h"
 #include "utils/options.h"
 #include "infer.h"
+#include "warpfns/warpfns.h"
+#include "warpfns/fnirt_file_reader.h"
 
 #define _GNU_SOURCE 1
-#define POSIX_SOURCE 1
+#define POSIX_SOURCE 1        
 
 using namespace NEWIMAGE;
 using std::vector;
 using namespace Utilities;
+using namespace NEWMAT;
+using namespace MISCMATHS;
 
-string title="cluster (Version 1.2)\nCopyright(c) 2000-2002, University of Oxford (Mark Jenkinson)";
+string title="cluster (Version 1.3)\nCopyright(c) 2000-2008, University of Oxford (Mark Jenkinson, Matthew Webster)";
 string examples="cluster --in=<filename> --thresh=<value> [options]";
 
 Option<bool> verbose(string("-v,--verbose"), false, 
@@ -89,9 +97,6 @@ Option<bool> verbose(string("-v,--verbose"), false,
 		     false, no_argument);
 Option<bool> help(string("-h,--help"), false,
 		  string("display this message"),
-		  false, no_argument);
-Option<bool> medxcoords(string("-m,--medx"), false,
-		  string("use MEDx coordinate conventions"),
 		  false, no_argument);
 Option<bool> mm(string("--mm"), false,
 		  string("use mm, not voxel, coordinates"),
@@ -126,6 +131,9 @@ Option<float> thresh(string("-t,--thresh,--zthresh"), 2.3,
 Option<float> pthresh(string("-p,--pthresh"), 0.01,
 		      string("p-threshold for clusters"),
 		      false, requires_argument);
+Option<float> peakdist(string("--peakdist"), 0,
+		      string("minimum distance between local maxima/minima (in mm)"),
+		      false, requires_argument);
 Option<string> inputname(string("-i,--in,-z,--zstat"), string(""),
 			 string("filename of input volume"),
 			 true, requires_argument);
@@ -154,12 +162,14 @@ Option<string> outmean(string("--omean"), string(""),
 		       string("filename for output of mean image"),
 		       false, requires_argument);
 Option<string> transformname(string("-x,--xfm"), string(""),
-		       string("filename for transform of input->standard-space volume"),
+		       string("filename for Linear: input->standard-space transform. Non-linear: input->highres transform"),
 		       false, requires_argument);
 Option<string> stdvolname(string("--stdvol"), string(""),
 		       string("filename for standard-space volume"),
 		       false, requires_argument);
-
+Option<string> warpname(string("--warpvol"), string(""),
+		       string("filename for warpfield"),
+		       false, requires_argument);
 
 
 int num(const char x) { return (int) x; }
@@ -185,52 +195,34 @@ void copyconvert(const vector<triple<T> >& oldcoords,
   }
 }
 
-
-template <class T, class S>
-void medx2voxcoord(vector<triple<T> >& coords, const volume<S>& vol)
+template <class T>
+void MultiplyCoordinateVector(vector<triple<T> >& coords, const Matrix& mat)
 {
-  int ymax = vol.ysize();
-  for (unsigned int n=0; n<coords.size(); n++) {
-    coords[n].y = (T) (ymax - 1) - coords[n].y;
-  }
-}
-
-
-template <class S>
-void vox2mmcoord(vector<triple<float> >& coords, 
-				   const volume<S>& vol)
-{
-  ColumnVector cc(4);
-  cc(4) = 1.0;
-  for (unsigned int n=0; n<coords.size(); n++) {
-    cc(1) = coords[n].x;
-    cc(2) = coords[n].y;
-    cc(3) = coords[n].z;
-    cc = vol.vox2mm_mat() * cc;
-    coords[n].x = cc(1);
-    coords[n].y = cc(2);
-    coords[n].z = cc(3);
-  }
-
-}
-
-
-template <class T, class S>
-void applyvoxelxfm(vector<triple<T> >& coords, const Matrix& mat, 
-	      const volume<S>& source, const volume<S>& dest)
-{
-  Matrix voxmat;
-  voxmat = Vox2VoxMatrix(mat,source,dest);
   ColumnVector vec(4);
   for (unsigned int n=0; n<coords.size(); n++) {
     vec << coords[n].x << coords[n].y << coords[n].z << 1.0;
-    vec = voxmat * vec;     // apply voxel xfm
+    vec = mat * vec;     // apply voxel xfm
     coords[n].x = vec(1);
     coords[n].y = vec(2);
     coords[n].z = vec(3);
   }
 }
 
+template <class T, class S>
+void TransformToReference(vector<triple<T> >& coordlist, const Matrix& affine, 
+			  const volume<S>& source, const volume<S>& dest, const volume4D<float>& warp,bool doAffineTransform, bool doWarpfieldTransform)
+{
+  ColumnVector coord(4);
+  for (unsigned int n=0; n<coordlist.size(); n++) {
+    coord << coordlist[n].x << coordlist[n].y << coordlist[n].z << 1.0;
+    if ( doAffineTransform && doWarpfieldTransform ) coord = NewimageCoord2NewimageCoord(affine,warp,true,source,dest,coord);
+    if ( doAffineTransform && !doWarpfieldTransform) coord = NewimageCoord2NewimageCoord(affine,source,dest,coord);
+    if ( !doAffineTransform && doWarpfieldTransform) coord = NewimageCoord2NewimageCoord(warp,true,source,dest,coord);
+    coordlist[n].x = coord(1);
+    coordlist[n].y = coord(2);
+    coordlist[n].z = coord(3);
+  }
+}
 
 template <class T>
 void get_stats(const volume<int>& labelim, const volume<T>& origim,
@@ -331,7 +323,6 @@ void relabel_image(const volume<int>& labelim, volume<T>& relabelim,
   }
 }
 
-
 template <class T, class S>
 void print_results(const vector<int>& idx, 
 		   const vector<int>& size,
@@ -347,8 +338,10 @@ void print_results(const vector<int>& idx,
 		   const volume<T>& zvol, const volume<T>& cope, 
 		   const volume<int> &labelim)
 {
+  bool doAffineTransform=false;
+  bool doWarpfieldTransform=false;
+  volume4D<float>  full_field;
   int length=size.size();
-
   vector<triple<float> > fmaxpos, fcopemaxpos, fcog;
   copyconvert(maxpos,fmaxpos);
   copyconvert(cog,fcog);
@@ -356,68 +349,80 @@ void print_results(const vector<int>& idx,
   volume<T> stdvol;
   Matrix trans;
   const volume<T> *refvol = &zvol;
-  if ( !transformname.unset() && !stdvolname.unset() ) {
+  if ( transformname.set() && stdvolname.set() ) {
     read_volume(stdvol,stdvolname.value());
-    read_matrix(trans,transformname.value(),zvol);
+    trans = read_ascii_matrix(transformname.value());
     if (verbose.value()) { 
       cout << "Transformation Matrix filename = "<<transformname.value()<<endl;
       cout << trans.Nrows() << " " << trans.Ncols() << endl; 
       cout << "Transformation Matrix = " << endl;
       cout << trans << endl;
     }
-    applyvoxelxfm(fmaxpos,trans,zvol,stdvol);
-    applyvoxelxfm(fcog,trans,zvol,stdvol);
-    if (!copename.unset()) applyvoxelxfm(fcopemaxpos,trans,zvol,stdvol);
+    doAffineTransform=true;
   }
-  if ( medxcoords.value() && (!mm.value()) ) {
-    medx2voxcoord(fmaxpos,zvol);
-    medx2voxcoord(fcog,zvol);
-    if (!copename.unset()) medx2voxcoord(fcopemaxpos,cope);
+
+  FnirtFileReader   reader;
+  if (warpname.value().size()) 
+  {
+    reader.Read(warpname.value());
+    full_field = reader.FieldAsNewimageVolume4D(true);
+    doWarpfieldTransform=true;
   }
+
+  if ( doAffineTransform || doWarpfieldTransform ) { 
+    TransformToReference(fmaxpos,trans,zvol,stdvol,full_field,doAffineTransform,doWarpfieldTransform);
+    TransformToReference(fcog,trans,zvol,stdvol,full_field,doAffineTransform,doWarpfieldTransform);
+    if (copename.set()) TransformToReference(fcopemaxpos,trans,zvol,stdvol,full_field,doAffineTransform,doWarpfieldTransform);
+  }
+
+  if ( doAffineTransform ) refvol = &stdvol;
   if (mm.value()) {
-    if ( !transformname.unset() && !stdvolname.unset() ) refvol = &stdvol;
     if (verbose.value()) { 
-      cout << "Using matrix : " << endl << refvol->vox2mm_mat() << endl; 
+      cout << "Using matrix : " << endl << refvol->newimagevox2mm_mat() << endl; 
     }
-    vox2mmcoord(fmaxpos,*refvol);
-    vox2mmcoord(fcog,*refvol);
-    if (!copename.unset()) vox2mmcoord(fcopemaxpos,*refvol);  // used cope before
+    MultiplyCoordinateVector(fmaxpos,refvol->newimagevox2mm_mat());
+    MultiplyCoordinateVector(fcog,refvol->newimagevox2mm_mat());
+    if (copename.set()) MultiplyCoordinateVector(fcopemaxpos,refvol->newimagevox2mm_mat());  // used cope before
+  } else {
+    MultiplyCoordinateVector(fmaxpos,refvol->niftivox2newimagevox_mat().i());
+    MultiplyCoordinateVector(fcog,refvol->niftivox2newimagevox_mat().i());
+    if (copename.set()) MultiplyCoordinateVector(fcopemaxpos,refvol->niftivox2newimagevox_mat().i());   // used cope before
   }
 
   string units=" (vox)";
-  if (!mm.unset()) units=" (mm)";
+  if (mm.value()) units=" (mm)";
   string tablehead;
   tablehead = "Cluster Index\tVoxels";
-  if (!pthresh.unset()) tablehead += "\tP\t-log10(P)";
+  if (pthresh.set()) tablehead += "\tP\t-log10(P)";
   tablehead += "\tZ-MAX\tZ-MAX X" + units + "\tZ-MAX Y" + units + "\tZ-MAX Z" + units
     + "\tZ-COG X" + units + "\tZ-COG Y" + units + "\tZ-COG Z" + units;
-  if (!copename.unset()) {
+  if (copename.set()) {
     tablehead+= "\tCOPE-MAX\tCOPE-MAX X" + units + "\tCOPE-MAX Y" + units + "\tCOPE-MAX Z" + units 
                  + "\tCOPE-MEAN";
   }
 
-  cout << tablehead << endl;
+  if (!no_table.value()) cout << tablehead << endl;
 
   for (int n=length-1; n>=1; n--) {
     int index=idx[n];
     int k = size[index];
     float p = pvals[index];
-    if (pthreshindex[index]>0) {
+    if ( !no_table.value() && pthreshindex[index]>0 ) {
       float mlog10p;
       mlog10p = -logpvals[index];
       cout << setprecision(3) << num(pthreshindex[index]) << "\t" << k << "\t"; 
       if (!pthresh.unset()) { cout << num(p) << "\t" << num(mlog10p) << "\t"; }
-      cout << num(maxvals[index]) << "\t" 
+        cout << num(maxvals[index]) << "\t" 
 	   << num(fmaxpos[index].x) << "\t" << num(fmaxpos[index].y) << "\t" 
 	   << num(fmaxpos[index].z) << "\t"
 	   << num(fcog[index].x) << "\t" << num(fcog[index].y) << "\t" 
 	   << num(fcog[index].z);
       if (!copename.unset()) { 
-	cout   << "\t" << num(copemaxval[index]) << "\t"
+	  cout   << "\t" << num(copemaxval[index]) << "\t"
 	       << num(fcopemaxpos[index].x) << "\t" << num(fcopemaxpos[index].y) << "\t" 
 	       << num(fcopemaxpos[index].z) << "\t" << num(copemean[index]);
 	}
-      cout << endl;
+        cout << endl;
     }
   }
 
@@ -473,14 +478,29 @@ void print_results(const vector<int>& idx,
 
 	lmaxlistZ.resize(lmaxlistcounter);
 	vector<int> lmaxidx = get_sortindex(lmaxlistZ);
-
-	if ( !transformname.unset() && !stdvolname.unset() )
-	  applyvoxelxfm(lmaxlistR,trans,zvol,stdvol);
-	if ( medxcoords.value() && (!mm.value()) )
-	  medx2voxcoord(lmaxlistR,zvol);
-	if (mm.value()) {
-	  vox2mmcoord(lmaxlistR,*refvol);
+	if (peakdist.value()>0)
+	{
+	  for(int source=lmaxlistcounter-2;source>=0;source--)
+	  {
+	    vector<triple<float> > sourcecoord(1);
+	    sourcecoord[0]=lmaxlistR[lmaxidx[source]];
+	    MultiplyCoordinateVector(sourcecoord,refvol->newimagevox2mm_mat());
+	    for(int clust=lmaxlistcounter-1;clust>source;clust--)
+	    {
+	      vector<triple<float> > clustcoord(1);
+	      clustcoord[0]=lmaxlistR[lmaxidx[clust]];
+	      MultiplyCoordinateVector(clustcoord,refvol->newimagevox2mm_mat());
+	      float dist = (sourcecoord[0].x-clustcoord[0].x)*(sourcecoord[0].x-clustcoord[0].x) + (sourcecoord[0].y-clustcoord[0].y )*(sourcecoord[0].y-clustcoord[0].y) + (sourcecoord[0].z-clustcoord[0].z)*(sourcecoord[0].z-clustcoord[0].z);
+	      dist = sqrt(dist);
+	      if (dist<peakdist.value()) { lmaxidx.erase(lmaxidx.begin()+source) ; lmaxlistcounter--; }
+	    }
+	  }
 	}
+
+	if ( doAffineTransform || doWarpfieldTransform ) TransformToReference(lmaxlistR,trans,zvol,stdvol,full_field,doAffineTransform,doWarpfieldTransform);
+  
+	if (mm.value()) MultiplyCoordinateVector(lmaxlistR,refvol->newimagevox2mm_mat());
+	else MultiplyCoordinateVector(lmaxlistR,refvol->niftivox2newimagevox_mat().i());
 
 	for (int i=lmaxlistcounter-1; i>MISCMATHS::Max(lmaxlistcounter-1-mx_cnt.value(),-1); i--)
 	  lmaxfile << setprecision(3) << pthreshindex[index] << "\t" << lmaxlistZ[lmaxidx[i]]/1000.0 << "\t" << 
@@ -552,11 +572,8 @@ int fmrib_main(int argc, char *argv[])
     if (labelim.zsize()<=1) { infer.setD(2); } // the 2D option
     if (minclustersize.value()) {
       float pmin=1.0;
-      int nmin=1;
-      while (pmin>=pthresh.value()) {
-	pmin=exp(infer(nmin++));
-      }
-      nmin--;  // now nmin has the value of the smallest cluster under thresh
+      int nmin=0;
+      while (pmin>=pthresh.value()) pmin=exp(infer(++nmin)); 
       cout << "Minimum cluster size under p-threshold = " << nmin << endl;
     }
     for (int n=1; n<length; n++) {
@@ -585,10 +602,8 @@ int fmrib_main(int argc, char *argv[])
   }
 
   // print table
-  if (!no_table.value()) {
-    print_results(idx, size, threshidx, pvals, logpvals, maxvals, maxpos, cog,
-		  copemaxval, copemaxpos, copemean, zvol, cope, labelim);
-  }
+  print_results(idx, size, threshidx, pvals, logpvals, maxvals, maxpos, cog, copemaxval, copemaxpos, copemean, zvol, cope, labelim);
+  
 
   // save relevant volumes
   if (!outindex.unset()) {
@@ -648,12 +663,12 @@ int main(int argc,char *argv[])
     options.add(outmean);
     options.add(outpvals);
     options.add(pthresh);
+    options.add(peakdist);
     options.add(copename);
     options.add(voxvol);
     options.add(dLh);
     options.add(fractional);
     options.add(numconnected);
-    options.add(medxcoords);
     options.add(mm);
     options.add(minv);
     options.add(no_table);
@@ -663,6 +678,7 @@ int main(int argc,char *argv[])
     options.add(mx_cnt);
     options.add(verbose);
     options.add(help);
+    options.add(warpname);
     
     options.parse_command_line(argc, argv);
 

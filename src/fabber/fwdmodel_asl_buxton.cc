@@ -77,7 +77,7 @@ using namespace NEWIMAGE;
 
 string BuxtonFwdModel::ModelVersion() const
 {
-  return "$Id: fwdmodel_asl_buxton.cc,v 1.2 2007/07/27 21:58:30 adriang Exp $";
+  return "$Id: fwdmodel_asl_buxton.cc,v 1.7 2008/05/22 11:57:48 chappell Exp $";
 }
 
 void BuxtonFwdModel::HardcodedInitialDists(MVNDist& prior, 
@@ -91,17 +91,17 @@ void BuxtonFwdModel::HardcodedInitialDists(MVNDist& prior,
     // Set priors
     // Tissue bolus perfusion
      prior.means(tiss_index()) = 0;
-     precisions(tiss_index(),tiss_index()) = 1e-6;
+     precisions(tiss_index(),tiss_index()) = 1e-12;
 
     // Tissue bolus transit delay
      prior.means(tiss_index()+1) = 0.7;
-     precisions(tiss_index()+1,tiss_index()+1) = 0.5;
+     precisions(tiss_index()+1,tiss_index()+1) = 10;
     
     
     // Tissue bolus length
      if (infertau) {
        prior.means(tau_index()) = seqtau;
-       precisions(tau_index(),tau_index()) = 0.5;
+       precisions(tau_index(),tau_index()) = 100;
      }
 
      // T1 & T1b
@@ -113,11 +113,28 @@ void BuxtonFwdModel::HardcodedInitialDists(MVNDist& prior,
       precisions(tidx+1,tidx+1) = 100;
     }
 
+    // second bolus
+    if (twobol) {
+      int tiss2idx = tiss2_index();
+      // perfusion
+      prior.means(tiss2idx) = 0;
+      precisions(tiss2idx,tiss2idx) = 1e-12; //should be largely irrelevant as this will be subject to ARD
+
+      // transit delay
+      prior.means(tiss2idx+1) = 1;
+      precisions(tiss2idx+1,tiss2idx+1) = 10;
+    }
+
     // Set precsions on priors
     prior.SetPrecisions(precisions);
     
     // Set initial posterior
     posterior = prior;
+
+    // Modify posterior for perfusion to a more realisitic starting point
+    posterior.means(tiss_index()) = 10;
+    precisions(tiss_index(),tiss_index()) = 0.1;
+    posterior.SetPrecisions(precisions);
     
 }    
     
@@ -135,7 +152,7 @@ void BuxtonFwdModel::Evaluate(const ColumnVector& params, ColumnVector& result) 
     }
 
      // sensible limits on transit times
-  if (params(tiss_index()+1)>timax-0.2) { paramcpy(tiss_index()+1) = timax-0.2; }
+     if (params(tiss_index()+1)>timax-0.2) { paramcpy(tiss_index()+1) = timax-0.2; }
  
   // parameters that are inferred - extract and give sensible names
   float ftiss;
@@ -143,6 +160,9 @@ void BuxtonFwdModel::Evaluate(const ColumnVector& params, ColumnVector& result) 
   float tautiss;
   float T_1;
   float T_1b;
+
+  float ftiss2 = 0;
+  float delttiss2 = 0;
 
   ftiss=paramcpy(tiss_index());
   delttiss=paramcpy(tiss_index()+1);
@@ -158,9 +178,12 @@ void BuxtonFwdModel::Evaluate(const ColumnVector& params, ColumnVector& result) 
     T_1 = t1;
     T_1b = t1b;
   }
+
+  if (twobol) {
+    ftiss2 = paramcpy(tiss2_index());
+    delttiss2 = paramcpy(tiss2_index()+1);
+  }
     
-
-
 
     float lambda = 0.9;
 
@@ -170,8 +193,12 @@ void BuxtonFwdModel::Evaluate(const ColumnVector& params, ColumnVector& result) 
     float tau1 = delttiss;
     float tau2 = delttiss + tautiss;
 
-    float F=0;
-    float kctissue;
+    // for second bolus
+    float tau3 = delttiss2;
+    float tau4 = delttiss2 + tautiss;
+
+    float F=0;float F2=0;
+    float kctissue; float kctissue2;
  
 
     // loop over tis
@@ -181,7 +208,9 @@ void BuxtonFwdModel::Evaluate(const ColumnVector& params, ColumnVector& result) 
     for(int it=1; it<=tis.Nrows(); it++)
       {
 	ti = tis(it);
-	F = 2*ftiss/lambda * exp(-ti/T_1app);
+
+	// 1st bolus
+	F = 2*ftiss * exp(-ti/T_1app);
 
 	/* tissue contribution */
 	if(ti < tau1)
@@ -192,12 +221,25 @@ void BuxtonFwdModel::Evaluate(const ColumnVector& params, ColumnVector& result) 
 	  }
 	else /*(ti > tau2)*/
 	  {kctissue = F/R * (exp(R*tau2) - exp(R*tau1)); }
+
+	// 2nd bolus
+	F2 = 2*ftiss2/lambda * exp(-ti/T_1app);
+
+	/* tissue contribution */
+	if(ti < tau3)
+	  { kctissue2 = 0;}
+	else if(ti >= tau3 && ti <= tau4)
+	  {
+	    kctissue2 = F2/R * (exp(R*ti) - exp(R*tau3));
+	  }
+	else /*(ti > tau2)*/
+	  {kctissue2 = F2/R * (exp(R*tau4) - exp(R*tau3)); }
 	
 	/* output */
 	// loop over the repeats
 	for (int rpt=1; rpt<=repeats; rpt++)
 	  {
-	    result( (it-1)*repeats+rpt ) = kctissue;
+	    result( (it-1)*repeats+rpt ) = kctissue + kctissue2;
 	  }
 
 
@@ -219,6 +261,9 @@ BuxtonFwdModel::BuxtonFwdModel(ArgsType& args)
       t1b = convertTo<double>(args.ReadWithDefault("t1b","1.5"));
       infertau = args.ReadBool("infertau"); // infer on bolus length?
       infert1 = args.ReadBool("infert1"); //infer on T1 values?
+      twobol = args.ReadBool("twobol"); //infer a second bolus?
+      doard=false;
+      if (twobol) { doard = true; } //ARD is always used on perfusion of second bolus
       seqtau = convertTo<double>(args.Read("tau")); 
  
       // Deal with tis
@@ -246,6 +291,8 @@ BuxtonFwdModel::BuxtonFwdModel(ArgsType& args)
 	LOG << "Infering on bolus length " << endl; }
       if (infert1) {
 	LOG << "Infering on T1 values " << endl; }
+      if (twobol) {
+	LOG << "Inferring upon a second bolus " << endl; }
       LOG << "TIs: ";
       for (int i=1; i <= tis.Nrows(); i++)
 	LOG << tis(i) << " ";
@@ -287,10 +334,70 @@ void BuxtonFwdModel::NameParams(vector<string>& names) const
   
   names.push_back("ftiss");
   names.push_back("delttiss");
-  if (infertau>0)
+  if (infertau)
     names.push_back("tautiss");
-   if (infert1>0) {
+   if (infert1) {
     names.push_back("T_1");
     names.push_back("T_1b");
   }
+   if (twobol) {
+     names.push_back("ftiss2");
+     names.push_back("delttiss2");
+   }
 }
+
+/* ARD for second bolus perfusion */
+/* taken from fwdmodel_asl_grase.cc (29-11-2007) */
+void BuxtonFwdModel::SetupARD( const MVNDist& theta, MVNDist& thetaPrior, double& Fard) const
+{
+  Tracer_Plus tr("BuxtonFwdModel::SetupARD");
+
+  int ardindex = ard_index();
+
+   if (doard)
+    {
+      SymmetricMatrix PriorPrec;
+      PriorPrec = thetaPrior.GetPrecisions();
+      
+      PriorPrec(ardindex,ardindex) = 1e-12;
+      
+      thetaPrior.SetPrecisions(PriorPrec);
+
+      thetaPrior.means(ardindex)=0;
+
+      //set the Free energy contribution from ARD term
+      SymmetricMatrix PostCov = theta.GetCovariance();
+      double b = 2/(theta.means(ardindex)*theta.means(ardindex) + PostCov(ardindex,ardindex));
+      Fard = -1.5*(log(b) + digamma(0.5)) - 0.5 - gammaln(0.5) - 0.5*log(b); //taking c as 0.5 - which it will be!
+    }
+
+  return;
+}
+
+void BuxtonFwdModel::UpdateARD(
+				const MVNDist& theta,
+				MVNDist& thetaPrior, double& Fard) const
+{
+  Tracer_Plus tr("BuxtonFwdModel::UpdateARD");
+  
+  int ardindex = ard_index();
+
+  if (doard)
+    {
+      SymmetricMatrix PriorCov;
+      SymmetricMatrix PostCov;
+      PriorCov = thetaPrior.GetCovariance();
+      PostCov = theta.GetCovariance();
+
+      PriorCov(ardindex,ardindex) = theta.means(ardindex)*theta.means(ardindex) + PostCov(ardindex,ardindex);
+
+      
+      thetaPrior.SetCovariance(PriorCov);
+
+      //Calculate the extra terms for the free energy
+      double b = 2/(theta.means(ardindex)*theta.means(ardindex) + PostCov(ardindex,ardindex));
+      Fard = -1.5*(log(b) + digamma(0.5)) - 0.5 - gammaln(0.5) - 0.5*log(b); //taking c as 0.5 - which it will be!
+    }
+  return;
+
+  }

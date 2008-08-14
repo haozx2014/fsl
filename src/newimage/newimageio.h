@@ -85,14 +85,6 @@ using namespace NEWMAT;
 
 namespace NEWIMAGE {
 
-//class volumeinfo {
-//  private:
-//    FSLIO p_fslio;
-//  public:
-//    volumeinfo() { p_fslio = blank_vinfo(); }
-//    FSLIO operator() () { return p_fslio; }
-//}
-
 typedef FSLIO volumeinfo;
 
 volumeinfo blank_vinfo();
@@ -108,11 +100,6 @@ template <class T>
 int read_volume(volume<T>& target, const string& filename);
 template <class T>
 int read_volume(volume<T>& target, const string& filename, volumeinfo& vinfo);
-   // read and reorder to radiological if needed
-template <class T>
-int read_rad_volume(volume<T>& target, const string& filename);
-template <class T>
-int read_rad_volume(volume<T>& target, const string& filename, volumeinfo& vinfo);
 template <class T>
 int read_volumeROI(volume<T>& target, const string& filename,
 		   int x0, int y0, int z0, int x1, int y1, int z1);
@@ -147,11 +134,6 @@ int read_volume4D(volume4D<T>& target, const string& filename);
 template <class T>
 int read_volume4D(volume4D<T>& target, const string& filename, 
 		  volumeinfo& vinfo);
-   // read and reorder to radiological if needed
-template <class T>
-int read_rad_volume4D(volume4D<T>& target, const string& filename);
-template <class T>
-int read_rad_volume4D(volume4D<T>& target, const string& filename, volumeinfo& vinfo);
 template <class T>
 int read_volume4DROI(volume4D<T>& target, const string& filename, 
 		     int x0, int y0, int z0, int t0, 
@@ -244,24 +226,8 @@ template <class T>
 int save_volume4D_filetype(const volume4D<T>& source, const string& filename,
 			   int filetype);
 
-
-  // Transform matrix IO
-  
-int read_ascii_matrix(Matrix &target, const string& filename);
-
-  // outdated MEDx-compliant io routines
-template <class T>
-int read_matrix(Matrix &target, const string& filename, const volume<T>& invol);
-template <class T>
-int read_matrix(Matrix &target, const string& filename, const volume<T>& invol,
-		const volume<T>& finalvol);
-template <class T>
-int write_medx_matrix(const Matrix& worldmat, const string& filename, 
-		      const volume<T>& initvol, 
-		      const volume<T>& finalvol, 
-		      const string& mtype, const string& reffname);
-
 // Helper functions
+short closestTemplatedType(const short inputType);
 
 short dtype(const char* T);
 short dtype(const short* T);
@@ -295,10 +261,6 @@ template <class T>
 int load_volume(volume<T>& target, const string& filename);
 template <class T>
 int load_volume(volume<T>& target, const string& filename, volumeinfo& vinfo); 
-template <class T>
-int load_rad_volume(volume<T>& target, const string& filename);
-template <class T>
-int load_rad_volume(volume<T>& target, const string& filename, volumeinfo& vinfo);
 template <class T>
 int load_volume_hdr_only(volume<T>& target, const string& filename);
 template <class T>
@@ -415,8 +377,11 @@ void FslReadBuffer(FSLIO* IP, T* tbuffer)
       {
       case DT_SIGNED_SHORT:
 	{
-	  short* sbuffer=new short[imagesize];
-	  if (sbuffer==0) { imthrow("Out of memory",99); }
+	  short* sbuffer;
+	  try {
+	    sbuffer=new short[imagesize];
+	  } catch(...) { sbuffer=0; }
+	  if (sbuffer==0) { imthrow("Out of memory for size "+num2str(imagesize),99); }
 	  FslReadVolumes(IP,sbuffer,1);
 	  if (doscaling) convertbuffer(sbuffer,tbuffer,imagesize,slope,intercept);
 	  else convertbuffer(sbuffer,tbuffer,imagesize);
@@ -425,8 +390,11 @@ void FslReadBuffer(FSLIO* IP, T* tbuffer)
 	break;
       case DT_UNSIGNED_CHAR:
 	{
-	  unsigned char* sbuffer=new unsigned char[imagesize];
-	  if (sbuffer==0) { imthrow("Out of memory",99); }
+	  unsigned char* sbuffer;
+	  try {
+	    sbuffer=new unsigned char[imagesize];
+	  } catch(...) { sbuffer=0; }
+	  if (sbuffer==0) { imthrow("Out of memory for size "+num2str(imagesize),99); }
 	  FslReadVolumes(IP,sbuffer,1);
 	  if (doscaling) convertbuffer(sbuffer,tbuffer,imagesize,slope,intercept);
 	  else convertbuffer(sbuffer,tbuffer,imagesize);
@@ -435,8 +403,11 @@ void FslReadBuffer(FSLIO* IP, T* tbuffer)
 	break;
       case DT_SIGNED_INT:
 	{
-	  int* sbuffer=new int[imagesize];
-	  if (sbuffer==0) { imthrow("Out of memory",99); }
+	  int* sbuffer;
+	  try {
+	    sbuffer=new int[imagesize];
+	  } catch(...) { sbuffer=0; }
+	  if (sbuffer==0) { imthrow("Out of memory for size "+num2str(imagesize),99); }
 	  FslReadVolumes(IP,sbuffer,1);
 	  if (doscaling) convertbuffer(sbuffer,tbuffer,imagesize,slope,intercept);
 	  else convertbuffer(sbuffer,tbuffer,imagesize);
@@ -445,8 +416,11 @@ void FslReadBuffer(FSLIO* IP, T* tbuffer)
 	break;
       case DT_FLOAT:
 	{
-	  float* sbuffer=new float[imagesize];
-	  if (sbuffer==0) { imthrow("Out of memory",99); }
+	  float* sbuffer;
+	  try {
+	    sbuffer=new float[imagesize];
+	  } catch(...) { sbuffer=0; }
+	  if (sbuffer==0) { imthrow("Out of memory for size "+num2str(imagesize),99); }
 	  FslReadVolumes(IP,sbuffer,1);
 	  if (doscaling) convertbuffer(sbuffer,tbuffer,imagesize,slope,intercept);
 	  else convertbuffer(sbuffer,tbuffer,imagesize);
@@ -455,8 +429,11 @@ void FslReadBuffer(FSLIO* IP, T* tbuffer)
 	break;
       case DT_DOUBLE:
 	{
-	  double* sbuffer=new double[imagesize];
-	  if (sbuffer==0) { imthrow("Out of memory",99); }
+	  double* sbuffer;
+	  try {
+	    sbuffer=new double[imagesize];
+	  } catch(...) { sbuffer=0; }
+	  if (sbuffer==0) { imthrow("Out of memory for size "+num2str(imagesize),99); }
 	  FslReadVolumes(IP,sbuffer,1);
 	  if (doscaling) convertbuffer(sbuffer,tbuffer,imagesize,slope,intercept);
 	  else convertbuffer(sbuffer,tbuffer,imagesize);
@@ -466,8 +443,11 @@ void FslReadBuffer(FSLIO* IP, T* tbuffer)
 	/*------------------- new codes for NIFTI ---*/
       case DT_INT8:
 	{
-	  signed char* sbuffer=new signed char[imagesize];
-	  if (sbuffer==0) { imthrow("Out of memory",99); }
+	  signed char* sbuffer;
+	  try {
+	    sbuffer=new signed char[imagesize];
+	  } catch(...) { sbuffer=0; }
+	  if (sbuffer==0) { imthrow("Out of memory for size "+num2str(imagesize),99); }
 	  FslReadVolumes(IP,sbuffer,1);
 	  if (doscaling) convertbuffer(sbuffer,tbuffer,imagesize,slope,intercept);
 	  else convertbuffer(sbuffer,tbuffer,imagesize);
@@ -476,8 +456,11 @@ void FslReadBuffer(FSLIO* IP, T* tbuffer)
 	break;
       case DT_UINT16:
 	{
-	  unsigned short* sbuffer=new unsigned short[imagesize];
-	  if (sbuffer==0) { imthrow("Out of memory",99); }
+	  unsigned short* sbuffer;
+	  try {
+	    sbuffer=new unsigned short[imagesize];
+	  } catch(...) { sbuffer=0; }
+	  if (sbuffer==0) { imthrow("Out of memory for size "+num2str(imagesize),99); }
 	  FslReadVolumes(IP,sbuffer,1);
 	  if (doscaling) convertbuffer(sbuffer,tbuffer,imagesize,slope,intercept);
 	  else convertbuffer(sbuffer,tbuffer,imagesize);
@@ -486,8 +469,11 @@ void FslReadBuffer(FSLIO* IP, T* tbuffer)
 	break;
       case DT_UINT32:
 	{
-	  unsigned int* sbuffer=new unsigned int[imagesize];
-	  if (sbuffer==0) { imthrow("Out of memory",99); }
+	  unsigned int* sbuffer;
+	  try {
+	    sbuffer=new unsigned int[imagesize];
+	  } catch(...) { sbuffer=0; }
+	  if (sbuffer==0) { imthrow("Out of memory for size "+num2str(imagesize),99); }
 	  FslReadVolumes(IP,sbuffer,1);
 	  if (doscaling) convertbuffer(sbuffer,tbuffer,imagesize,slope,intercept);
 	  else convertbuffer(sbuffer,tbuffer,imagesize);
@@ -496,8 +482,11 @@ void FslReadBuffer(FSLIO* IP, T* tbuffer)
 	break;
       case DT_INT64:
 	{
-	  long signed int* sbuffer=new long signed int[imagesize];
-	  if (sbuffer==0) { imthrow("Out of memory",99); }
+	  long signed int* sbuffer;
+	  try {
+	    sbuffer=new long signed int[imagesize];
+	  } catch(...) { sbuffer=0; }
+	  if (sbuffer==0) { imthrow("Out of memory for size "+num2str(imagesize),99); }
 	  FslReadVolumes(IP,sbuffer,1);
 	  if (doscaling) convertbuffer(sbuffer,tbuffer,imagesize,slope,intercept);
 	  else convertbuffer(sbuffer,tbuffer,imagesize);
@@ -506,8 +495,11 @@ void FslReadBuffer(FSLIO* IP, T* tbuffer)
 	break;
       case DT_UINT64:
 	{
-	  long unsigned int* sbuffer=new long unsigned int[imagesize];
-	  if (sbuffer==0) { imthrow("Out of memory",99); }
+	  long unsigned int* sbuffer;
+	  try {
+	    sbuffer=new long unsigned int[imagesize];
+	  } catch(...) { sbuffer=0; }
+	  if (sbuffer==0) { imthrow("Out of memory for size "+num2str(imagesize),99); }
 	  FslReadVolumes(IP,sbuffer,1);
 	  if (doscaling) convertbuffer(sbuffer,tbuffer,imagesize,slope,intercept);
 	  else convertbuffer(sbuffer,tbuffer,imagesize);
@@ -540,31 +532,7 @@ FSLIO* NewFslOpen(const string& filename, const string& permissions);
 
 
 template <class T>
-void set_volume_properties(FSLIO* IP1, volume<T>& target)
-{
-  float x,y,z,tr;
-  FslGetVoxDim(IP1,&x,&y,&z,&tr);
-  target.setdims(x,y,z);
-
-  int sform_code, qform_code;
-  mat44 smat, qmat;
-  sform_code = FslGetStdXform(IP1,&smat);
-  qform_code = FslGetRigidXform(IP1,&qmat);
-  Matrix snewmat(4,4), qnewmat(4,4);
-  for (int i=1; i<=4; i++) {
-    for (int j=1; j<=4; j++) {
-      snewmat(i,j) = smat.m[i-1][j-1];
-      qnewmat(i,j) = qmat.m[i-1][j-1];
-    }
-  }
-  target.set_sform(sform_code,snewmat);
-  target.set_qform(qform_code,qnewmat);
-
-  short intent_code;
-  float p1, p2, p3;
-  FslGetIntent(IP1, &intent_code, &p1, &p2, &p3);
-  target.set_intent(intent_code,p1,p2,p3);
-}
+  void set_volume_properties(FSLIO* IP1, volume<T>& target);
 
 
 
@@ -614,60 +582,8 @@ int read_volumeROI(volume<T>& target, const string& filename,
 template <class T>
 int read_volumeROI(volume<T>& target, const string& filename, 
 		   volumeinfo& vinfo, short& dtype, bool read_img_data,
-		   int x0, int y0, int z0, int x1, int y1, int z1)
-{
-  Tracer trcr("read_volumeROI");
-
-  FSLIO *IP1;
-  IP1 = NewFslOpen(filename.c_str(), "r");
-  if (IP1==0) { imthrow("Failed to read volume "+filename,22); }
-  short sx,sy,sz,st;
-  FslGetDim(IP1,&sx,&sy,&sz,&st);
-  size_t volsize=sx*sy*sz;
-
-  T* tbuffer;
-  if (read_img_data) {
-    tbuffer = new T[volsize];
-    if (tbuffer==0) { imthrow("Out of memory",99); }
-    FslReadBuffer(IP1,tbuffer);
-  } else {
-    tbuffer  = new T[volsize];  // a hack to stop reinitialize from allocating memory //originally 1
-  }
-  target.reinitialize(sx,sy,sz,tbuffer,true);
-
-  FslGetDataType(IP1,&dtype);
-  set_volume_properties(IP1,target);
-
-  vinfo = blank_vinfo();
-  FslCloneHeader(&vinfo,IP1);
-  FslSetFileType(&vinfo,FslGetFileType(IP1));
-  FslClose(IP1);
-
-  // now get the ROI (if necessary)
-  // this is a hack until the disk reading functions integrated here
-  // use -1 to signify end point
-  if (x1<0) { x1=sx-1; }
-  if (y1<0) { y1=sy-1; }
-  if (z1<0) { z1=sz-1; }
-  // truncate to known limits
-  if (x0<0) { x0=0; }
-  if (y0<0) { y0=0; }
-  if (z0<0) { z0=0; }
-  if (x1>sx-1) { x1=sx-1; }
-  if (y1>sy-1) { y1=sy-1; }
-  if (z1>sz-1) { z1=sz-1; }
-  if (x0>x1) { x0=x1; }
-  if (y0>y1) { y0=y1; }
-  if (z0>z1) { z0=z1; }
-  if ((x0!=0) || (y0!=0) || (z0!=0) || (x1!=sx-1) || (y1!=sy-1) || (z1!=sz-1))
-    {
-      target.setROIlimits(x0,y0,z0,x1,y1,z1);
-      target.activateROI();
-      target = target.ROI();
-    }
-
-  return 0;
-}
+		   int x0, int y0, int z0, int x1, int y1, int z1,
+		   bool swap2radiological=true);
 
 
 template <class T>
@@ -717,48 +633,6 @@ int read_volume(volume<T>& target, const string& filename)
   int retval = read_volume(target,filename,vinfo,dtype,true);
   return retval;
 }
-
-// read a volume and force it to be in radiological format
-template <class T>
-int read_rad_volume(volume<T>& target, const string& filename)
-{
-  int retval=0;
-  retval = read_volume(target,filename);
-  target.makeradiological();
-  return retval;
-}
- 	 
-// read a volume and force it to be in radiological format
-template <class T>
-int read_rad_volume(volume<T>& target, const string& filename, volumeinfo& vinfo)
-{
-  int retval=0;
-  retval = read_volume(target,filename,vinfo);
-  target.makeradiological();
-  return retval;
-}
- 	 
- 	 
-// read a volume and force it to be in radiological format
-template <class T>
-int read_rad_volume4D(volume4D<T>& target, const string& filename)
-{
-  int retval=0;
-  retval = read_volume4D(target,filename);
-  target.makeradiological();
-  return retval;
-}
- 	 
-// read a volume and force it to be in radiological format
-template <class T>
-int read_rad_volume4D(volume4D<T>& target, const string& filename, volumeinfo& vinfo)
-{
-  int retval=0;
-  retval = read_volume4D(target,filename,vinfo);
-  target.makeradiological();
-  return retval;
-}
- 	 
 
 template <class T>
 int read_volume_hdr_only(volume<T>& target, const string& filename, 
@@ -831,96 +705,8 @@ template <class T>
 int read_volume4DROI(volume4D<T>& target, const string& filename, 
 		     volumeinfo& vinfo, short& dtype, bool read_img_data,
 		     int x0, int y0, int z0, int t0, 
-		     int x1, int y1, int z1, int t1)
-{
-  // to get the whole volume use x0=y0=z0=t0=0 and x1=y1=z1=t1=-1
-
-  Tracer trcr("read_volume4DROI");
-
-  target.destroy();
-
-  FSLIO *IP1;
-  IP1 = NewFslOpen(filename.c_str(), "r");
-  if (IP1==0) { imthrow("Failed to read volume "+filename,22); }
-
-  short sx,sy,sz,st;
-  FslGetDim(IP1,&sx,&sy,&sz,&st);
-  size_t volsize=sx*sy*sz;
-  if (st<1) st=1;  // make it robust to dim4=0
-  
-  // use -1 to signify end point
-  if (t1<0) { t1=st-1; }
-  // truncate to known limits
-  if (t0<0) { t0=0; }
-  if (t1>st-1) { t1=st-1; }
-  if (t0>t1) { t0=t1; }
-  // use -1 to signify end point
-  if (x1<0) { x1=sx-1; }
-  if (y1<0) { y1=sy-1; }
-  if (z1<0) { z1=sz-1; }
-  // truncate to known limits
-  if (x0<0) { x0=0; }
-  if (y0<0) { y0=0; }
-  if (z0<0) { z0=0; }
-  if (x1>sx-1) { x1=sx-1; }
-  if (y1>sy-1) { y1=sy-1; }
-  if (z1>sz-1) { z1=sz-1; }
-  if (x0>x1) { x0=x1; }
-  if (y0>y1) { y0=y1; }
-  if (z0>z1) { z0=z1; }
-
-  volume<T> dummyvol(sx,sy,sz), tmpvol;
-  // now take ROI (if necessary)
-  if ((x0!=0) || (y0!=0) || (z0!=0) || (x1!=sx-1) || (y1!=sy-1) || (z1!=sz-1))
-    {
-      tmpvol = dummyvol;
-      dummyvol.setROIlimits(x0,y0,z0,x1,y1,z1);
-      dummyvol.activateROI();
-      dummyvol = dummyvol.ROI();
-    }
-  if (t0>0) {
-    if (t0>st-1) t0=st-1;
-    FslSeekVolume(IP1,t0);
-  }
-  for (int t=t0; t<=t1; t++) {
-    target.addvolume(dummyvol);
-    T* tbuffer;
-    if (read_img_data) {
-      tbuffer = new T[volsize];
-      if (tbuffer==0) { imthrow("Out of memory",99); }
-      FslReadBuffer(IP1,tbuffer);
-    } else {
-      tbuffer = new T[volsize];  // set 1 as a bad hack to stop reinitialize from allocating memory // 
-    }
-    // Note that the d_owner flag = true in the following so that the
-    //  control for delete is passed to the volume class
-    // now take ROI (if necessary)
-    if ((x0!=0) || (y0!=0) || (z0!=0) || (x1!=sx-1) || (y1!=sy-1) || (z1!=sz-1))
-      {
-	tmpvol.reinitialize(sx,sy,sz,tbuffer,true);
-	tmpvol.setROIlimits(x0,y0,z0,x1,y1,z1);
-	tmpvol.activateROI();
-	target[t-t0] = tmpvol.ROI();
-      } else {
-	target[t-t0].reinitialize(sx,sy,sz,tbuffer,true);
-      }
-    set_volume_properties(IP1,target[t-t0]);
-  }
-
-  float x,y,z,tr;
-  FslGetVoxDim(IP1,&x,&y,&z,&tr);
-  target.setdims(x,y,z,tr);
-
-  FslGetDataType(IP1,&dtype);
-
-  vinfo = blank_vinfo();
-  FslCloneHeader(&vinfo,IP1);
-  FslSetFileType(&vinfo,FslGetFileType(IP1));
-  FslClose(IP1);
-
-  return 0;
-}
-
+		     int x1, int y1, int z1, int t1,
+		     bool swap2radiological=true);
 
 template <class T>
 int read_volume4DROI(volume4D<T>& target, const string& filename, 
@@ -1014,48 +800,13 @@ int set_fsl_hdr(const volume<T>& source, FSLIO *OP, int tsize, float tdim)
   return 0;
 }
 
-
-
 template <class T>
 int save_basic_volume(const volume<T>& source, const string& filename, 
-		      int filetype, const volumeinfo& vinfo, bool use_vinfo)
-{
-  // if filetype < 0 then it is ignored, otherwise it overrides everything
-  Tracer tr("save_basic_volume");
-
-  FSLIO *OP = NewFslOpen(filename.c_str(),"wb",filetype,vinfo,use_vinfo);
-  if (OP==0) { imthrow("Failed to open volume "+filename+" for writing",23); }
-  set_fsl_hdr(source,OP,1,1);
-  FslWriteAllVolumes(OP,&(source(0,0,0)));
-  FslClose(OP);
-  return 0;
-}
-
+		      int filetype, const volumeinfo& vinfo, bool use_vinfo, bool save_orig=false);
 
 template <class T>
 int save_basic_volume4D(const volume4D<T>& source, const string& filename,
-			int filetype, const volumeinfo& vinfo, bool use_vinfo)
-{
-  Tracer tr("save_basic_volume4D");
-  if (source.tsize()<1) return -1;
-
-  // if filetype < 0 then it is ignored, otherwise it overrides everything
-  FSLIO *OP = NewFslOpen(filename.c_str(),"wb",filetype,vinfo,use_vinfo);
-  if (OP==0) { imthrow("Failed to open volume "+filename+" for writing",23); }
-
-  set_fsl_hdr(source[0],OP,source.tsize(),source.tdim());
-  if (filetype>=0) FslSetFileType(OP,filetype);
-  FslWriteHeader(OP);
-  if (source.nvoxels()>0) {
-    for (int t=0; t<source.tsize(); t++) {
-      FslWriteVolumes(OP,&(source[t](0,0,0)),1);
-    }
-  }
-  FslClose(OP); 
-
-  return 0;
-}
-
+			int filetype, const volumeinfo& vinfo, bool use_vinfo, bool save_orig=false);
 
 template <class T>
 int save_volume(const volume<T>& source, const string& filename, 
@@ -1108,6 +859,7 @@ template <class T>
 int save_volume_dtype(const volume<T>& source, const string& filename,
 		       short datatype, const volumeinfo& vinfo, bool use_vinfo)
 {
+  datatype=closestTemplatedType(datatype);
   if (dtype(source) == datatype) {
     return save_volume(source,filename,vinfo,use_vinfo);
   } else {
@@ -1162,6 +914,7 @@ template <class T>
 int save_volume4D_dtype(const volume4D<T>& source, const string& filename,
 		       short datatype, const volumeinfo& vinfo, bool use_vinfo)
 {
+  datatype=closestTemplatedType(datatype);
   if (dtype(source) == datatype) {
     return save_volume4D(source,filename,vinfo,use_vinfo);
   } else {
@@ -1308,292 +1061,40 @@ int save_volume4D_filetype(const volume4D<T>& source, const string& filename,
   return save_basic_volume4D(source,filename,filetype,vinfo,false); 
 }
 
-
-
-// MATRIX IO
-
-// Non-templated helper functions (bodies in .cc)
-
-int get_medx_small_matrix(Matrix &target, ifstream& matfile);
-int get_medx_matrix(Matrix &target, ifstream& matfile);
-int get_minc_matrix(Matrix &target, ifstream& matfile);
-int put_medx_matrix(ofstream& matfile, const string& name, 
-		    const Matrix& affmat);
-
-// Template definitions
+  // functions to save without doing any swapping (i.e. just as passed in)
 
 template <class T>
-int medx2world(Matrix &target, const Matrix& medxmat, 
-	       const ColumnVector& finalimsize, const Matrix& finalvoxsize,
-	       const volume<T>& initvol) 
+int save_orig_volume(const volume<T>& source, const string& filename)
 {
-  Tracer tr("medx2world");
-  // convert the voxel->voxel MEDx form to a world->world form
-  Matrix swapy1(4,4), samp1(4,4);
-  Matrix swapy2(4,4), samp2(4,4);
-  Identity(swapy1);
-  swapy1(2,2)=-1;
-  swapy2=swapy1;
-  swapy1(2,4)=initvol.ysize()-1.0;  // corrected version
-  swapy2(2,4)=finalimsize(2)-1.0;   // corrected version
-  Identity(samp1);
-  samp1(1,1) = initvol.xdim();  
-  samp1(2,2) = initvol.ydim();
-  samp1(3,3) = initvol.zdim();
-  samp2 = finalvoxsize;
-  samp2(1,4)=0; samp2(2,4)=0; samp2(3,4)=0;  // translation can be ignored
-  samp2(1,1)=fabs(samp2(1,1));    // swapping info is not used
-  samp2(2,2)=fabs(samp2(2,2)); 
-  samp2(3,3)=fabs(samp2(3,3));
-  target = samp2 * swapy2 * medxmat * swapy1 * samp1.i(); // correct
-  return 0;
+  volumeinfo vinfo = blank_vinfo();
+  return save_basic_volume(source,filename,-1,vinfo,false,true);
 }
 
 
 template <class T>
-int world2medx(Matrix &medxmat, const Matrix& worldmat, 
-	       const ColumnVector& finalimsize, const Matrix& finalvoxsize,
-	       const volume<T>& initvol) 
+int save_orig_volume(const volume<T>& source, const string& filename,
+		const volumeinfo& vinfo)
 {
-  Tracer tr("world2medx");
-  // convert the world->world form to a voxel->voxel MEDx form 
-  Matrix swapy1(4,4), samp1(4,4);
-  Matrix swapy2(4,4), samp2(4,4);
-  Identity(swapy1);
-  swapy1(2,2)=-1;
-  swapy2=swapy1;
-  swapy1(2,4)=initvol.ysize()-1.0;  // corrected version
-  swapy2(2,4)=finalimsize(2)-1.0;   // corrected version
-  Identity(samp1);
-  samp1(1,1) = initvol.xdim();  
-  samp1(2,2) = initvol.ydim();
-  samp1(3,3) = initvol.zdim();
-  samp2 = finalvoxsize;
-  samp2(1,4)=0; samp2(2,4)=0; samp2(3,4)=0;  // translation can be ignored
-  samp2(1,1)=fabs(samp2(1,1));    // swapping info is not used
-  samp2(2,2)=fabs(samp2(2,2)); 
-  samp2(3,3)=fabs(samp2(3,3));
-  medxmat = swapy2 * samp2.i() * worldmat * samp1 * swapy1;
-  return 0;
+  return save_basic_volume(source,filename,-1,vinfo,true,true);
 }
 
 
 template <class T>
-int minc2world(Matrix &target, const Matrix& mincmat, 
-	       const volume<T>& initvol, const volume<T>& finalvol)
+int save_orig_volume4D(const volume4D<T>& source, const string& filename)
 {
-  Tracer tr("minc2world");
-  // convert the voxel->voxel MINC form to a world->world form
-  Matrix trans1(4,4), trans2(4,4), samp1(4,4), samp2(4,4), 
-         flipx1(4,4), flipx2(4,4);
-
-  Identity(trans1);
-  if (initvol.sform_code()!=NIFTI_XFORM_UNKNOWN) {
-    trans1.SubMatrix(1,3,4,4) = initvol.sform_mat().i().SubMatrix(1,3,4,4);
-  }
-
-  Identity(trans2);
-  if (finalvol.sform_code()!=NIFTI_XFORM_UNKNOWN) {
-    trans2.SubMatrix(1,3,4,4) = finalvol.sform_mat().i().SubMatrix(1,3,4,4);
-  }
-  
-  Identity(samp1);
-  samp1(1,1) = fabs(initvol.xdim());  
-  samp1(2,2) = fabs(initvol.ydim());
-  samp1(3,3) = fabs(initvol.zdim());
-
-  Identity(samp2);
-  samp2(1,1) = fabs(finalvol.xdim());  
-  samp2(2,2) = fabs(finalvol.ydim());
-  samp2(3,3) = fabs(finalvol.zdim());
-  
-  Identity(flipx1);
-  flipx1(1,1) = -1.0;
-  flipx1(1,4) = initvol.xsize() - 1.0;
-
-  Identity(flipx2);
-  flipx2(1,1) = -1.0;
-  flipx2(1,4) = finalvol.xsize() - 1.0;
-
-  target = samp2 * flipx2 * trans2 * samp2.i() * mincmat * samp1 *
-                  trans1.i() * flipx1 * samp1.i();
-  return 0;
+  volumeinfo vinfo = blank_vinfo();
+  return save_basic_volume4D(source,filename,-1,vinfo,false,true);
 }
 
 
 template <class T>
-int read_medx_matrix(Matrix &target, ifstream& matfile, const volume<T>& invol)
+int save_orig_volume4D(const volume4D<T>& source, const string& filename,
+		  const volumeinfo& vinfo)
 {
-  Tracer tr("read_medx_matrix");
-  string curword;
-  Matrix id4(4,4), gmat, imsize(1,3), voxsize(4,4), medxmat(4,4);
-  Identity(id4);  // set to be the identity matrix for checking
-  medxmat = id4;   // default return value
-  imsize = 1.0;
-  voxsize = id4;
-  while (!matfile.eof()) {
-    matfile >> curword;
-    if ( (curword == "/outputsize") ) {
-      get_medx_small_matrix(imsize,matfile);
-    }
-    if ( (curword == "/outputusermatrix") ) {
-      get_medx_small_matrix(voxsize,matfile);
-    }
-    if ( (curword == "/GenericReslice")  || (curword == "/ShadowTransform")
-	 || (curword == "/MotionCorrectionReslice") 
-	 || (curword == "/UserTransformation") 
-	 || (curword == "/IntoTalairachSpace") ) {
-      if (get_medx_matrix(gmat,matfile)==0) {  // only accept good returns
-	if (SumSquare(gmat - id4) > 0.001) // only accept non-identities
-	  medxmat = gmat;
-      }
-    }
-  }
-  ColumnVector imsizev(3);
-  imsizev(1) = imsize(1,1);
-  imsizev(2) = imsize(1,2);
-  imsizev(3) = imsize(1,3);
-  medx2world(target,medxmat,imsizev,voxsize,invol);
-  return 0;
+  return save_basic_volume4D(source,filename,-1,vinfo,true,true);
 }
 
 
-template <class T>
-int read_minc_matrix(Matrix &target, ifstream& matfile, const volume<T>& invol,
-		     const volume<T>& finalvol)
-{
-  Tracer tr("read_minc_matrix");
-  string curword;
-  Matrix gmat, id4(4,4);
-  Identity(id4);
-  target = id4;  // default return value
-  while (!matfile.eof()) {
-    matfile >> curword;
-    if ( (curword == "Linear_Transform") ) {
-      get_minc_matrix(gmat,matfile);
-    }
-    curword="";
-  }
-  minc2world(target,gmat,invol,finalvol);
-  return 0;
-}
-
-
-template <class T>
-int read_matrix(Matrix &target, const string& filename, const volume<T>& invol,
-		const volume<T>& finalvol)
-{
-  Tracer tr("read_matrix");
-  if ( filename.size()<1 ) return -1;
-  ifstream matfile(filename.c_str());
-  if (!matfile) { 
-    cerr << "Could not open matrix file " << filename << endl;
-    return -1;
-  }
-  string firstline;
-  matfile >> firstline;
-  matfile.seekg(0,ios::beg);
-  int rval=0;
-  if (firstline == "%!VEST-Transformations")
-    {
-      rval = read_medx_matrix(target,matfile,invol);
-    } else if (firstline == "MNI") {
-      if (finalvol.xsize()>0) {
-	rval = read_minc_matrix(target,matfile,invol,finalvol);
-      } else {
-	cerr << "Cannot read MINC transform files with finalvol" << endl;
-	rval = -1;
-      }
-    } else {
-      target = MISCMATHS::read_ascii_matrix(matfile);
-      if (target.Nrows()<=0) rval = -1;
-      else rval = 0;
-    }
-  matfile.close();
-  return rval;
-}
-
-template <class T>
-int read_matrix(Matrix &target, const string& filename, const volume<T>& invol)
-{
-  volume<T> dummy(0,0,0);
-  return read_matrix(target,filename,invol,dummy);
-}
-
-int get_outputusermat(const string& filename, Matrix& oumat);
-
-template <class T>
-int write_medx_matrix(const Matrix& worldmat, const string& filename, 
-		      const volume<T>& initvol, 
-		      const volume<T>& finalvol, 
-		      const string& mtype, const string& reffname)
-{
-  Tracer tr("write_medx_matrix");
-  if ( (filename.size()<1) ) return -1;
-  ofstream matfile(filename.c_str());
-  if (!matfile) { 
-    cerr << "Could not open file " << filename << " for writing" << endl;
-    return -1;
-  }
-
-  // convert from world->world transform to the voxel->voxel MEDx transform
-  Matrix swapy1(4,4), swapy2(4,4), samp1(4,4), samp2(4,4), medxtrans(4,4);
-  Identity(samp1);  Identity(samp2);  Identity(swapy1);  Identity(swapy2);
-  swapy1(2,2) = -1.0;
-  swapy2(2,2) = -1.0;
-  swapy1(2,4) = initvol.ysize()-1.0;  // corrected version
-  swapy2(2,4) = finalvol.ysize()-1.0; // corrected version
-  samp1(1,1) = initvol.xdim();  
-  samp1(2,2) = initvol.ydim();
-  samp1(3,3) = initvol.zdim();
-  samp2(1,1) = finalvol.xdim();  
-  samp2(2,2) = finalvol.ydim();
-  samp2(3,3) = finalvol.zdim();
-  medxtrans = swapy2 * samp2.i() * worldmat * samp1 * swapy1;
-
-
-  string mattype;
-  if ( (mtype.size()<1) || // default
-       (mtype[0] == 'g') || (mtype[0] == 'G') )  
-    { mattype="GenericReslice"; }
-  if ( (mtype[0] == 's') || (mtype[0] == 'S') )  
-    { mattype="ShadowTransform"; }
-  if ( (mtype[0] == 't') || (mtype[0] == 'T') )  
-    { mattype="IntoTalairachSpace"; }
-  if ( (mtype[0] == 'u') || (mtype[0] == 'U') )  
-    { mattype="UserTransformation"; }
-  if ( (mtype[0] == 'm') || (mtype[0] == 'M') || 
-       (mtype[0] == 'a') || (mtype[0] == 'A') )
-    { mattype="MotionCorrectionReslice"; }
-
-  matfile << "%!VEST-Transformations" << endl;
-  matfile << "<<" << endl;
-  matfile << "    /" << mattype << "     <<" << endl;
-  put_medx_matrix(matfile,"matrix",medxtrans);
-  matfile << "        /order  1" << endl;
-
-  Matrix imsize(1,3);
-  imsize(1,1) = finalvol.xsize();
-  imsize(1,2) = finalvol.ysize();
-  imsize(1,3) = finalvol.zsize();
-  put_medx_matrix(matfile,"outputsize",imsize);
-
-  Matrix oumat(4,4);
-  get_outputusermat(reffname,oumat);
-  put_medx_matrix(matfile,"outputusermatrix",oumat);
-
-  if (mattype == "MotionCorrectionReslice") {
-    matfile << "        /outputunits    (mm)" << endl;
-    matfile << "        /talairachcalibrated?   false" << endl;
-  }
-  if (mattype == "IntoTalairachSpace") {
-    matfile << "        /talairachcalibrated?   true" << endl;
-  }
-  matfile << "    >>" << endl;
-  matfile << ">>" << endl;
-  matfile.close();
-  return 0;
-}
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -1613,14 +1114,6 @@ int load_volume(volume<T>& target, const string& filename, volumeinfo& vinfo)
   { return read_volume(target,filename,vinfo); }
 
 template <class T>
-int load_rad_volume(volume<T>& target, const string& filename)
-{ return read_rad_volume(target,filename); }
- 	 
-template <class T>
-int load_rad_volume(volume<T>& target, const string& filename, volumeinfo& vinfo)
-{ return read_rad_volume(target,filename,vinfo); }
-
-template <class T>
 int load_volume_hdr_only(volume<T>& target, const string& filename)
   { return read_volume_hdr_only(target,filename); }
 
@@ -1638,15 +1131,6 @@ int load_volume4D(volume4D<T>& target, const string& filename,
 		  volumeinfo& vinfo)
   { return read_volume4D(target,filename,vinfo); }
 
-template <class T>
-int load_rad_volume4D(volume4D<T>& target, const string& filename)
-{ return read_rad_volume4D(target,filename); }
- 	 
-template <class T>
-int load_rad_volume4D(volume4D<T>& target, const string& filename, 
-		      volumeinfo& vinfo)
-{ return read_rad_volume4D(target,filename,vinfo); }
- 	 
 template <class T>
 int load_volume4D_hdr_only(volume4D<T>& target, const string& filename)
   { return read_volume4D_hdr_only(target,filename); }
@@ -1717,6 +1201,76 @@ int write_volume4D_filetype(const volume4D<T>& source, const string& filename,
   { return save_volume4D_filetype(source,filename,filetype); }
 
 
+  // Basic I/O functions 
+    // read original storage order - do not swap to radiological
+
+template <class T>
+int read_orig_volume(volume<T>& target, const string& filename);
+template <class T>
+int read_orig_volume(volume<T>& target, const string& filename, volumeinfo& vinfo);
+
+template <class T>
+int read_orig_volume4D(volume4D<T>& target, const string& filename);
+template <class T>
+int read_orig_volume4D(volume4D<T>& target, const string& filename, volumeinfo& vinfo);
+
+template <class T>
+int load_orig_volume(volume<T>& target, const string& filename)
+{ return read_orig_volume(target,filename); }
+ 	 
+template <class T>
+int load_orig_volume(volume<T>& target, const string& filename, volumeinfo& vinfo)
+{ return read_orig_volume(target,filename,vinfo); }
+
+template <class T>
+int load_orig_volume(volume<T>& target, const string& filename);
+template <class T>
+int load_orig_volume(volume<T>& target, const string& filename, volumeinfo& vinfo);
+template <class T>
+int load_orig_volume4D(volume4D<T>& target, const string& filename)
+{ return read_orig_volume4D(target,filename); }
+ 	 
+template <class T>
+int load_orig_volume4D(volume4D<T>& target, const string& filename, 
+		      volumeinfo& vinfo)
+{ return read_orig_volume4D(target,filename,vinfo); }
+ 	 
+ 	 
+template <class T>
+int read_orig_volume(volume<T>& target, const string& filename)
+{
+  short dtype;
+  volumeinfo vinfo = blank_vinfo();
+  return read_volumeROI(target,filename,vinfo,dtype,true,
+			0,0,0,-1,-1,-1,false);
+}
+ 	 
+template <class T>
+int read_orig_volume(volume<T>& target, const string& filename, volumeinfo& vinfo)
+{
+  short dtype;
+  return read_volumeROI(target,filename,vinfo,dtype,true,
+			0,0,0,-1,-1,-1,false);
+}
+ 	 
+
+template <class T>
+int read_orig_volume4D(volume4D<T>& target, const string& filename)
+{
+  short dtype;
+  volumeinfo vinfo = blank_vinfo();
+  return read_volume4DROI(target,filename,vinfo,dtype,true,
+			0,0,0,0,-1,-1,-1,-1,false);
+}
+ 	 
+template <class T>
+int read_orig_volume4D(volume4D<T>& target, const string& filename, volumeinfo& vinfo)
+{
+  short dtype;
+  return read_volume4DROI(target,filename,vinfo,dtype,true,
+			0,0,0,0,-1,-1,-1,-1,false);
+}
+ 	 
 }
 
 #endif

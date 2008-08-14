@@ -157,6 +157,8 @@ class globaloptions {
   bool resample;
   bool useweights;
   bool mode2D;
+  bool clamping;
+  bool interpblur;
   interps interpmethod;
   float sincwidth;
   windowtype sincwindow;
@@ -213,7 +215,7 @@ inline globaloptions::globaloptions()
   initmatfname = "";
   refweightfname = "";
   testweightfname = "";
-  initmat = Identity(4);
+  initmat = IdentityMatrix(4);
   initmatsqform = false;
   printinit = false;
 
@@ -223,8 +225,7 @@ inline globaloptions::globaloptions()
   refparams.ReSize(12);
   refparams << 0.0 << 0.0 << 0.0 << 0.0 << 0.0 << 0.0 << 1.0 << 1.0 << 1.0
 	    << 0.0 << 0.0 << 0.0;
-  parammask.ReSize(12,12);
-  Identity(parammask);
+  parammask=IdentityMatrix(12);
   no_params = 12;
   dof = 12;
   usrsubset = false;
@@ -269,6 +270,8 @@ inline globaloptions::globaloptions()
   resample = true;
   useweights = false;
   mode2D = false;
+  clamping = true;
+  interpblur = true;
   interpmethod = TriLinear;
   sincwidth = 7.0; // voxels
   sincwindow = Hanning;

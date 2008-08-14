@@ -87,7 +87,7 @@ int main (int argc,char** argv){
   
   volume4D<float> timeseries, lowres;
   volume<float> vout;
-  Matrix aff = Identity(4);
+  Matrix aff = IdentityMatrix(4);
   volumeinfo vinfo;
   int no_volumes;
   string inputfname;

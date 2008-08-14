@@ -39,11 +39,11 @@ avwmerge -t brain ${struct}_brain_seg_1  ${struct}_brain_seg_2 ${struct}_brain_s
 
 ***NOTE: in case you need change in voxel dimensions BUT preservation of the size do:
 
-A) avwcreatehd Nx Ny Nz Nt dx dy dz dt x0 y0 z0 datatype NAME
+A) avwcreatehd Nx Ny Nz Nt dx dy dz dt x0 y0 z0 datatype ref_highres
    flirt -in brain.nii.gz -ref ref_highres.nii.gz -out brain_highres -applyxfm
 
 B) flirt -in brain.nii.gz -ref brain.nii.gz -out brain_highres -applyisoxfm 0.1
-  (it will set them all to size 0.1 and will maintain the FOV size)
+  (It will set them all to size 0.1 and will maintain the FOV size)
 
 echo "2.MRpar"
 t1t2=fids you get from the scanner
