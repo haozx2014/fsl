@@ -112,6 +112,12 @@ set fmri(prewhiten_yn) 1
 # 1 : Yes
 set fmri(motionevs) 0
 
+# General confound matrix (any number of EVs)
+set fmri(confoundevs) 0
+
+# Robust outlier detection in FLAME
+set fmri(robust_yn) 0
+
 # Higher-level modelling
 # 3 : Fixed effects
 # 0 : Mixed Effects: Simple OLS
@@ -151,6 +157,8 @@ set fmri(default_bfcustom) "${FSLDIR}/etc/default_flobs.flobs/hrfbasisfns.txt"
 # Add temporal derivative
 set fmri(default_deriv_yn) 1
 
+# Number of additional voxel-dependent EVs
+set fmri(evs_vox) 0
 
 #########################################################################
 # Post-stats
@@ -196,6 +204,8 @@ set fmri(rendertype) 1
 # 5 : Standard space template
 set fmri(bgimage) 1
 
+# Create time series plots
+set fmri(tsplot_yn) 1
 
 #########################################################################
 # Registration
@@ -258,6 +268,9 @@ set fmri(init_standard) ""
 
 # For full FEAT analysis: overwrite existing .feat output dir?
 set fmri(overwrite_yn) 0
+
+# For custom FNIRT configuration change the following
+set fmri(fnirt_config) "T1_2_MNI152_2mm"
 
 #########################################################################
 

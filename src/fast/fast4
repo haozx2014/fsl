@@ -1,4 +1,0 @@
-#!/bin/sh
-
-$FSLDIR/bin/fast4 $@
-

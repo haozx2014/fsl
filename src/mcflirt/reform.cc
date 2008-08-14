@@ -88,7 +88,7 @@ int main (int argc,char** argv){
   volume4D<float> timeseries, lowres;
   volume<float> vout;
   volumeinfo vinfo;
-  Matrix aff = Identity(4);
+  Matrix aff = IdentityMatrix(4);
   int no_volumes;
   string inputfname;
   string inputbasename = "/usr/people/prb/medx/motion/synthetic/";

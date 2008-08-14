@@ -1,8 +1,8 @@
 /*  ranopts.h
 
-    Tim Behrens & Steve Smith (FMRIB) & Tom Nichols (UMich)
+    Matthew Webster, Tim Behrens & Steve Smith (FMRIB) & Tom Nichols (UMich)
 
-    Copyright (C) 2004 University of Oxford  */
+    Copyright (C) 2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -70,13 +70,10 @@
 #define ranopts_h
 
 #include <string>
-#include <iostream>
-#include <fstream>
 #include <stdlib.h>
 #include <stdio.h>
 #include "utils/options.h"
 #include "utils/log.h"
-
 
 using namespace Utilities;
 
@@ -89,7 +86,6 @@ class ranopts {
   
   Option<bool> demean_data;
   Option<bool> one_samp;
-  Option<bool> low_ram;
   Option<string> in_fileroot;
   Option<string> maskname;
   Option<string> out_fileroot;
@@ -98,12 +94,15 @@ class ranopts {
   Option<string> fc_file;
   Option<string> gp_file;
   Option<bool> how_many_perms;
+  Option<bool> parallelData;
   Option<int> n_perm;
+  Option<bool> voxelwiseOutput;
+  Option<bool> tfce;
+  Option<bool> tfce2D;
   Option<float> cluster_thresh;
   Option<float> clustermass_thresh;
   Option<float> f_thresh;
   Option<float> fmass_thresh;
-  Option<bool> tfce;
   Option<float> tfce_height;
   Option<float> tfce_size;
   Option<int> tfce_connectivity;
@@ -111,8 +110,14 @@ class ranopts {
   Option<bool> help;
   Option<bool> verbose;
   Option<bool> cluster_norm;
+  Option<bool> outputText;
+  Option<bool> output_permstat;
   Option<string> logdir;
-  Option<string> confound_file;
+  Option<int> confoundMethod;
+  Option<int> randomSeed;
+  Option<vector<int> > voxelwise_ev_numbers;
+  Option<vector<string> > voxelwise_ev_filenames;
+
   void parse_command_line(int argc, char** argv,Log& logger);
   
  private:
@@ -140,17 +145,14 @@ class ranopts {
    one_samp(string("-1"), false,
 	    string("\tperform 1-sample group-mean test instead of generic permutation test"),
 	    false, no_argument),
-   low_ram(string("-M"), false,
-	string("\tminimise memory usage during load (uses less total RAM but is slower)"),
-	false, no_argument),
    in_fileroot(string("-i"), "",
-       string("~<in_root>\t4D input image"),
+       string("~<input>\t4D input image"),
        true, requires_argument),
    maskname(string("-m"), "",
        string("~<mask>\tmask image"),
        false, requires_argument),
    out_fileroot(string("-o"), string(""),
-	    string("~<out_root>\toutput file root"),
+	    string("~<out_root>\toutput file-rootname"),
 	    true, requires_argument),  
    dm_file(string("-d"), string(""),
 	    string("~<design.mat>\tdesign matrix file"),
@@ -161,33 +163,42 @@ class ranopts {
    fc_file(string("-f"), string(""),
             string("~<design.fts>\tf contrasts file"),
 	   false, requires_argument),  
-   gp_file(string("-g"), string(""),
-            string("~<design.grp>\tgroup labels file"),
+   gp_file(string("-e"), string(""),
+            string("~<design.grp>\texchangeability block labels file"),
 	   false, requires_argument),  
    how_many_perms(string("-q"), false,
 	    string("\tprint out how many unique permutations would be generated and exit"),
-	    false, no_argument),  
+	    false, no_argument), 
+   parallelData(string("-Q"), false,
+	    string("\tprint out information required for parallel mode and exit"),
+	    false, no_argument),
    n_perm(string("-n"), 5000,
 	    string("~<n_perm>\tnumber of permutations (default 5000, set to 0 for exhaustive)"),
 	    false, requires_argument),  
-   cluster_thresh(string("-c"), -1,
-	  string("~<thresh>\tcarry out cluster-based thresholding (as well as max and voxelwise)"),
-	  false, requires_argument),
-   clustermass_thresh(string("-C"), -1,
-	  string("~<thresh>\tcarry out cluster-mass-based thresholding (as well as max and voxelwise)"),
-	  false, requires_argument),
-   f_thresh(string("-F"), -1,
-	  string("~<thresh>\tcarry out f cluster thresholding (as well as max and voxelwise)"),
-	  false, requires_argument),
-   fmass_thresh(string("-S"), -1,
-	  string("~<thresh>\tcarry out f cluster-mass thresholding (as well as max and voxelwise)"),
-	  false, requires_argument),
+   voxelwiseOutput(string("-x"),false,
+	    string("\toutput voxelwise (corrected and uncorrected) p-value images"),
+		 false, no_argument),  
    tfce(string("-T"), false, 
 	   string("\tcarry out Threshold-Free Cluster Enhancement"), 
 	   false, no_argument),
+   tfce2D(string("--T2"), false, 
+	   string("\tcarry out Threshold-Free Cluster Enhancement with 2D optimisation (e.g. for TBSS data); H=2, E=1, C=26"), 
+	   false, no_argument),
+   cluster_thresh(string("-c"), -1,
+	  string("~<thresh>\tcarry out cluster-based thresholding"),
+	  false, requires_argument),
+   clustermass_thresh(string("-C"), -1,
+	  string("~<thresh>\tcarry out cluster-mass-based thresholding"),
+	  false, requires_argument),
+   f_thresh(string("-F"), -1,
+	  string("~<thresh>\tcarry out f cluster thresholding"),
+	  false, requires_argument),
+   fmass_thresh(string("-S"), -1,
+	  string("~<thresh>\tcarry out f cluster-mass thresholding"),
+	  false, requires_argument),
    tfce_height(string("--tfce_H"), 2, string("~<H>\tTFCE height parameter (default=2)"), false, requires_argument),
    tfce_size(string("--tfce_E"), 0.5, string("~<E>\tTFCE extent parameter (default=0.5)"), false, requires_argument),
-   tfce_connectivity(string("--tfce_C"), 26, string("~<C>\tTFCE connectivity (6 or 26; default=26)"), false, requires_argument),
+   tfce_connectivity(string("--tfce_C"), 6, string("~<C>\tTFCE connectivity (6 or 26; default=6)"), false, requires_argument),
    var_sm_sig(string("-v"), 0,
 	    string("~<std>\tuse variance smoothing (std is in mm)"),
 	     false, requires_argument),
@@ -195,27 +206,42 @@ class ranopts {
 	string("display this message"),
 	false, no_argument),
    verbose(string("-V"), false, 
-	   string("\tswitch on diagnostic messages and null distribution text files"),
+	   string("\tswitch on diagnostic messages"),
 	   false, no_argument),
    cluster_norm(string("-N"), false, 
-	   string("carry out cluster normalisation thresholding"), 
+	   string("\tcarry out cluster normalisation thresholding"), 
+		false, no_argument,false),
+   outputText(string("-P"), false, 
+	   string("\toutput permutation vector and null distribution text files"), 
+		false, no_argument),
+   output_permstat(string("--permout"), false, 
+	   string("\toutput permuted tstat"), 
 		false, no_argument,false),
    logdir(string("-l"), string("logdir"),
 	    string("~<logdir>\tlog directory"),
 	  false, requires_argument,false),  
-   confound_file(string("-x"), string(""),
-	    string("~<xdesign.mat>\tconfound matrix file"),
-		 false, requires_argument,false),  
+   confoundMethod(string("-U"),1,
+	    string("~<mode>\tconfound mode. 0: Use unconfounded design (old default). 1: Use original design. (new default) 2: Use confounded design concatenated with confound matrix. caution BETA option."),
+		 false, requires_argument), 
+   randomSeed(string("--seed"),0,
+	    string("~<seed>\tspecific integer seed for random number generator"),
+		 false, requires_argument),
+   voxelwise_ev_numbers(string("--vxl"), vector<int>(), 
+         string("\tlist of numbers indicating voxelwise EVs position in the design matrix (list order corresponds to files in vxf option). caution BETA option."), 
+         false, requires_argument),
+    voxelwise_ev_filenames(string("--vxf"), vector<string>(), 
+         string("\tlist of 4D images containing voxelwise EVs (list order corresponds to numbers in vxl option). caution BETA option."), 
+         false, requires_argument),
 
 
 
-   options("randomise v2.0", "randomise -i <input> -o <output> -d <design.mat> -t <design.con> [options]")
+
+   options("randomise v2.1", "randomise -i <input> -o <output> -d <design.mat> -t <design.con> [options]")
      {
     
      try {
        options.add(demean_data);
        options.add(one_samp);
-       options.add(low_ram);
        options.add(in_fileroot);
        options.add(maskname);
        options.add(out_fileroot);
@@ -224,21 +250,29 @@ class ranopts {
        options.add(fc_file);
        options.add(gp_file);
        options.add(how_many_perms);
+       options.add(parallelData);
        options.add(n_perm);    
+       options.add(voxelwiseOutput);     
+       options.add(tfce);
+       options.add(tfce2D);
        options.add(cluster_thresh);
        options.add(clustermass_thresh);
        options.add(f_thresh);     
-       options.add(fmass_thresh);     
-       options.add(tfce);
-       options.add(tfce_height);     
-       options.add(tfce_size);     
-       options.add(tfce_connectivity);  
+       options.add(fmass_thresh);
        options.add(var_sm_sig);
        options.add(help);
        options.add(verbose);
        options.add(cluster_norm);
+       options.add(outputText);
+       options.add(output_permstat);
        options.add(logdir);
-       options.add(confound_file);
+       options.add(confoundMethod);
+       options.add(randomSeed);
+       options.add(voxelwise_ev_numbers);
+       options.add(voxelwise_ev_filenames);
+       options.add(tfce_height);     
+       options.add(tfce_size);     
+       options.add(tfce_connectivity);  
      }
      catch(X_OptionError& e) {
        options.usage();

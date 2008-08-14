@@ -109,7 +109,6 @@ int fmrib_main(int argc, char* argv[], bool out_int)
   }
 
   read_volume(bg,string(argv[argindex++]),bginfo);
-  bg.makeradiological();
 
   if (!strcmp(argv[argindex],"-a")) {
     bgmax = bg.percentile(0.98);
@@ -121,13 +120,11 @@ int fmrib_main(int argc, char* argv[], bool out_int)
   }
 
   read_volume(s1,string(argv[argindex++]));
-  s1.makeradiological();
   s1min=atof(argv[argindex++]);
   s1max=atof(argv[argindex++]);
   
   if (argc-argindex-1>2){  
     read_volume(s2,string(argv[argindex++]));
-    s2.makeradiological();
     s2min=atof(argv[argindex++]);
     s2max=atof(argv[argindex++]);
   }

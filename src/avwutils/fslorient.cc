@@ -67,6 +67,10 @@
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
 
+#ifndef EXPOSE_TREACHEROUS
+#define EXPOSE_TREACHEROUS
+#endif
+
 #include "newimage/newimageall.h"
 #include "newimage/fmribmain.h"
 
@@ -93,9 +97,7 @@ void print_usage() {
   cout << "    -forceneurological     (makes FSL neurological header - not Analyze)" << endl;
   cout << "    -swaporient            (swaps FSL radiological and FSL neurological)" << endl;
   cout << endl;
-  cout << " Note: ANALYZE files are NOT modified by any of the commands" << endl;
-  cout << "         - they are for NIFTI files ONLY!" << endl;
-  cout << "       For NIFTI: the stored data order is never changed here - only the header info." << endl;
+  cout << "       Note: the stored data order is never changed here - only the header info." << endl;
   cout << "       To change the data storage use fslswapdim." << endl;
   cout << endl;
   cout << "  e.g.  " << progname << " -forceradiological myimage" << endl;
@@ -133,7 +135,7 @@ template <class T>
 int getorient(const string& filename) 
 {
   volume4D<T> invol;
-  read_volume4D(invol,filename);
+  read_orig_volume4D(invol,filename);
   return getorient(invol);
 }
 
@@ -169,7 +171,7 @@ int fmrib_main(int argc,char *argv[])
   volume4D<T> invol;
 
   filename=argv[argc-1];
-  read_volume4D(invol,filename,volinfo);
+  read_orig_volume4D(invol,filename,volinfo);
 
   if (option=="-getorient") {
     getorient(invol);
@@ -246,7 +248,7 @@ int fmrib_main(int argc,char *argv[])
   if (modified) {
     if (FslBaseFileType(FslGetFileType(&volinfo))!=FSL_TYPE_ANALYZE) {
       FslSetOverrideOutputType(FslGetFileType(&volinfo));
-      write_volume4D(invol,filename,volinfo);
+      save_orig_volume4D(invol,filename,volinfo);
       FslSetOverrideOutputType(-1);  // restore to default
     } else {
       cerr << "Cannot modify orientation for Analyze files" << endl;

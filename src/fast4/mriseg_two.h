@@ -1,6 +1,6 @@
 /*  FAST4 - FMRIB's Automated Segmentation Tool v4
 
-    John Vickers, Mark Jenkinson and Steve Smith
+    John Vickers, Mark Jenkinson, Steve Smith and Matthew Webster
     FMRIB Image Analysis Group
 
     Copyright (C) 2005-2007 University of Oxford  */
@@ -70,7 +70,7 @@
 #include "newimage/newimageall.h"
 #include "miscmaths/miscmaths.h"
 #include "utils/options.h"
-
+#include <vector>
 
 using namespace MISCMATHS;
 using namespace NEWIMAGE;
@@ -101,32 +101,17 @@ class ZMRISegmentation
 
 
 private:
-  NEWIMAGE::volume4D<float> InitclassAlt(int numberofsegs);
   NEWIMAGE::volume4D<float> Initclass(int numberofsegs);
   NEWIMAGE::volume4D<float> pvprobs(int clas);
   NEWIMAGE::volume<float> Convolve(NEWIMAGE::volume<float>& resfieldimage);
   float pvmeans(int clas);
   float pvvar(int clas);
-  float ICMCopy(float BB, bool hyperparameter);
-  float numberofvoxels();
-  float hyper();
-  float MeanFieldBetaHyper();
-  float PVMRF(int x, int y, int z);
-  float HyperparameterEst(float beta, int algorithm);
-  float pveConditional(int x, int y, int z);
   float MRFWeightsTotal();
   double MRFWeightsInner(const int x, const int y, const int z,const int c);
   double MRFWeightsAM(const int l, const int m, const int n);
-  float pvePosterior(int x, int y, int z);
-  float pveConditionalInit(int x, int y, int z);
-  float pvePosteriorInit(int x, int y, int z);
-  float LoopyMessagePassing(float BB, bool hyperparameter);
-  float Loopy2DMessagePassing(float BB, bool hyperparameter);
-  float SimplePrior(float BB, bool hyperparameter);
   float logGaussian(float y_i, float mu, float sigma);
   float PVEnergy(int x, int y, int z, float mu, float sigma);
-  int qsort();
-  int ICM(float BB, bool hyperparameter);
+  void qsort();
   void TanakaIterations();
   void TanakaHyper();
   void TanakaPriorHyper();
@@ -135,15 +120,10 @@ private:
   void InitSimple(const NEWIMAGE::volume<float>& pcsf, const NEWIMAGE::volume<float>& pgm, const NEWIMAGE::volume<float>& pwm);
   void Apriorimap(const NEWIMAGE::volume<float>& pcsf, const NEWIMAGE::volume<float>& pgm, const NEWIMAGE::volume<float>& pwm);
   void EMloop();
-  void pvrecompmeanvar();
-  void onepvefinal();
   void UpdateMembers(NEWIMAGE::volume4D<float>& probability);
-  void UpdateWeights();
-  void TreeKMeans();
   void WeightedKMeans();
   void pveIterations();
   void pveInitialize();
-  void InitWeights();
   void takeexpo();
   void InitKernel(float kernalsize);
   void Classification(int x, int y, int z);
@@ -151,22 +131,16 @@ private:
   void pveClassification(int x, int y, int z);
   void pveClassification();
   void Probabilities(int index);
-  void recomputeMeansVariances(int index);
-  void maximumVariances(int index);
   void Volumesquant(const NEWIMAGE::volume4D<float>& probs);
   void PVClassificationStep();
   void ICMPV();
   void PVEnergyInit();
-  void PVMRFestimation();
   void PVMoreSophisticated();
   void PVestimation();
   void PVMeansVar(const NEWIMAGE::volume4D<float>& probability);
   void MeansVariances(int numberofclasses, NEWIMAGE::volume4D<float>& probability);
   void BiasRemoval();
   void cliques();
-  void MeanFieldEstimation();
-  void MeanFieldZwiggle();
-  void MeanFieldProb();
   void Dimensions();
   void pvbias();
   
@@ -175,48 +149,27 @@ private:
   volume4D<float>PVprob;
   volume4D<float> pvprobsinit;
   volume4D<float> talpriors;
-  volume4D<float> m_cliquepot;
-  volume4D<float> zwiggle;
-  volume4D<float> m_postwiggle;
-  volume4D<float> m_postwigglepart;
-  volume4D<float> m_loopy;
   volume4D<float> m_prob;
   volume4D<float> pvebias;
-  volume<double> m_Finalbiastan;
   volume <float>  m_Mricopy;
-  volume<float> pveeng;
   volume<float> m_Mri;
-  volume<float> pve_eng;
   volume<float> p_bias;
-  volume<float> m_brainmask;
-  volume<float> p_meaninvcov;
-  volume<float> p_resmean;
-  volume<int> m_clique;
-  volume<int> m_mask;
-  volume<int> m_loopyseg;
+  volume<float> m_mask;
   ColumnVector kernelx, kernely, kernelz;
-  ColumnVector kernelxtan, kernelytan, kernelztan;
-  double* globtot;
-  double* volumequant;
-  float* m_mean;
-  float* m_variance;
-  float* m_prior;
-  float* npve;
-  float* weight;
-  float* rhs;
+  vector<double> volumequant;
+  vector<float> m_mean;
+  vector<float> m_variance;
+  vector<float> weight;
+  vector<float> rhs;
   double m_nxdim, m_nydim, m_nzdim;
-  float maximum, minimum;
   float m_nbLowpass;
-  float TB;
   float maxvariance;
-  float beta, pveB;
-  float smallnumber;
+  float beta;
   float logposterior;
-  float nvoxel;
   float pveBmixeltype;
+  float nvoxel;
   float Hyper;
   float amx, amy, amz, amxy, amzy, amzx;
-  int nomixeltypeiterations;
   int imagetype;
   int neighbour[27];
   int offset3d;
@@ -224,15 +177,12 @@ private:
   int maxvarianceindex;
   int bapusedflag;
   int noclasses;
-  int algorithm;
   int inititerations;
   int usingmeanfield;
   int iterationspve;
   int   biassteps,  initfixed;
-  bool biasfieldremoval, autoparaflag, weightschanged;
-  bool m_b3D;
+  bool biasfieldremoval;
   bool verboseusage;
-  bool loopyflag;
   string mansegfile;
 class kmeansexception: public exception
 {

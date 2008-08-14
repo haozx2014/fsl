@@ -2,7 +2,6 @@ set FSLDIR        $env(FSLDIR)
 set FSLOUTPUTTYPE $env(FSLOUTPUTTYPE)
 set FSLTCLSH      $env(FSLTCLSH)
 set FSLWISH       $env(FSLWISH)
-set FSLBROWSER    $env(FSLBROWSER)
 
 set USER       $env(USER)
 set HOME       [ exec sh -c " cd ; pwd " ]

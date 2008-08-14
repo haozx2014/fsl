@@ -4,7 +4,7 @@
 # 
 #   Gwenaelle Douaud & Stephen Smith, FMRIB Image Analysis Group
 #
-#   Copyright (C) 2007 University of Oxford
+#   Copyright (C) 2007-2008 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -70,57 +70,42 @@
 
 echo [`date`] [`hostname`] [`uname -a`] [`pwd`] [$0 $@] >> .fslvbmlog
 
-D=${FSLDIR}/bin/DR
 mkdir -p stats
-cd FAi
+cd struc
 
 echo "Now running the preprocessing steps and the pre-analyses"
 
 /bin/rm -f fslvbm3a
-for g in `$FSLDIR/bin/remove_ext *FAi.hdr` ; do
+for g in `$FSLDIR/bin/imglob *_struc.*` ; do
   echo $g
-  echo -n "${FSLDIR}/bin/tbss_reg ${g}_GM template_GM -a ; " >> fslvbm3a
-  echo -n "${D}/jacobian template_GM.hdr ${g}_JAC_aff.hdr ${g}_GM_to_template_GM_affine.dof ; " >> fslvbm3a
-  echo -n "${D}/jacobian template_GM.hdr ${g}_JAC_nl.hdr  ${g}_GM_to_template_GM_nonlinear.dof ; " >> fslvbm3a
-  echo "$FSLDIR/bin/fslmaths ${g}_GM_to_template_GM -mul ${g}_JAC_nl -div ${g}_JAC_aff ${g}_GM_to_template_GM_mod -odt float " >> fslvbm3a
+  echo "${FSLDIR}/bin/fsl_reg ${g}_GM template_GM ${g}_GM_to_template_GM -fnirt \"--config=GM_2_MNI152GM_2mm.cnf --jout=${g}_JAC_nl\"; \
+        $FSLDIR/bin/fslmaths ${g}_GM_to_template_GM -mul ${g}_JAC_nl ${g}_GM_to_template_GM_mod -odt float" >> fslvbm3a
 done
 chmod a+x fslvbm3a
-fslvbm3a_id=`${FSLDIR}/bin/fsl_sub -T 200 -N fslvbm3a -t ./fslvbm3a`
+fslvbm3a_id=`${FSLDIR}/bin/fsl_sub -T 40 -N fslvbm3a -t ./fslvbm3a`
 echo Doing registrations: ID=$fslvbm3a_id
-  
+
 cd ../stats
 
 cat <<stage_preproc2 > fslvbm3b
 #!/bin/sh
 
-\$FSLDIR/bin/imcp ../FAi/template_GM template_GM
-\$FSLDIR/bin/imcp ../FAi/T MNI152_grey
+\$FSLDIR/bin/imcp ../struc/template_GM template_GM
 
-\$FSLDIR/bin/fslmerge -t GM_merg \`\${FSLDIR}/bin/imglob -oneperimage ../FAi/*_GM_to_template_GM.*\`
-\$FSLDIR/bin/fslmerge -t GM_mod_merg \`\${FSLDIR}/bin/imglob -oneperimage ../FAi/*_GM_to_template_GM_mod.*\`
+\$FSLDIR/bin/fslmerge -t GM_merg     \`\${FSLDIR}/bin/imglob ../struc/*_GM_to_template_GM.*\`
+\$FSLDIR/bin/fslmerge -t GM_mod_merg \`\${FSLDIR}/bin/imglob ../struc/*_GM_to_template_GM_mod.*\`
 
-### Creation of the mask for the statistical analyses 
-
-\$FSLDIR/bin/fslmaths GM_merg -Tmax max_GM
-\$FSLDIR/bin/fslmaths GM_merg -Tmin -bin -mul max_GM -thr 100 -bin GM_mask -odt char
-
-### Convolution with different smoothing kernels (sigma not FWHM) and run of randomise with only one permutation (no correction for multiple comparisons)
+\$FSLDIR/bin/fslmaths GM_merg -Tmean -thr 0.01 -bin GM_mask -odt char
 
 /bin/cp ../design.* .
 
 for i in GM_mod_merg ; do
-
-  for j in 2.5 3 3.5 4 ; do
-    
+  for j in 2 3 4 ; do
     \$FSLDIR/bin/fslmaths \$i -s \$j \${i}_s\${j} 
-    \$FSLDIR/bin/randomise -i \${i}_s\${j} -o \${i}_s\${j} -m GM_mask -d design.mat -t design.con -n 1 -V
-  
+    \$FSLDIR/bin/randomise -i \${i}_s\${j} -o \${i}_s\${j} -m GM_mask -d design.mat -t design.con -V
   done
-
 done
 
-/bin/rm *_vox_* *_max_*
-  
 stage_preproc2
 
 chmod a+x fslvbm3b
@@ -129,5 +114,6 @@ fslvbm3b_id=`${FSLDIR}/bin/fsl_sub -T 15 -N fslvbm3b -j $fslvbm3a_id ./fslvbm3b`
 
 echo Doing subject concatenation and initial randomise: ID=$fslvbm3b_id
 
-echo "Now run randomise with 5000 permutations on the best smoothed 4D GM with the appropriate -c threshold for the correction for multiple comparisons"
+echo "Once this has finished, run randomise with 5000 permutations on the 'best' smoothed 4D GM_mod_merg. We recommend using the -T (TFCE) option. For example:"
+echo "randomise -i GM_mod_merg_s3 -o GM_mod_merg_s3 -m GM_mask -d design.mat -t design.con -n 5000 -T -V"
 

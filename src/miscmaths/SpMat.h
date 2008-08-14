@@ -11,14 +11,6 @@
 //  for example inserting elements in a random order may be
 //  a bit slow.  
 //
-//  You will notice that some "obvious" functionality like e.g.
-//  transpose is missing. Instead I have supplied functionality
-//  like A.trans_mult(x) which is equivalent to A.t()*x in NEWMAT
-//  lingo. The reason for this is partly to supply an api that is
-//  consistent with that expected by IML++. But more so because I
-//  believe that when a matrix is unwieldily enough to warrant
-//  the use of a sparse matrix class, then one should not attempt
-//  to represent both the matrix and its transpose.
 //
 // Jesper Andersson, FMRIB Image Analysis Group
 //
@@ -29,10 +21,13 @@
 #define SpMat_h
 
 #include <vector>
+#include <fstream>
+#include <iomanip>
 #include <boost/shared_ptr.hpp>
 #include "newmat.h"
 #include "cg.h"
 #include "bicg.h"
+#include "miscmaths.h"
 
 namespace MISCMATHS {
 
@@ -98,6 +93,7 @@ public:
   SpMat(unsigned int m, unsigned int n) : _m(m), _n(n), _nz(0), _ri(n), _val(n) {}
   SpMat(unsigned int m, unsigned int n, const unsigned int *irp, const unsigned int *jcp, const double *sp);
   SpMat(const NEWMAT::GeneralMatrix& M);
+  SpMat(const std::string& fname);
   ~SpMat() {}
 
   unsigned int Nrows() const {return(_m);}
@@ -105,12 +101,22 @@ public:
   unsigned int NZ() const {return(_nz);}
 
   NEWMAT::ReturnMatrix AsNEWMAT() const;
+  void Save(const std::string&   fname,
+            unsigned int         precision) const;
+  void Save(const std::string&   fname) const {Save(fname,8);}
+  void Print(const std::string&  fname,
+             unsigned int        precision) const;
+  void Print(const std::string&  fname) const {Print(fname,8);}
+  void Print(unsigned int        precision) const {Print(std::string(""),precision);}
+  void Print() const {Print(8);}
+
 
   T Peek(unsigned int r, unsigned int c) const;
   T operator()(unsigned int r, unsigned int c) const {return(Peek(r,c));}    // Read-only
 
-  void Set(unsigned int r, unsigned int c, const T& v) {here(r,c) = v;}
-  void AddTo(unsigned int r, unsigned int c, const T& v) {here(r,c) += v;}
+  void Set(unsigned int r, unsigned int c, const T& v) {here(r,c) = v;}             // Set a single value
+  void SetColumn(unsigned int c, const NEWMAT::ColumnVector& col, double eps=0.0);  // Set a whole column (obliterating what was there before) 
+  void AddTo(unsigned int r, unsigned int c, const T& v) {here(r,c) += v;}          // Add value to a single (possibly existing) value
 
   SpMat<T>& operator+=(const SpMat& M) 
   {
@@ -134,6 +140,8 @@ public:
   SpMat<T>& operator&=(const SpMat<T>& bh);                                        // Vert concat below
 
   const SpMat<T> TransMultSelf() const {return(TransMult(*this));}                 // Returns transpose(*this)*(*this)
+
+  const SpMat<T> t() const;                                                        // Returns transpose(*this). Avoid, if at all possible.
   
   friend class Accumulator<T>; 
 
@@ -146,18 +154,18 @@ public:
                                  unsigned int                          miter = 200,
 				 boost::shared_ptr<Preconditioner<T> > C = boost::shared_ptr<Preconditioner<T> >()) const;
 
-NEWMAT::ReturnMatrix SolveForx(const NEWMAT::ColumnVector&            b,
-			                 MatrixType                             type,
-			                 double                                 tol,
-			                 unsigned int                           miter,
-					 const NEWMAT::ColumnVector&            x_init) const;
+  NEWMAT::ReturnMatrix SolveForx(const NEWMAT::ColumnVector&            b,
+			         MatrixType                             type,
+			         double                                 tol,
+			         unsigned int                           miter,
+				 const NEWMAT::ColumnVector&            x_init) const;
 
-NEWMAT::ReturnMatrix SolveForx(const NEWMAT::ColumnVector&            b,
-			                 MatrixType                             type,
-			                 double                                 tol,
-			                 unsigned int                           miter,
-					 boost::shared_ptr<Preconditioner<T> >  C,
-					 const NEWMAT::ColumnVector&           x_init) const;
+  NEWMAT::ReturnMatrix SolveForx(const NEWMAT::ColumnVector&            b,
+			         MatrixType                             type,
+			         double                                 tol,
+			         unsigned int                           miter,
+				 boost::shared_ptr<Preconditioner<T> >  C,
+				 const NEWMAT::ColumnVector&            x_init) const;
 
 private:
   unsigned int                              _m;
@@ -249,9 +257,9 @@ private:
 //
 // The concept of an accumulator was "borrowed" from Gilbert et al. 
 // 92. It is intended as a helper class for SpMat and is used to
-// hold the content of one column of a matrix C where C is a 
-// sparse matrix resulting from C=A*B where A and B are sparse
-// matrices.
+// hold the content of one column of a matrix. This column can then
+// be accessed both by indexing a certain element, and also by indexing
+// only non-zero elements.
 //
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
@@ -356,6 +364,64 @@ SpMat<T>::SpMat(const NEWMAT::GeneralMatrix& M)
 
 /////////////////////////////////////////////////////////////////////
 //
+// Constructs matrix from row col val format produced by 
+// Save/Print below.
+//
+/////////////////////////////////////////////////////////////////////
+
+template<class T>
+SpMat<T>::SpMat(const std::string&  fname)
+: _m(0), _n(0), _nz(0), _ri(0), _val(0)
+{
+  // First read data into (nz+1)x3 NEWMAT matrix
+  NEWMAT::Matrix rcv;
+  try {
+    rcv = read_ascii_matrix(fname);
+  }
+  catch(...) {
+    throw SpMatException("SpMat::SpMat(string& fname): cannot read file given by fname");
+  }
+  // Then interpret it
+  if (rcv(rcv.Nrows(),3)) throw SpMatException("SpMat::SpMat(string& fname): Last row must have zero value and indicate matrix size");
+  _m = static_cast<unsigned int>(rcv(rcv.Nrows(),1)+0.5);
+  _n = static_cast<unsigned int>(rcv(rcv.Nrows(),2)+0.5);
+  // cout << "rcv = " << endl << rcv << endl << "_n = " << _n << endl;
+  _ri.resize(_n);
+  _val.resize(_n);
+  // First pass to see how many elements in each colum
+  std::vector<unsigned int> col_count(_n,0);
+  unsigned int col = static_cast<unsigned int>(rcv(1,2)+0.5);
+  for (unsigned int indx=1; indx<static_cast<unsigned int>(rcv.Nrows()); indx++) {
+    if (static_cast<unsigned int>(rcv(indx,2)+0.5) != col) {
+      if (static_cast<unsigned int>(rcv(indx,2)+0.5) < col) throw SpMatException("SpMat::SpMat(string& fname): Column index must be monotonously increasing");
+      else col = static_cast<unsigned int>(rcv(indx,2)+0.5);
+      if (col > _n) throw SpMatException("SpMat::SpMat(string& fname): File internally inconsistent");
+    }
+    // cout << "col = " << col << endl;
+    col_count[col-1]++;
+  }
+  // Second pass to allocate and fill vectors
+  unsigned int indx=1;
+  for (col=0; col<_n; col++) {
+    std::vector<unsigned int>& ri = _ri[col];
+    std::vector<T>&            val = _val[col];
+    ri.resize(col_count[col]);
+    val.resize(col_count[col]);
+    for (unsigned int i=0; i<col_count[col]; i++, indx++) {
+      if (i && ri[i] >= static_cast<unsigned int>(rcv(indx,1)+0.5)) throw SpMatException("SpMat::SpMat(string& fname): Row index must be monotonously increasing");
+      if (static_cast<unsigned int>(rcv(indx,1)+0.5) < 1 || static_cast<unsigned int>(rcv(indx,1)+0.5) > _m) {
+        throw SpMatException("SpMat::SpMat(string& fname): Row index outside 1 -- -m range");
+      } 
+      ri[i] = static_cast<unsigned int>(rcv(indx,1)+0.5) - 1;
+      val[i] = rcv(indx,3);
+      _nz++;
+    }
+  }
+}
+
+
+/////////////////////////////////////////////////////////////////////
+//
 // Returns matrix in NEWMAT matrix format. Useful for debugging
 //
 /////////////////////////////////////////////////////////////////////
@@ -376,6 +442,61 @@ NEWMAT::ReturnMatrix SpMat<T>::AsNEWMAT() const
   }
   M.Release();
   return(M);
+}
+
+/////////////////////////////////////////////////////////////////////
+//
+// Saves matrix in a row col val format that is useful for
+// exporting it to Matlab (use Matlab function spconvert).
+// Is really the same as Print below, but only writes to
+// file as opposed to Print that optionally prints to the
+// screen.
+//
+/////////////////////////////////////////////////////////////////////
+
+template<class T>
+void SpMat<T>::Save(const std::string&  fname,
+                    unsigned int        precision) const
+{
+  if (!fname.length()) throw SpMatException("SpMat::Save: Must specify filename");
+  else Print(fname,precision);
+}
+
+/////////////////////////////////////////////////////////////////////
+//
+// Prints matrix in a row col val format that is useful for
+// exporting it to Matlab (use Matlab function spconvert).
+//
+/////////////////////////////////////////////////////////////////////
+
+template<class T>
+void SpMat<T>::Print(const std::string&  fname,
+                     unsigned int        precision) const
+{
+  ostream  *sptr=0;
+
+  if (!fname.length()) {
+    sptr = &cout;
+  }
+  else {
+    try {
+      sptr = new ofstream(fname.c_str());
+    }
+    catch(...) {
+      std::string  errmsg("BFMatrix::print: Failed to write to file " + fname);
+      throw SpMatException(errmsg);
+    }
+  }
+  (*sptr) << setprecision(precision);
+
+  for (unsigned int c=0; c<_n; c++) {
+    for (unsigned int i=0; i<_ri[c].size(); i++) {
+      if (_val[c][i]) (*sptr) << _ri[c][i]+1 << "  " << c+1 << "  " << _val[c][i] << endl;
+    }
+  }
+  (*sptr) << _m << "  " << _n << "  " << 0 << endl;
+  
+  if (fname.length()) delete sptr;
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -461,6 +582,78 @@ NEWMAT::ReturnMatrix SpMat<T>::SolveForx(const NEWMAT::ColumnVector&            
   x.Release();
   return(x);
 }
+
+/////////////////////////////////////////////////////////////////////
+//
+// Returns a sparse matrix that is the transpose of *this
+//
+/////////////////////////////////////////////////////////////////////
+
+template<class T>
+const SpMat<T> SpMat<T>::t() const
+{
+  SpMat<T>         t_mat(_n,_m);
+  Accumulator<T>   t_col(_n);
+  for (unsigned int new_col=0; new_col<_m; new_col++) {    // For all columns of transposed matrix
+    t_col.Reset();
+    for (unsigned int old_col=0; old_col<_n; old_col++) {  // Search old colums for row-index corresponding to new_col
+      int pos = 0;
+      if (found(_ri[old_col],new_col,pos)) {
+	t_col(old_col) = _val[old_col][pos];
+      }
+    }
+    t_mat._ri[new_col].resize(t_col.NO());  
+    t_mat._val[new_col].resize(t_col.NO());
+    std::vector<unsigned int>&   t_mat_ri = t_mat._ri[new_col];
+    std::vector<T>&              t_mat_val = t_mat._val[new_col];
+    for (unsigned int i=0; i<t_col.NO(); i++) {
+      t_mat_ri[i] = t_col.ri(i);
+      t_mat_val[i] = t_col.val(i);
+    }
+    t_mat._nz += t_col.NO();
+  }
+  return(t_mat);  
+}
+
+/////////////////////////////////////////////////////////////////////
+//
+// Sets the values of an entire column, destroying any previous content.
+//
+/////////////////////////////////////////////////////////////////////
+
+template<class T>
+void SpMat<T>::SetColumn(unsigned int                 c,      // Column #
+			 const NEWMAT::ColumnVector&  col,    // The values in that column
+			 double                       eps)    // Any value <= eps is treated as a zero
+{
+  if (c < 1 || c > _n) throw SpMatException("SetColumn: column index out of range");
+  if (static_cast<unsigned int>(col.Nrows()) != _m) throw SpMatException("SetColumn: column size mismatch");
+
+  Accumulator<T>    acc(_m);
+  double            *colp = col.Store();
+  
+  for (unsigned int i=0; i<_m; i++) {
+    if (colp[i] > eps) acc(i) = static_cast<T>(colp[i]);
+  }
+  
+  std::vector<unsigned int>&   ri = _ri[c-1];
+  std::vector<T>&              val = _val[c-1];
+  unsigned int                 old_sz = ri.size();
+  if (old_sz) {
+    ri = std::vector<unsigned int>(acc.NO());
+    val = std::vector<T>(acc.NO());
+  }
+  else {
+    ri.resize(acc.NO()); 
+    val.resize(acc.NO());
+  }
+  for (unsigned int i=0; i<acc.NO(); i++) {
+    ri[i] = acc.ri(i);
+    val[i] = acc.val(i);
+  }
+  _nz += (acc.NO() - old_sz);
+}
+
 /////////////////////////////////////////////////////////////////////
 //
 // Returns value at position i,j (one offset)

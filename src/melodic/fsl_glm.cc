@@ -1,8 +1,8 @@
 /*  fsl_glm - 
 
-    Christian Beckmann, FMRIB Image Analysis Group
+    Christian F. Beckmann, FMRIB Image Analysis Group
 
-    Copyright (C) 2006-2007 University of Oxford  */
+    Copyright (C) 2006-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -82,8 +82,8 @@ using namespace std;
 // The two strings below specify the title and example usage that is
 // printed out as the help or usage message
 
-  string title=string("fsl_glm (Version 1.0)")+
-		string("\nCopyright(c) 2007, University of Oxford (Christian F. Beckmann)\n")+
+  string title=string("fsl_glm (Version 1.05)")+
+		string("\nCopyright(c) 2004-2008, University of Oxford (Christian F. Beckmann)\n")+
 		string(" \n Simple GLM usign ordinary least-squares regression on\n")+
 		string(" time courses and/or 3D/4D imges against time courses \n")+
 		string(" or 3D/4D images\n\n");
@@ -91,65 +91,65 @@ using namespace std;
 
 //Command line Options {
   Option<string> fnin(string("-i,--in"), string(""),
-		string("        input file name (matrix 3D or 4D image)"),
+		string("        input file name (text matrix or 3D/4D image file)"),
 		true, requires_argument);
   Option<string> fnout(string("-o,--out"), string(""),
-		string("output file name for GLM parameter estimates"),
+		string("output file name for GLM parameter estimates (GLM betas)"),
 		true, requires_argument);
   Option<string> fndesign(string("-d,--design"), string(""),
 		string("file name of the GLM design matrix (time courses or spatial maps)"),
 		true, requires_argument);
   Option<string> fnmask(string("-m,--mask"), string(""),
-		string("mask image file name"),
+		string("mask image file name if input is image"),
 		false, requires_argument);
   Option<string> fncontrasts(string("-c,--contrasts"), string(""),
 		string("matrix of t-statistics contrasts"),
-		false, requires_argument, false);
+		false, requires_argument);
   Option<string> fnftest(string("-f,--ftests"), string(""),
 		string("matrix of F-tests on contrasts"),
-		false, requires_argument);
+		false, requires_argument,false);
 	Option<int> dofset(string("--dof"),0,
 		string("        set degrees-of-freedom explicitly"),
 		false, requires_argument);
 	Option<bool> perfvn(string("--vn"),FALSE,
-		string("        perfrom variance-normalisation on data"),
-		false, requires_argument);
+		string("        perfrom MELODIC variance-normalisation on data"),
+		false, no_argument);
 	Option<int> help(string("-h,--help"), 0,
 		string("display this help text"),
 		false,no_argument);
 	// Output options	
 	Option<string> outcope(string("--out_cope"),string(""),
-		string("output COPEs"),
+		string("output file name for COPEs (either as text file or image)"),
 		false, requires_argument);
 	Option<string> outz(string("--out_z"),string(""),
-		string("        output Z-stats"),
+		string("        output file name for Z-stats (either as text file or image)"),
 		false, requires_argument);
 	Option<string> outt(string("--out_t"),string(""),
-		string("        output t-stats"),
+		string("        output file name for t-stats (either as text file or image)"),
 		false, requires_argument);
 	Option<string> outp(string("--out_p"),string(""),
-		string("        output p-values of Z-stats"),
+		string("        output file name for p-values of Z-stats (either as text file or image)"),
 		false, requires_argument);
 	Option<string> outf(string("--out_f"),string(""),
-		string("        output F-value of full model fit"),
+		string("        output file name for F-value of full model fit"),
 		false, requires_argument);
 	Option<string> outpf(string("--out_pf"),string(""),
-		string("output p-value for full model fit"),
+		string("output file name for p-value for full model fit"),
 		false, requires_argument);
 	Option<string> outres(string("--out_res"),string(""),
-		string("output residuals"),
+		string("output file name for residuals"),
 		false, requires_argument);
 	Option<string> outvarcb(string("--out_varcb"),string(""),
-		string("output variance of COPEs"),
+		string("output file name for variance of COPEs"),
 		false, requires_argument);
 	Option<string> outsigsq(string("--out_sigsq"),string(""),
-		string("output residual noise variance sigma-square"),
+		string("output file name for residual noise variance sigma-square"),
 		false, requires_argument);
 	Option<string> outdata(string("--out_data"),string(""),
-		string("output data"),
+		string("output file name for pre-processed data"),
 		false, requires_argument);
 	Option<string> outvnscales(string("--out_vnscales"),string(""),
-		string("output scaling factors for variance normalisation"),
+		string("output file name for scaling factors for variance normalisation"),
 		false, requires_argument);
 		/*
 }
@@ -216,6 +216,9 @@ int setup(){
 		
 		data = tmpdata.matrix(mask);
 		voxels = data.Ncols();
+		data = remmean(data,1);
+		if(perfvn.value())
+			vnscales = Melodic::varnorm(data);
 	}
 	else
 		data = read_ascii_matrix(fnin.value());	
@@ -236,8 +239,7 @@ int setup(){
 	meanR=mean(data,1);
 	data = remmean(data,1);
 	design = remmean(design,1);
-	if(perfvn.value())
-		vnscales = Melodic::varnorm(data);
+
 	if(fncontrasts.value()>""){//read contrast		
 		contrasts = read_ascii_matrix(fncontrasts.value());
 		if(!(contrasts.Ncols()==design.Ncols())){
@@ -245,7 +247,7 @@ int setup(){
 			return 1;
 		}
 	}else{
-		contrasts = Identity(design.Ncols());
+		contrasts = IdentityMatrix(design.Ncols());
 		contrasts &= -1.0 * contrasts;
 	}
 	return 0;	
@@ -298,8 +300,8 @@ int main(int argc,char *argv[]){
 			options.add(fnin);
 			options.add(fnout);
 			options.add(fndesign);
-			options.add(fnmask);
 			options.add(fncontrasts);
+			options.add(fnmask);
 			options.add(fnftest);
 			options.add(dofset);
 			options.add(perfvn);

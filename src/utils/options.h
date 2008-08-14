@@ -71,6 +71,7 @@
 #include <iostream>
 #include <sstream>
 #include <iterator>
+#include <cstdlib>
 
 #define POSIX_SOURCE 1
 
@@ -253,6 +254,8 @@ namespace Utilities {
 
     void usage(std::ostream& os) const;
 
+    virtual std::ostream& print(std::ostream& os) const = 0;
+
     virtual ~BaseOption() {}
 
   private:
@@ -305,18 +308,22 @@ namespace Utilities {
 
 
     /** 
-	@param vs The value string which needs to be parsed to set
+	@param s The value string which needs to be parsed to set
 	this options value. The overloaded function string_to_T must be defined
 	for type T.
+
+	@return true if the value actually got set
     */
-    bool set_value(const std::string& vs) { 
-      if(string_to_T(value_, vs))
-	unset_ = false;
-      return !unset_;
-    }
+    bool set_value(const std::string& s)
+      { 
+	if(string_to_T(value_, s))
+	  unset_ = false;
+	return !unset_;
+      }
 
     // and a version for multiple options...
-    bool set_value(const std::string& vs, char* argv[], int valpos, int argc) { 
+    bool set_value(const std::string& vs, char* argv[], int valpos, int argc) {
+
       if (nrequired()<=0) { /* error */ return false; }
       if (nrequired()==1) {
 	// first and only argument
@@ -389,6 +396,13 @@ namespace Utilities {
     */
     const T& default_value() const { return default_; }
 
+    virtual ostream& print(ostream& os) const {
+      os << "# " << help_text() << std::endl 
+	 << config_key() << value_string();
+      
+      return os;
+    }
+
     virtual ~Option() {}
 
   protected:
@@ -402,6 +416,9 @@ namespace Utilities {
     unsigned int valuevec_size_;
   };
 
+  template<> bool Option<bool>::set_value(const string& s);
+  template<> std::ostream& Option<bool>::print(std::ostream& s) const;
+  //  std::ostream& operator<<(std::ostream& os, const Option<bool>& o);
   std::ostream& operator<<(std::ostream& os, const BaseOption& o);
 
   template<class T> class HiddenOption: public Option<T>
@@ -430,7 +447,7 @@ namespace Utilities {
      <pre>
 #include "options.h"
 
-// $Id: options.h,v 1.28 2007/11/29 15:42:25 flitney Exp $ 
+// $Id: options.h,v 1.32 2008/02/08 17:34:10 mwebster Exp $ 
 
 using namespace Utilities;
 

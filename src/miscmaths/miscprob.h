@@ -95,6 +95,12 @@ namespace MISCMATHS {
   // returns nsamps*nparams matrix:
   ReturnMatrix mvnrnd(const RowVector& mu, const SymmetricMatrix& covar, int nsamp = 1);
   
+  float mvnpdf(const RowVector& vals, const RowVector& mu, const SymmetricMatrix& covar);
+
+  float bvnpdf(const RowVector& vals, const RowVector& mu, const SymmetricMatrix& covar);
+
+  float normpdf(const float val, const float mu = 0, const float var = 1);
+  float lognormpdf(const float val, const float mu = 0, const float var = 1);
 
   ReturnMatrix normpdf(const RowVector& vals, const float mu = 0, const float var = 1);
 

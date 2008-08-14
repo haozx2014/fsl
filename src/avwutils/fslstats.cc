@@ -4,11 +4,73 @@
 
     Copyright (C) 2003-2007 University of Oxford  */
 
-/*  CCOPYRIGHT  */
+/*  Part of FSL - FMRIB's Software Library
+    http://www.fmrib.ox.ac.uk/fsl
+    fsl@fmrib.ox.ac.uk
+    
+    Developed at FMRIB (Oxford Centre for Functional Magnetic Resonance
+    Imaging of the Brain), Department of Clinical Neurology, Oxford
+    University, Oxford, UK
+    
+    
+    LICENCE
+    
+    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    Oxford (the "Software")
+    
+    The Software remains the property of the University of Oxford ("the
+    University").
+    
+    The Software is distributed "AS IS" under this Licence solely for
+    non-commercial use in the hope that it will be useful, but in order
+    that the University as a charitable foundation protects its assets for
+    the benefit of its educational and research purposes, the University
+    makes clear that no condition is made or to be implied, nor is any
+    warranty given or to be implied, as to the accuracy of the Software,
+    or that it will be suitable for any particular purpose or for use
+    under any specific conditions. Furthermore, the University disclaims
+    all responsibility for the use which is made of the Software. It
+    further disclaims any liability for the outcomes arising from using
+    the Software.
+    
+    The Licensee agrees to indemnify the University and hold the
+    University harmless from and against any and all claims, damages and
+    liabilities asserted by third parties (including claims for
+    negligence) which arise directly or indirectly from the use of the
+    Software or the sale of any products based on the Software.
+    
+    No part of the Software may be reproduced, modified, transmitted or
+    transferred in any form or by any means, electronic or mechanical,
+    without the express permission of the University. The permission of
+    the University is not required if the said reproduction, modification,
+    transmission or transference is done without financial return, the
+    conditions of this Licence are imposed upon the receiver of the
+    product, and all original and amended source code is included in any
+    transmitted product. You may be held legally responsible for any
+    copyright infringement that is caused or encouraged by your failure to
+    abide by these terms and conditions.
+    
+    You are not permitted under this Licence to use this Software
+    commercially. Use for which any financial return is received shall be
+    defined as commercial use, and includes (1) integration of all or part
+    of the source code or the Software into a product for sale or license
+    by or on behalf of Licensee to third parties or (2) use of the
+    Software or any derivative of it for research with the final aim of
+    developing software products for sale or license to a third party or
+    (3) use of the Software or any derivative of it for research with the
+    final aim of developing non-software products for sale or license to a
+    third party, or (4) use of the Software to provide any service to an
+    external organisation for which payment is received. If you are
+    interested in using the Software commercially, please contact Isis
+    Innovation Limited ("Isis"), the technology transfer company of the
+    University, to negotiate a licence. Contact details are:
+    innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
 #include "miscmaths/miscmaths.h"
 #include "newimage/newimageall.h"
 #include "newimage/costfns.h"
+#include "utils/fsl_isfinite.h"
+
 
 using namespace NEWIMAGE;
 using namespace MISCMATHS;
@@ -16,12 +78,6 @@ using namespace MISCMATHS;
 bool masks_used=false;
 bool lthr_used=false;
 bool uthr_used=false;
-
-#if defined ( __CYGWIN__ ) ||  defined (__sun)
-extern "C" { 
-#include <ieeefp.h> //for finite
-}
-#endif
 
 void print_usage(const string& progname) {
   cout << "Usage: fslstats <input> [options]" << endl << endl;
@@ -171,7 +227,7 @@ int fmrib_main_float(int argc, char* argv[])
         for (int z=vol.minz(); z<=vol.maxz(); z++)
           for (int y=vol.miny(); y<=vol.maxy(); y++)
             for (int x=vol.minx(); x<=vol.maxx(); x++)
-              if (!finite((double)vol(x,y,z,t)))
+              if (!isfinite((double)vol(x,y,z,t)))
 	        vol(x,y,z,t)=0;
     } else if (sarg=="-m") {
       if (masks_used) cout <<  vol.mean(mask) << " ";
@@ -184,21 +240,35 @@ int fmrib_main_float(int argc, char* argv[])
 	cout << nzmean << " ";
       }
     } else if (sarg=="-X") {
+      ColumnVector coord(4);
+      coord(4)=1.0;
       if (masks_used) {
-	cout << vol.mincoordx(mask) << " " << vol.mincoordy(mask) << " " 
-	   << vol.mincoordz(mask) << " ";
+	coord(1) = vol.mincoordx(mask);
+	coord(2) = vol.mincoordy(mask);
+	coord(3) = vol.mincoordz(mask);
       } else {
-	cout << vol.mincoordx() << " " << vol.mincoordy() << " " 
-	   << vol.mincoordz() << " ";
+	coord(1) = vol.mincoordx();
+	coord(2) = vol.mincoordy();
+	coord(3) = vol.mincoordz();
       }
+      coord = (vol[0].niftivox2newimagevox_mat()).i() * coord;
+      cout << MISCMATHS::round(coord(1)) << " " << 
+	MISCMATHS::round(coord(2)) << " " << MISCMATHS::round(coord(3)) << " ";
     } else if (sarg=="-x") { 
+      ColumnVector coord(4);
+      coord(4)=1.0;
       if (masks_used) {
-	cout << vol.maxcoordx(mask) << " " << vol.maxcoordy(mask) << " " 
-	     << vol.maxcoordz(mask) << " ";
+	coord(1) = vol.maxcoordx(mask);
+	coord(2) = vol.maxcoordy(mask);
+	coord(3) = vol.maxcoordz(mask);
       } else {
-	cout << vol.maxcoordx() << " " << vol.maxcoordy() << " " 
-	     << vol.maxcoordz() << " ";
+	coord(1) = vol.maxcoordx();
+	coord(2) = vol.maxcoordy();
+	coord(3) = vol.maxcoordz();
       }
+      coord = (vol[0].niftivox2newimagevox_mat()).i() * coord;
+      cout << MISCMATHS::round(coord(1)) << " " << 
+	MISCMATHS::round(coord(2)) << " " << MISCMATHS::round(coord(3)) << " ";
     } else if (sarg=="-w") {
       if (!masks_used) { 
 	if (vin.nvoxels()<1) { vin = vol; }
@@ -227,6 +297,22 @@ int fmrib_main_float(int argc, char* argv[])
 	  }
 	}
       }
+      // change voxel coords from newimage to nifti convention for output
+      ColumnVector v(4);
+      v << xmin << ymin << zmin << 1.0;
+      v = masknz.niftivox2newimagevox_mat().i() * v;
+      xmin = MISCMATHS::round(v(1));
+      ymin = MISCMATHS::round(v(2));
+      zmin = MISCMATHS::round(v(3));
+      v << xmax << ymax << zmax << 1.0;
+      v = masknz.niftivox2newimagevox_mat().i() * v;
+      xmax = MISCMATHS::round(v(1));
+      ymax = MISCMATHS::round(v(2));
+      zmax = MISCMATHS::round(v(3));
+      if (xmin>xmax) { int tmp=xmax;  xmax=xmin;  xmin=tmp; }
+      if (ymin>ymax) { int tmp=ymax;  ymax=ymin;  ymin=tmp; }
+      if (zmin>zmax) { int tmp=zmax;  zmax=zmin;  zmin=tmp; }
+      // now output nifti coords
       cout << xmin << " " << 1+xmax-xmin << " " << ymin << " " << 1+ymax-ymin << " " << zmin << " " << 1+zmax-zmin << " " << tmin << " " << 1+tmax-tmin << " ";
     } else if (sarg=="-e") {
       if (!masks_used) { 
@@ -331,8 +417,8 @@ int fmrib_main_float(int argc, char* argv[])
 	cout << (long int) mask.sum() << " " 
 	     << mask.sum() * vol.xdim() * vol.ydim() * vol.zdim() << " ";
       } else {
-	cout << (long int) vol.nvoxels() << " "
-	     << vol.nvoxels() * vol.xdim() * vol.ydim() * vol.zdim() << " ";
+	cout << (long int) vol.nvoxels() * vol.tsize() << " "
+	     << vol.nvoxels() * vol.tsize() * vol.xdim() * vol.ydim() * vol.zdim() << " ";
       }
     } else if (sarg=="-V") {
       if (masks_used) {
@@ -364,17 +450,17 @@ int fmrib_main_float(int argc, char* argv[])
 	else cout << vol.min() << " " << vol.max() << " ";
     } else if (sarg=="-c") {
 	ColumnVector cog(4);
-	// convert from fsl mm to voxel to sform coord
+	// convert from fsl mm to voxel to nifti sform coord
 	cog.SubMatrix(1,3,1,1) = vol[0].cog();
 	cog(4) = 1.0;
-	cog = vol[0].vox2mm_mat() * (vol[0].sampling_mat()).i() * cog; 
+	cog = vol[0].newimagevox2mm_mat() * cog; 
 	cout << cog(1) << " " << cog(2) << " " << cog(3) << " " ;
     } else if (sarg=="-C") {
     ColumnVector cog(4);
-	// convert from fsl mm to voxel coord
+	// convert from fsl mm to fsl voxel coord to nifti voxel coord
 	cog.SubMatrix(1,3,1,1) = vol[0].cog();
 	cog(4) = 1.0;
-	cog = (vol[0].sampling_mat()).i() * cog;
+	cog = (vol[0].niftivox2newimagevox_mat()).i() * cog;
 	cout << cog(1) << " " << cog(2) << " " << cog(3) << " " ;
     } else if (sarg=="-p") {
       float n;

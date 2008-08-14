@@ -4,7 +4,7 @@
 #
 #   Gwenaelle Douaud & Stephen Smith, FMRIB Image Analysis Group
 #
-#   Copyright (C) 2007 University of Oxford
+#   Copyright (C) 2007-2008 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -72,7 +72,7 @@ Usage() {
     echo ""
     echo "Usage: fslvbm_1_bet  <-b or -N>  [options to be passed on to BET] "
     echo ""
-    echo "-b  : default BET brain extraction"
+    echo "-b  : default BET brain extraction (which uses -f 0.4)"
     echo "-N  : increased robustness in the brain extraction when a lot of neck is present"
     echo ""
     echo "e.g.,   fslvbm_1_bet -b  -f 0.6 -R"
@@ -90,21 +90,25 @@ if [ $1 = -N ] ; then
 fi
 shift
 
-export FSLOUTPUTTYPE=ANALYZE
-cd FAi
+mkdir -p struc
+for g in `$FSLDIR/bin/imglob *` ; do
+    imcp $g struc/${g}_struc
+done
 
+cd struc
 imagelist=""
-for g in `$FSLDIR/bin/remove_ext *FAi.hdr` ; do
-    echo $g  
-    imagelist="$imagelist $g ${g}_brain"
+for g in `$FSLDIR/bin/imglob *_struc.*` ; do
+    echo $g
     if [ $bet = 0 ] ; then
-	$FSLDIR/bin/bet ${g} ${g}_brain -f 0.4 $@
+	$FSLDIR/bin/bet $g ${g}_brain -f 0.4 $@
     else
 	$FSLDIR/bin/bet $g ${g}_brain
 	$FSLDIR/bin/standard_space_roi ${g}_brain ${g}_cut -roiNONE -ssref ${FSLDIR}/data/standard/MNI152_T1_2mm_brain -altinput $g
 	$FSLDIR/bin/bet ${g}_cut ${g}_brain -f 0.4 $@
     fi
+    imagelist="$imagelist $g ${g}_brain"
 done
 
+echo "Done running BET, now running slicesdir:"
 $FSLDIR/bin/slicesdir -o $imagelist
 

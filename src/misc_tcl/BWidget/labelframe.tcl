@@ -1,7 +1,7 @@
 # ------------------------------------------------------------------------------
 #  labelframe.tcl
 #  This file is part of Unifix BWidget Toolkit
-#  $Id: labelframe.tcl,v 1.1 2006/11/28 15:34:01 mwebster Exp $
+#  $Id: labelframe.tcl,v 1.2 2008/01/08 16:31:25 mwebster Exp $
 # ------------------------------------------------------------------------------
 #  Index of commands:
 #     - LabelFrame::create

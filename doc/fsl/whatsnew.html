@@ -7,8 +7,48 @@
 
 <H2>WHAT'S NEW IN THIS RELEASE</H2>
 
-<hr><P><b>Release 4.0, August 2007</b><br>
+<hr><P><b>Release 4.1, June 2008</b><br>
 Minor release revision history <a href="#revisions">here</a>.<UL>
+
+<LI><a href="../fnirt/index.html" target="_top">FNIRT</a> - FMRIB's
+  Nonlinear Image Registration Tool. The first release of an accurate
+  and yet fast nonlinear registration tool. This replaces IRTK, and is
+  based on a similar warp field representation, but a) includes
+  relative bias field modelling for improved accuracy and b) is very
+  fast because of explicit computation of the cost function
+  Hessian. FEAT, MELODIC, TBSS and FSL-VBM have all been updated to
+  use FNIRT.
+
+<LI><a href="../feat5/index.html">FEAT</a> v5.98. Various
+       improvements, including FNIRT nonlinear registration, outlier
+       modelling in higher-level analysis and higher-level voxelwise
+       covariates (e.g., for structural confound modelling). A new
+       script <code>feat_gm_prepare</code> makes it easy to process
+       structural data for use as a higher-level voxelwise confound
+       covariate.
+
+<LI><a href="../randomise/index.html">randomise</a> v2.1. Various
+  improvements, including improved handling of confounds, TFCE
+  optimisation for TBSS and parallelisation over multiple computers.
+
+<LI><a href="../fast4/index.html">FAST</a> v4.1 is now the default
+  tissue-type segmentation program, and FAST v3 has been removed from
+  FSL. Hence all programs
+  including <a href="../siena/index.html">SIENA/SIENAX</a> now use
+  FAST v4.
+
+<LI><a href="../first/index.html">FIRST</a> subcortical segmentation
+is now considerably faster, has improved boundary correction and now
+includes a cerebellum model.
+
+<LI>The <i>outputting</i> of ANALYZE files is no longer supported as the
+  format is now strongly discouraged.
+
+
+
+</ul>
+
+<hr><P><b>Release 4.0, August 2007</b><br><ul>
 
 <LI><a href="../melodic/index.html" target="_top">MELODIC</a> v3.0 -
   now contains multi-subject ICA, including Tensor-ICA
@@ -30,7 +70,7 @@ Minor release revision history <a href="#revisions">here</a>.<UL>
   time series given a gradient echo pulse sequence, a segmented object
   with known tissue parameters, and a motion sequence.
 
-<LI><a href="../fslview/atlas-descriptions.html" target="_top">Standard Space
+<LI><a href="../data/atlas-descriptions.html" target="_top">Standard Space
     Atlases</a> - several complementary brain atlases, integrated into
     FSLView and Featquery, allowing viewing of structural and
     cytoarchitectonic standard space labels and probability maps for
@@ -45,7 +85,7 @@ Minor release revision history <a href="#revisions">here</a>.<UL>
 
 <LI><a href="../tbss/index.html" target="_top">TBSS</a> v1.1 -
 improved registration efficiency in conjunction with the release of a
-new standard space FA template, the <a href="../tbss/FMRIB58_FA.html"
+new standard space FA template, the <a href="../data/FMRIB58_FA.html"
 target="_top">FMRIB58_FA</a>. Also it is now possible to
 back-transform skeleton-space voxels into subjects' native DTI space,
 for example to allow the automated seeding of tractography in FDT.
@@ -415,31 +455,47 @@ previous version (3.20).
 
 <br><br><br><br><br>
 
-<b>FSL 4.0 minor release revision history</b><ul>
+<b>FSL 4.1 minor release revision history</b><ul>
 
-<LI>4.0.0 13/8/07 First release
-
-<LI>4.0.1 31/8/07 Minor bugfix release: various minor fixes in FEAT,
-FDT scripts, etc.
-
-<LI>4.0.2 14/11/07 Bugfix release:
-Susan    multiple performance improvements
-SienaX   Bugfix in sienax regarding the -lm option
-Conf/doc minor changes
-IRTK     linux 32/64 flavours
-Avwutils minor fixes to fslmaths and fslsplit
-Feat5    Multiple minor fixes
-Film     Minor fix
-Flame    bugfix in the multiple-group-variances estimation
-Fdt      minor changes and fixes
-Miscvis  Fixed Renderstats gui
-
-<LI>4.0.3 18/01/08 Bugfix release:
-Bet2     Fix for multiple options
- 
-Small changes to installer/configuraton
+<LI>4.1.0 12/8/08 First release
 
 </ul>
+
+<!-- <b>FSL 4.0 minor release revision history</b><ul> -->
+
+<!-- <LI>4.0.0 13/8/07 First release -->
+
+<!-- <LI>4.0.1 31/8/07 Minor bugfix release: <br>  -->
+<!--   Various minor fixes in FEAT, FDT scripts, etc. -->
+
+<!-- <LI>4.0.2 14/11/07 Bugfix release: <br> -->
+<!--   Susan    multiple performance improvements <br> -->
+<!--   SienaX   Bugfix in sienax regarding the -lm option <br> -->
+<!--   Conf/doc minor changes <br> -->
+<!--   IRTK     linux 32/64 flavours <br> -->
+<!--   Avwutils minor fixes to fslmaths and fslsplit <br> -->
+<!--   Feat5    Multiple minor fixes <br> -->
+<!--   Film     Minor fix <br> -->
+<!--   Flame    bugfix in the multiple-group-variances estimation <br> -->
+<!--   Fdt      minor changes and fixes <br> -->
+<!--   Miscvis  Fixed Renderstats gui -->
+
+<!-- <LI>4.0.3 18/01/08 Bugfix release: <br> -->
+<!--   Bet2     Fix for multiple options  <br> -->
+<!--   Possum   Fix for postproc          <br> -->
+<!--   Minor    changes to installer/configuraton -->
+
+<!-- <LI>4.0.4 31/03/08 Bugfix release: <br> -->
+<!--   First    Fixed script  <br> -->
+<!--   Fslmaths Fixed output type for small image range <br> -->
+<!--   Fslchpixdim Fixed error in script <br> -->
+<!--   Fast     Minor bugfix <br> -->
+<!--   Fast4    Minor bugfix <br> -->
+<!--   Flirt    Minor bugfix <br> -->
+<!--   Fugue	   Minor bugfix <br> -->
+<!--   Possum   Fixed MRpar_3T -->
+
+<!-- </ul> -->
 
 <!-- <b>FSL 3.3 minor release revision history</b><ul> -->
 

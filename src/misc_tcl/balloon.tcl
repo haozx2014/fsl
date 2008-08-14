@@ -134,6 +134,6 @@ proc balloonhelp_show {win} {
         after idle raise .balloonhelp
         after idle update
     }
-    unset bhInfo(pending)
+    if { [ info exists bhInfo(pending) ] } { unset bhInfo(pending) }
 }
 

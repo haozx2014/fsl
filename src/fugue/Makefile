@@ -1,25 +1,27 @@
-# $Id: Makefile,v 1.34 2007/07/11 16:50:42 mark Exp $
+# $Id: Makefile,v 1.44 2008/04/03 16:12:28 mark Exp $
 include ${FSLCONFDIR}/default.mk
 
 PROJNAME = fugue
 
-USRINCFLAGS = -I${INC_NEWMAT} -I${INC_ZLIB}
+USRINCFLAGS = -I${INC_NEWMAT} -I${INC_BOOST} -I${INC_ZLIB}
 USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_ZLIB}
 
-LIBS=-lnewimage -lmiscmaths -lprob -lfslio -lniftiio -lznz -lnewmat -lutils -lz
+LIBS=-lwarpfns -lbasisfield -lmeshclass -lnewimage -lmiscmaths -lprob -lfslio -lniftiio -lznz -lnewmat -lutils -lz
 
 PRELUDEOBJS=prelude.o unwarpfns.o
 FUGUEOBJS=fugue.o unwarpfns.o
 APPLYOBJS=applywarp.o
 CONVERTOBJS=convertwarp.o
-VOBJS=variation.o unwarpfns.o
 IOBJS=invwarp.o unwarpfns.o
+I2OBJS=interpwarp.o unwarpfns.o
 SOBJS=sigloss.o
-MOBJS=macfnirt.o
+FNIRTFILEUTILSOBJS=fnirtfileutils.o
 
-XFILES=prelude fugue applywarp convertwarp sigloss invwarp
-TESTXFILES=variation invwarp macflirt
-SCRIPTS = extractfidparams dof2warp
+RUNTCLS = Fmrib_prepare_fieldmap
+XFILES=prelude fugue applywarp convertwarp sigloss invwarp fnirtfileutils
+SCRIPTS=extractfidparams dof2warp
+FSCRIPTS=fmrib_prepare_fieldmap fix_OCMR_fieldmaps
+TESTXFILES=interpwarp
 
 all: ${XFILES}
 
@@ -35,14 +37,14 @@ applywarp:  ${APPLYOBJS}
 convertwarp:  ${CONVERTOBJS}
 	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${CONVERTOBJS} ${LIBS} 
 
-variation: ${VOBJS}
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${VOBJS} ${LIBS} 
-
 invwarp: ${IOBJS}
 	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${IOBJS} ${LIBS} 
+
+interpwarp: ${I2OBJS}
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${I2OBJS} ${LIBS} 
 
 sigloss: ${SOBJS}
 	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${SOBJS} ${LIBS} 
 
-macfnirt: ${MOBJS}
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${MOBJS} ${LIBS} 
+fnirtfileutils: ${FNIRTFILEUTILSOBJS}
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${FNIRTFILEUTILSOBJS} ${LIBS} 

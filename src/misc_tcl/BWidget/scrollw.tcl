@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 #  scrollw.tcl
 #  This file is part of Unifix BWidget Toolkit
-#  $Id: scrollw.tcl,v 1.1 2006/11/28 15:34:01 mwebster Exp $
+#  $Id: scrollw.tcl,v 1.2 2008/01/08 16:31:25 mwebster Exp $
 # -----------------------------------------------------------------------------
 #  Index of commands:
 #     - ScrolledWindow::create
@@ -47,9 +47,10 @@ proc ScrolledWindow::create { path args } {
 
     set bg     [Widget::cget $path -background]
     set sbsize [Widget::cget $path -size]
-    set sw     [frame $path \
-	    -relief flat -borderwidth 0 -background $bg \
-	    -highlightthickness 0 -takefocus 0]
+    set sw     [eval [list frame $path \
+			  -relief flat -borderwidth 0 -background $bg \
+			  -highlightthickness 0 -takefocus 0] \
+		    [Widget::subcget $path :cmd]]
 
     scrollbar $path.hscroll \
 	    -highlightthickness 0 -takefocus 0 \
@@ -161,11 +162,21 @@ proc ScrolledWindow::configure { path args } {
 
 	if {$data(hsb,packed)} {
 	    grid $path.hscroll -column 1 -row $data(hsb,row) \
-		    -sticky ew -ipady $data(ipad)
+		-sticky ew -ipady $data(ipad)
+	} else {
+	    if {![info exists data(hlock)]} {
+		set data(hsb,packed) 0
+		grid remove $path.hscroll
+	    }
 	}
 	if {$data(vsb,packed)} {
 	    grid $path.vscroll -column $data(vsb,column) -row 1 \
-		    -sticky ns -ipadx $data(ipad)
+		-sticky ns -ipadx $data(ipad)
+	} else {
+	    if {![info exists data(hlock)]} {
+		set data(vsb,packed) 0
+		grid remove $path.vscroll
+	    }
 	}
     }
     return $res

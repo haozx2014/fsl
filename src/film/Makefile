@@ -9,7 +9,7 @@ LIBS = -lnewimage -lmiscmaths -lutils -lm -lnewmat -lfslio -lniftiio -lznz -lpro
 
 XFILES = film_gls contrast_mgr ttoz ftoz ttologp
 
-OBJS =  ContrastMgrOptions.o ContrastMgr.o BandPassOptions.o gaussComparer.o AutoCorrEstimator.o glm.o paradigm.o glim.o FilmOlsOptions.o FilmGlsOptionsRes.o FilmGlsOptions.o glimGls.o
+OBJS =  ContrastMgrOptions.o ContrastMgr.o gaussComparer.o AutoCorrEstimator.o glm.o paradigm.o FilmOlsOptions.o FilmGlsOptionsRes.o FilmGlsOptions.o glimGls.o
 
 #OPTFLAGS =
 

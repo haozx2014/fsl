@@ -1,9 +1,9 @@
-# $Id: Makefile,v 1.7 2005/11/03 15:17:45 duncan Exp $
+# $Id: Makefile,v 1.8 2007/11/02 11:06:19 flitney Exp $
 include ${FSLCONFDIR}/default.mk
 
 PROJNAME = meshclass
 
-USRINCFLAGS = -I${INC_NEWMAT} -I${INC_ZLIB}
+USRINCFLAGS = -I${INC_NEWMAT} -I${INC_ZLIB} -I${INC_BOOST}
 USRLDFLAGS = -L${LIB_NEWMAT}  -L${LIB_ZLIB}
 
 LIBS=-lnewimage -lmiscmaths -lprob -lfslio -lniftiio -lznz -lnewmat -lutils -lz

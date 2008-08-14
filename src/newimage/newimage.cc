@@ -66,7 +66,6 @@
     University, to negotiate a licence. Contact details are:
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
-
 #include <complex>
 #include <cassert>
 #include <sstream>
@@ -152,7 +151,9 @@ namespace NEWIMAGE {
 	  data_owner = d_owner;
 	}
 	else {
-	  Data = new T[SizeBound];
+          try {
+	    Data = new T[SizeBound];
+	  } catch(...) { Data=0; }
 	  if (Data==0) { imthrow("Out of memory",99); }
 	  data_owner = true;
 	}
@@ -173,10 +174,11 @@ namespace NEWIMAGE {
       Ydim = 1.0;
       Zdim = 1.0;
 
-      StandardSpaceCoordMat = Identity(4);
-      RigidBodyCoordMat = Identity(4);
+      StandardSpaceCoordMat = IdentityMatrix(4);
+      RigidBodyCoordMat = IdentityMatrix(4);
       StandardSpaceTypeCode = NIFTI_XFORM_UNKNOWN;
       RigidBodyTypeCode = NIFTI_XFORM_UNKNOWN;
+      RadiologicalFile = true;
 
       IntentCode = NIFTI_INTENT_NONE;
       IntentParam1 = 0.0;
@@ -195,7 +197,7 @@ namespace NEWIMAGE {
       minmax.init(this,calc_minmax);
       sums.init(this,calc_sums);
       backgroundval.init(this,calc_backgroundval);
-      cog.init(this,calc_cog);
+      lazycog.init(this,calc_cog);
       robustlimits.init(this,calc_robustlimits);
       principleaxes.init(this,calc_principleaxes);
       percentiles.init(this,calc_percentiles);
@@ -280,7 +282,7 @@ namespace NEWIMAGE {
   template <class T>
   void volume<T>::calc_no_voxels() const 
   {
-    no_voxels = (maxx()-minx()+1) *(maxy()-miny()+1) *(maxz()-minz()+1); 
+    no_voxels = ((unsigned long int)(maxx()-minx()+1)) *((unsigned long int) (maxy()-miny()+1)) *((unsigned long int) (maxz()-minz()+1)); 
   }
   
   template <class T>
@@ -367,8 +369,7 @@ namespace NEWIMAGE {
     roivol.copyproperties(*this);
     roivol.deactivateROI();
     // set sform and qform matrices appropriately (if set)
-    Matrix roi2vol(4,4);
-    roi2vol = Identity(4);
+    Matrix roi2vol= IdentityMatrix(4);
     roi2vol(1,4) = this->minx();
     roi2vol(2,4) = this->miny();
     roi2vol(3,4) = this->minz();
@@ -415,7 +416,7 @@ namespace NEWIMAGE {
     minmax.copy(source.minmax,this);
     sums.copy(source.sums,this);
     backgroundval.copy(source.backgroundval,this);
-    cog.copy(source.cog,this);
+    lazycog.copy(source.lazycog,this);
     robustlimits.copy(source.robustlimits,this);
     principleaxes.copy(source.principleaxes,this);
     percentiles.copy(source.percentiles,this);
@@ -475,6 +476,8 @@ namespace NEWIMAGE {
                              const volume<T>&     mask)
   {
     if (pvec.Nrows() != xsize()*ysize()*zsize()) {
+      cout << "pvec.Nrows() = " << pvec.Nrows() << endl;
+      cout << "xsize() = " << xsize() << ",  ysize() = " << ysize() << ",  zsize() = " << zsize() << endl;
       imthrow("volume<T>::insert_vec: Size mismatch between ColumnVector and image volume",3);
     }
     if (!samesize(mask,*this)) {
@@ -494,6 +497,8 @@ namespace NEWIMAGE {
   void volume<T>::insert_vec(const ColumnVector&  pvec)
   {
     if (pvec.Nrows() != xsize()*ysize()*zsize()) {
+      cout << "pvec.Nrows() = " << pvec.Nrows() << endl;
+      cout << "xsize() = " << xsize() << ",  ysize() = " << ysize() << ",  zsize() = " << zsize() << endl;
       imthrow("volume<T>::insert_vec: Size mismatch between ColumnVector and image volume",3);
     }
     for (int vindx=0, k=0; k<zsize(); k++) {
@@ -1018,8 +1023,7 @@ namespace NEWIMAGE {
   template <class T>
   Matrix volume<T>::sampling_mat() const
   {
-    Matrix samp(4,4);
-    Identity(samp);
+    Matrix samp=IdentityMatrix(4);
     samp(1,1) = xdim();
     samp(2,2) = ydim();
     samp(3,3) = zdim();
@@ -1566,6 +1570,24 @@ namespace NEWIMAGE {
   }
 
 
+  template <class T>
+  ColumnVector volume<T>::cog(const string& coordtype) const
+  {
+    // for coordtype="scaled_mm" return the old style, otherwise
+    //  return newimage voxel coordinates
+    ColumnVector retcog;
+    retcog = this->lazycog();
+    if (coordtype=="scaled_mm") {
+      ColumnVector v(4);
+      v << retcog(1) << retcog(2) << retcog(3) << 1.0;
+      v = this->sampling_mat() * v;
+      retcog(1) = v(1); retcog(2) = v(2); retcog(3) = v(3);
+    }
+    return retcog;
+  }
+
+
+
   
   // the following calculates a robust background by taking the 10th percentile
   //  of the edge voxels only
@@ -1660,12 +1682,7 @@ namespace NEWIMAGE {
       v_cog(1) /= total;
       v_cog(2) /= total;
       v_cog(3) /= total;
-      // Now convert these values from voxel to physical space
-      ColumnVector cog4(4);
-      cog4.Rows(1,3) = v_cog.Rows(1,3);
-      cog4(4) = 1.0;
-      cog4 = vol.sampling_mat() * cog4;
-      v_cog.Rows(1,3) = cog4.Rows(1,3);
+      // Leave these values in (newimage) voxel coordinates
       return v_cog;
     }
 
@@ -2584,39 +2601,49 @@ namespace NEWIMAGE {
   int volume<T>::left_right_order() const
   {
     int order;
-    // call the function in miscmaths
-    order = FslGetLeftRightOrder(this->sform_code(), this->sform_mat(),this->qform_code(), this->qform_mat());
+    // call the function in fslio
+    order = FslGetLeftRightOrder2(this->sform_code(),
+				   newmat_to_mat44(this->sform_mat()),
+				   this->qform_code(),
+				   newmat_to_mat44(this->qform_mat()));
     return order;
   }
 
   template <class T>
   short vox2mm_all(const volume<T>& vol, Matrix& vox2mm_mat, short& code) 
   {
-    // call the function in miscmaths
-    code = FslGetVox2mmMatrix(vox2mm_mat,vol.sform_code(),vol.sform_mat(), 
-			      vol.qform_code(), vol.qform_mat(), 
+    mat44 vox2mm44;
+    code = FslGetVox2mmMatrix2(&vox2mm44,vol.sform_code(),
+			      newmat_to_mat44(vol.sform_mat()), 
+			      vol.qform_code(), 
+			      newmat_to_mat44(vol.qform_mat()), 
 			      vol.xdim(),vol.ydim(),vol.zdim());
+    vox2mm_mat = mat44_to_newmat(vox2mm44);
     return code;
   }
- 	 
+ 	  	 
   template <class T>
-  short volume<T>::vox2mm_code() const
-  {
-    Matrix dummymat;
-    short code;
-    vox2mm_all(*this,dummymat,code);
-    return code;
-  }
- 	 
-  template <class T>
-  Matrix volume<T>::vox2mm_mat() const
+  Matrix volume<T>::newimagevox2mm_mat() const
   {
     Matrix vox2mm;
     short code;
     vox2mm_all(*this,vox2mm,code);
     return vox2mm;
   }
+
+  template <class T>
+  Matrix volume<T>::niftivox2newimagevox_mat() const
+  {
+    Matrix vox2vox=IdentityMatrix(4);
+    if ((!RadiologicalFile) && (this->left_right_order()==FSL_RADIOLOGICAL)) {
+      vox2vox = (this->sampling_mat()).i() * this->swapmat(-1,2,3) * 
+	(this->sampling_mat());
+    }
+    return vox2vox;
+  }
  	 
+
+
   template <class T>
   void volume<T>::swapLRorder()
   {
@@ -3109,6 +3136,14 @@ namespace NEWIMAGE {
   const volume4D<T>& volume4D<T>::operator=(const volume4D<T>& source)
   {
     this->reinitialize(source);
+    return *this;
+  }
+
+  template <class T>
+  const volume4D<T>& volume4D<T>::operator=(const volume<T>& source)
+  {
+    this->clear();
+    this->addvolume(source);
     return *this;
   }
 
@@ -4218,6 +4253,7 @@ namespace NEWIMAGE {
   template <class T>
   void volume4D<T>::binarise(T lowerth, T upperth, threshtype tt)
   {
+    set_whole_cache_validity(false);
     for (int t=this->mint(); t<=this->maxt(); t++)  {
       vols[t].binarise(lowerth,upperth,tt); 
     }
@@ -4226,6 +4262,7 @@ namespace NEWIMAGE {
   template <class T>
   void volume4D<T>::threshold(T lowerth, T upperth, threshtype tt)
   {
+    set_whole_cache_validity(false);
     for (int t=this->mint(); t<=this->maxt(); t++)  { 
       vols[t].threshold(lowerth,upperth,tt); 
     }
@@ -4252,7 +4289,7 @@ namespace NEWIMAGE {
     if (this->tsize()>0) {
       return vols[0].swapmat(dim1,dim2,dim3);
     }
-    return Identity(4);
+    return IdentityMatrix(4);
   }
 
 
@@ -4264,18 +4301,19 @@ namespace NEWIMAGE {
 
 
   template <class T>
-  Matrix volume4D<T>::vox2mm_mat() const
+  Matrix volume4D<T>::newimagevox2mm_mat() const
   {
-    if (this->tsize()>0) return vols[0].vox2mm_mat();
-    return Identity(4);
+    if (this->tsize()>0) return vols[0].newimagevox2mm_mat();
+    return IdentityMatrix(4);
   }
  	 
   template <class T>
-  short volume4D<T>::vox2mm_code() const
+  Matrix volume4D<T>::niftivox2newimagevox_mat() const
   {
-    if (this->tsize()>0) return vols[0].vox2mm_code();
-    return NIFTI_XFORM_UNKNOWN;
+    if (this->tsize()>0) return vols[0].niftivox2newimagevox_mat();
+    return IdentityMatrix(4);
   }
+
  	 
   template <class T>
   int volume4D<T>::left_right_order() const
@@ -4319,6 +4357,7 @@ namespace NEWIMAGE {
   template <class T>
   T volume4D<T>::operator=(T val)
   {
+    set_whole_cache_validity(false);
     for (int t=this->mint(); t<=this->maxt(); t++)  { vols[t] = val; }
     return val;
   }
@@ -4327,6 +4366,7 @@ namespace NEWIMAGE {
   template <class T>
   const volume4D<T>& volume4D<T>::operator+=(T val)
   {
+    set_whole_cache_validity(false);
     for (int t=this->mint(); t<=this->maxt(); t++) {
       vols[t] += val;
     }
@@ -4336,6 +4376,7 @@ namespace NEWIMAGE {
   template <class T>
   const volume4D<T>& volume4D<T>::operator-=(T val)
   {
+    set_whole_cache_validity(false);
     for (int t=this->mint(); t<=this->maxt(); t++) {
       vols[t] -= val;
     }
@@ -4345,6 +4386,7 @@ namespace NEWIMAGE {
   template <class T>
   const volume4D<T>& volume4D<T>::operator*=(T val)
   {
+    set_whole_cache_validity(false);
     for (int t=this->mint(); t<=this->maxt(); t++) {
       vols[t] *= val;
     }
@@ -4354,6 +4396,7 @@ namespace NEWIMAGE {
   template <class T>
   const volume4D<T>& volume4D<T>::operator/=(T val)
   {
+    set_whole_cache_validity(false);
     for (int t=this->mint(); t<=this->maxt(); t++) {
       vols[t] /= val;
     }
@@ -4364,6 +4407,7 @@ namespace NEWIMAGE {
   template <class T>
   const volume4D<T>& volume4D<T>::operator+=(const volume<T>& source)
   {
+    set_whole_cache_validity(false);
     for (int t=this->mint(); t<=this->maxt(); t++) {
       vols[t] += source;
     }
@@ -4373,6 +4417,7 @@ namespace NEWIMAGE {
   template <class T>
   const volume4D<T>& volume4D<T>::operator-=(const volume<T>& source) 
   {
+    set_whole_cache_validity(false);
     for (int t=this->mint(); t<=this->maxt(); t++) {
       vols[t] -= source;
     }
@@ -4382,6 +4427,7 @@ namespace NEWIMAGE {
   template <class T>
   const volume4D<T>& volume4D<T>::operator*=(const volume<T>& source) 
   {
+    set_whole_cache_validity(false);
     for (int t=this->mint(); t<=this->maxt(); t++) {
       vols[t] *= source;
     }
@@ -4391,6 +4437,7 @@ namespace NEWIMAGE {
   template <class T>
   const volume4D<T>& volume4D<T>::operator/=(const volume<T>& source) 
   {
+    set_whole_cache_validity(false);
     for (int t=this->mint(); t<=this->maxt(); t++) {
       vols[t] /= source;
     }
@@ -4404,6 +4451,7 @@ namespace NEWIMAGE {
     if (!samesize(*this,source)) {
       imthrow("Attempted to add images/ROIs of different sizes",3);
     }
+    set_whole_cache_validity(false);
     int toff = source.mint() - this->mint();
     for (int t=this->mint(); t<=this->maxt(); t++) {
       vols[t] += source[t + toff];
@@ -4418,6 +4466,7 @@ namespace NEWIMAGE {
     if (!samesize(*this,source)) {
       imthrow("Attempted to subtract images/ROIs of different sizes",3);
     }
+    set_whole_cache_validity(false);
     int toff = source.mint() - this->mint();
     for (int t=this->mint(); t<=this->maxt(); t++) {
       vols[t] -= source[t + toff];
@@ -4432,6 +4481,7 @@ namespace NEWIMAGE {
     if (!samesize(*this,source)) {
       imthrow("Attempted to multiply images/ROIs of different sizes",3);
     }
+    set_whole_cache_validity(false);
     int toff = source.mint() - this->mint();
     for (int t=this->mint(); t<=this->maxt(); t++) {
       vols[t] *= source[t + toff];
@@ -4446,6 +4496,7 @@ namespace NEWIMAGE {
     if (!samesize(*this,source)) {
       imthrow("Attempted to divide images/ROIs of different sizes",3);
     }
+    set_whole_cache_validity(false);
     int toff = source.mint() - this->mint();
     for (int t=this->mint(); t<=this->maxt(); t++) {
       vols[t] /= source[t + toff];
@@ -4456,6 +4507,7 @@ namespace NEWIMAGE {
   template <class T>
   volume4D<T> volume4D<T>::operator+(T num) const
   {
+    set_whole_cache_validity(false);
     volume4D<T> tmp = *this;
     tmp+=num;
     return tmp;
@@ -4464,6 +4516,7 @@ namespace NEWIMAGE {
   template <class T>
   volume4D<T> volume4D<T>::operator-(T num) const
   {
+    set_whole_cache_validity(false);
     volume4D<T> tmp = *this;
     tmp-=num;
     return tmp;
@@ -4480,6 +4533,7 @@ namespace NEWIMAGE {
   template <class T>
   volume4D<T> volume4D<T>::operator/(T num) const
   {
+    set_whole_cache_validity(false);
     volume4D<T> tmp = *this;
     tmp/=num;
     return tmp;
@@ -4496,6 +4550,7 @@ namespace NEWIMAGE {
   template <class T>
   volume4D<T> volume4D<T>::operator-(const volume<T>& vol2) const
   {
+    set_whole_cache_validity(false);
     volume4D<T> tmp = *this;
     tmp-=vol2;
     return tmp;
@@ -4512,6 +4567,7 @@ namespace NEWIMAGE {
   template <class T>
   volume4D<T> volume4D<T>::operator/(const volume<T>& vol2) const
   {
+    set_whole_cache_validity(false);
     volume4D<T> tmp = *this;
     tmp/=vol2;
     return tmp;
@@ -4520,6 +4576,7 @@ namespace NEWIMAGE {
   template <class T>
   volume4D<T> volume4D<T>::operator+(const volume4D<T>& vol2) const
   {
+    set_whole_cache_validity(false);
     volume4D<T> tmp = *this;
     tmp+=vol2;
     return tmp;
@@ -4528,6 +4585,7 @@ namespace NEWIMAGE {
   template <class T>
   volume4D<T> volume4D<T>::operator-(const volume4D<T>& vol2) const
   {
+    set_whole_cache_validity(false);
     volume4D<T> tmp = *this;
     tmp-=vol2;
     return tmp;
@@ -4536,6 +4594,7 @@ namespace NEWIMAGE {
   template <class T>
   volume4D<T> volume4D<T>::operator*(const volume4D<T>& vol2) const
   {
+    set_whole_cache_validity(false);
     volume4D<T> tmp = *this;
     tmp*=vol2;
     return tmp;
@@ -4544,6 +4603,7 @@ namespace NEWIMAGE {
   template <class T>
   volume4D<T> volume4D<T>::operator/(const volume4D<T>& vol2) const
   {
+    set_whole_cache_validity(false);
     volume4D<T> tmp = *this;
     tmp/=vol2;
     return tmp;

@@ -111,6 +111,6 @@ ${FSLDIR}/bin/slicer ${A1}_halfwayto_${A2} -s 1 -x 0.4 gr${A1}${A2}a.png -x 0.5 
 ${FSLDIR}/bin/pngappend gr${A1}${A2}a.png + gr${A1}${A2}b.png + gr${A1}${A2}c.png + gr${A1}${A2}d.png + gr${A1}${A2}e.png + gr${A1}${A2}f.png + gr${A1}${A2}g.png + gr${A1}${A2}h.png + gr${A1}${A2}i.png gr${A1}${A2}j.gif
 ${FSLDIR}/bin/slicer ${A2}_halfwayto_${A1} -s 1 -x 0.4 gr${A1}${A2}a.png -x 0.5 gr${A1}${A2}b.png -x 0.6 gr${A1}${A2}c.png -y 0.4 gr${A1}${A2}d.png -y 0.5 gr${A1}${A2}e.png -y 0.6 gr${A1}${A2}f.png -z 0.4 gr${A1}${A2}g.png -z 0.5 gr${A1}${A2}h.png -z 0.6 gr${A1}${A2}i.png
 ${FSLDIR}/bin/pngappend gr${A1}${A2}a.png + gr${A1}${A2}b.png + gr${A1}${A2}c.png + gr${A1}${A2}d.png + gr${A1}${A2}e.png + gr${A1}${A2}f.png + gr${A1}${A2}g.png + gr${A1}${A2}h.png + gr${A1}${A2}i.png gr${A1}${A2}k.gif
-${FSLDIR}/bin/whirlgif -o ${A1}_and_${A2}.gif -time 50 -loop 0 gr${A1}${A2}j.gif gr${A1}${A2}k.gif >& /dev/null
-/bin/rm gr${A1}${A2}?.??? `$FSLDIR/bin/imglob ${A2}_halfwayto_${A1}.* ${A1}_halfwayto_${A2}.*`
+${FSLDIR}/bin/whirlgif -o ${A1}_and_${A2}.gif -time 50 -loop 0 gr${A1}${A2}j.gif gr${A1}${A2}k.gif >/dev/null 2>&1 
+/bin/rm gr${A1}${A2}?.??? `$FSLDIR/bin/imglob -extensions ${A2}_halfwayto_${A1}.* ${A1}_halfwayto_${A2}.*`
 

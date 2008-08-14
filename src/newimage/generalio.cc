@@ -77,6 +77,320 @@ namespace NEWIMAGE {
 ////////////////////////////////////////////////////////////////////////////
 
 // VOLUME I/O
+template <class T>
+void set_volume_properties(FSLIO* IP1, volume<T>& target)
+{
+  float x,y,z,tr;
+  FslGetVoxDim(IP1,&x,&y,&z,&tr);
+  target.setdims(x,y,z);
+
+  int sform_code, qform_code;
+  mat44 smat, qmat;
+  sform_code = FslGetStdXform(IP1,&smat);
+  qform_code = FslGetRigidXform(IP1,&qmat);
+  Matrix snewmat(4,4), qnewmat(4,4);
+  for (int i=1; i<=4; i++) {
+    for (int j=1; j<=4; j++) {
+      snewmat(i,j) = smat.m[i-1][j-1];
+      qnewmat(i,j) = qmat.m[i-1][j-1];
+    }
+  }
+  target.set_sform(sform_code,snewmat);
+  target.set_qform(qform_code,qnewmat);
+  target.RadiologicalFile = (FslGetLeftRightOrder(IP1)==FSL_RADIOLOGICAL);
+
+  short intent_code;
+  float p1, p2, p3;
+  FslGetIntent(IP1, &intent_code, &p1, &p2, &p3);
+  target.set_intent(intent_code,p1,p2,p3);
+}
+
+template void set_volume_properties(FSLIO* IP1, volume<char>& target);
+template void set_volume_properties(FSLIO* IP1, volume<short>& target);
+template void set_volume_properties(FSLIO* IP1, volume<int>& target);
+template void set_volume_properties(FSLIO* IP1, volume<float>& target);
+template void set_volume_properties(FSLIO* IP1, volume<double>& target);
+
+template <class T>
+int read_volumeROI(volume<T>& target, const string& filename, 
+		   volumeinfo& vinfo, short& dtype, bool read_img_data,
+		   int x0, int y0, int z0, int x1, int y1, int z1,
+		   bool swap2radiological)
+{
+  // to get the whole volume use x0=y0=z0=0 and x1=y1=z1=-1
+  // NB: coordinates are in "radiological" convention when swapping (i.e.
+  ///    *not* the same as nifti/fslview), or untouched otherwise
+  Tracer trcr("read_volumeROI");
+
+  FSLIO *IP1;
+  IP1 = NewFslOpen(filename.c_str(), "r");
+  if (IP1==0) { imthrow("Failed to read volume "+filename,22); }
+  short sx,sy,sz,st;
+  FslGetDim(IP1,&sx,&sy,&sz,&st);
+  size_t volsize=sx*sy*sz;
+
+  T* tbuffer;
+  if (read_img_data) {
+    tbuffer = new T[volsize];
+    if (tbuffer==0) { imthrow("Out of memory",99); }
+    FslReadBuffer(IP1,tbuffer);
+  } else {
+    tbuffer  = new T[volsize];  // a hack to stop reinitialize from allocating memory //originally 1
+  }
+  target.reinitialize(sx,sy,sz,tbuffer,true);
+
+  FslGetDataType(IP1,&dtype);
+  set_volume_properties(IP1,target);
+
+  vinfo = blank_vinfo();
+  FslCloneHeader(&vinfo,IP1);
+  FslSetFileType(&vinfo,FslGetFileType(IP1));
+  FslClose(IP1);
+
+  // swap to radiological if necessary
+  if (swap2radiological && !target.RadiologicalFile) {
+    target.makeradiological();
+  }
+
+  // now get the ROI (if necessary)
+  // this is a hack until the disk reading functions integrated here
+  // use -1 to signify end point
+  if (x1<0) { x1=sx-1; }
+  if (y1<0) { y1=sy-1; }
+  if (z1<0) { z1=sz-1; }
+  // truncate to known limits
+  if (x0<0) { x0=0; }
+  if (y0<0) { y0=0; }
+  if (z0<0) { z0=0; }
+  if (x1>sx-1) { x1=sx-1; }
+  if (y1>sy-1) { y1=sy-1; }
+  if (z1>sz-1) { z1=sz-1; }
+  if (x0>x1) { x0=x1; }
+  if (y0>y1) { y0=y1; }
+  if (z0>z1) { z0=z1; }
+  if ((x0!=0) || (y0!=0) || (z0!=0) || (x1!=sx-1) || (y1!=sy-1) || (z1!=sz-1))
+    {
+      target.setROIlimits(x0,y0,z0,x1,y1,z1);
+      target.activateROI();
+      target = target.ROI();
+    }
+
+  return 0;
+}
+
+template int read_volumeROI(volume<char>& target, const string& filename, 
+		   volumeinfo& vinfo, short& dtype, bool read_img_data,
+		   int x0, int y0, int z0, int x1, int y1, int z1,
+		   bool swap2radiological);
+template int read_volumeROI(volume<short>& target, const string& filename, 
+		   volumeinfo& vinfo, short& dtype, bool read_img_data,
+		   int x0, int y0, int z0, int x1, int y1, int z1,
+		   bool swap2radiological);
+template int read_volumeROI(volume<int>& target, const string& filename, 
+		   volumeinfo& vinfo, short& dtype, bool read_img_data,
+		   int x0, int y0, int z0, int x1, int y1, int z1,
+		   bool swap2radiological);
+template int read_volumeROI(volume<float>& target, const string& filename, 
+		   volumeinfo& vinfo, short& dtype, bool read_img_data,
+		   int x0, int y0, int z0, int x1, int y1, int z1,
+		   bool swap2radiological);
+template int read_volumeROI(volume<double>& target, const string& filename, 
+		   volumeinfo& vinfo, short& dtype, bool read_img_data,
+		   int x0, int y0, int z0, int x1, int y1, int z1,
+		   bool swap2radiological);
+
+template <class T>
+int read_volume4DROI(volume4D<T>& target, const string& filename, 
+		     volumeinfo& vinfo, short& dtype, bool read_img_data,
+		     int x0, int y0, int z0, int t0, 
+		     int x1, int y1, int z1, int t1,
+		     bool swap2radiological)
+{
+  // to get the whole volume use x0=y0=z0=t0=0 and x1=y1=z1=t1=-1
+  // NB: coordinates are in "radiological" convention when swapping (i.e.
+  ///    *not* the same as nifti/fslview), or untouched otherwise
+
+  Tracer trcr("read_volume4DROI");
+
+  target.destroy();
+
+  FSLIO *IP1;
+  IP1 = NewFslOpen(filename.c_str(), "r");
+  if (IP1==0) { imthrow("Failed to read volume "+filename,22); }
+
+  short sx,sy,sz,st;
+  FslGetDim(IP1,&sx,&sy,&sz,&st);
+  size_t volsize=sx*sy*sz;
+  if (st<1) st=1;  // make it robust to dim4=0
+  
+  // use -1 to signify end point
+  if (t1<0) { t1=st-1; }
+  // truncate to known limits
+  if (t0<0) { t0=0; }
+  if (t1>st-1) { t1=st-1; }
+  if (t0>t1) { t0=t1; }
+  // use -1 to signify end point
+  if (x1<0) { x1=sx-1; }
+  if (y1<0) { y1=sy-1; }
+  if (z1<0) { z1=sz-1; }
+  // truncate to known limits
+  if (x0<0) { x0=0; }
+  if (y0<0) { y0=0; }
+  if (z0<0) { z0=0; }
+  if (x1>sx-1) { x1=sx-1; }
+  if (y1>sy-1) { y1=sy-1; }
+  if (z1>sz-1) { z1=sz-1; }
+  if (x0>x1) { x0=x1; }
+  if (y0>y1) { y0=y1; }
+  if (z0>z1) { z0=z1; }
+
+  volume<T> dummyvol(sx,sy,sz), tmpvol;
+  // now take ROI (if necessary)
+  if ((x0!=0) || (y0!=0) || (z0!=0) || (x1!=sx-1) || (y1!=sy-1) || (z1!=sz-1))
+    {
+      tmpvol = dummyvol;
+      dummyvol.setROIlimits(x0,y0,z0,x1,y1,z1);
+      dummyvol.activateROI();
+      dummyvol = dummyvol.ROI();
+    }
+  if (t0>0) {
+    if (t0>st-1) t0=st-1;
+    FslSeekVolume(IP1,t0);
+  }
+  for (int t=t0; t<=t1; t++) {
+    target.addvolume(dummyvol);
+    T* tbuffer;
+    if (read_img_data) {
+      tbuffer = new T[volsize];
+      if (tbuffer==0) { imthrow("Out of memory",99); }
+      FslReadBuffer(IP1,tbuffer);
+    } else {
+      tbuffer = new T[volsize];  // set 1 as a bad hack to stop reinitialize from allocating memory // 
+    }
+    // Note that the d_owner flag = true in the following so that the
+    //  control for delete is passed to the volume class
+    // now take ROI (if necessary)
+    if ((x0!=0) || (y0!=0) || (z0!=0) || (x1!=sx-1) || (y1!=sy-1) || (z1!=sz-1))
+      {
+	tmpvol.reinitialize(sx,sy,sz,tbuffer,true);
+	tmpvol.setROIlimits(x0,y0,z0,x1,y1,z1);
+	tmpvol.activateROI();
+	target[t-t0] = tmpvol.ROI();
+      } else {
+	target[t-t0].reinitialize(sx,sy,sz,tbuffer,true);
+      }
+    set_volume_properties(IP1,target[t-t0]);
+  }
+
+  target.setROIlimits(target.limits());
+  float x,y,z,tr;
+  FslGetVoxDim(IP1,&x,&y,&z,&tr);
+  target.setdims(x,y,z,tr);
+
+  FslGetDataType(IP1,&dtype);
+
+  vinfo = blank_vinfo();
+  FslCloneHeader(&vinfo,IP1);
+  FslSetFileType(&vinfo,FslGetFileType(IP1));
+  FslClose(IP1);
+
+  // swap to radiological if necessary
+  if (swap2radiological && !target[0].RadiologicalFile) target.makeradiological();
+
+  return 0;
+}
+
+template int read_volume4DROI(volume4D<char>& target, const string& filename, 
+		     volumeinfo& vinfo, short& dtype, bool read_img_data,
+		     int x0, int y0, int z0, int t0, 
+		     int x1, int y1, int z1, int t1,
+			      bool swap2radiological);
+template int read_volume4DROI(volume4D<short>& target, const string& filename, 
+		     volumeinfo& vinfo, short& dtype, bool read_img_data,
+		     int x0, int y0, int z0, int t0, 
+		     int x1, int y1, int z1, int t1,
+			       bool swap2radiological);
+template int read_volume4DROI(volume4D<int>& target, const string& filename, 
+		     volumeinfo& vinfo, short& dtype, bool read_img_data,
+		     int x0, int y0, int z0, int t0, 
+		     int x1, int y1, int z1, int t1,
+			      bool swap2radiological);
+template int read_volume4DROI(volume4D<float>& target, const string& filename, 
+		     volumeinfo& vinfo, short& dtype, bool read_img_data,
+		     int x0, int y0, int z0, int t0, 
+		     int x1, int y1, int z1, int t1,
+			      bool swap2radiological);
+template int read_volume4DROI(volume4D<double>& target, const string& filename, 
+		     volumeinfo& vinfo, short& dtype, bool read_img_data,
+		     int x0, int y0, int z0, int t0, 
+		     int x1, int y1, int z1, int t1,
+			      bool swap2radiological);
+
+template <class T>
+int save_basic_volume(const volume<T>& source, const string& filename, 
+		      int filetype, const volumeinfo& vinfo, bool use_vinfo, 
+		      bool save_orig)
+{
+  // if filetype < 0 then it is ignored, otherwise it overrides everything
+  Tracer tr("save_basic_volume");
+
+  bool currently_rad = source.left_right_order()==FSL_RADIOLOGICAL;
+  if (!save_orig && !source.RadiologicalFile && currently_rad) const_cast< volume <T>& > (source).makeneurological();
+  FSLIO *OP = NewFslOpen(filename.c_str(),"wb",filetype,vinfo,use_vinfo);
+  if (OP==0) { imthrow("Failed to open volume "+filename+" for writing",23); }
+  set_fsl_hdr(source,OP,1,1);
+  FslWriteAllVolumes(OP,&(source(0,0,0)));
+  FslClose(OP);
+  if (!save_orig && !source.RadiologicalFile && currently_rad) const_cast< volume <T>& > (source).makeradiological();
+  return 0;
+}
+
+template int save_basic_volume(const volume<char>& source, const string& filename, 
+			       int filetype, const volumeinfo& vinfo, bool use_vinfo, bool save_orig);
+template int save_basic_volume(const volume<short>& source, const string& filename, 
+			       int filetype, const volumeinfo& vinfo, bool use_vinfo, bool save_orig);
+template int save_basic_volume(const volume<int>& source, const string& filename, 
+			       int filetype, const volumeinfo& vinfo, bool use_vinfo, bool save_orig);
+template int save_basic_volume(const volume<float>& source, const string& filename, 
+			       int filetype, const volumeinfo& vinfo, bool use_vinfo, bool save_orig);
+template int save_basic_volume(const volume<double>& source, const string& filename, 
+			       int filetype, const volumeinfo& vinfo, bool use_vinfo, bool save_orig);
+
+template <class T>
+int save_basic_volume4D(const volume4D<T>& source, const string& filename,
+			int filetype, const volumeinfo& vinfo, bool use_vinfo, bool save_orig)
+{
+  Tracer tr("save_basic_volume4D");
+  if (source.tsize()<1) return -1;
+  bool currently_rad = source.left_right_order()==FSL_RADIOLOGICAL;
+  if (!save_orig && !source[0].RadiologicalFile && currently_rad)  const_cast< volume4D <T>& > (source).makeneurological();
+  // if filetype < 0 then it is ignored, otherwise it overrides everything
+  FSLIO *OP = NewFslOpen(filename.c_str(),"wb",filetype,vinfo,use_vinfo);
+  if (OP==0) { imthrow("Failed to open volume "+filename+" for writing",23); }
+
+  set_fsl_hdr(source[0],OP,source.tsize(),source.tdim());
+  if (filetype>=0) FslSetFileType(OP,filetype);
+  FslWriteHeader(OP);
+  if (source.nvoxels()>0) {
+    for (int t=0; t<source.tsize(); t++) {
+      FslWriteVolumes(OP,&(source[t](0,0,0)),1);
+    }
+  }
+  FslClose(OP); 
+  if (!save_orig && !source[0].RadiologicalFile && currently_rad)  const_cast< volume4D <T>& > (source).makeradiological();
+  return 0;
+}
+
+template int save_basic_volume4D(const volume4D<char>& source, const string& filename,
+				 int filetype, const volumeinfo& vinfo, bool use_vinfo, bool save_orig);
+template int save_basic_volume4D(const volume4D<short>& source, const string& filename,
+				 int filetype, const volumeinfo& vinfo, bool use_vinfo, bool save_orig);
+template int save_basic_volume4D(const volume4D<int>& source, const string& filename,
+				 int filetype, const volumeinfo& vinfo, bool use_vinfo, bool save_orig);
+template int save_basic_volume4D(const volume4D<float>& source, const string& filename,
+				 int filetype, const volumeinfo& vinfo, bool use_vinfo, bool save_orig);
+template int save_basic_volume4D(const volume4D<double>& source, const string& filename,
+				 int filetype, const volumeinfo& vinfo, bool use_vinfo, bool save_orig);
 
 void WriteClonedHeader(FSLIO *dest, const FSLIO *src)
 {
@@ -193,7 +507,33 @@ FSLIO* NewFslOpen(const string& filename, const string& permissions)
   return NewFslOpen(filename,permissions,vinfo,false);
 }
 
-
+short closestTemplatedType(const short inputType)
+{
+  switch (inputType) {
+  case DT_UNSIGNED_CHAR:
+  case DT_INT8:
+    return DT_UNSIGNED_CHAR;
+  case DT_SIGNED_SHORT:
+    return DT_SIGNED_SHORT;
+  case DT_SIGNED_INT:
+  case DT_UINT16:
+    return DT_SIGNED_INT;
+  case DT_FLOAT:
+  case DT_UINT32:
+  case DT_INT64:
+  case DT_UINT64:
+    return DT_FLOAT;
+  case DT_DOUBLE:
+  case DT_FLOAT128:
+    return DT_DOUBLE;
+  case DT_COMPLEX:
+    cerr << "COMPLEX not supported as an independent type" << endl;
+    return -1;
+  default:
+    cerr << "Datatype " << inputType << " is NOT supported - please check your image" << endl;
+    return -1;
+  }
+}
 
 short dtype(const char* T)   { return DT_UNSIGNED_CHAR; }
 short dtype(const short* T)  { return DT_SIGNED_SHORT; }
@@ -354,6 +694,16 @@ int read_complexvolume(volume<float>& realvol, volume<float>& imagvol,
 
   vinfo = blank_vinfo();
   FslCloneHeader(&vinfo,IP1);
+  // swap to Radiological when necessary
+  if (FslGetLeftRightOrder(IP1)!=FSL_RADIOLOGICAL) {
+    realvol.RadiologicalFile = false;
+    realvol.makeradiological();
+    imagvol.RadiologicalFile = false;
+    imagvol.makeradiological();
+  } else {
+    realvol.RadiologicalFile = true;
+    imagvol.RadiologicalFile = true;
+  }
   FslClose(IP1);
   return 0;
 }
@@ -420,6 +770,16 @@ int read_complexvolume4D(volume4D<float>& realvols, volume4D<float>& imagvols,
 
   vinfo = blank_vinfo();
   FslCloneHeader(&vinfo,IP1);
+  // swap to Radiological when necessary
+  if (FslGetLeftRightOrder(IP1)!=FSL_RADIOLOGICAL) {
+    realvols[0].RadiologicalFile = false;
+    realvols.makeradiological();
+    imagvols[0].RadiologicalFile = false;
+    imagvols.makeradiological();
+  } else {
+    realvols[0].RadiologicalFile = true;
+    imagvols[0].RadiologicalFile = true;
+  }
   FslClose(IP1);
   return 0;
 }
@@ -462,6 +822,10 @@ int save_complexvolume(const volume<float>& realvol,
   make_basename(basename);
   if ( basename.size()<1 ) return -1;
 
+  // convert back to Neurological if necessary
+  if (!realvol.RadiologicalFile) { const_cast< volume <float>& > (realvol).makeneurological(); }
+  if (!imagvol.RadiologicalFile) { const_cast< volume <float>& > (imagvol).makeneurological(); }
+
   FSLIO* OP=FslOpen(basename.c_str(),"w");
   if (OP==0) return -1;
   if (use_vinfo) WriteClonedHeader(OP,&vinfo);
@@ -474,6 +838,10 @@ int save_complexvolume(const volume<float>& realvol,
   FslWriteComplexVolume(OP,&(realvol(0,0,0)),&(imagvol(0,0,0)));
 
   FslClose(OP); 
+
+  // restore to original ?
+  if (!realvol.RadiologicalFile) { const_cast< volume <float>& > (realvol).makeradiological(); }
+  if (!imagvol.RadiologicalFile) { const_cast< volume <float>& > (imagvol).makeradiological(); }
   return 0;
 }
 
@@ -517,6 +885,10 @@ int save_complexvolume4D(const volume4D<float>& realvols,
   make_basename(basename);
   if ( basename.size()<1 ) return -1;
 
+  // convert back to Neurological if necessary
+  if (!realvols[0].RadiologicalFile) { const_cast< volume4D <float>& > (realvols).makeneurological(); }
+  if (!imagvols[0].RadiologicalFile) { const_cast< volume4D <float>& > (imagvols).makeneurological(); }
+
   FSLIO* OP=FslOpen(basename.c_str(),"w");
   if (OP==0) return -1;
   if (use_vinfo) WriteClonedHeader(OP,&vinfo);
@@ -534,6 +906,10 @@ int save_complexvolume4D(const volume4D<float>& realvols,
   }
 
   FslClose(OP); 
+
+  // restore to original ?
+  if (!realvols[0].RadiologicalFile) { const_cast< volume4D <float>& > (realvols).makeradiological(); }
+  if (!imagvols[0].RadiologicalFile) { const_cast< volume4D <float>& > (imagvols).makeradiological(); }
   return 0;
 }
 
@@ -568,143 +944,6 @@ int save_complexvolume4D(const complexvolume& vol, const string& filename,
 
 
 //////////////////////////////////////////////////////////////////////////
-
-// MATRIX I/O
-
-
-int read_ascii_matrix(Matrix &target, const string& filename)
-{
-  Tracer tr("read_ascii_matrix");
-  target=MISCMATHS::read_ascii_matrix(filename);
-  if (target.Nrows()<=0) return -1;
-  return 0;
-}
-
-
-int get_medx_small_matrix(Matrix &target, ifstream& matfile)
-{
-  Tracer tr("get_medx_small_matrix");
-  string str1;
-  matfile >> str1;
-  if (str1 != "[") {
-    return -1;
-  }
-  int i=1, j=1;
-  matfile >> str1;
-  while (str1 != "]") {
-    target(i,j) = atof(str1.c_str());
-    if (j==4) { i++; j=1; }
-    else { j++; }
-    matfile >> str1;
-  }
-  return 0;
-}  
-
-
-int get_medx_matrix(Matrix &target, ifstream& matfile)
-{
-  Tracer tr("get_medx_matrix");
-  string str1, str2;
-  matfile >> str1 >> str2;
-  if ((str1 != "<<") || (str2 != "/matrix")) {
-    return -1;
-  }
-  target.ReSize(4,4);
-  Identity(target);  // default return value
-  return get_medx_small_matrix(target,matfile);
-}  
-
-
-int get_minc_matrix(Matrix &target, ifstream& matfile)
-{
-  Tracer tr("get_minc_matrix");
-  string str1;
-  matfile >> str1;
-  if (str1 != "=") {
-    cerr << "Could not parse MINC transform file" << endl;
-    return -1;
-  }
-  target.ReSize(4,4);
-  Identity(target);  // default return value
-  for (int i=1; i<=3; i++) {
-    for (int j=1; j<=4; j++) {
-      matfile >> str1;
-      target(i,j) = atof(str1.c_str());
-    }
-  }
-  return 0;
-}  
-
-
-//------------------------------------------------------------------------//
-
-int put_medx_matrix(ofstream& matfile, const string& name, const Matrix& affmat)
-{
-  Tracer tr("put_medx_matrix");
-  if (affmat.Nrows()<=0) { return -1; }
-  matfile << "        /" << name << " [" << endl;
-  for (int i=1; i<=affmat.Nrows(); i++) {
-    for (int j=1; j<=affmat.Ncols(); j++) {
-      matfile << "            " << affmat(i,j) << endl;
-    }
-  }
-  matfile << "        ]" << endl;
-  return 0;
-}
-
-
-
-int get_outputusermat(const string& filename, Matrix& oumat)
-{
-  Tracer trcr("get_outputusermat");
-  if ( filename.size()<1 ) return -1;
-  string basename = filename, fname;
-  make_basename(basename);
-
-  // check that the .hdr file exists
-  if (!fsl_imageexists(basename)) {
-    cerr << "Cannot open volume " << fname << " for reading!\n";
-    exit(1);
-  }
-
-  FSLIO* IP1(FslOpen(basename.c_str(), "r"));
-
-  float x,y,z,tr;
-  FslGetVoxDim(IP1,&x,&y,&z,&tr);
-
-  ColumnVector origin(3);
-  origin=0.0;
-  // read origin from sform (if set)
-  mat44 sform_mat;
-  short sform_code = FslGetStdXform(IP1,&sform_mat);
-  if (sform_code!=NIFTI_XFORM_UNKNOWN) {
-    sform_mat = nifti_mat44_inverse(sform_mat);
-    origin(1) = sform_mat.m[0][3];
-    origin(2) = sform_mat.m[1][3];
-    origin(3) = sform_mat.m[2][3];
-  }
-
-  short sx,sy,sz,st;
-  FslGetDim(IP1,&sx,&sy,&sz,&st);
-  origin(2) = -sy - origin(2);   // Convert to dumb MEDx conventions
-
-  oumat.ReSize(4,4);
-  Identity(oumat);
-  oumat(1,1) = x;
-  oumat(2,2) = -y;
-  oumat(3,3) = z;
-
-  oumat(1,4) = origin(1)*x;
-  oumat(2,4) = -origin(2)*y;
-  oumat(3,4) = origin(3)*z;
-
-  FslClose(IP1);
-  return 0;
-}  
-
-
-//------------------------------------------------------------------------//
-
 
 int load_complexvolume(volume<float>& realvol, volume<float>& imagvol,
 		       const string& filename)

@@ -74,8 +74,6 @@
 
 #include "newmatap.h"
 #include "newmatio.h"
-#include "miscmaths/volumeseries.h"
-#include "miscmaths/volume.h"
 #include "ContrastMgr.h"
 #include "miscmaths/miscmaths.h"
 #include "utils/log.h"

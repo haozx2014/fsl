@@ -12,8 +12,8 @@ SN_OBJS = surface_norm.o
 CS_OBJS = cylsamp.o
 GT_OBJS = groupttest.o
 
-XFILES = siena_diff surface_norm cylsamp groupttest
-
+XFILES = siena_diff
+TESTXFILES = groupttest surface_norm cylsamp 
 SCRIPTS = siena siena_flirt siena_cal sienax siena_flow2std
 
 all:	${XFILES}

@@ -2,7 +2,7 @@
 
     Adrian Groves and Michael Chappell, FMRIB Image Analysis Group
 
-    Copyright (C) 2007 University of Oxford  */
+    Copyright (C) 2007-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -69,23 +69,42 @@
 #include "noisemodel.h"
 #include "dist_gamma.h"
 
+class WhiteParams : public NoiseParams {
+public:
+    virtual WhiteParams* Clone() const
+        { return new WhiteParams(*this); }
+    virtual const WhiteParams& operator=(const NoiseParams& in)
+      { const WhiteParams& from = dynamic_cast<const WhiteParams&>(in);
+	assert(nPhis == from.nPhis); phis = from.phis; return *this; }
+    
+    virtual const MVNDist OutputAsMVN() const;
+    virtual void InputFromMVN(const MVNDist& mvn);
+    
+    virtual void Dump(const string indent = "") const;
+    
+    WhiteParams(int N) : nPhis(N), phis(N) { return; }
+    WhiteParams(const WhiteParams& from) 
+        : nPhis(from.nPhis), phis(from.phis) { return; }
+    
+private:
+    friend class WhiteNoiseModel;
+    const int nPhis;
+    vector<GammaDist> phis;
+};    
+
 class WhiteNoiseModel : public NoiseModel {
  public:
 
-  virtual WhiteNoiseModel* Clone() const;
-  // makes a new identical copy of this object
+    virtual WhiteParams* NewParams() const
+        { return new WhiteParams( Qis.size() ); }
 
-  // Loading priors & saving results
-  virtual void LoadPrior( const string& filename );
-  virtual const MVNDist GetResultsAsMVN() const;
+    virtual void HardcodedInitialDists(NoiseParams& prior, 
+        NoiseParams& posterior) const; 
 
-  // Debugging stuff
-  virtual void Dump(const string indent = "") const;
-  virtual void DumpPrior(const string indent = "") const;
-  virtual void DumpPosterior(const string indent = "") const;
 
   // Constructor/destructor
-  WhiteNoiseModel(const string& pattern);
+    //  WhiteNoiseModel(const string& pattern);
+    WhiteNoiseModel(ArgsType& args);
   // pattern says which phi distribution to use for each data points; this
   // string is repeated as necessary to make up the data length. e.g. for 
   // dual-echo data, pattern = "12".  after 9, use letters (A=10, ...)
@@ -95,37 +114,35 @@ class WhiteNoiseModel : public NoiseModel {
 
   // Do all the calculations
   virtual void UpdateNoise(
+    NoiseParams& noise,
+    const NoiseParams& noisePrior,  
   	const MVNDist& theta,
-  	const LinearFwdModel& model,
-  	const ColumnVector& data);
-
-  virtual void UpdateTheta(
-  	MVNDist& theta,
-  	const MVNDist& thetaPrior,
   	const LinearFwdModel& model,
   	const ColumnVector& data) const;
 
+  virtual void UpdateTheta(
+    const NoiseParams& noise,
+  	MVNDist& theta,
+  	const MVNDist& thetaPrior,
+  	const LinearFwdModel& model,
+        const ColumnVector& data,
+        MVNDist* thetaWithoutPrior = NULL
+    ) const;
+
   virtual double CalcFreeEnergy(
+    const NoiseParams& noise,
+    const NoiseParams& noisePrior,
 	const MVNDist& theta,
   	const MVNDist& thetaPrior,
   	const LinearFwdModel& model,
   	const ColumnVector& data) const;
 
- 
- void SaveParams(const MVNDist& theta) ;		 
- void RevertParams(MVNDist& theta) ;
-
  protected:
   const string phiPattern;
+
+  double lockedNoiseStdev; // A quick hack to allow phi to be locked externally
 
   // Diagonal matrices, indicating which data points use each phi
   mutable vector<DiagonalMatrix> Qis; // mutable because it's used as a cache
   void MakeQis(int dataLen) const;
-
-  vector<GammaDist> phis;
-  vector<GammaDist> phisPrior;
-
-  vector<GammaDist> phissave;
-  MVNDist thetasave;
-
 };
