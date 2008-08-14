@@ -1,3 +1,12 @@
+fsl (4.1.0-1) unstable; urgency=low
+
+  * The new FNIRT tool replaces the previous IRTK, which has never been
+    included in the Debian package, because it's sources were not available.
+    With the arrival of FNIRT the Debian package is now (again) provides
+    the full functionally of FSL.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Thu, 14 Aug 2008 19:53:25 +0200
+
 fsl (3.3.11-2) unstable; urgency=low
 
   * FSL config file /etc/fsl/fsl.conf has been renamed to /etc/fsl/fsl.sh to
