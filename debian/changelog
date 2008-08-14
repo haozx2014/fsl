@@ -1,3 +1,10 @@
+fsl (4.1.0-1) unstable; urgency=low
+
+  * New Upstream Version.
+  * Bumped Standard version to 3.8.0 -- no changes necessary.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Thu, 14 Aug 2008 13:14:53 +0200
+
 fsl (4.0.4-2) unstable; urgency=low
 
   * Alternatively use octave3.0-headers (instead of just octave2.1-headers)
