@@ -1,3 +1,14 @@
+fsl (4.1.0+fslio1-1) unstable; urgency=low
+
+  * Updated repackaging of the current upstream version (4.1). Repackaging
+    procedure was changed to keep fslio in the package. This version contains
+    more up-to-date scripts than the one in the nifticlibs package.
+  * Install im* and tcl scripts from local fslio sources, instead of using the
+    (discontinued) ones in the nifticlibs package. Therefore also removing
+    dependency to 'nifti-bin'.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Mon, 29 Sep 2008 21:08:52 +0200
+
 fsl (4.1.0-1) unstable; urgency=low
 
   * New Upstream Version.
