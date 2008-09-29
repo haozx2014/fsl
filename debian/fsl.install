@@ -7,6 +7,8 @@ etc usr/share/fsl
 lib/*.so usr/lib/fsl
 doc/images usr/share/fsl/doc
 extras/irtk/* usr/lib/fsl/DR
+src/fslio/{im*,remove_ext} usr/lib/fsl
+src/fslio/*.tcl usr/share/fsl/tcl
 
 debian/fsl.sh etc/fsl
 debian/desktop/*.desktop usr/share/applications
