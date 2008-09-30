@@ -37,11 +37,3 @@
 /usr/share/man/man1/fsl.1.gz /usr/share/man/man1/Susan.1.gz
 /usr/bin/fslview /usr/lib/fsl/fslview
 /usr/bin/atlasquery /usr/lib/fsl/atlasquery
-/usr/share/nifti/bin/imtest /usr/lib/fsl/imtest
-/usr/share/nifti/bin/imcp /usr/lib/fsl/imcp
-/usr/share/nifti/bin/imglob /usr/lib/fsl/imglob
-/usr/share/nifti/bin/imln /usr/lib/fsl/imln
-/usr/share/nifti/bin/immv /usr/lib/fsl/immv
-/usr/share/nifti/bin/imrm /usr/lib/fsl/imrm
-/usr/share/nifti/bin/remove_ext /usr/lib/fsl/remove_ext
-/usr/share/nifti/tcl/fslio.tcl /usr/share/fsl/tcl/fslio.tcl

@@ -1,3 +1,18 @@
+fsl (4.1.0+fslio1-1) unstable; urgency=low
+
+  * Updated repackaging of the current upstream version (4.1). Repackaging
+    procedure was changed to keep fslio in the package. This version contains
+    more up-to-date scripts than the one in the nifticlibs package.
+  * Install im* and tcl scripts from local fslio sources, instead of using the
+    (discontinued) ones in the nifticlibs package. Therefore also removing
+    dependency to 'nifti-bin'.
+  * Do not install installer script -- useless on Debian.
+  * Remove broken get-orig-source target from debian/rules. The repackaging
+    procedure is implemented in the 'repackage-fsl' script shipped with the
+    fslview package.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Tue, 30 Sep 2008 11:24:01 +0200
+
 fsl (4.1.0-1) unstable; urgency=low
 
   * New Upstream Version.
