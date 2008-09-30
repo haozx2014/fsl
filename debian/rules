@@ -151,6 +151,14 @@ install: build
 	# make FSL logo for menu entries
 	convert debian/tmp/tcl/fsl-logo-tiny.ppm \
 		-resize x32 -crop 32x32+6+0 debian/tmp/fsl.xpm
+	
+	# install fslio scripts
+	install -p -t debian/tmp/bin -m 0755 src/fslio/im* src/fslio/remove_ext
+	
+	# install fsl config
+	cp -r -t debian/tmp etc
+	# clean useless pieces
+	rm debian/tmp/etc/fslconf/fslmachtype.sh
 
 
 # Must not depend on anything. This is to be called by
@@ -185,9 +193,12 @@ binary-indep: install
 	
 	# install docs (except images which are in fsl package)
 	cp -r doc/!(images) debian/fsl-doc/usr/share/fsl/doc
+	# wipe installer script - useless on Debian
+	rm debian/fsl-doc/usr/share/fsl/doc/fsl/fsl_installer.sh
 	
 	# cleanup doc path
 	rm debian/tmp/doc/feat5/DO
+	-rm debian/tmp/doc/fsl/fsl_installer.sh
 	
 	# clean empty dirs from doc package
 	find debian/fsl-doc/usr/share/fsl/doc -depth -type d -empty -exec rmdir {} \;
@@ -211,14 +222,6 @@ binary-arch: install
 	cp debian/lintian.overrides debian/tmp/lintian/fsl
 
 	$(MAKE) -f debian/rules DH_OPTIONS=-a binary-common
-
-
-# this target downloads the upstream tarball and turns it into the
-# orig source of the Debian package
-get-orig-source:
-	if [ -x debian/fsl-orig-source.sh ]; then debian/fsl-orig-source.sh && mv fsl*orig.tar.gz .. ; \
-	else echo "This must be run from the root of the unpackaged source package." && exit 1; \
-	fi
 
 
 binary: binary-arch binary-indep
