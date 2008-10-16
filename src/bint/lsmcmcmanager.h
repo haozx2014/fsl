@@ -13,14 +13,13 @@
 #include <fstream>
 #include <string>
 #include <vector>
-
-#include "miscmaths/volume.h"
-#include "miscmaths/volumeseries.h"
+#include "newimage/newimageall.h"
 #include "model.h"
 #include "bintoptions.h"
 
 using namespace NEWMAT;
 using namespace MISCMATHS;
+using namespace NEWIMAGE;
 
 namespace Bint {
 
@@ -354,7 +353,7 @@ class McmcParameter
   {
   public:
     // constructor
-    LSMCMCManager(int pnjumps, int pnburnin, int psampleevery, int pupdateproposalevery, int pacceptancerate, int pdebuglevel, float pprecin, bool panalmargprec, ForwardModel& pmodel, VolumeSeries& pdata, Volume& pmask) : 
+    LSMCMCManager(int pnjumps, int pnburnin, int psampleevery, int pupdateproposalevery, int pacceptancerate, int pdebuglevel, float pprecin, bool panalmargprec, ForwardModel& pmodel, const Matrix& pdata, const volume4D<float>& pmask) : 
       data(pdata),
       mask(pmask),      
       debuglevel(pdebuglevel),
@@ -366,7 +365,7 @@ class McmcParameter
     {
     }
 
-    LSMCMCManager(BintOptions& opts, ForwardModel& pmodel, VolumeSeries& pdata, Volume& pmask) : 
+    LSMCMCManager(BintOptions& opts, ForwardModel& pmodel,const Matrix& pdata, const volume4D<float>& pmask) : 
       data(pdata),
       mask(pmask),      
       debuglevel(opts.debuglevel.value()),
@@ -389,24 +388,24 @@ class McmcParameter
     int getntpts() const {return ntpts;}
     int getnvoxels() const {return nvoxels;}
     
-    const VolumeSeries& getsamples(int paramnum) const {return samples[paramnum];}
-    VolumeSeries& getsamples(int paramnum) {return samples[paramnum];}
+    const Matrix& getsamples(int paramnum) const {return samples[paramnum];}
+    Matrix& getsamples(int paramnum) {return samples[paramnum];}
    
     // Destructor
     virtual ~LSMCMCManager() {}
  
   protected:     
 
-    VolumeSeries& data;
-    Volume& mask;
+    Matrix data;
+    volume4D<float> mask;
 
     int ntpts;    
     int nvoxels;
     int nparams;
 
-    vector<VolumeSeries> samples;
+    vector<Matrix> samples;
 
-    VolumeSeries precsamples;
+    Matrix precsamples;
 
     vector<string> paramnames;
 

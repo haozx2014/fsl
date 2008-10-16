@@ -68,12 +68,10 @@
 
 #include "lslaplacemanager.h"
 #include "utils/log.h"
-#include "miscmaths/miscmaths.h"
-#include "miscmaths/miscprob.h"
-#include "newimage/newimageall.h"
 #include "utils/tracer_plus.h"
 
 using namespace Utilities;
+using namespace MISCMATHS;
 using namespace NEWIMAGE;
 
 // priorstd=load('stddevs');clear tmp; d=ra('data'); dataprec = 1/(1)^2; priormean=0;  for i=1:length(priorstd), priorprec = 1/(priorstd(i))^2; tmp(i) = (dataprec*sum(squeeze(d(1,1,1,:)))+priorprec*priormean)/(1000*dataprec+priorprec);end;load means;plot(priorstd,means,priorstd,tmp);legend('mcmc','theory');
@@ -254,22 +252,20 @@ namespace Bint {
   void LSLaplaceManager::setup()
   {
     Tracer_Plus tr("LSLaplaceManager::setup");
-
-    ntpts = data.tsize();
-    nvoxels = data.nvoxels();
+    ntpts = data.Nrows();
+    nvoxels = data.Ncols();
   }
 
   void LSLaplaceManager::run()
   {
     Tracer_Plus tr("LSLaplaceManager::run");
-
 //      float mint = 1;
 //      float maxt = 10;
 
 //      ColumnVector stddevs(data.nvoxels());stddevs=0;
 //      ColumnVector means(data.nvoxels());means=0;
 
-    for(int vox=1;vox<=data.nvoxels();vox++)    
+    for(int vox=1;vox<=data.Ncols();vox++)    
       {
 	cout << vox<< ",";
 	cout.flush();
@@ -283,18 +279,19 @@ namespace Bint {
 //  	float stddev = float((maxt-mint)*vox)/data.nvoxels()+mint;
 //  	OUT(stddev);
 
-	voxelmanager->setdata(data.getSeries(vox));
+	voxelmanager->setdata(data.Column(vox));
 	voxelmanager->setupparams(precin);
 	nparams = voxelmanager->getnparams();
 	int nvaryingparams = voxelmanager->getnvaryingparams();
-
 	voxelmanager->run();
 //  	stddevs(vox) = stddev;
 
 	// use first voxel to get size of results storage
 	if(vox==1)
 	  {  
-	    covs.ReSize(nvaryingparams*nvaryingparams,nvoxels);
+	    covs.ReSize(nvaryingparams*nvaryingparams,nvoxels); //should this be nparams to fix error below...
+	    //covs.ReSize(nparams*nparams,nvoxels);
+
 	    covs = 0; 
 	    mns.ReSize(nparams,nvoxels);
 	    mns = 0;
@@ -305,7 +302,6 @@ namespace Bint {
 		prec = 0;
 	      }
 	  }
-
 //  	ColumnVector tmp = mns.Column(vox);
 //  	OUT(tmp.Nrows());
 //  	tmp = voxelmanager->getparammeans();
@@ -324,53 +320,35 @@ namespace Bint {
 	ColumnVector col = reshape(symmat.i(), Sqr(symmat.Nrows()), 1).AsColumn();
 
 	OUT(symmat.i());
-
-	covs.Column(vox) = col;
-	
+	//cerr << vox << "    here5          " << col.Nrows() << " " << col.Ncols() << " " << covs.Nrows() << " " << covs.Ncols() << endl;
+	covs.Column(vox) = col; //ERROR this apppears to be broken (for certain inputs ) in the volumeseries lslaplace for noamp and still needs fixing
       }
 
     cout << endl;
-    
-    //    write_ascii_matrix(LogSingleton::getInstance().appendDir("stddevs"),stddevs);
   }
 
   void LSLaplaceManager::save()
   {
     Tracer_Plus tr("LSLaplaceManager::save");
 
-    VolumeInfo info = mask.getInfo();
-    info.v = ntpts;
-//      data.setInfo(info);
-//      data.setPreThresholdPositions(mask.getPreThresholdPositions());
-//      data.unthresholdSeries();
-//      data.writeAsFloat(LogSingleton::getInstance().appendDir("data"));
-//      data.CleanUp();
+    volume4D<float> output(mask);
+    output.setmatrix(mns,mask[0]);
 
     for(int p=0;p<nparams;p++)
       {
 	OUT(p);
-	Volume vol = ColumnVector(mns.getVolume(p+1).AsColumn());
-	info.v = 1;
-	vol.setInfo(info);
-	vol.setPreThresholdPositions(mask.getPreThresholdPositions());
-	vol.unthreshold();
-	vol.writeAsFloat(LogSingleton::getInstance().appendDir(voxelmanager->getparamname(p)+string("_means")));	
+	save_volume(output[p],LogSingleton::getInstance().appendDir(voxelmanager->getparamname(p)+string("_means")));	
       }
+      mns.CleanUp();
 
-      info.v = covs.Nrows();
-      covs.setInfo(info);
-      covs.setPreThresholdPositions(mask.getPreThresholdPositions());
-      covs.unthresholdSeries();
-      covs.writeAsFloat(LogSingleton::getInstance().appendDir("covs"));
+      output.setmatrix(covs,mask[0]);
+      save_volume4D(output,LogSingleton::getInstance().appendDir("covs"));
       covs.CleanUp();
 
       if(!analmargprec)
 	{
-	  info.v = 1;
-	  prec.setInfo(info);
-	  prec.setPreThresholdPositions(mask.getPreThresholdPositions());
-	  prec.unthreshold();
-	  prec.writeAsFloat(LogSingleton::getInstance().appendDir("prec_means"));
+	  output.setmatrix(prec.t(),mask[0]);
+	  save_volume4D(output,LogSingleton::getInstance().appendDir("prec_means"));
 	  prec.CleanUp(); 
 	}
   }

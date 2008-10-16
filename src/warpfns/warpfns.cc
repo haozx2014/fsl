@@ -93,6 +93,7 @@ namespace NEWIMAGE {
 int affine2warp(const Matrix& affmat, volume4D<float>& warpvol,
 		const volume<float>& outvol)
 {
+  // all warps in absolute format
   if (outvol.nvoxels() <= 0) {
     cerr << "Cannot do affine2warp as outvol has no size" << endl;
     return -1;
@@ -226,13 +227,105 @@ bool is_abs_convention(const volume4D<float>& inwarpvol)
 
 ////////////////////////////////////////////////////////////////////////////
 
+
+Matrix best_fit_aff(const volume4D<float>& warp)
+{
+  Matrix XX(4,4), XY(4,3);
+  double xx=0, yy=0, zz=0, xy=0, xz=0, yz=0, xt=0, yt=0, zt=0, x0, y0, z0;
+  double xxtot=0, yytot=0, zztot=0, xytot=0, xztot=0, yztot=0, xtot=0, ytot=0, ztot=0;
+  long int n=0, nlim, ntot=0;
+  nlim = (long int) sqrt((double) warp[0].nvoxels());
+  if (nlim<1000) nlim=1000;
+  for (int z=warp.minz(); z<=warp.maxz(); z++) {
+    for (int y=warp.miny(); y<=warp.maxy(); y++) {
+      for (int x=warp.minx(); x<=warp.maxx(); x++) {
+	x0=x*warp.xdim(); y0=y*warp.ydim(); z0=z*warp.zdim();
+	xx += x0*x0;
+	yy += y0*y0;
+	zz += z0*z0;
+	xy += x0*y0;
+	xz += x0*z0;
+	yz += y0*z0;
+	xt += x0;
+	yt += y0;
+	zt += z0;
+	n++;
+	if (n>nlim) {
+	  ntot+=n; xxtot+=xx; yytot+=yy; zztot+=zz; xytot+=xy; xztot+=xz; yztot+=yz; 
+	  xtot+=xt; ytot+=yt; ztot+=zt;
+	  n=0; xx=0; yy=0; zz=0; xy=0; xz=0; yz=0; xt=0; yt=0; zt=0;
+	}
+      }
+    }
+  }
+  ntot+=n; xxtot+=xx; yytot+=yy; zztot+=zz; xytot+=xy; xztot+=xz; yztot+=yz;
+  xtot+=xt; ytot+=yt; ztot+=zt;
+  XX(1,1)=xxtot/ntot;
+  XX(2,2)=yytot/ntot;
+  XX(3,3)=zztot/ntot;
+  XX(4,4)=1;
+  XX(1,2)=xytot/ntot;
+  XX(2,1)=XX(1,2);
+  XX(1,3)=xztot/ntot;
+  XX(3,1)=XX(1,3);
+  XX(2,3)=yztot/ntot;
+  XX(3,2)=XX(2,3);
+  XX(1,4)=xtot/ntot;
+  XX(4,1)=XX(1,4);
+  XX(2,4)=ytot/ntot;
+  XX(4,2)=XX(2,4);
+  XX(3,4)=ztot/ntot;
+  XX(4,3)=XX(3,4);
+
+  for (int m=0; m<3; m++) {
+    double vxtot=0, vytot=0, vztot=0, vtot=0, vx=0, vy=0, vz=0, vt=0, val;
+    for (int z=warp.minz(); z<=warp.maxz(); z++) {
+      for (int y=warp.miny(); y<=warp.maxy(); y++) {
+	for (int x=warp.minx(); x<=warp.maxx(); x++) {
+	  val = (double) warp(x,y,z,m);
+	  x0=x*warp.xdim(); y0=y*warp.ydim(); z0=z*warp.zdim();
+	  vx += val*x0;
+	  vy += val*y0;
+	  vz += val*z0;
+	  vt += val;
+	  if (n>nlim) {
+	    vxtot+=vx; vytot+=vy; vztot+=vz; vtot+=vt;
+	    n=0; vx=0; vy=0; vz=0; vt=0;
+	  }
+	}
+      }
+    }
+    vxtot+=vx; vytot+=vy; vztot+=vz; vtot+=vt;
+    XY(1,m+1)=vxtot/ntot;
+    XY(2,m+1)=vytot/ntot;
+    XY(3,m+1)=vztot/ntot;
+    XY(4,m+1)=vtot/ntot;
+  }
+  
+  Matrix Beta;
+  Beta = pinv(XX) * XY;
+  Matrix aff(4,4);
+  for (int r=1; r<=3; r++) {
+    for (int n=1; n<=4; n++) {
+      aff(r,n) = Beta(n,r);
+    }
+  }
+  aff(4,1)=0;  aff(4,2)=0;  aff(4,3)=0;  aff(4,4)=1;
+
+  return aff;
+}
+
+
 int concat_warps(const volume4D<float>& prewarp, 
                  const volume4D<float>& postwarp,
 		 volume4D<float>& totalwarp)
 {
+  // all warps are in absolute convention
   totalwarp = postwarp;  // set size
   totalwarp = 0.0;
   ColumnVector xmid(4), xpre(4);
+  Matrix extrap_aff;
+  extrap_aff = best_fit_aff(prewarp);
   xmid(4) = 1.0;  xpre(4)=1.0;
   for (int z=postwarp.minz(); z<=postwarp.maxz(); z++) {
     for (int y=postwarp.miny(); y<=postwarp.maxy(); y++) {
@@ -240,12 +333,17 @@ int concat_warps(const volume4D<float>& prewarp,
 	xmid(1) = postwarp[0](x,y,z);
 	xmid(2) = postwarp[1](x,y,z);
 	xmid(3) = postwarp[2](x,y,z);
-	// convert xmid from mm to voxels (of prewarp image)
-	xmid = prewarp[0].sampling_mat().i() * xmid;
-	// look up the coordinates in prewarp
-	xpre(1) = prewarp[0].interpolate(xmid(1),xmid(2),xmid(3));
-	xpre(2) = prewarp[1].interpolate(xmid(1),xmid(2),xmid(3));
-	xpre(3) = prewarp[2].interpolate(xmid(1),xmid(2),xmid(3));
+	if (prewarp.in_bounds((float) xmid(1),(float) xmid(2),(float) xmid(3))) {
+	  // convert xmid from mm to voxels (of prewarp image)
+	  xmid = prewarp[0].sampling_mat().i() * xmid;
+	  // look up the coordinates in prewarp
+	  xpre(1) = prewarp[0].interpolate(xmid(1),xmid(2),xmid(3));
+	  xpre(2) = prewarp[1].interpolate(xmid(1),xmid(2),xmid(3));
+	  xpre(3) = prewarp[2].interpolate(xmid(1),xmid(2),xmid(3));
+	} else {
+	  // alternative interpolation for warp fields
+	  xpre = extrap_aff * xmid;
+	}
 	// set these mm coordinates as the result
 	totalwarp[0](x,y,z) = xpre(1);
 	totalwarp[1](x,y,z) = xpre(2);

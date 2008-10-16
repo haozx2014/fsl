@@ -783,7 +783,7 @@ mat44 newmat2mat44(const Matrix& nmat);
 
 
 template <class T>
-int set_fsl_hdr(const volume<T>& source, FSLIO *OP, int tsize, float tdim)
+int set_fsl_hdr(const volume<T>& source, FSLIO *OP, int tsize, float tdim, bool useNEWCalMinMax=true) //temp bool while converting
 {
   Tracer tr("set_fsl_hdr");
     
@@ -796,7 +796,7 @@ int set_fsl_hdr(const volume<T>& source, FSLIO *OP, int tsize, float tdim)
   
   FslSetIntent(OP,source.intent_code(),source.intent_param(1),
 	       source.intent_param(2),source.intent_param(3));
-  
+  if (useNEWCalMinMax) FslSetCalMinMax(OP,source.getDisplayMinimum(),source.getDisplayMaximum());
   return 0;
 }
 
@@ -823,7 +823,6 @@ int save_volume(const volume<T>& source, const string& filename)
   return save_volume(source,filename,vinfo,false);
 }
 
-
 template <class T>
 int save_volume(const volume<T>& source, const string& filename,
 		const volumeinfo& vinfo)
@@ -845,7 +844,6 @@ int save_volume4D(const volume4D<T>& source, const string& filename)
   volumeinfo vinfo = blank_vinfo();
   return save_volume4D(source,filename,vinfo,false);
 }
-
 
 template <class T>
 int save_volume4D(const volume4D<T>& source, const string& filename,
@@ -994,7 +992,6 @@ int save_volume4D_datatype(const volume4D<T>& source, const string& filename,
   volumeinfo vinfo = blank_vinfo();
   return save_volume4D_dtype(source,filename,datatype,vinfo,false);
 }
-
 
 // old versions call _dtype - kept for compatability
   

@@ -158,7 +158,7 @@ inline Globaloptions::Globaloptions()
   anglerep = Euler;
   verbose = 0;
   maincostfn = NormCorr;
-  initmat = Identity(4);
+  initmat = IdentityMatrix(4);
   impair = 0;
   refnum = -1;
   no_volumes = 0;
