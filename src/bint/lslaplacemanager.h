@@ -14,14 +14,10 @@
 #include <string>
 #include <vector>
 
-#include "miscmaths/volume.h"
-#include "miscmaths/volumeseries.h"
 #include "miscmaths/minimize.h"
 #include "model.h"
 #include "bintoptions.h"
-
-using namespace NEWMAT;
-using namespace MISCMATHS;
+#include "newimage/newimageall.h"
 
 namespace Bint {
 
@@ -144,7 +140,7 @@ class SumSquaresgEvalFunction : public gEvalFunction
   {
   public:
 
-    LSLaplaceManager(int pdebuglevel, float pprecin, bool panalmargprec, ForwardModel& pmodel, VolumeSeries& pdata, Volume& pmask) : 
+      LSLaplaceManager(int pdebuglevel, float pprecin, bool panalmargprec, ForwardModel& pmodel, const Matrix& pdata, const NEWIMAGE::volume4D<float>& pmask) : 
       data(pdata),
       mask(pmask),      
       debuglevel(pdebuglevel),
@@ -154,7 +150,7 @@ class SumSquaresgEvalFunction : public gEvalFunction
 	voxelmanager = new LSLaplaceVoxelManager(pmodel,debuglevel,analmargprec);
     }
 
-    LSLaplaceManager(BintOptions& opts, ForwardModel& pmodel, VolumeSeries& pdata, Volume& pmask) : 
+      LSLaplaceManager(BintOptions& opts, ForwardModel& pmodel,const Matrix& pdata, const NEWIMAGE::volume4D<float>& pmask) : 
       data(pdata),
       mask(pmask),      
       debuglevel(opts.debuglevel.value()),
@@ -164,7 +160,7 @@ class SumSquaresgEvalFunction : public gEvalFunction
 	voxelmanager = new LSLaplaceVoxelManager(pmodel,debuglevel,analmargprec);
     }
 
-    LSLaplaceManager(int pdebuglevel, float pprecin, bool panalmargprec, gForwardModel& pmodel, VolumeSeries& pdata, Volume& pmask) : 
+      LSLaplaceManager(int pdebuglevel, float pprecin, bool panalmargprec, gForwardModel& pmodel,const Matrix& pdata, const NEWIMAGE::volume4D<float>& pmask) : 
       data(pdata),
       mask(pmask),      
       debuglevel(pdebuglevel),
@@ -174,7 +170,7 @@ class SumSquaresgEvalFunction : public gEvalFunction
 	voxelmanager = new LSLaplaceVoxelManager(pmodel,debuglevel,analmargprec);
     }
 
-    LSLaplaceManager(BintOptions& opts, gForwardModel& pmodel, VolumeSeries& pdata, Volume& pmask) : 
+      LSLaplaceManager(BintOptions& opts, gForwardModel& pmodel,const Matrix& pdata, const NEWIMAGE::volume4D<float>& pmask) : 
       data(pdata),
       mask(pmask),      
       debuglevel(opts.debuglevel.value()),
@@ -199,17 +195,17 @@ class SumSquaresgEvalFunction : public gEvalFunction
  
   protected:     
 
-    VolumeSeries& data;
-    Volume& mask;
+    Matrix data;
+    NEWIMAGE::volume4D<float> mask;
 
     int ntpts;    
     int nvoxels;
     int nparams;
 
-    VolumeSeries mns;
-    VolumeSeries covs;
+    Matrix mns;
+    Matrix covs;
 
-    Volume prec;
+    ColumnVector prec;
 
     int debuglevel;
     float precin;

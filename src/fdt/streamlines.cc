@@ -8,10 +8,11 @@ namespace TRACT{
     // A and B contain th, ph f. 
     float th,ph;
     ColumnVector rA(3), rB(3);
-    rA<< sin(A(1))*cos(A(2)) <<sin(A(1))*sin(A(2)) <<cos(A(1));
-    rB<< sin(B(1))*cos(B(2)) <<sin(B(1))*sin(B(2)) <<cos(B(1));
+
+    rA << (sin(A(1))*cos(A(2))) << (sin(A(1))*sin(A(2))) << (cos(A(1)));
+    rB << (sin(B(1))*cos(B(2))) << (sin(B(1))*sin(B(2))) << (cos(B(1)));
     
-    if(SP(rA,rB).AsScalar()>0)
+    if(sum(SP(rA,rB)).AsScalar()>0)
       cart2sph((rA+rB)/2,th,ph);
     else
       cart2sph((rA-rB)/2,th,ph);
@@ -156,9 +157,9 @@ namespace TRACT{
 	
 	float pref_x=0,pref_y=0,pref_z=0;
 	if(opts.prefdirfile.value()!=""){
-	  pref_x = m_prefdir(xyz_seeds(1),xyz_seeds(2),xyz_seeds(3),0);
-	  pref_y = m_prefdir(xyz_seeds(1),xyz_seeds(2),xyz_seeds(3),1);
-	  pref_z = m_prefdir(xyz_seeds(1),xyz_seeds(2),xyz_seeds(3),2); 
+	  pref_x = m_prefdir((int)xyz_seeds(1),(int)xyz_seeds(2),(int)xyz_seeds(3),0);
+	  pref_y = m_prefdir((int)xyz_seeds(1),(int)xyz_seeds(2),(int)xyz_seeds(3),1);
+	  pref_z = m_prefdir((int)xyz_seeds(1),(int)xyz_seeds(2),(int)xyz_seeds(3),2); 
 	}
 	//update every passed_flag
 	for( unsigned int wm=0;wm<m_waymasks.size();wm++ ){
@@ -209,10 +210,12 @@ namespace TRACT{
 	      else
 		{
 		  ColumnVector test_th_ph_f;
+		  
 		  m_part.testjump(th_ph_f(1),th_ph_f(2));
 		  test_th_ph_f=vols.sample(m_part.testx(),m_part.testy(),m_part.testz(),m_part.rx(),m_part.ry(),m_part.rz(),pref_x,pref_y,pref_z);
 		  test_th_ph_f=mean_sph_pol(th_ph_f,test_th_ph_f);
 		  m_part.jump(test_th_ph_f(1),test_th_ph_f(2));
+		  
 		}
 	    }
 	    
@@ -576,6 +579,15 @@ namespace TRACT{
     // save total number of particles that made it through the streamlining
     ColumnVector keeptotvec(1);
     keeptotvec(1)=keeptotal;
+    write_ascii_matrix(keeptotvec,logger.appendDir("waytotal"));
+
+  }
+  void Counter::save_total(const vector<int>& keeptotal){
+    
+    // save total number of particles that made it through the streamlining
+    ColumnVector keeptotvec(keeptotal.size());
+    for (int i=1;i<=(int)keeptotal.size();i++)
+      keeptotvec(i)=keeptotal[i-1];
     write_ascii_matrix(keeptotvec,logger.appendDir("waytotal"));
 
   }

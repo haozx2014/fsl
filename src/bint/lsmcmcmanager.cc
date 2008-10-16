@@ -70,13 +70,13 @@
 #include "utils/log.h"
 #include "miscmaths/miscmaths.h"
 #include "miscmaths/miscprob.h"
-#include "newimage/newimageall.h"
+
 #include "utils/tracer_plus.h"
 #include "model.h"
 
 using namespace Utilities;
 using namespace MISCMATHS;
-using namespace NEWIMAGE;
+
 
 namespace Bint {
 
@@ -84,8 +84,8 @@ namespace Bint {
   {
     Tracer_Plus tr("LSMCMCManager::setup"); 
 
-    ntpts = data.tsize();
-    nvoxels = data.nvoxels();
+    ntpts = data.Nrows();
+    nvoxels = data.Ncols();
 
     // need to get nparams by dummy call to model:
     model.setparams();
@@ -115,7 +115,7 @@ namespace Bint {
     Tracer_Plus tr("LSMCMCManager::run");
 
     // now run each voxel
-    for(int vox=1;vox<=data.nvoxels();vox++)
+    for(int vox=1;vox<=data.Ncols();vox++)
       {
 	cout << vox<< ",";
 	cout.flush();
@@ -126,10 +126,7 @@ namespace Bint {
 	    cout << "----------------------------------" << endl;
 	  }
 
-//  	float stddev = float((maxt-mint)*vox)/data.nvoxels()+mint;
-//  	OUT(stddev);
-
-	voxelmanager.setdata(data.getSeries(vox));	
+	voxelmanager.setdata(data.Column(vox));	
 	voxelmanager.setupparams(precin);	
 	voxelmanager.run();	
 
@@ -138,25 +135,18 @@ namespace Bint {
 	  if(voxelmanager.getmcmcparams()[p]->getallowtovary())
 	    {
 	      const vector<float>& samps = voxelmanager.getsamples(p);
-	      
-	      ColumnVector tmp(vector2ColumnVector(samps));
-	      //	      means(vox) = MISCMATHS::mean(tmp).AsScalar();
-
-	      samples[p].setSeries(tmp,vox);
+	      samples[p].Column(vox)=vector2ColumnVector(samps);
 	    }
 
 	  if(!analmargprec)
 	    {
 	      const vector<float>& precsamps = voxelmanager.getprecsamples();	
-	      precsamples.setSeries(vector2ColumnVector(precsamps),vox);
+	      precsamples.Column(vox)=vector2ColumnVector(precsamps);
 	    }
 	}      
       }
 
     cout << endl;
-
-    //    write_ascii_matrix(LogSingleton::getInstance().appendDir("means"),means);
-    //    write_ascii_matrix(LogSingleton::getInstance().appendDir("stddevs"),stddevs);
   }
 
   void LSMCMCManager::save()
@@ -164,31 +154,22 @@ namespace Bint {
     Tracer_Plus tr("LSMCMCManager::save");
     
     cout << "Saving results...";
-    VolumeInfo info = mask.getInfo();
-    info.v = ntpts;
-    //     data.setInfo(info);
-    //     data.setPreThresholdPositions(mask.getPreThresholdPositions());
-    //     data.unthresholdSeries();
-    //     data.writeAsFloat(LogSingleton::getInstance().appendDir("data"));
-    //     data.CleanUp();
+
     for(int p=0; p<nparams; p++) {
       if(model.getparam(p).getallowtovary() && model.getparam(p).getsave())
 	{
-	  info.v = samples[p].Nrows();
-	  samples[p].setInfo(info);
-	  samples[p].setPreThresholdPositions(mask.getPreThresholdPositions());
-	  samples[p].unthresholdSeries();
-	  samples[p].writeAsFloat(LogSingleton::getInstance().appendDir(paramnames[p]+string("_samples")));
+          volume4D<float> output(mask);
+	  output.setmatrix(samples[p],mask[0]);
+          save_volume4D(output,LogSingleton::getInstance().appendDir(paramnames[p]+string("_samples")));
 	  samples[p].CleanUp();
 	}
     }
 
     if(!analmargprec)
       {
-	precsamples.setInfo(info);
-	precsamples.setPreThresholdPositions(mask.getPreThresholdPositions());
-	precsamples.unthresholdSeries();
-	precsamples.writeAsFloat(LogSingleton::getInstance().appendDir("prec_samples"));
+        volume4D<float> output(mask);
+	output.setmatrix(precsamples,mask[0]);
+        save_volume4D(output,LogSingleton::getInstance().appendDir("prec_samples"));
 	precsamples.CleanUp();
       }
 
@@ -214,7 +195,6 @@ namespace Bint {
     val += normrnd().AsScalar()*proposal_std;      
 
     // calculate acceptance threshold   
-    //float tmp = unifrnd().AsScalar();    
     float tmp = unifrnd().AsScalar();    
     float tmpold = old_energy();
     float tmpnew = new_energy();
@@ -388,9 +368,6 @@ namespace Bint {
 	}
       
       ColumnVector retstart = model.nonlinearfunc(x);
-      //write_ascii_matrix(retstart,LogSingleton::getInstance().appendDir("retstart"));
-
-      //write_ascii_matrix(data,LogSingleton::getInstance().appendDir("datastart"));
 
     while(true)
       {
@@ -423,10 +400,6 @@ namespace Bint {
 	}
       
       ColumnVector retend = model.nonlinearfunc(x);
-      //write_ascii_matrix(retend,LogSingleton::getInstance().appendDir("retend"));
-      //write_ascii_matrix(data,LogSingleton::getInstance().appendDir("dataend"));
-      //OUT((data-retend).SumSquare());
-
   }
 
   void LSMCMCVoxelManager::sample() 

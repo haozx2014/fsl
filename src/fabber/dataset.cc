@@ -69,18 +69,31 @@
 #include "easylog.h"
 #include "dataset.h"
 
-void DumpVolumeInfo(const VolumeInfo& info, string indent = "", ostream& out = LOG)
+using namespace MISCMATHS;
+using namespace NEWIMAGE;
+using namespace std;
+
+void DumpVolumeInfo(const volume4D<float>& info, string indent = "", ostream& out = LOG)
 {
   Tracer_Plus tr("DumpVolumeInfo");
-  LOG << indent << "Dimensions: x=" << info.x << ", y=" << info.y 
-      << ", z=" << info.z << ", vols=" << info.v << endl;
-  LOG << indent << "Voxel size: x=" << info.vx << "mm, y=" << info.vy 
-      << "mm, z=" << info.vz << "mm, TR=" << info.tr << " sec\n";
-  LOG << indent << "Intents: " << info.intent_code << ", " << info.intent_p1
-      << ", " << info.intent_p1 << ", " << info.intent_p2 << ", " 
-      << info.intent_p3 << endl;
+  LOG << indent << "Dimensions: x=" << info.xsize() << ", y=" << info.ysize() 
+      << ", z=" << info.zsize() << ", vols=" << info.tsize() << endl;
+  LOG << indent << "Voxel size: x=" << info.xdim() << "mm, y=" << info.ydim() 
+      << "mm, z=" << info.zdim() << "mm, TR=" << info.tdim() << " sec\n";
+  LOG << indent << "Intents: " << info.intent_code() << ", " << info.intent_param(1)
+      << ", " << info.intent_param(2) << ", " << info.intent_param(3) << endl;
 }
 
+void DumpVolumeInfo(const volume<float>& info, string indent = "", ostream& out = LOG)
+{
+  Tracer_Plus tr("DumpVolumeInfo");
+  LOG << indent << "Dimensions: x=" << info.xsize() << ", y=" << info.ysize() 
+      << ", z=" << info.zsize() << ", vols=1" << endl;
+  LOG << indent << "Voxel size: x=" << info.xdim() << "mm, y=" << info.ydim() 
+      << "mm, z=" << info.zdim() << "mm, TR=1" << " sec\n";
+  LOG << indent << "Intents: " << info.intent_code() << ", " << info.intent_param(1)
+      << ", " << info.intent_param(2) << ", " << info.intent_param(3) << endl;
+}
 
 void DataSet::LoadData(ArgsType& args)
 {
@@ -97,37 +110,36 @@ void DataSet::LoadData(ArgsType& args)
       // they just crash.  Hence the detailed logging before we try anything.
 
       LOG_ERR("    Loading data from '" << dataFile << "'" << endl);
-      VolumeSeries data; data.read(dataFile);
-      DumpVolumeInfo(data.getInfo(), "      ");
+      volume4D<float> data;
+      read_volume4D(data,dataFile);
+      DumpVolumeInfo(data);
 
       LOG_ERR("    Loading mask data from '" + maskFile << "'" << endl);
-      mask.read(maskFile); // This just crashes if data is multi-volume.
-      DumpVolumeInfo(mask.getInfo(), "      ");
+      read_volume(mask,maskFile);
+      DumpVolumeInfo(mask);
 
       LOG << "    Applying mask to data..." << endl;
-      mask.threshold(1e-16);
+      mask.binarise(1e-16,mask.max()+1,exclusive);
       // threshold using mask:
       try {
-        data.setPreThresholdPositions(mask.getPreThresholdPositions());
-        data.thresholdSeries();
-
+	voxelData=data.matrix(mask);
       } catch (Exception) {
         LOG_ERR("\n*** NEWMAT error while thresholding time-series... "
                 << "Most likely a dimension mismatch. ***\n");
-        DumpVolumeInfo(data.getInfo());
+        DumpVolumeInfo(data);
         LOG_ERR("Mask:\n");
-        DumpVolumeInfo(mask.getInfo());
+        DumpVolumeInfo(mask);
         LOG_ERR("\nThis is fatal... rethrowing exception.\n");
         throw;
       }
 
-      voxelData = data;
     }
   else if (dataOrder == "interleave" || dataOrder == "concatenate")
     {
       LOG << "  Loading data from multiple files..." << endl;
       
-      vector<VolumeSeries> dataSets;
+      vector<volume4D<float> > dataSets;
+      vector<Matrix> dataSetsM;
       int nTimes = -1;
       while (true)
 	{
@@ -138,13 +150,14 @@ void DataSet::LoadData(ArgsType& args)
 	  // Load the files.  Note: these functions don't throw errors if file doesn't exist --
 	  // they just crash.  Hence the detailed logging before we try anything.
 	  LOG_ERR("    Loading " << "data"+stringify(N) << " from '" << datafile << "'" << endl);
-	  dataSets.push_back(VolumeSeries());
-	  dataSets.back().read(datafile);
-	  DumpVolumeInfo(dataSets.back().getInfo(), "      ");
+          volume4D<float> temp;
+	  read_volume4D(temp,datafile);
+          dataSets.push_back(temp);
+	  DumpVolumeInfo(dataSets.back(), "      ");
 
 	  if (nTimes == -1) 
-	    nTimes = dataSets[0].Nrows();
-	  else if (nTimes != dataSets.back().Nrows())
+	    nTimes = dataSets[0].tsize();
+	  else if (nTimes != dataSets.back().tsize())
 	    throw Invalid_option("Data sets must all have the same number of time points");
 	}
 
@@ -155,36 +168,35 @@ void DataSet::LoadData(ArgsType& args)
       string maskFile = args.Read("mask");
  
       LOG_ERR("    Loading mask data from '" + maskFile << "'" << endl);
-      mask.read(maskFile);
-      DumpVolumeInfo(mask.getInfo(), "      ");
+      read_volume(mask,maskFile);
+      DumpVolumeInfo(mask);
 
       LOG << "    Applying mask to all data sets..." << endl;
-      mask.threshold(1e-16);
+      mask.binarise(1e-16,mask.max()+1,exclusive);
       // threshold using mask:
       for (int i = 0; i < nSets; i++)
 	{
 	  try {
-	    dataSets.at(i).setPreThresholdPositions(mask.getPreThresholdPositions());
-	    dataSets.at(i).thresholdSeries();
+	    dataSetsM.push_back(dataSets[i].matrix(mask));
 
             // Note that the above doesn't catch all dimension mismatches..
             // If the mask is smaller (in the z-dir, at least) than the data,
             // it doesn't seem to raise any exception.
 
-            if (dataSets[i].getInfo().x != mask.getInfo().x)
+            if (dataSets[i].xsize() != mask.xsize())
               LOG_ERR("Warning: nonfatal dimension mismatch in x!\n");
-            if (dataSets[i].getInfo().y != mask.getInfo().y)
+            if (dataSets[i].ysize() != mask.ysize())
               LOG_ERR("Warning: nonfatal dimension mismatch in y!\n");
-            if (dataSets[i].getInfo().z != mask.getInfo().z)
+            if (dataSets[i].zsize() != mask.zsize())
               LOG_ERR("Warning: nonfatal dimension mismatch in z!\n");
 
 	  } catch (Exception) {
 	    LOG_ERR("\n*** NEWMAT error while thresholding time-series... "
 		    << "Most likely a dimension mismatch (more details in logfile) ***\n");
 	    LOG << "Data set " << i+1 << ":\n"; 
-	    DumpVolumeInfo(dataSets.at(i).getInfo());
+	    DumpVolumeInfo(dataSets.at(i));
 	    LOG << "Mask:\n"; 
-	    DumpVolumeInfo(mask.getInfo());
+	    DumpVolumeInfo(mask);
 	    LOG_ERR("\nThis is fatal... rethrowing exception.\n");
 	    throw;
 	  }
@@ -194,12 +206,12 @@ void DataSet::LoadData(ArgsType& args)
         {
           LOG << "    Combining data into one big matrix by interleaving..." << endl;
           // Interleave:
-          voxelData.ReSize(nTimes * nSets, dataSets[0].Ncols());
+          voxelData.ReSize(nTimes * nSets, dataSetsM[0].Ncols());
           for (int i = 0; i < nTimes; i++)
             {
               for (int j = 0; j < nSets; j++)
 	        {
-	          voxelData.Row(nSets*i+j+1) = dataSets.at(j).Row(i+1);
+	          voxelData.Row(nSets*i+j+1) = dataSetsM.at(j).Row(i+1);
 	        }
 	    }
         }
@@ -207,9 +219,9 @@ void DataSet::LoadData(ArgsType& args)
         {
           LOG << "    Combining data into one big matrix by concatenating..." << endl;
           // Concatenate:
-          voxelData = dataSets.at(0);
-          for (unsigned j = 1; j < dataSets.size(); j++)
-            voxelData &= dataSets.at(j);
+          voxelData = dataSetsM.at(0);
+          for (unsigned j = 1; j < dataSetsM.size(); j++)
+            voxelData &= dataSetsM.at(j);
         }
       
       LOG << "    Done loading data, size = " 

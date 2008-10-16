@@ -100,19 +100,21 @@ int main(int argc, char *argv[])
     volume4D<float> input_data;
     volumeinfo vinfo;
     read_volume4D(input_data,globalopts.inputfname,vinfo);
-    int sizeTS = input_data.tsize();
+    int sizeTS(input_data.tsize());
 
-    Matrix datam;
-    volume<float> mask(input_data[0]);
+    volume4D<float> reference;
+    reference=input_data[int(sizeTS/2)-1];
+    copybasicproperties(input_data,reference);
 
-    volume4D<float> reference(mask.xsize(),mask.ysize(),mask.zsize(),1);
-    reference[0]=input_data[int(sizeTS/2)-1];
-
-    for(int t=1;t<input_data.tsize();t++) mask+=input_data[t];
-    mask/=input_data.tsize();
+    volume<float> mask(meanvol(input_data));
+    volume<float> variance(variancevol(input_data));
     input_data-=mask;
+
     mask.binarise(globalopts.thresh,mask.max()+1,exclusive);
-    datam=input_data.matrix(mask);
+    variance.binarise(1e-10,variance.max()+1,exclusive); //variance mask needed if thresh is -ve to remove background voxels (0 variance)
+    mask*=variance; //convolved mask ensures that only super-threshold non-background voxels pass
+
+    Matrix datam(input_data.matrix(mask));
    
     int numTS = datam.Ncols();
     ColumnVector epivol = reference.matrix(mask).t();
@@ -164,7 +166,7 @@ int main(int argc, char *argv[])
 	  {
 	    volume4D<float> beta;
 	    beta.setmatrix(acEst.fitAutoRegressiveModel(),mask);
-	    copybasicproperties(input_data,beta);
+	    copybasicproperties(reference,beta);
 	    FslSetCalMinMax(&vinfo,beta.min(),beta.max());
 	    save_volume4D(beta,LogSingleton::getInstance().getDir() + "/betas",vinfo);
 	  }
@@ -250,7 +252,7 @@ int main(int argc, char *argv[])
     threshacm = threshacm.Rows(1,MISCMATHS::Max(1,cutoff)); 
 
     input_data.setmatrix(threshacm,mask);
-    input_data.settdim(reference.tdim());
+    input_data.settdim(reference.tdim()); //Possibly just set to a constant 1?
     input_data.set_intent(NIFTI_INTENT_ESTIMATE,0,0,0);
     FslSetCalMinMax(&vinfo,input_data.min(),input_data.max());
     save_volume4D(input_data,logger.getDir() + "/threshac1",vinfo);

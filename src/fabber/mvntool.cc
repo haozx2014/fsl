@@ -10,13 +10,14 @@
 #include <map>
 #include <string>
 #include "inference.h"
-#include "miscmaths/volume.h"
-using namespace std;
-using namespace MISCMATHS;
-
 #include "dist_mvn.h"
 #include "easyoptions.h"
+#include "newimage/newimageall.h"
+
 using namespace Utilities;
+using namespace std;
+using namespace MISCMATHS;
+using namespace NEWIMAGE;
 
 /* Function declarations */
 void Usage(const string& errorString = "");
@@ -70,9 +71,10 @@ int main(int argc, char** argv)
 	    }
 
 	    /* Read in MVN file */
-	    Volume mask;
-	    mask.read(maskfile);
-	    mask.threshold(1e-16);
+	    volume<float> mask;
+            read_volume(mask,maskfile);
+	    mask.binarise(1e-16,mask.max()+1,exclusive);
+
 	    cout << "Read file" << endl;
 	    vector<MVNDist*> vmvnin;
 	    MVNDist::Load(vmvnin,infile,mask);
@@ -155,7 +157,7 @@ int main(int argc, char** argv)
 	    else {
 	      /* Section to deal with reading a parameter out to an image */
 	      int nVoxels = vmvnin.size();
-	      VolumeSeries image;
+	      Matrix image;
 	      image.ReSize(1,nVoxels);
 
 	      if (bval) {
@@ -175,14 +177,12 @@ int main(int argc, char** argv)
 
 	      cout << "Writing output file" << endl;
 
-	      VolumeInfo info = mask.getInfo();
-	      info.v = 1;
-	      info.intent_code = NIFTI_INTENT_NONE;
-	      image.setInfo(info);
-	      image.setPreThresholdPositions(mask.getPreThresholdPositions());
-	      image.unthresholdSeries();
-	      image.writeAsFloat(outfile);
-	      image.CleanUp();
+              volume4D<float> output(mask.xsize(),mask.ysize(),mask.zsize(),1);
+	      copybasicproperties(mask,output);
+	      output.setmatrix(image,mask);
+	      output.setDisplayMaximumMinimum(output.max(),output.min());
+	      output.set_intent(NIFTI_INTENT_NONE,0,0,0);
+	      save_volume4D(output,outfile);
 	    }
 	      
 	    cout << "Done." << endl;
