@@ -77,6 +77,7 @@
 #include "miscmaths/t2z.h"
 #include "miscmaths/f2z.h"
 #include <algorithm>
+#include <limits.h>
 
 using namespace Utilities;
 using namespace MISCMATHS;
@@ -568,7 +569,10 @@ namespace Gs {
     design.setup();    
         
     mcmc_mask=design.getmask();
-    nmaskvoxels = int(mcmc_mask.sum());
+
+    volume<float> tmp_mask=mcmc_mask;
+    tmp_mask.binarise(1e-32);
+    nmaskvoxels = int(tmp_mask.sum());
 
     ngs = design.getngs();
     nevs = design.getnevs();
@@ -1071,9 +1075,16 @@ namespace Gs {
 	iU(t) = 1.0/(S(t)+beta(design.getgroup(t)));
       }
 
+
     // calc gam covariance
     gamcovariance << (z.t()*iU*z).i();
 
+//     OUT(S);
+//     OUT(beta);
+//     OUT(gamcovariance);
+//     OUT(Y);
+//     OUT(z);
+//     OUT(iU);
     gam=gamcovariance*z.t()*iU*Y;    	
 
     // calc log marg posterior
@@ -1246,9 +1257,7 @@ namespace Gs {
 	    for(int z = 0; z < zsize; z++)
 	      {
 		if(design.getmask()(x,y,z))
-		  {	
-		    //		cout << x << "," << y << "," << z << endl;
-
+		  {
 		    /////////// extract params for this voxel
 		    // extract gam
 		    ColumnVector gam(nevs);
@@ -1355,11 +1364,6 @@ namespace Gs {
 			ColumnVector Uin=Sg[g-1]+beta(g); //variances
 			ColumnVector Uout=Sg[g-1]+beta(g)+beta_outlier(g); //variances
 
-// 			OUT(g);
-// 			OUT(gam);
-// 			OUT(gamg[g-1]);
-// 			OUT(zg[g-1]);
-
 			ColumnVector mu=zg[g-1]*gamg[g-1];
 
 			for(int i = 1; i <= mu.Nrows(); i++)
@@ -1382,6 +1386,11 @@ namespace Gs {
 
 			if(isnan(tmp))
 			  {
+			    OUT(x); OUT(y); OUT(z);
+			    OUT(g);
+			    OUT(gam);
+			    OUT(gamg[g-1]);
+			    OUT(zg[g-1]);
 			    OUT(global_prob_outlier(g));
 			    OUT(prob_outlier_g[g-1].t());
 			    OUT(Uin.t());
@@ -1397,7 +1406,7 @@ namespace Gs {
 				OUT(normpdf(Yg[g-1](i),mu(i),Uin(i)));
 				OUT(normpdf(Yg[g-1](i),mu(i),Uout(i)));
 			      }
-			    OUT("Error in Gsmanager::flame_stage1_onvoxel_inferoutliers");
+			    OUT("Error in Gsmanager::flame_stage1_onvoxel");
 			    exit(0);
 			  }
  
@@ -1584,6 +1593,7 @@ namespace Gs {
     vector<ColumnVector> log_beta_outlier(ngs);
     
     ColumnVector gamtmp=gam;
+
     gamtmp = design.insert_zeroev_pes(px,py,pz,gamtmp);
     for(int g = 1; g <= ngs; g++)
       {
@@ -1719,6 +1729,11 @@ namespace Gs {
 	    float tmp=mean(prob_outlier_g[g-1]).AsScalar();
    	    if(isnan(tmp))
 	      {
+		OUT(px); OUT(py); OUT(pz);
+		OUT(g);
+		OUT(gam);
+		OUT(gamg[g-1]);
+		OUT(zg[g-1]);
 		OUT(global_prob_outlier(g));
 		OUT(prob_outlier_g[g-1].t());
 		OUT(Uin.t());
@@ -2060,7 +2075,9 @@ namespace Gs {
 
 	  }
 
-    nmaskvoxels = int(mcmc_mask.sum()); 
+    volume<float> tmp_mask=mcmc_mask;
+    tmp_mask.binarise(1e-32);
+    nmaskvoxels = int(tmp_mask.sum());
     OUT(nmaskvoxels);
   }
 
@@ -2256,7 +2273,7 @@ namespace Gs {
 		    // insert any zero EV PE samples
 		    gamsamples=design.insert_zeroev_pemcmcsamples(x,y,z,gamsamples);
 		    
-		    write_ascii_matrix(LogSingleton::getInstance().appendDir("gamsamples"),gamsamples);
+		    //		    write_ascii_matrix(LogSingleton::getInstance().appendDir("gamsamples"),gamsamples);
 		    flame2_contrasts(gamsamples,x,y,z);
 
 		    if((std::abs(zts[0](x,y,z)-zflame1lowerts[0](x,y,z))>3))
@@ -2389,10 +2406,12 @@ namespace Gs {
 			  }
 			zts[t](x,y,z) = T2z::getInstance().convert(ts[t](x,y,z),int(tdofs[t](x,y,z)));
 		      }
+
 		    for(int f = 0; f < design.getnumfcontrasts(); f++)
 		      {
 			zfs[f](x,y,z) = F2z::getInstance().convert(fs[f](x,y,z),int(fdof1s[f](x,y,z)),int(fdof2s[f](x,y,z)));
 		      }
+
 		  }
 	      }
 	  }
@@ -2472,6 +2491,7 @@ namespace Gs {
 	t_ols_contrast(mn,covariance,design.gettcontrast(t+1),tcopes[t](px,py,pz), tvarcopes[t](px,py,pz), ts[t](px,py,pz), tdofs[t](px,py,pz), zts[t](px,py,pz), px,py,pz);		
       }
 
+
     for(int f = 0; f < design.getnumfcontrasts(); f++)
       {
 	fdof1s[f](px,py,pz) = float(design.getfcontrast(f+1).Nrows());
@@ -2482,6 +2502,7 @@ namespace Gs {
 
 	f_ols_contrast(mn,covariance,design.getfcontrast(f+1),fs[f](px,py,pz), fdof1s[f](px,py,pz), fdof2s[f](px,py,pz), zfs[f](px,py,pz), px,py,pz);
       }
+
   }
 
   void Gsmanager::flame1_contrasts(const ColumnVector& mn, const SymmetricMatrix& covariance, int px, int py, int pz)
@@ -2495,7 +2516,7 @@ namespace Gs {
 	// double tdoflower = float(ntpts - nevs);
 	// eventually work out effective DOF based on which variance groups interact with the contrast
 	// for now just take dof from variance group with fewest members (to be conservative)
-	float tdoflower = 1e10;
+	float tdoflower = INT_MAX/10.0;
 
 	for(int g=0; g<ngs; g++)
 	  {
@@ -2523,7 +2544,7 @@ namespace Gs {
 	// double fdof2lower = float(ntpts - nevs);
 	// eventually work out effective DOF based on which variance groups interact with the contrast
 	// for now just take dof from variance group with fewest members (to be conservative)
-	float fdof2lower = 1e10;
+	float fdof2lower = INT_MAX/10.0;
 	for(int g=0; g<ngs; g++)
 	  {
 	    float tmpdof = design.getntptsingroup(g+1) - nevs/float(ngs);
@@ -2577,8 +2598,8 @@ namespace Gs {
 	// set z-score to lower z bound	
 	tdofs[t](px,py,pz) = tdoflower;
 	zts[t](px,py,pz) = zflame1lowerts[t](px,py,pz);
-      }
-	      
+      }	        
+
     for(int f = 0; f < design.getnumfcontrasts(); f++)
       {
 	fdof1s[f](px,py,pz) = float(design.getfcontrast(f+1).Nrows());
@@ -2586,12 +2607,24 @@ namespace Gs {
 
 	// eventually work out effective DOF based on which variance groups interact with the contrast
 	// for now just take dof from variance group with fewest members (to be conservative)
-	float fdof2lower = 1e10;
+	float fdof2lower = INT_MAX/10.0;
+
 	for(int g=0; g<ngs; g++)
 	  {
-	    float tmpdof = global_prob_outlier_mean[g](px,py,pz)*design.getntptsingroup(g+1) - nevs/float(ngs);
+	    float tmpdof = (1-global_prob_outlier_mean[g](px,py,pz))*design.getntptsingroup(g+1) - nevs/float(ngs);
 	    if(design.is_group_in_fcontrast(g+1, design.getfcontrast(f+1)) && tmpdof>0 && tmpdof<fdof2lower)
 	      fdof2lower=tmpdof;
+
+// 	    OUT(nevs);
+// 	    OUT(ngs);
+// 	    OUT(global_prob_outlier_mean[g](px,py,pz)*design.getntptsingroup(g+1));
+
+// 	    OUT(tmpdof);
+// 	    OUT(design.is_group_in_fcontrast(g+1, design.getfcontrast(f+1)));
+
+// 	    OUT(g+1);
+// 	    OUT(design.getfcontrast(f+1));
+	      
 	  }
 
 	// call first with highest possible DOF
@@ -2603,7 +2636,9 @@ namespace Gs {
 	// set z-score to lower z bound
 	fdof2s[f](px,py,pz) = fdof2lower;
 	zfs[f](px,py,pz) = zflame1lowerfs[f](px,py,pz);	
+
       }
+
   }
 
   void Gsmanager::flame2_contrasts(const Matrix& gamsamples, int px, int py, int pz)
@@ -2665,6 +2700,13 @@ namespace Gs {
 
     f = (mn.t()*fcontrast.t()*(fcontrast*covariance*fcontrast.t()).i()*fcontrast*mn/dof1).AsScalar();
     z = F2z::getInstance().convert(f,int(floor(dof1+0.5)),int(floor(dof2+0.5)));
+
+//     OUT(dof1);
+//     OUT(dof2);
+//     OUT(int(floor(dof1+0.5)));
+//     OUT(int(floor(dof2+0.5)));
+//     OUT(f);
+//     OUT(z);
   }
  
   void Gsmanager::t_mcmc_contrast(const Matrix& gamsamples, const RowVector& tcontrast, float& cope, float& varcope, float& t, float& dof, float& z, int px, int py, int pz)

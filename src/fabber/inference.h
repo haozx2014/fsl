@@ -71,17 +71,11 @@
 #include <map>
 #include <string>
 #include <vector>
-#include "miscmaths/volumeseries.h"
-#include "miscmaths/volume.h"
 #include "fwdmodel.h"
 #include "noisemodel.h"
-using namespace std;
-using namespace MISCMATHS;
 #include "easylog.h"
 #include "easyoptions.h"
 #include "dataset.h"
-
-//typedef vector<VolumeSeries> DataSet;
 
 class InferenceTechnique {
     

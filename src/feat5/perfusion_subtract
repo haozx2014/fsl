@@ -82,9 +82,13 @@ OUT=`$FSLDIR/bin/remove_ext $2`
 shift 2
 
 invert=""
+demean="-add ${tmpbase}_asl_subtract/mean"
 while [ _$1 != _ ] ; do
     if [ $1 = -c ] ; then
 	invert="-mul -1.0"
+	shift
+    elif [ $1 = -m ] ; then
+	demean=""
 	shift
     else
         Usage
@@ -123,7 +127,7 @@ ${FSLDIR}/bin/fslmerge -t output $lb
 
 cd $OLDPWD
 
-${FSLDIR}/bin/fslmaths ${tmpbase}_asl_subtract/output $invert -add ${tmpbase}_asl_subtract/mean $OUT
+${FSLDIR}/bin/fslmaths ${tmpbase}_asl_subtract/output $invert $demean $OUT
 
 /bin/rm -rf ${tmpbase}*
 

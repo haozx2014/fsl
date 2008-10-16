@@ -214,7 +214,7 @@ if { [ lindex $argv [ expr $pm + 1 ] ] != "" } {
 
     fsl:echo $fq "Using co-ordinates $cX $cY $cZ. "
 
-    fsl:exec "${FSLDIR}/bin/fslmaths $mask -mul 0 -add 100 -roi $cX 1 $cY 1 $cZ 1 0 1 -s 5 ${fqroot}/mask -odt float"
+    fsl:exec "${FSLDIR}/bin/fslmaths $mask -mul 0 -add 100 -roi $cX 1 $cY 1 $cZ 1 0 1 ${fqroot}/mask -odt float"
     
     set mask ${fqroot}/mask
 }
@@ -267,6 +267,10 @@ if { [ string compare $spaces example_func ] != 0 } {
 
     if { ! [ file exists reg/${spaces}2example_func.mat ] } {
 	fq_exit "Error - transform to take mask into space of example_func does not exist in the FEAT directory - run FEAT registration"
+    }
+
+    if { $coords == 1 } {
+	fsl:exec "${FSLDIR}/bin/fslmaths ${fqroot}/$mask -s 5 ${fqroot}/mask -odt float"
     }
 
     if { [ string compare $spaces standard ] == 0 && [ imtest reg/highres2standard_warp ] } {

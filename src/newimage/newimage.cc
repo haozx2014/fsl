@@ -225,6 +225,9 @@ namespace NEWIMAGE {
       p_userinterp = 0;
       p_userextrap = 0;
 
+      displayMaximum=0;
+      displayMinimum=0;
+
       set_whole_cache_validity(false);
     }
 
@@ -423,8 +426,7 @@ namespace NEWIMAGE {
     l_histogram.copy(source.l_histogram,this);
     HISTbins = source.HISTbins;
     HISTmin = source.HISTmin;
-    HISTmax = source.HISTmax;
-    
+    HISTmax = source.HISTmax;    
     percentilepvals = source.percentilepvals;
     p_userextrap = source.p_userextrap;
     p_userinterp = source.p_userinterp;
@@ -3048,8 +3050,8 @@ namespace NEWIMAGE {
     }
     percentilepvals.push_back(0.995);
     percentilepvals.push_back(0.999);
-    percentilepvals.push_back(1.0);
-    
+    percentilepvals.push_back(1.0);    
+
     set_whole_cache_validity(false);
   }
 
@@ -3174,6 +3176,7 @@ namespace NEWIMAGE {
     HISTbins = source.HISTbins;
     HISTmin = source.HISTmin;
     HISTmax = source.HISTmax;
+
     // now copy all individual volume properties
     if (sameabssize(source,*this)) {
       for (int t=0; t<source.tsize(); t++) {
@@ -3665,13 +3668,11 @@ namespace NEWIMAGE {
   void volume4D<T>::setzdim(float z)
     { for (int t=0; t<tsize(); t++) vols[t].setzdim(z); }
 
-
-
-
-
+  template <class T>
+  void volume4D<T>::setDisplayMaximumMinimum(const float maximum, const float minimum)
+  { for (int t=0; t<tsize(); t++) vols[t].setDisplayMaximumMinimum(maximum,minimum); }
 
   // SECONDARY PROPERTIES (using a 3D or 4D mask)
-
 
   template <class T>
   minmaxstuff<T> calc_minmax(const volume4D<T>& source)
