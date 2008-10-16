@@ -16,7 +16,7 @@ OBJS = model.o lsmcmcmanager.o lslaplacemanager.o bintoptions.o meanoptions.o
 all:	${XFILES} libbint
 
 libbint: ${OBJS}
-	${CXX} -shared -o libbint.so ${OBJS} ${LDFLAGS} -fPIC -lutils -lnewmat -lmiscmaths
+	${CXX} -shared -o libbint.so ${OBJS} ${LDFLAGS} -fPIC -lutils -lnewmat -lnewimage -lmiscmaths
 
 mean:${OBJS} mean.o
 	${CXX}  ${CXXFLAGS} ${LDFLAGS} -o $@ ${OBJS} mean.o ${LIBS}
