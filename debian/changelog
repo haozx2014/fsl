@@ -12,7 +12,7 @@ fsl (4.1.0+fslio1-1) unstable; urgency=low
   * Install im* and tcl scripts from local fslio sources, instead of using the
     (discontinued) ones in the nifticlibs package. Therefore also removing
     dependency to 'nifti-bin'.
-  * Do not install installer script -- useless on Debian.
+  * Do not install installer script -- useless on Debian (Closes: #489596).
   * Remove broken get-orig-source target from debian/rules. The repackaging
     procedure is implemented in the 'repackage-fsl' script shipped with the
     fslview package.
