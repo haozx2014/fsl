@@ -114,7 +114,6 @@ namespace FILM {
       void filter(const ColumnVector& filterFFT);
       Matrix fitAutoRegressiveModel();
       void pava();
-      //void preWhiten(VolumeSeries& in, VolumeSeries& ret);
       void preWhiten(const ColumnVector& in, ColumnVector& ret, int i, Matrix& dmret, bool highfreqremovalonly=false);
       void setDesignMatrix(const Matrix& dm);
       int establishUsanThresh(const ColumnVector& epivol);

@@ -73,6 +73,8 @@ using namespace Utilities;
 
 #define NOCACHE 1
 
+using namespace NEWIMAGE;
+
 void SpatialVariationalBayes::Setup(ArgsType& args)
 {
   Tracer_Plus tr("SpatialVariationalBayes::Setup");
@@ -200,15 +202,16 @@ assert(resultFs.empty());
 
 // Make the neighbours[] lists if required
 if (spatialPriorsTypes.find_first_of("mMpPS") != string::npos)
-CalcNeighbours(allData.GetMask());
+  CalcNeighbours(allData.GetMask());
 
 // Make distance matrix if required
 if (spatialPriorsTypes.find_first_of("RDF") != string::npos)
-covar.CalcDistances(allData.GetMask(), distanceMeasure);
+  covar.CalcDistances(allData.GetMask(), distanceMeasure);
 // If we haven'd done this, then covar is invalid and it'll return a 
 // zero-size matrix for GetC, etc!
 
 // Make each voxel's distributions
+
 vector<NoiseParams*> noiseVox; // these change
 vector<NoiseParams*> noiseVoxPrior; // these may change in future
 vector<MVNDist> fwdPriorVox;
@@ -1505,7 +1508,7 @@ Tracer tr("SpatialVariationalBayes::DoCalculations - delta updates");
       // to justify duplicating the code here.
 
       Tracer_Plus tr("Saving Sinvs");
-      VolumeSeries vols;
+      Matrix vols;
       
       vols.ReSize(Nparams, Nvoxels*Nvoxels);
       for (int k = 1; k <= Nparams; k++)
@@ -1515,21 +1518,14 @@ Tracer tr("SpatialVariationalBayes::DoCalculations - delta updates");
 	  vols.Row(k) = full.AsColumn().t();
 	}
       
-      VolumeInfo info; //allData.GetMask().getInfo();
-      info.x = info.y = Nvoxels;
-      info.miscinfo = FslInit();
-
-      info.z = 1;
-      info.v = Nparams;
-      info.vx = info.vy = info.vz = info.tr = 1.0;
-      info.intent_p1 = info.intent_p2 = info.intent_p3 = 1.0;
-      info.intent_code = NIFTI_INTENT_NONE;
-      vols.setInfo(info);
+      volume4D<float> output(Nvoxels,Nvoxels,1,Nparams);
+      output.set_intent(NIFTI_INTENT_SYMMATRIX,1,1,1);
+      output.setdims(1,1,1,1);
+      output.setmatrix(vols);
       // no unThresholding needed
       cout << vols.Nrows() << "," << vols.Ncols() << endl;
       
-      vols.writeAsFloat(outputDir + "/finalSpatialPriors");
-      vols.CleanUp();
+      save_volume4D(output,outputDir + "/finalSpatialPriors");
     }
       
 
@@ -1569,13 +1565,23 @@ inline int binarySearch(const ColumnVector& data, int num)
 
 
 
-void SpatialVariationalBayes::CalcNeighbours(const Volume& mask)
+void SpatialVariationalBayes::CalcNeighbours(const volume<float>& mask)
 {
   Tracer_Plus tr("SpatialVariationalBayes::CalcNeighbours");
 
-  const ColumnVector& preThresh = mask.getPreThresholdPositions();
-  const VolumeInfo& info = mask.getInfo();
+  ColumnVector preThresh(mask.sum());
   const int nVoxels = preThresh.Nrows();
+
+  int offset(0);
+  int count(1);
+  for(int z=0;z<mask.zsize();z++)
+    for(int y=0;y<mask.ysize();y++)     
+      for(int x=0;x<mask.xsize();x++)
+      {
+	if (mask(x,y,z)!=0) 
+	  preThresh(count++)=offset;
+	offset++;
+      }
 
   vector<int> delta;
   if (spatialDims >= 1)
@@ -1585,13 +1591,13 @@ void SpatialVariationalBayes::CalcNeighbours(const Volume& mask)
   }
   if (spatialDims >= 2)
   {
-    delta.push_back(info.x); // next column
-    delta.push_back(-info.x); // prev column
+    delta.push_back(mask.xsize()); // next column
+    delta.push_back(-mask.xsize()); // prev column
   }
   if (spatialDims >= 3)
   {
-    delta.push_back(info.x*info.y); // next slice
-    delta.push_back(-info.x*info.y); // prev slice
+    delta.push_back(mask.xsize()*mask.ysize()); // next slice
+    delta.push_back(-mask.xsize()*mask.ysize()); // prev slice
   }
 
   /* Tedious output and I'm pretty sure this is working correctly.  
@@ -1667,21 +1673,31 @@ void SpatialVariationalBayes::CalcNeighbours(const Volume& mask)
   */
 }
 
-void CovarianceCache::CalcDistances(const Volume& mask, const string& distanceMeasure)
+void CovarianceCache::CalcDistances(const volume<float>& mask, const string& distanceMeasure)
 {
     Tracer_Plus tr("CovarianceCache::CalcDistances");
 
-    const ColumnVector& preThresh = mask.getPreThresholdPositions();
-    const VolumeInfo& info = mask.getInfo();
+    ColumnVector preThresh(mask.sum());
     const int nVoxels = preThresh.Nrows();
-    
-    const int dims[3] = {info.x, info.y, info.z};
-    const double dimSize[3] = {info.vx, info.vy, info.vz};
-    assert(info.x*info.y*info.z > 0);
-    assert(info.vx*info.vy*info.vz > 0); // no zeroes!
+
+    int offset(0);
+    int count(1);
+    for(int z=0;z<mask.zsize();z++)
+      for(int y=0;y<mask.ysize();y++)     
+	for(int x=0;x<mask.xsize();x++)
+	{
+	  if (mask(x,y,z)!=0) 
+	    preThresh(count++)=offset;
+	  offset++;
+	}
+ 
+    const int dims[3] = {mask.xsize(),mask.ysize(),mask.zsize()};
+    const double dimSize[3] = {mask.xdim(),mask.ydim(),mask.zdim()};
+    assert(mask.xsize()*mask.ysize()*mask.zsize() > 0);
+    assert(mask.xdim()*mask.ydim()*mask.zdim() > 0); // no zeroes!
     
     LOG << "Calculating distance matrix, using voxel dimensions: " 
-	<< info.vx << " by " << info.vy << " by " << info.vz << " mm\n";
+	<< mask.xdim() << " by " << mask.ydim() << " by " << mask.zdim() << " mm\n";
     
     if (nVoxels > 7500)
       LOG_ERR("WARNING: Over " << int(2.5*nVoxels*nVoxels*8/1e9) 

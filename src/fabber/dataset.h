@@ -66,14 +66,11 @@
     University, to negotiate a licence. Contact details are:
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
-#include "miscmaths/volume.h"
-#include "miscmaths/volumeseries.h"
 #include "easyoptions.h"
 #include "easylog.h"
 #include <vector>
+#include "newimage/newimageall.h"
 
-using namespace std;
-using namespace MISCMATHS;
 using namespace Utilities;
 
 class DataSet
@@ -81,11 +78,11 @@ class DataSet
  public:
   void LoadData(ArgsType& args);
 
-  const Volume& GetMask() const { return mask; }
-  const Matrix& GetVoxelData() const { return voxelData; }
+  const NEWIMAGE::volume<float>& GetMask() const { return mask; }
+  const NEWMAT::Matrix& GetVoxelData() const { return voxelData; }
 
  protected:
-  Volume mask;
-  Matrix voxelData;
+  NEWIMAGE::volume<float> mask;
+  NEWMAT::Matrix voxelData;
 };
 

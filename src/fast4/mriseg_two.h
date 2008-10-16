@@ -72,13 +72,6 @@
 #include "utils/options.h"
 #include <vector>
 
-using namespace MISCMATHS;
-using namespace NEWIMAGE;
-using namespace Utilities;
-using namespace std;
-
-
-
 class ZMRISegmentation
 {
  public:
@@ -86,26 +79,25 @@ class ZMRISegmentation
   ~ZMRISegmentation()
     {
     }
-  bool Segments(bool pve,const NEWIMAGE::volume<float>& pcsf, const NEWIMAGE::volume<float>& pgm, const NEWIMAGE::volume<float>& pwm);
   void TanakaCreate(const NEWIMAGE::volume<float>& image, float fbeta, int nclasses, float nblowpass, bool bbias, int biterationspve, float mixeltypeMRF, int nbiter, int initinitfixed, int winitfixed, int bapused, float hyp, bool verb,string mansegfle,int typeoffile);
   int TanakaMain(NEWIMAGE::volume<float>& pcsf, NEWIMAGE::volume<float>& pgm, NEWIMAGE::volume<float>& pwm);
 
-
-  volume4D<float> members;
-  volume4D<float> m_post;
-  volume4D<float> m_pve;
-  volume<float> m_Finalbias;
-  volume<int> m_Segment;
-  volume<int> m_pveSegment;
-  volume<int>hardPV;
+  NEWIMAGE::volume4D<float> members;
+  NEWIMAGE::volume4D<float> m_post;
+  NEWIMAGE::volume4D<float> m_pve;
+  NEWIMAGE::volume<float> m_BiasField;
+  NEWIMAGE::volume<int> m_Segment;
+  NEWIMAGE::volume<int> m_pveSegment;
+  NEWIMAGE::volume<int>hardPV;
 
 
 private:
-  NEWIMAGE::volume4D<float> Initclass(int numberofsegs);
-  NEWIMAGE::volume4D<float> pvprobs(int clas);
+  void BiasRemoval();
+  void Classification();
+  void Classification(int x, int y, int z);
   NEWIMAGE::volume<float> Convolve(NEWIMAGE::volume<float>& resfieldimage);
-  float pvmeans(int clas);
-  float pvvar(int clas);
+  void Dimensions();
+  void Initclass();
   float MRFWeightsTotal();
   double MRFWeightsInner(const int x, const int y, const int z,const int c);
   double MRFWeightsAM(const int l, const int m, const int n);
@@ -116,18 +108,13 @@ private:
   void TanakaHyper();
   void TanakaPriorHyper();
   void Initialise();
-  void Initialise(const NEWIMAGE::volume<float>& pcsf, const NEWIMAGE::volume<float>& pgm, const NEWIMAGE::volume<float>& pwm);
   void InitSimple(const NEWIMAGE::volume<float>& pcsf, const NEWIMAGE::volume<float>& pgm, const NEWIMAGE::volume<float>& pwm);
-  void Apriorimap(const NEWIMAGE::volume<float>& pcsf, const NEWIMAGE::volume<float>& pgm, const NEWIMAGE::volume<float>& pwm);
-  void EMloop();
   void UpdateMembers(NEWIMAGE::volume4D<float>& probability);
   void WeightedKMeans();
   void pveIterations();
   void pveInitialize();
   void takeexpo();
   void InitKernel(float kernalsize);
-  void Classification(int x, int y, int z);
-  void Classification();
   void pveClassification(int x, int y, int z);
   void pveClassification();
   void Probabilities(int index);
@@ -135,26 +122,16 @@ private:
   void PVClassificationStep();
   void ICMPV();
   void PVEnergyInit();
-  void PVMoreSophisticated();
   void PVestimation();
-  void PVMeansVar(const NEWIMAGE::volume4D<float>& probability);
   void MeansVariances(int numberofclasses, NEWIMAGE::volume4D<float>& probability);
-  void BiasRemoval();
-  void cliques();
-  void Dimensions();
-  void pvbias();
-  
 
-
-  volume4D<float>PVprob;
-  volume4D<float> pvprobsinit;
-  volume4D<float> talpriors;
-  volume4D<float> m_prob;
-  volume4D<float> pvebias;
-  volume <float>  m_Mricopy;
-  volume<float> m_Mri;
-  volume<float> p_bias;
-  volume<float> m_mask;
+  NEWIMAGE::volume4D<float>PVprob;
+  NEWIMAGE::volume4D<float> pvprobsinit;
+  NEWIMAGE::volume4D<float> talpriors;
+  NEWIMAGE:: volume4D<float> m_prob;
+  NEWIMAGE::volume <float>  m_Mricopy;
+  NEWIMAGE::volume<float> m_Mri;
+  NEWIMAGE::volume<float> m_mask;
   ColumnVector kernelx, kernely, kernelz;
   vector<double> volumequant;
   vector<float> m_mean;
@@ -163,34 +140,31 @@ private:
   vector<float> rhs;
   double m_nxdim, m_nydim, m_nzdim;
   float m_nbLowpass;
-  float maxvariance;
   float beta;
-  float logposterior;
   float pveBmixeltype;
   float nvoxel;
   float Hyper;
   float amx, amy, amz, amxy, amzy, amzx;
-  int imagetype;
+  int imagetype,m_nWidth, m_nHeight, m_nDepth;
   int neighbour[27];
-  int offset3d;
-  int m_nSlicesize, m_nWidth, m_nHeight, m_nDepth, m_nbIter;
-  int maxvarianceindex;
+  int m_nbIter;
   int bapusedflag;
-  int noclasses;
+  int nClasses;
   int inititerations;
   int usingmeanfield;
   int iterationspve;
-  int   biassteps,  initfixed;
+  int initfixed;
   bool biasfieldremoval;
   bool verboseusage;
   string mansegfile;
-class kmeansexception: public exception
-{
- public:
-  virtual const char* what() const throw ()
+
+  class kmeansexception: public exception
   {
-    return "Exception: Not enough classes detected to init KMeans";
-  }
-} kmeansexc;
+  public:
+    virtual const char* what() const throw ()
+    {
+      return "Exception: Not enough classes detected to init KMeans";
+    }
+  } kmeansexc;
 
 };
