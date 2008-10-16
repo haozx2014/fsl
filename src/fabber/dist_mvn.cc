@@ -68,8 +68,10 @@
 
 #include "dist_mvn.h"
 #include "easyoptions.h"
-using namespace Utilities;
 #include "miscmaths/miscmaths.h"
+
+using namespace NEWIMAGE;
+using namespace Utilities;
 using namespace MISCMATHS;
 
 // Constructors
@@ -312,18 +314,16 @@ void MVNDist::Load(const string& filename)
     assert(means.Nrows() == len);
 }
 
-#include "miscmaths/volumeseries.h"
-
-void MVNDist::Load(vector<MVNDist*>& mvns, const string& filename, const Volume& mask)
+void MVNDist::Load(vector<MVNDist*>& mvns, const string& filename, const volume<float>& mask)
 {
     Tracer_Plus tr("MVNDist::Load (static)");
     
-    VolumeSeries vols; 
+    Matrix vols; 
     LOG_ERR("Reading MVNs from " << filename << endl);
-    vols.read(filename);
-    
-    vols.setPreThresholdPositions(mask.getPreThresholdPositions());
-    vols.thresholdSeries();
+ 
+    volume4D<float> input;
+    read_volume4D(input,filename);
+    vols=input.matrix(mask);
     
     const int nVoxels = vols.Ncols();
     for (unsigned i = 0; i < mvns.size(); i++) 
@@ -363,7 +363,7 @@ void MVNDist::Load(vector<MVNDist*>& mvns, const string& filename, const Volume&
 
 }
 
-void MVNDist::Save(const vector<MVNDist*>& mvns, const string& filename, const Volume& mask)
+void MVNDist::Save(const vector<MVNDist*>& mvns, const string& filename, const volume<float>& mask)
 {    
     Tracer_Plus tr("MVNDist::Save");
      
@@ -372,7 +372,7 @@ void MVNDist::Save(const vector<MVNDist*>& mvns, const string& filename, const V
     // Note that I'm using the 4th dim and should really be using the 5th,
     // according to the specification -- but I don't think it really matters.
 
-    VolumeSeries vols;
+    Matrix vols;
 
     const int nVoxels = mvns.size();
     assert(nVoxels > 0 && mvns.at(0) != NULL);   
@@ -392,18 +392,10 @@ void MVNDist::Save(const vector<MVNDist*>& mvns, const string& filename, const V
         // AsColumn uses row ordering on the lower triangular part, 
         // as NIFTI_INTENT_SYMMATRIX specifies: (1,1) (2,1) (2,2) (3,1)...
       }
-
     // Write the file
-    VolumeInfo info = mask.getInfo();
-    info.v = vols.Nrows();
-    // Note: this is an abuse of NIFTI_INTENT_VECTOR
-    // vector terms should be in 5th dim, not 4th.
-    // Also, can I attach names somehow?
-    info.intent_code = NIFTI_INTENT_SYMMATRIX;
-    vols.setInfo(info);
-    vols.setPreThresholdPositions(mask.getPreThresholdPositions());
-    vols.unthresholdSeries();
-    vols.writeAsFloat(filename);
-    vols.CleanUp();
+    volume4D<float> output(mask.xsize(),mask.ysize(),mask.zsize(),vols.Nrows());
+    output.setmatrix(vols,mask);
+    output.set_intent(NIFTI_INTENT_SYMMATRIX,0,0,0);
+    output.setDisplayMaximumMinimum(output.max(),output.min());
+    save_volume4D(output,filename);
 }
-

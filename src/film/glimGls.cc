@@ -144,7 +144,7 @@ namespace FILM {
       
       peVol.setmatrix(corrections,mask);
       peVol.set_intent(NIFTI_INTENT_NONE,0,0,0);
-      peVol.settdim(reftdim);
+      peVol.settdim(reftdim); //Possibly just set to a constant 1?
       FslSetCalMinMax(&vinfo,peVol.min(),peVol.max());
       save_volume4D(peVol,logger.getDir() + "/corrections",vinfo);
     }

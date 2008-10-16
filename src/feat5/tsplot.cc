@@ -291,7 +291,8 @@ void usage(const string& message)
 int main(int argc, char **argv)
 {
 ofstream     outputFile;
-int          t, numEVs, npts, numContrasts=1, nftests=0, ymin, ymax, GRPHSIZE(600), PSSIZE(600); 
+double       ymin,ymax;
+int          t, numEVs, npts, numContrasts=1, nftests=0, GRPHSIZE(600), PSSIZE(600); 
 vector<double> normalisedContrasts, model, triggers;
 string       fmriFileName, fslPath, outputName, featdir, vType, statType, graphFileName, indexText, graphText, graphName, peristimulusText;
 ColumnVector NewimageVoxCoord(4),NiftiVoxCoord(4);
@@ -353,7 +354,7 @@ volume<float> immask;
 
   /* read filtered_func_data */
 
-  volume4D<int> im;
+  volume4D<float> im;
   read_volume4D(im, fmriFileName);
 
   if (useCoordinate) NewimageVoxCoord = im.niftivox2newimagevox_mat()*NiftiVoxCoord;
@@ -505,7 +506,6 @@ volume4D<float> acs;
 		else
 		   prewhitenedTS = im.voxelts(x,y,z);
 		for(t=1; t<=npts; t++) TS_data(t)+= prewhitenedTS(t)*weight;
-
 		if (!modelFree) {
 		  if (prewhiten)
 		    prewhiten_model(acs.voxelts(x,y,z), model, pwmodel, numEVs, npts);
@@ -522,13 +522,9 @@ volume4D<float> acs;
 		}
 	      }
 
-	double tsmean(0);
-	for(t=1; t<=npts; t++)
-	{
-	  TS_data(t)/=wtotal;
-	  tsmean+=TS_data(t);
-	}
-	tsmean/=npts;
+	TS_data/=wtotal;
+	double tsmean(TS_data.Sum()/npts);
+	  
 	if (isHigherLevel) tsmean=0;
 	if (!modelFree)
 	  for(t=1; t<=npts; t++)
@@ -542,23 +538,23 @@ volume4D<float> acs;
 	/* output data text files */
 	if (outputText) 
 	  outputFile.open((outputName+"/tsplot"+vType+"_"+statType+num2str(i)+".txt").c_str());
-	ymin=ymax=(int)TS_data(1);
+	ymin=ymax=TS_data(1);
 	for(t=1; t<=npts; t++)
 	{
 	  if (outputText) outputFile << scientific << TS_data(t);
-	  ymin=(int)MISCMATHS::Min(TS_data(t),ymin); 
-	  ymax=(int)MISCMATHS::Max(TS_data(t),ymax);
+	  ymin=MISCMATHS::Min(TS_data(t),ymin); 
+	  ymax=MISCMATHS::Max(TS_data(t),ymax);
 	  if (!modelFree)
 	  {
 	    if (type==0)
 	    {
 	      if (outputText) outputFile << " " << TS_copemodel(t); 
-	      ymin=(int)MISCMATHS::Min(TS_copemodel(t),ymin); 
-	      ymax=(int)MISCMATHS::Max(TS_copemodel(t),ymax);
+	      ymin=MISCMATHS::Min(TS_copemodel(t),ymin); 
+	      ymax=MISCMATHS::Max(TS_copemodel(t),ymax);
 	    }
 	    if (outputText) outputFile << " " << TS_model(t); 
-	    ymin=(int)MISCMATHS::Min(TS_model(t),ymin); 
-	    ymax=(int)MISCMATHS::Max(TS_model(t),ymax);
+	    ymin=MISCMATHS::Min(TS_model(t),ymin); 
+	    ymax=MISCMATHS::Max(TS_model(t),ymax);
 	    if (type==0) outputFile << " " << TS_residuals(t)+TS_copemodel(t);
 	  }
 	  if (outputText) outputFile << endl;

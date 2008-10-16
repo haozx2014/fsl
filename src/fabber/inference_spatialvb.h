@@ -67,10 +67,11 @@
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
 #include "inference_vb.h"
+#include "newimage/newimageall.h"
 
 class CovarianceCache {
  public:
-  void CalcDistances(const Volume& mask, const string& distanceMeasure);
+  void CalcDistances(const NEWIMAGE::volume<float>& mask, const string& distanceMeasure);
   const SymmetricMatrix& GetDistances() const { return distances; }
 
   const ReturnMatrix GetC(double delta) const; // quick to calculate
@@ -119,7 +120,7 @@ public:
 
     vector<vector<int> > neighbours; // Sparse matrix would be easier
     vector<vector<int> > neighbours2; // Sparse matrix would be easier
-    void CalcNeighbours(const Volume& mask);
+    void CalcNeighbours(const NEWIMAGE::volume<float>& mask);
     
     // For the new (Sahani-based) smoothing method:    
     CovarianceCache covar;

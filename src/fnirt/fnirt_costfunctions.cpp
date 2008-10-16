@@ -590,7 +590,7 @@ void fnirt_CF::subsample_ref(const std::vector<unsigned int>  nms,
   // that the smoothing of the original volume above has effectively done that.
   NEWIMAGE::volume4D<float>  fakevol;
   std::vector<int>           fakevec;
-  raw_general_transform(*svref,Identity(4),fakevol,fakevec,fakevec,*ssvref,fakevol);
+  raw_general_transform(*svref,IdentityMatrix(4),fakevol,fakevec,fakevec,*ssvref,fakevol);
 }
 
 void fnirt_CF::subsample_refmask(const std::vector<unsigned int>  nms,
@@ -624,7 +624,7 @@ void fnirt_CF::subsample_refmask(const std::vector<unsigned int>  nms,
     // inside the original volume and zero otherwise.
     NEWIMAGE::volume4D<float>  fakevol;
     std::vector<int>           fakevec;
-    raw_general_transform(finmask,Identity(4),fakevol,fakevec,fakevec,foutmask,fakevol,*ssrefmask);
+    raw_general_transform(finmask,IdentityMatrix(4),fakevol,fakevec,fakevec,foutmask,fakevol,*ssrefmask);
 
     // Now combine the resampled mask with the "inside volume" mask;
     for (int k=0; k<ssrefmask->zsize(); k++) {

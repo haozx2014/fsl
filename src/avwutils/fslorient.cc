@@ -110,8 +110,7 @@ void print_usage() {
 
 template <class T>
 void swaporient(volume4D<T>& invol) {
-  Matrix swapmat(4,4);
-  swapmat=Identity(4);
+  Matrix swapmat(IdentityMatrix(4));
   swapmat(1,1)=-1;
   swapmat(1,4)=invol.xsize()-1;
   invol.set_sform(invol.sform_code(),invol.sform_mat() * swapmat);
