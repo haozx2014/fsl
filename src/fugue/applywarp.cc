@@ -285,7 +285,7 @@ int applywarp()
     vector<float>  vsize(3,0.0);
     vsize[0] = outvol.xdim() / float(ssvec[0]);
     vsize[1] = outvol.ydim() / float(ssvec[1]);
-    vsize[2] = outvol.zdim() / float(ssvec[0]);
+    vsize[2] = outvol.zdim() / float(ssvec[2]);
     ssout_ptr->setdims(vsize[0],vsize[1],vsize[2]);
     // Correct for half-voxel shift caused by 0,0,0 mm being
     // set at centre of voxel 0,0,0. A bit fiddly because

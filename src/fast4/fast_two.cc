@@ -86,12 +86,6 @@ string examples_multi_channel="fast [options] <image> [<image2> ... <imagen>]";
 // Note that they must also be included in the main() function or they
 // will not be active.
 
-
-// following not currently user-settable
-// Option<float> fsmall(string("-s, --small"), 0.0,
-// 		  string("small positive number for EM convergence; default=0.0"),
-// 		  false, requires_argument);
-
 Option<int> inititer(string("-W,--init"), 15,
 		  string("number of segmentation-initialisation iterations; default=15"),
 		  false, requires_argument);
@@ -101,8 +95,6 @@ Option<int> nbiter(string("-I,--iter"), 4,
 Option<int> initfixity(string("-O,--fixed"), 4,
 		  string("number of main-loop iterations after bias-field removal; default=4"),
 		  false, requires_argument);
-
-
 Option<float> fbeta(string("-f,--fHard"), 0.02,
 		  string("initial segmentation spatial smoothness (during bias field estimation); default=0.02"),
 		  false, requires_argument);
@@ -281,7 +273,6 @@ string csfPriorName, grayPriorName, whitePriorName;
 int segmentSingleChannel(int argc, char* argv[]) 
 { 
   volume<float> inputImage,pCSF, pGM, pWM;
-  volumeinfo inputinfo;
 
   if (verbose.value()) cout << "Starting Single Image Segmentation" << endl; 
 
@@ -293,7 +284,7 @@ int segmentSingleChannel(int argc, char* argv[])
   make_basename(tempName);
   outname.set_value(tempName);
 
-  if(read_volume(inputImage,inputName,inputinfo)!=0)
+  if(read_volume(inputImage,inputName)!=0)
   {
     cerr<<"Image cannot be found";
     return 1;
@@ -339,8 +330,8 @@ int segmentSingleChannel(int argc, char* argv[])
   ZMRISegmentation	mri;
   mri.TanakaCreate(inputImage, fbeta.value(), nclass.value(), nblowpass.value(),!removeBias.value(), pve.value(), fpveMRFmixeltype.value(), nbiter.value(),initfixity.value(), inititer.value(), bapused, Hyp.value(), verbose.value(),manualsegmentation.value(),typeofimage.value());
   if (mri.TanakaMain(pCSF, pGM, pWM)) return -1;
+  mri.m_Segment.setDisplayMaximumMinimum(0,0);
   save_volume(mri.m_Segment,outname.value()+"_seg");
-  FslSetCalMinMax(&inputinfo,0,0);
   if(segments.value())
   {
     volume<int> ind_segments;
@@ -351,36 +342,38 @@ int segmentSingleChannel(int argc, char* argv[])
 	for(int y=0;y<inputImage.ysize();y++)
 	  for(int x=0;x<inputImage.xsize();x++)
 	    ind_segments.value(x, y, z) = (ind_segments.value(x, y, z)==i);	 
-       save_volume(ind_segments,outname.value()+"_seg_"+num2str(i-1),inputinfo); 
+       save_volume(ind_segments,outname.value()+"_seg_"+num2str(i-1)); 
     }
   }
   
   if(outputProbabilities.value())
+  {
+    copybasicproperties(mri.m_Segment,mri.members);
     for(int i=1; i<=nclass.value(); i++)
-      save_volume(mri.members[i-1],outname.value()+"_prob_"+num2str(i-1),inputinfo); 
-	
+      save_volume(mri.members[i-1],outname.value()+"_prob_"+num2str(i-1)); 
+  }
     
   
   if(pve.value())
   {
     for(int i=1; i<=nclass.value(); i++)
-      save_volume(mri.m_pve[i],outname.value()+"_pve_"+num2str(i-1),inputinfo); 	
-    save_volume(mri.m_pveSegment,outname.value()+"_pveseg",inputinfo);
-    save_volume(mri.hardPV, outname.value()+"_mixeltype", inputinfo);	  
+      save_volume(mri.m_pve[i],outname.value()+"_pve_"+num2str(i-1)); 	
+    save_volume(mri.m_pveSegment,outname.value()+"_pveseg");
+    save_volume(mri.hardPV, outname.value()+"_mixeltype");	  
   }
 
   if(outputCorrected.value())
   {
-    inputImage*=mri.m_Finalbias;
-    save_volume(inputImage,outname.value()+"_restore",inputinfo);
+    inputImage*=mri.m_BiasField;
+    save_volume(inputImage,outname.value()+"_restore");
   }
 
   if(outputBias.value())
   {
-    volume<float> estimatedField(mri.m_Finalbias);
+    volume<float> estimatedField(mri.m_BiasField);
     estimatedField=1;
-    estimatedField/=mri.m_Finalbias;
-    save_volume(estimatedField,outname.value()+"_bias",inputinfo);
+    estimatedField/=mri.m_BiasField;
+    save_volume(estimatedField,outname.value()+"_bias");
   }
 
   return 0;
@@ -402,7 +395,6 @@ int segmentMultiChannel(int argc, char* argv[])
   if(nchannel.value()>=2)
   {
       volume<float>* images=new volume<float>[nchannel.value()];
-      volumeinfo inputinfo;
 
       for(int c=0;c<=nchannel.value()-1;c++)
       {
@@ -415,7 +407,7 @@ int segmentMultiChannel(int argc, char* argv[])
 	  make_basename(tempName);
 	  outname.set_value(tempName);
 	}
-	if(read_volume(images[c], argv[argc-c-1], inputinfo)!=0)
+	if(read_volume(images[c], argv[argc-c-1])!=0)
 	{
 	   cerr<<"Image cannot be found";
 	   return 1;
@@ -434,7 +426,7 @@ int segmentMultiChannel(int argc, char* argv[])
       ZMRIMULTISegmentation mri;
       mri.TanakaCreate(images, nclass.value(), false, nbiter.value(), nblowpass.value(), fbeta.value(), bapused, pve.value(), nchannel.value(),!removeBias.value(),initfixity.value(), verbose.value(), pve.value(), inititer.value(),fpveMRFmixeltype.value(), Hyp.value(),manualsegmentation.value(),typeofimage.value());
       if (mri.TanakaMain(pCSF, pGM, pWM)) return -1;
-     
+      mri.m_Segment.setDisplayMaximumMinimum(0,0);     
       save_volume(mri.m_Segment, outname.value()+"_seg");
 
       if(segments.value())
@@ -448,37 +440,41 @@ int segmentMultiChannel(int argc, char* argv[])
 	      for(int x=0;x<images[0].xsize();x++)
 		ind_segments.value(x, y, z) = (ind_segments.value(x, y, z)==i);
 		  
-	  save_volume(ind_segments,outname.value()+"_seg_"+num2str(i-1),inputinfo); 
+	  save_volume(ind_segments,outname.value()+"_seg_"+num2str(i-1)); 
 	}
       }
 
       if(outputProbabilities.value())
+      {
+	copybasicproperties(mri.m_Segment,mri.members);
 	for(int i=1; i<=nclass.value(); i++)
-	  save_volume(mri.members[i-1],outname.value()+"_prob_"+num2str(i-1),inputinfo); 
-	    
+	  save_volume(mri.members[i-1],outname.value()+"_prob_"+num2str(i-1)); 
+      }	
+    
       if(pve.value())
       {
 	  volume<float> ind_pve;
 	  for(int i=1; i<=nclass.value(); i++)
-	    save_volume(mri.m_pve[i],outname.value()+"_pve_"+num2str(i-1),inputinfo); 	    
-	  save_volume(mri.m_pveSegment,outname.value()+"_pveseg",inputinfo);
-	  save_volume(mri.hardPV, outname.value()+"_mixeltype", inputinfo);
+	    save_volume(mri.m_pve[i],outname.value()+"_pve_"+num2str(i-1)); 	    
+	  save_volume(mri.m_pveSegment,outname.value()+"_pveseg");
+	  save_volume(mri.hardPV, outname.value()+"_mixeltype");
       }
 
       if(outputCorrected.value())
 	for(int i=1;i<nchannel.value()+1;i++)
 	{
 	  images[i-1]*=mri.m_Finalbias[i];
-	  save_volume(images[i-1],outname.value()+"_restore_"+num2str(i),inputinfo);
+	  save_volume(images[i-1],outname.value()+"_restore_"+num2str(i));
 	}
 
       if(outputBias.value())
 	for(int i=1;i<nchannel.value()+1;i++)
 	{
 	  volume<float> estimatedField(mri.m_Finalbias[i]);
+          copybasicproperties(mri.m_Segment,estimatedField);
 	  estimatedField=1;
 	  estimatedField/=mri.m_Finalbias[i];
-	  save_volume(estimatedField,outname.value()+"_bias_"+num2str(i),inputinfo);
+	  save_volume(estimatedField,outname.value()+"_bias_"+num2str(i));
 	}
 	   
       delete[] images;

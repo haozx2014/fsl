@@ -9,25 +9,18 @@ USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_ZLIB}
 LIBS = -lnewimage -lmiscmaths -lprob -lfslio -lnewmat -lutils -lniftiio -lznz -lm -lz
 
 IOLIBS = -lfslio -lniftiio -lznz -lm -lz
-SSLIBS = -lss_32R $(IOLIBS)
 
 XFILES = fslorient fslstats fslmerge \
          fslpspec fslroi fslnvols fsl2ascii  \
          fslsplit fslcc fslinterleave \
          fslhd fslcpgeom fslcreatehd fslcorrecthd fslmaths \
-         fslcomplex fslfft fslmeants fslcheck fslslice fslswapdim_exe fslchfiletype_exe
+         fslcomplex fslfft fslmeants fslslice fslswapdim_exe fslchfiletype_exe
 
 SCRIPTS = fslval fslchpixdim fslanimate fslsize sliceanimate fslinfo fsledithd avw2fsl fslswapdim fslchfiletype 
 
 FSCRIPTS = fmriborient 
 
 all: ${XFILES}
-
-fslcheck: fslcheck.cc
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o fslcheck fslcheck.cc ${LIBS}
-
-avwconv: avwconv.cc
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o avwconv avwconv.cc ${LIBS}
 
 fslstats: fslstats.o
 	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ fslstats.o ${LIBS} 

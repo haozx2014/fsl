@@ -72,8 +72,6 @@
 #include <sstream>
 #define WANT_STREAM
 #define WANT_MATH
-//  #include "newmatap.h"
-//  #include "newmatio.h"
 #include <string>
 #include <math.h>
 #include "utils/log.h"
@@ -84,11 +82,13 @@
 #include "model.h"
 #include "lsmcmcmanager.h"
 #include "lslaplacemanager.h"
+#include "newimage/newimageall.h"
 
 using namespace Bint;
 using namespace Utilities;
 using namespace NEWMAT;
 using namespace MISCMATHS;
+using namespace NEWIMAGE;
 
 class MeanModel : public ForwardModel  
   {
@@ -149,53 +149,48 @@ int main(int argc, char *argv[])
       Tracer_Plus::settimingon();
 
     // read data
-    VolumeSeries data;
-    data.read(opts.datafile.value());   
-    int ntpts = data.tsize();
-
-    // mask:
-    Volume mask;
-    mask.read(opts.maskfile.value());
-    mask.threshold(1e-16);
-    
-    // threshold using mask:
-    data.setPreThresholdPositions(mask.getPreThresholdPositions());
-    data.thresholdSeries();
+    volume4D<float> input;
+    read_volume4D(input,opts.datafile.value());  
+    int ntpts=input.tsize();
+    volume4D<float> maskNew;
+    read_volume4D(maskNew,opts.maskfile.value());
+    maskNew.threshold(1e-16,maskNew.max()+1,inclusive);
+    Matrix data=input.matrix(maskNew[0]);
 
     cout << "ntpts=" << ntpts << endl;
-    cout << "nvoxels=" << mask.getVolumeSize() << endl;
+    cout << "nvoxels=" << maskNew.sum() << endl;
+
 
     MeanModel model(ntpts,MeanOptions::getInstance().debuglevel.value());
 
-    LSMCMCManager lsmcmc(MeanOptions::getInstance(),model,data,mask);
-    LSLaplaceManager lslaplace(MeanOptions::getInstance(),model,data,mask);
+    LSMCMCManager lsmcmc(MeanOptions::getInstance(),model,data,maskNew);
+     LSLaplaceManager lslaplace(MeanOptions::getInstance(),model,data,maskNew);
 
-    if(MeanOptions::getInstance().inference.value()=="mcmc")
-      {
-	lsmcmc.setup();
-	lsmcmc.run();
-	lsmcmc.save();
-      }
-    else
-      {
-	lslaplace.setup();
-	lslaplace.run();
-	lslaplace.save();
-      }
+     if(MeanOptions::getInstance().inference.value()=="mcmc")
+       {
+ 	lsmcmc.setup();
+ 	lsmcmc.run();
+ 	lsmcmc.save();
+       }
+     else
+       {
+	 lslaplace.setup();
+	 lslaplace.run();
+	 lslaplace.save();
+       }
     
     if(opts.timingon.value())
       Tracer_Plus::dump_times(logger.getDir());
 
     cout << endl << "Log directory was: " << logger.getDir() << endl;
   }
-  catch(Exception& e) 
-    {
-      cerr << endl << e.what() << endl;
-    }
-  catch(X_OptionError& e) 
-    {
-      cerr << endl << e.what() << endl;
-    }
+  catch(Exception& e) {
+    cerr << endl << e.what() << endl;   
+  }
+  catch(X_OptionError& e) {
+    cerr << endl << e.what() << endl;
+  }
+    
 
   return 0;
 }

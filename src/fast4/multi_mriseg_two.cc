@@ -1537,34 +1537,26 @@ void ZMRIMULTISegmentation::UpdateWeights()
 
 void ZMRIMULTISegmentation::WeightedKMeans()
 {
-
-
-ifstream inputfile;
-  float* input_mean = new float[noclasses];
-  int input_c=0;
+  vector<float> inputMeans;
   if (mansegfile!="") 
   {  
-    inputfile.open(mansegfile.c_str(), ifstream::in);
-    while ( (inputfile >> input_mean[++input_c]) && (input_c<=(noclasses*numberofchannels)) );
+    ifstream inputfile(mansegfile.c_str());
+    copy(istream_iterator<float> (inputfile),istream_iterator<float> (),back_inserter(inputMeans));
     inputfile.close();
   }
 
   m_post=m_prob=0.0f;
   for(int z=0;z<m_nDepth;z++)
-    {
-      for(int y=0;y<m_nHeight;y++)
-	{
-	  for(int x=0;x<m_nWidth;x++)
-	    {
-	      if(m_mask(x, y, z)==1)
-		{
-		  m_maskc(x, y, z)=1.0f;
-		}
-	      else
-		  m_maskc(x, y, z)=0.00f;
-	    }
-	}
-    }
+    for(int y=0;y<m_nHeight;y++)
+      for(int x=0;x<m_nWidth;x++)
+      {
+	 if(m_mask(x, y, z)==1)
+	   m_maskc(x, y, z)=1.0f;
+	 else
+	   m_maskc(x, y, z)=0.00f;
+      }
+	
+    
   m_mean.ReSize(noclasses+1, numberofchannels);m_mean=0.0;
   m_co_variance=new Matrix[noclasses+1];
   m_inv_co_variance=new Matrix[noclasses+1];
@@ -1581,7 +1573,7 @@ ifstream inputfile;
       float perc=1.0/((float)(noclasses+1.0));
       for(int c=1;c<noclasses+1;c++)
 	{
-          if ( input_c == ((noclasses*numberofchannels)+1) ) m_mean(c, n)=log(input_mean[c+noclasses*(n-1)]); 
+          if ( (int)inputMeans.size() == (noclasses*numberofchannels) ) m_mean(c, n)=log(inputMeans[c+noclasses*(n-1)-1]); 
 	  else m_mean(c, n)=m_Mricopy[n].percentile((float)(perc*c), m_maskc);
            if (verboseusage) cout << n << " " << c << " " << m_mean(c, n) << endl ;
 	}
@@ -1631,7 +1623,6 @@ ifstream inputfile;
 	cout<<"KMeans Iteration "<<initfiter<<"\n";
       m_post=m_prob=Initclass(noclasses);
     }
-  delete [] input_mean;
 }
 
 int ZMRIMULTISegmentation::qsort()
