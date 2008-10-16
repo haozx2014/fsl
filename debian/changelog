@@ -1,3 +1,9 @@
+fsl (4.1.1-1) unstable; urgency=low
+
+  * New Upstream Version fixing a number of bugs in FEAT, FDT and FNIRT.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Thu, 16 Oct 2008 14:28:34 +0200
+
 fsl (4.1.0+fslio1-1) unstable; urgency=low
 
   * Updated repackaging of the current upstream version (4.1). Repackaging
