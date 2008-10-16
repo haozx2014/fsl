@@ -67,7 +67,11 @@
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
 #include "inference.h"
-
+#include "newimage/newimageall.h"
+ 
+using namespace NEWIMAGE;
+using namespace std;
+using namespace MISCMATHS;
 
 void InferenceTechnique::Setup(ArgsType& args)
 {
@@ -100,10 +104,10 @@ void InferenceTechnique::SaveResults(const DataSet& data) const
     // NIFTI_INTENT_NORMAL -- but I can't find the detailed 
     // documentation!  (Ordering for a multivariate norm).
 
-    const Volume& mask = data.GetMask();
+    const volume<float>& mask  = data.GetMask();
     int nVoxels = resultMVNs.size();
 
-cout << "Saving!\n";
+    cout << "Saving!\n";
     MVNDist::Save(resultMVNs, outputDir + "/finalMVN", mask);
 
     if (resultMVNsWithoutPrior.size() > 0)
@@ -163,7 +167,7 @@ cout << "Saving!\n";
 
     for (unsigned i = 1; i <= paramNames.size(); i++)
     {
-        VolumeSeries paramMean, paramZstat;
+        Matrix paramMean, paramZstat;
     	paramMean.ReSize(1, nVoxels);
 	paramZstat.ReSize(1, nVoxels);
 
@@ -177,42 +181,34 @@ cout << "Saving!\n";
     	LOG << "    Writing means..." << endl;
 
     	// Save paramMeans
-    	VolumeInfo info = mask.getInfo();
-    	info.v = 1;
-    	info.intent_code = NIFTI_INTENT_NONE; // just data values
-        paramMean.setInfo(info);
-        paramMean.setPreThresholdPositions(mask.getPreThresholdPositions());
-        paramMean.unthresholdSeries();
-        paramMean.writeAsFloat(outputDir + "/mean_" + paramNames.at(i-1));
-        paramMean.CleanUp();
+	volume4D<float> output(mask.xsize(),mask.ysize(),mask.zsize(),1);
+	output.setmatrix(paramMean,mask);
+	output.set_intent(NIFTI_INTENT_NONE,0,0,0);
+	output.setDisplayMaximumMinimum(output.max(),output.min());
+	save_volume4D(output,outputDir + "/mean_" + paramNames.at(i-1));
 
-        info.intent_code = NIFTI_INTENT_ZSCORE; // = mean/stdev
-        paramZstat.setInfo(info);
-        paramZstat.setPreThresholdPositions(mask.getPreThresholdPositions());
-        paramZstat.unthresholdSeries();
-        paramZstat.writeAsFloat(outputDir + "/zstat_" + paramNames.at(i-1));
-        paramZstat.CleanUp();
+	output.setmatrix(paramZstat,mask);
+        output.set_intent(NIFTI_INTENT_ZSCORE,0,0,0);
+	output.setDisplayMaximumMinimum(output.max(),output.min());
+	save_volume4D(output,outputDir + "/zstat_" + paramNames.at(i-1));
     }        
 
     // Save the Free Energy estimates
     if (!resultFs.empty())
       {
 	assert((int)resultFs.size() == nVoxels);
-	VolumeSeries freeEnergy;
+	Matrix freeEnergy;
 	freeEnergy.ReSize(1, nVoxels);
 	for (int vox = 1; vox <= nVoxels; vox++)
 	  {
 	    freeEnergy(1,vox) = resultFs.at(vox-1);
 	  }
 	
-	VolumeInfo info = mask.getInfo();
-	info.v = 1;
-	info.intent_code = NIFTI_INTENT_NONE;
-	freeEnergy.setInfo(info);
-	freeEnergy.setPreThresholdPositions(mask.getPreThresholdPositions());
-	freeEnergy.unthresholdSeries();
-	freeEnergy.writeAsFloat(outputDir + "/freeEnergy");
-	freeEnergy.CleanUp();
+	volume4D<float> output(mask.xsize(),mask.ysize(),mask.zsize(),1);
+	output.setmatrix(freeEnergy,mask);
+	output.set_intent(NIFTI_INTENT_NONE,0,0,0);
+	output.setDisplayMaximumMinimum(output.max(),output.min());
+	save_volume4D(output,outputDir + "/freeEnergy");
       }
     else
       {
@@ -224,7 +220,7 @@ cout << "Saving!\n";
         LOG << "    Writing model fit/residuals..." << endl;
         // Produce the model fit and residual volumeserieses
 	
-        VolumeSeries modelFit, residuals;
+        Matrix modelFit, residuals;
         modelFit.ReSize(model->NumOutputs(), nVoxels);
 	ColumnVector tmp;
         for (int vox = 1; vox <= nVoxels; vox++)
@@ -232,25 +228,23 @@ cout << "Saving!\n";
             model->Evaluate(resultMVNs.at(vox-1)->means.Rows(1,model->NumParams()), tmp);
             modelFit.Column(vox) = tmp;
         }
-        VolumeInfo info = mask.getInfo(); // reset info
-        info.v = model->NumOutputs();
-        info.intent_code = NIFTI_INTENT_NONE; // just data values
+
+	volume4D<float> output(mask.xsize(),mask.ysize(),mask.zsize(),model->NumOutputs());
+	
         if (saveResiduals)
         {
-            residuals = data.GetVoxelData() - modelFit;
-            residuals.setInfo(info);
-            residuals.setPreThresholdPositions(mask.getPreThresholdPositions());
-            residuals.unthresholdSeries();
-            residuals.writeAsFloat(outputDir + "/residuals");
-            residuals.CleanUp();
+	  residuals = data.GetVoxelData() - modelFit;
+	  output.setmatrix(residuals,mask);
+	  output.set_intent(NIFTI_INTENT_NONE,0,0,0);
+	  output.setDisplayMaximumMinimum(output.max(),output.min());
+	  save_volume4D(output,outputDir + "/residuals");
         }
         if (saveModelFit)
         {
-            modelFit.setInfo(info);
-            modelFit.setPreThresholdPositions(mask.getPreThresholdPositions());
-            modelFit.unthresholdSeries();
-            modelFit.writeAsFloat(outputDir + "/modelfit");
-            modelFit.CleanUp();
+ 	  output.setmatrix(residuals,mask);
+	  output.set_intent(NIFTI_INTENT_NONE,0,0,0);
+	  output.setDisplayMaximumMinimum(output.max(),output.min());
+	  save_volume4D(output,outputDir + "/modelfit");
         }
 
     }

@@ -72,8 +72,6 @@
 #include <map>
 #include <string>
 #include "inference.h"
-#include "miscmaths/volumeseries.h"
-#include "miscmaths/volume.h"
 using namespace std;
 using namespace MISCMATHS;
 
@@ -83,7 +81,6 @@ using namespace Utilities;
 /*** Function declarations ***/
 
 void Usage(const string& errorString = "");
-ostream& operator<<(ostream& out, const VolumeInfo& info);
 
 /*** Function implementations ***/
 
@@ -119,7 +116,7 @@ int main(int argc, char** argv)
 
       // Diagnostic information: software versions
       // This only versions this file... should really use all.
-//      LOG_ERR("FABBER development revision: $Id: fabber.cc,v 1.18 2008/08/01 23:30:54 adriang Exp $\n");
+//      LOG_ERR("FABBER development revision: $Id: fabber.cc,v 1.19 2008/09/26 14:59:08 mwebster Exp $\n");
       LOG_ERR("FABBER release v1.1 (beta)\n");
       LOG << "Command line and effective options:\n" << args.Read("") << endl;
       LOG << "--output='" << EasyLog::GetOutputDirectory() << "'" << endl;

@@ -929,6 +929,8 @@ NEWMAT::ColumnVector inv_coord(const volume4D<float>&      warp,
   
     extrapolation oldex = f.getextrapolationmethod();
     if ((oldex==boundsassert) || (oldex==boundsexception)) {f.setextrapolationmethod(constpad);}
+    extrapolation d_oldex = d.getextrapolationmethod();
+    d.setextrapolationmethod(extraslice);
 
     // Repackage info about displacement directions in more convenient form
     int xd, yd, zd;
@@ -1193,6 +1195,7 @@ NEWMAT::ColumnVector inv_coord(const volume4D<float>&      warp,
     
     // restore settings and return
     f.setextrapolationmethod(oldex);
+    d.setextrapolationmethod(d_oldex);
  
    // All done!  
   }

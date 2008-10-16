@@ -68,13 +68,12 @@
 
 #pragma once
 
-#include <newmatio.h>
 #include <stdexcept>
 #include "assert.h"
 #include "easylog.h"
-using namespace NEWMAT;
+#include "newimage/newimageall.h"
 
-#include "miscmaths/volume.h"
+using namespace NEWMAT;
 using namespace MISCMATHS;
 
 class MVNDist {
@@ -112,8 +111,8 @@ public:
   void DumpTo(ostream& out, const string indent = "") const;
 
   void Load(const string& filename);
-  static void Load(vector<MVNDist*>& mvns, const string& filename, const Volume& mask);
-  static void Save(const vector<MVNDist*>& mvns, const string& filename, const Volume& mask);
+  static void Load(vector<MVNDist*>& mvns, const string& filename, const NEWIMAGE::volume<float>& mask);
+  static void Save(const vector<MVNDist*>& mvns, const string& filename, const NEWIMAGE::volume<float>& mask);
   
  protected:
   int len; // should only be changed explicitly

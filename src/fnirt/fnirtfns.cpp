@@ -138,7 +138,7 @@ fnirt_clp::fnirt_clp(const Utilities::Option<string>&                     pref,
   if (p_hess_prec.value() == "float") hess_prec = BFMatrixFloatPrecision;
   else if (p_hess_prec.value() == "double") hess_prec = BFMatrixDoublePrecision;
   else throw fnirt_error("fnirt_clp: --numprec takes values float or double");
-  if (debug > 2) throw fnirt_error("fnirt_clp: --debug takes values 0, 1 or 2");
+  if (debug > 3) throw fnirt_error("fnirt_clp: --debug takes values 0, 1, 2 or 3");
   if (pcf.value() == "ssd") cf = SSD;
   else throw fnirt_error("fnirt_clp: Invalid cost-function option");
   if (pbf.value() == "spline") bf = Spline;
@@ -505,7 +505,7 @@ boost::shared_ptr<fnirt_clp> parse_fnirt_command_line(unsigned int   narg,
       string("Print diagonostic information while running"), false, Utilities::no_argument);
 
   Utilities::HiddenOption<int> debug(string("--debug"), 0,
-      string("Save debug information while running, levels 0 (no info), 1 (some info) or 2 (LOTS of info)"), false, Utilities::requires_argument);
+      string("Save debug information while running, levels 0 (no info), 1 (some info), 3 (little more info) or 3 (LOTS of info)"), false, Utilities::requires_argument);
 
   // Some explanatory text
 
@@ -1019,14 +1019,27 @@ string existing_conf_file(const string& cfname)
   return(string(""));
 }
 
+// New version that _might_ help a little
+
+bool check_exist(const string& fname)
+{
+  // cout << "Attempting to open file named " << fname << endl;
+
+  std::ifstream  ins(fname.c_str(),std::ios::in);
+  return((ins) ? true : false);
+}
+
+/* Old version (used for first release that had a problem 
 bool check_exist(const string& fname)
 {
   std::ifstream  ins;
 
-  ins.open(fname.c_str(),std::ifstream::in);
+  cout << "Attempting to open file named " << fname << endl;
+  ins.open(fname.c_str(),std::ios::in);
   ins.close();
   return((ins.fail()) ? false : true);
 }
+*/
 
 string path(const string& fullname)
 {
@@ -1051,12 +1064,20 @@ string filename(const string& fullname)
 
   return(fnamev);
 }
+
 string extension(const string& fullname)
 {
-  string             extv;
-  string::size_type  idx = fullname.find_first_of(".");
-  if (idx == string::npos) extv = "";
-  else extv = fullname.substr(idx);
+  string   extv;
+
+  string::size_type  dotidx = fullname.find_last_of(".");
+  if (dotidx != string::npos) {    // If there is a dot
+    string::size_type  eopidx = fullname.find_last_of("/");
+    if (eopidx != string::npos) {  // If there is an explicit path
+      if (dotidx > eopidx) extv = fullname.substr(dotidx);
+    }
+    else extv = fullname.substr(dotidx);
+  }
+  else extv = "";
 
   return(extv);
 }

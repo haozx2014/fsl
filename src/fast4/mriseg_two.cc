@@ -86,7 +86,7 @@ void ZMRISegmentation::TanakaCreate(const NEWIMAGE::volume<float>& image, float 
 {
   mansegfile=mansegfle; 
   bapusedflag=bapused;
-  noclasses=nclasses;
+  nClasses=nclasses;
   imagetype=typeoffile;
   m_Mricopy=volume<float>(image);
   m_Mri=volume<float>(image);
@@ -96,18 +96,18 @@ void ZMRISegmentation::TanakaCreate(const NEWIMAGE::volume<float>& image, float 
   m_nxdim=image.xdim();
   m_nydim=image.ydim();
   m_nzdim=image.zdim();
-  m_post=volume4D<float>(m_nWidth, m_nHeight, m_nDepth, noclasses+1);
+  m_post=volume4D<float>(m_nWidth, m_nHeight, m_nDepth, nClasses+1);
   m_post.copyproperties(m_Mri);
-  m_prob=volume4D<float>(m_nWidth, m_nHeight, m_nDepth, noclasses+1);
+  m_prob=volume4D<float>(m_nWidth, m_nHeight, m_nDepth, nClasses+1);
   m_prob.copyproperties(m_Mri);
-  p_bias=volume<float>(m_nWidth, m_nHeight, m_nDepth);
-  p_bias.copyproperties(m_Mri);
+  m_BiasField=volume<float>(m_nWidth, m_nHeight, m_nDepth);
+  m_BiasField.copyproperties(m_Mri);
   m_mask=image;
   m_mask.binarise(0,m_mask.max()+1,exclusive);  
   nvoxel=(long)m_mask.sum();
   m_Segment=volume<int>(m_nWidth, m_nHeight, m_nDepth);
   copybasicproperties(m_mask,m_Segment);
-  members=volume4D<float>(m_nWidth, m_nHeight, m_nDepth, noclasses);
+  members=volume4D<float>(m_nWidth, m_nHeight, m_nDepth, nClasses);
   iterationspve=biterationspve;
   if(iterationspve>0)
     {
@@ -122,21 +122,11 @@ void ZMRISegmentation::TanakaCreate(const NEWIMAGE::volume<float>& image, float 
   beta=fbeta;
   m_nbLowpass=nblowpass;
   if(bapusedflag>0) {
-    talpriors=volume4D<float>(m_nWidth, m_nHeight, m_nDepth, noclasses+1);
+    talpriors=volume4D<float>(m_nWidth, m_nHeight, m_nDepth, nClasses+1);
     talpriors.copyproperties(m_post);
   }
   Hyper=Hyp;
   verboseusage=verb;
-}
-
-void ZMRISegmentation::Dimensions()
-{
-  amz=1.0/m_nzdim;
-  amy=1.0/m_nydim;
-  amzy=1.0/sqrt(m_nzdim*m_nzdim+m_nydim*m_nydim);
-  amx=1.0/m_nxdim;
-  amzx=1.0/sqrt(m_nzdim*m_nzdim+m_nxdim*m_nxdim);
-  amxy=1.0/sqrt(m_nxdim*m_nxdim+m_nydim*m_nydim);
 }
 
 int ZMRISegmentation::TanakaMain(NEWIMAGE::volume<float>& pcsf, NEWIMAGE::volume<float>& pgm, NEWIMAGE::volume<float>& pwm)
@@ -156,10 +146,10 @@ int ZMRISegmentation::TanakaMain(NEWIMAGE::volume<float>& pcsf, NEWIMAGE::volume
   srand(seed);
 
   rhs.resize(100);
-  volumequant.resize(noclasses+1);
-  m_mean.resize(noclasses+1,0);
-  m_variance.resize(noclasses+1,0);
-  weight.resize(noclasses,1);
+  volumequant.resize(nClasses+1);
+  m_mean.resize(nClasses+1,0);
+  m_variance.resize(nClasses+1,0);
+  weight.resize(nClasses,1);
   if(bapusedflag==0)
   {
     try{Initialise();}
@@ -178,32 +168,31 @@ int ZMRISegmentation::TanakaMain(NEWIMAGE::volume<float>& pcsf, NEWIMAGE::volume
   // first loop to remove bias field
   BiasRemoval();
 
-  for (int n=1; n<noclasses+1; n++)
+  for (int n=1; n<nClasses+1; n++)
     if(isnan(m_mean[n]) || isnan(m_variance[n])  ) cout << "MeaNsK variance nan" << endl;
 
   for(int iter=0;iter<m_nbIter;iter++)
-    {
-      if(verboseusage)
-	cout<<"Tanaka Iteration "<<iter<<" bias field "<<m_nbIter<<endl;
-      TanakaIterations();
-      BiasRemoval();
-      MeansVariances(noclasses, m_post);
-    }
+  {
+    if(verboseusage)
+      cout<<"Tanaka Iteration "<<iter<<" bias field "<<m_nbIter<<endl;
+    TanakaIterations();
+    BiasRemoval();
+    MeansVariances(nClasses, m_post);
+  }
   // second loop to estimate hyperparameter
   for(int iter=0;iter<initfixed;iter++)
-    {
-      if(verboseusage)
-	cout<<"Tanaka Iteration "<<iter<<" hyperparameter "<<initfixed<<endl;
-      TanakaIterations();
-      if(Hyper>=0.0)
-	beta=Hyper;
-      else
-	TanakaHyper();
-      if(verboseusage)
-	cout<<" BETA "<<beta<<endl;
-      MeansVariances(noclasses, m_post);
-    }
-  Classification();
+  {
+    if(verboseusage)
+      cout<<"Tanaka Iteration "<<iter<<" hyperparameter "<<initfixed<<endl;
+    TanakaIterations();
+    if(Hyper>=0.0)
+      beta=Hyper;
+    else
+      TanakaHyper();
+    if(verboseusage)
+      cout<<" BETA "<<beta<<endl;
+    MeansVariances(nClasses, m_post);
+  }
   qsort();
 
   if(iterationspve>0) {
@@ -215,39 +204,43 @@ int ZMRISegmentation::TanakaMain(NEWIMAGE::volume<float>& pcsf, NEWIMAGE::volume
 	for(int x=0;x<m_nWidth;x++)
 	  if(m_mask(x, y, z)==1)
 	    m_Mri.value(x, y, z)=exp(m_Mri.value(x, y, z));
-    MeansVariances(noclasses, m_post);
+    MeansVariances(nClasses, m_post);
 
-    PVMoreSophisticated();
+    PVClassificationStep();
+    PVestimation();
     Volumesquant(m_pve);
     pveClassification();
   }
   else
     Volumesquant(m_post);
-    
-  m_Finalbias=p_bias;
   takeexpo();
   return 0;
 }
 
 
-void ZMRISegmentation::Initialise()
-{
-  WeightedKMeans();
-  m_post=m_prob=Initclass(noclasses);
-  Classification();
-}
+void ZMRISegmentation::BiasRemoval()
+{ 
+  m_BiasField=0;
 
-
-void ZMRISegmentation::Classification(int x, int y, int z)
-{
-  float max=-1e-10;
-  m_Segment(x, y, z)=0;
-  if(m_mask(x, y, z)==1)
-    for(int c=1;c<=noclasses;c++)
-       if(m_post(x, y, z, c)>max) {
-	 max=m_post(x, y, z, c);
-	 m_Segment(x, y, z)=c;
-       }
+  if(biasfieldremoval) {
+    volume<float> p_meaninvcov(m_BiasField),p_resmean(m_BiasField);
+    for(int z=0;z<m_nDepth;z++)
+      for(int y=0;y<m_nHeight;y++)
+	for(int x=0;x<m_nWidth;x++)
+	  if(m_mask.value(x, y, z)==1)
+	    for(int c=1;c<nClasses+1;c++) 
+	    {
+	      float tempf=m_post(x, y, z, c)/m_variance[c];
+	      p_meaninvcov.value(x, y, z)+=tempf;
+	      p_resmean.value(x, y, z)+=tempf*(m_Mricopy.value(x, y, z)-m_mean[c]);
+	    }
+    p_meaninvcov=Convolve(p_meaninvcov);
+    p_resmean=Convolve(p_resmean);
+    m_BiasField=divide(p_resmean,p_meaninvcov,m_mask);
+    m_BiasField-=m_BiasField.mean(m_mask); // subtract off within-mask mean of m_BiasField
+    m_BiasField*=m_mask;  //Zero out regions outside of mask ( is this needed?)
+    m_Mri=m_Mricopy-m_BiasField;
+  }
 }
 
 
@@ -260,12 +253,50 @@ void ZMRISegmentation::Classification()
 }
 
 
+void ZMRISegmentation::Classification(int x, int y, int z)
+{
+  float max=-1e-10;
+  m_Segment(x, y, z)=0;
+  if(m_mask(x, y, z)==1)
+    for(int c=1;c<=nClasses;c++)
+       if(m_post(x, y, z, c)>max) {
+	 max=m_post(x, y, z, c);
+	 m_Segment(x, y, z)=c;
+       }
+}
+
+
+NEWIMAGE::volume<float> ZMRISegmentation::Convolve(NEWIMAGE::volume<float>& resfieldimage)
+{
+  return convolve_separable(resfieldimage, kernelx, kernely, kernelz);
+}
+
+
+void ZMRISegmentation::Dimensions()
+{
+  amz=1.0/m_nzdim;
+  amy=1.0/m_nydim;
+  amzy=1.0/sqrt(m_nzdim*m_nzdim+m_nydim*m_nydim);
+  amx=1.0/m_nxdim;
+  amzx=1.0/sqrt(m_nzdim*m_nzdim+m_nxdim*m_nxdim);
+  amxy=1.0/sqrt(m_nxdim*m_nxdim+m_nydim*m_nydim);
+}
+
+
+void ZMRISegmentation::Initialise()
+{
+  WeightedKMeans();
+  Initclass();
+  Classification();
+}
+
+
 void ZMRISegmentation::pveClassification(int x, int y, int z)
 {
   float max=-1e-10;
   m_pveSegment(x, y, z)=0;
   if(m_mask(x, y, z)==1)
-    for(int c=1;c<=noclasses;c++)
+    for(int c=1;c<=nClasses;c++)
       if(m_pve(x, y, z, c)>max) {
 	max=m_pve(x, y, z, c);
 	m_pveSegment(x, y, z)=c;
@@ -299,7 +330,7 @@ double total=0.0f; //Internally a double to avoid truncation when adding small t
     for(int y=0;y<m_nHeight;y++)
       for(int x=0;x<m_nWidth;x++)
 	if(m_mask.value(x, y, z)==1)
-	  for(int c=1;c<noclasses+1;c++)
+	  for(int c=1;c<nClasses+1;c++)
 	    total+=MRFWeightsInner(x,y,z,c)*m_post(x, y, z, c);
   return (float)total;   
 }
@@ -378,7 +409,7 @@ void ZMRISegmentation::TanakaPriorHyper()
 		{
 		  m_prob(x, y, z, 0)=0.0f;
 		  float sum=0.0f;
-		  for(int c=1;c<noclasses+1;c++)
+		  for(int c=1;c<nClasses+1;c++)
 		    {
 		      if(m_mask(x, y, z)==1)
 			{
@@ -387,7 +418,7 @@ void ZMRISegmentation::TanakaPriorHyper()
 		      else
 			m_prob(x, y, z, c)=0.0f;		    
 		    }
-		  for(int c=1;c<noclasses+1;c++)
+		  for(int c=1;c<nClasses+1;c++)
 		    if(sum>0.0)
 		      m_prob(x, y, z, c)/=sum;
 		}
@@ -407,7 +438,7 @@ void ZMRISegmentation::TanakaPriorHyper()
 		      float sum=0.0f;
 		      if(m_mask.value(x, y, z)==1)
 			{
-			  for(int c=1;c<noclasses+1;c++)
+			  for(int c=1;c<nClasses+1;c++)
 			    {
 			      float post=MRFWeightsInner(x,y,z,c);
 			      if(bapusedflag<2)
@@ -415,7 +446,7 @@ void ZMRISegmentation::TanakaPriorHyper()
 			      else
 				sum+=m_prob.value(x, y, z, c)=talpriors(x, y, z ,c)*exp(betahtemp*post);				
 			    }
-			  for(int c=1;c<noclasses+1;c++)
+			  for(int c=1;c<nClasses+1;c++)
 			    {
 			      if(sum>0.0f)
 				m_prob.value(x, y, z, c)/=sum;
@@ -426,7 +457,6 @@ void ZMRISegmentation::TanakaPriorHyper()
 		    }
 		}
 	    }
-	  //save_volume4D(m_prob,"grotgrot"+num2str(iteration));
 	}
       m_post=m_prob;
       rhs[betahyp] = MRFWeightsTotal();
@@ -443,9 +473,9 @@ void ZMRISegmentation::TanakaIterations()
       for(int x=0;x<m_nWidth;x++) 
 	if(m_mask(x,y,z)==1) {
 	  float sum=0.0f;
-	  for(int c=1;c<=noclasses;c++) 
+	  for(int c=1;c<=nClasses;c++) 
 	    sum+=m_post(x, y, z, c)=(float)(rand()/(float)(RAND_MAX));	 		    
-	  for(int c=1;c<=noclasses && sum>0;c++)
+	  for(int c=1;c<=nClasses && sum>0;c++)
 	    m_post(x, y, z, c)/=sum;
 	}
   
@@ -455,13 +485,13 @@ void ZMRISegmentation::TanakaIterations()
 	for(int x=0;x<m_nWidth;x++)
 	  if(m_mask.value(x, y, z)==1) {
 	    double sum=0.0f;       //Very important for sum to be a double for JV's loop ( if sum is a double there as well ) and mine to match results - numerically sensitive
-	    for(int c=1;c<=noclasses;c++) {
+	    for(int c=1;c<=nClasses;c++) {
 	      m_post.value(x, y, z, c)=exp(beta*MRFWeightsInner(x,y,z,c)-logGaussian(m_Mri.value(x, y, z), m_mean[c], m_variance[c]));
               if(bapusedflag>=2) 
 		m_post.value(x, y, z, c)*=talpriors(x, y, z, c);
 	      sum+=m_post.value(x, y, z, c);
 	    }
-	    for(int c=1;c<=noclasses;c++)
+	    for(int c=1;c<=nClasses;c++)
 	    {
 	      if(sum>0.0f)
 		m_post.value(x, y, z, c)/=sum;
@@ -475,11 +505,12 @@ void ZMRISegmentation::TanakaIterations()
   }
   if(verboseusage)
     {
-      for(int c=1;c<noclasses+1;c++)
+      for(int c=1;c<nClasses+1;c++)
 	cout<<" CLASS "<<c<<" MEAN "<<exp(m_mean[c])<<" STDDEV "<<( exp(m_mean[c] + sqrt(m_variance[c]) ) - exp(m_mean[c]-sqrt(m_variance[c])) )/2;
       cout<<endl;
     }
 }
+
 
  float ZMRISegmentation::PVEnergy(int x, int y, int z, float mu, float sigmasq)
 {
@@ -488,13 +519,14 @@ void ZMRISegmentation::TanakaIterations()
   return cond;
 }
 
+
 void ZMRISegmentation::PVClassificationStep()
 {
   int mixnum=0;
-  if(noclasses==3)
+  if(nClasses==3)
     mixnum=6;
-  if(noclasses==2 || noclasses>3)
-    mixnum=2*noclasses-1;
+  if(nClasses==2 || nClasses>3)
+    mixnum=2*nClasses-1;
   PVprob.reinitialize(m_nWidth, m_nHeight, m_nDepth, mixnum);
   PVprob=0.0;
   for(int z=0;z<m_nDepth;z++)
@@ -503,9 +535,9 @@ void ZMRISegmentation::PVClassificationStep()
 	if(m_mask.value(x, y, z)==1) 
 	  for(int type=0;type<mixnum;type++)
 	  {
-	    if(type<noclasses)
+	    if(type<nClasses)
 	      PVprob(x, y, z, type)=exp(-1.0*logGaussian(m_Mri(x, y, z), m_mean[type+1], m_variance[type+1]));
-	    else if(noclasses==3)
+	    else if(nClasses==3)
 	    {
 		float mu=0.0f;
 		float sigsq=0.0f;
@@ -529,14 +561,14 @@ void ZMRISegmentation::PVClassificationStep()
 		  PVprob(x, y, z, type)+=exp(-1.0*logGaussian(m_Mri(x, y, z), mu, sigsq))*0.01;
 		}
 	    }
-	    else if(noclasses==2 || noclasses>3)
+	    else if(nClasses==2 || nClasses>3)
 	    {
 		float mu=0.0f;
 		float sigsq=0.0f;
 		for(float delta=0.0;delta<=1.0;delta+=0.01)
 		{
-		  mu=delta*m_mean[type-noclasses+1]+(1-delta)*m_mean[type-noclasses+2];
-		  sigsq=delta*delta*m_variance[type-noclasses+1]+(1-delta)*(1-delta)*m_variance[type-noclasses+2];
+		  mu=delta*m_mean[type-nClasses+1]+(1-delta)*m_mean[type-nClasses+2];
+		  sigsq=delta*delta*m_variance[type-nClasses+1]+(1-delta)*(1-delta)*m_variance[type-nClasses+2];
 		  PVprob(x, y, z, type)+=exp(-1.0*logGaussian(m_Mri(x, y, z), mu, sigsq))*0.01;
 		}
 	    }
@@ -550,12 +582,12 @@ void ZMRISegmentation::ICMPV()
   hardPV=volume<int>(m_nWidth, m_nHeight, m_nDepth);
   hardPV.copyproperties(m_Segment);
   int mixnum=0;
-  if(noclasses==3)
+  if(nClasses==3)
     mixnum=6;
-  if(noclasses==2)
+  if(nClasses==2)
     mixnum=3;
-  if(noclasses>3)
-    mixnum=2*noclasses-1;
+  if(nClasses>3)
+    mixnum=2*nClasses-1;
   float* clique=new float[mixnum];
   for(int z=0;z<m_nDepth;z++)
     for(int y=0;y<m_nHeight;y++)
@@ -583,7 +615,7 @@ void ZMRISegmentation::ICMPV()
 		  if(m_mask(x+l, y+m, z+n)==1)
 		  {
 		    float am=MRFWeightsAM(l, m, n);
-		    if(noclasses==3)
+		    if(nClasses==3)
 		      for(int type=0;type<6;type++)
 		      {	
 			if(type==hardPV(x+l, y+m, z+n))
@@ -603,23 +635,23 @@ void ZMRISegmentation::ICMPV()
 			else
 			  clique[type]-=am;
 			}
-		    if(noclasses>3)
+		    if(nClasses>3)
 		      for(int type=0;type<mixnum;type++)
 		      {	
 			if(type==hardPV(x+l, y+m, z+n))
 			  clique[type]+=am*2;
-			else if((0<type)&&(type<noclasses-1)&&((hardPV(x+l, y+m, z+n)==(noclasses+type-1))||(hardPV(x+l, y+m, z+n)==(noclasses+type))))
+			else if((0<type)&&(type<nClasses-1)&&((hardPV(x+l, y+m, z+n)==(nClasses+type-1))||(hardPV(x+l, y+m, z+n)==(nClasses+type))))
 			  clique[type]+=am;
-			else if((type==0)&&((hardPV(x+l, y+m, z+n)==noclasses)))
+			else if((type==0)&&((hardPV(x+l, y+m, z+n)==nClasses)))
 			  clique[type]+=am;
-			else if((type==(noclasses-1))&&((hardPV(x+l, y+m, z+n)==mixnum-1)))
+			else if((type==(nClasses-1))&&((hardPV(x+l, y+m, z+n)==mixnum-1)))
 			  clique[type]+=am;
-			else if((type>(noclasses-1))&&((hardPV(x+l, y+m, z+n)==(type-noclasses))||(hardPV(x+l, y+m, z+n)==(type-noclasses+1))))
+			else if((type>(nClasses-1))&&((hardPV(x+l, y+m, z+n)==(type-nClasses))||(hardPV(x+l, y+m, z+n)==(type-nClasses+1))))
 			  clique[type]+=am;
 		        else 
 			  clique[type]-=am;
 		      }
-		    if(noclasses==2)
+		    if(nClasses==2)
 		      for(int type=0;type<3;type++)
 		      {
 			if(type==hardPV(x+l, y+m, z+n))
@@ -650,16 +682,9 @@ void ZMRISegmentation::ICMPV()
 }
 
 
-void ZMRISegmentation::PVMoreSophisticated()
-{
-  PVClassificationStep();
-  PVestimation();
-}
-
-
 void ZMRISegmentation::PVestimation()
 {
-  m_pve=volume4D<float>(m_nWidth, m_nHeight, m_nDepth, noclasses+1);
+  m_pve=volume4D<float>(m_nWidth, m_nHeight, m_nDepth, nClasses+1);
   m_pve.copyproperties(m_Mri);
   m_pve=0.0f;
   float mu=0.0f;
@@ -673,7 +698,7 @@ void ZMRISegmentation::PVestimation()
 	    { 
 	     if(m_mask.value(x, y, z)>0)
 	       {
-		 if(noclasses==3)
+		 if(nClasses==3)
 		   {
 		     float min=1.0e13;
 		     if(hardPV(x, y, z)==0)
@@ -739,12 +764,12 @@ void ZMRISegmentation::PVestimation()
 			   }
 		       }
 		   }
-		 if(noclasses>3)
+		 if(nClasses>3)
 		   {
 		     float min=1.0e13;
-		     if(hardPV(x, y, z)<noclasses)
+		     if(hardPV(x, y, z)<nClasses)
 		       {
-			 for(int c=0;c<noclasses;c++)
+			 for(int c=0;c<nClasses;c++)
 			   {
 			     if(hardPV(x, y, z)!=c)
 			       m_pve(x, y, z, c+1)=0.0;
@@ -752,29 +777,29 @@ void ZMRISegmentation::PVestimation()
 			 m_pve(x, y, z, hardPV(x, y, z)+1)=1.0f;
 			 continue;
 		       }
-		     if(hardPV(x, y, z)>=noclasses)
+		     if(hardPV(x, y, z)>=nClasses)
 		       {
 			 for(float delta=0.00;delta<=1.0;delta+=step)
 			   {
-			     mu=delta*m_mean[hardPV(x, y, z)-noclasses+1]+(1-delta)*m_mean[hardPV(x, y, z)-noclasses+2];
-			     sigsq=delta*delta*m_variance[hardPV(x, y, z)-noclasses+1]+(1-delta)*(1-delta)*m_variance[hardPV(x, y, z)-noclasses+2];
+			     mu=delta*m_mean[hardPV(x, y, z)-nClasses+1]+(1-delta)*m_mean[hardPV(x, y, z)-nClasses+2];
+			     sigsq=delta*delta*m_variance[hardPV(x, y, z)-nClasses+1]+(1-delta)*(1-delta)*m_variance[hardPV(x, y, z)-nClasses+2];
 			     float val=PVEnergy(x, y, z, mu, sigsq);
 			     if(min>val)
 			       {
 			     
-				 for(int c=0;c<noclasses;c++)
+				 for(int c=0;c<nClasses;c++)
 				   {
 				     m_pve(x, y, z, c+1)=0.0f;
 				   }
-				 m_pve(x, y, z, hardPV(x, y, z)-noclasses+1)=delta;
-				 m_pve(x, y, z, hardPV(x, y, z)-noclasses+2)=1.0-delta;			     
+				 m_pve(x, y, z, hardPV(x, y, z)-nClasses+1)=delta;
+				 m_pve(x, y, z, hardPV(x, y, z)-nClasses+2)=1.0-delta;			     
 				 min=val;
 			       }
 			   }
 		       }
 		   }
 
-		 if(noclasses==2)
+		 if(nClasses==2)
 		   {
 		     float min=1.0e13;
 		     if(hardPV(x, y, z)==0)
@@ -815,59 +840,13 @@ void ZMRISegmentation::PVestimation()
     }
 }
 
-
-float ZMRISegmentation::pvmeans(int clas)
-{
-     float pvmean=0.0f;
-     float tmp=0.0f;
-     float sum=0.0f;
-     for(int z=0;z<m_nDepth;z++)
-       {
-	 for(int y=0;y<m_nHeight;y++)
-	   {
-	     for(int x=0;x<m_nWidth;x++)
-	       {
-		 if(m_mask(x, y, z)>0)
-		   {
-		     sum+=pvprobsinit.value(x, y, z, 1);
-		     tmp=pvprobsinit.value(x, y, z , 1)*m_Mri.value(x, y, z);
-		     pvmean+=tmp;
-		   }
-	       }
-	   }
-       }
-     tmp=pvmean/sum;
-     return tmp;
-}
-
-
-float ZMRISegmentation::pvvar(int clas)
-{
-  float sum=0.0f;
-  float tmp=0.0f;
-  float pvvariance=0.0f;
-  for(int z=0;z<m_nDepth;z++)
-    for(int y=0;y<m_nHeight;y++)
-      for(int x=0;x<m_nWidth;x++)
-	if(m_mask(x, y, z)==1)
-	{
-	  sum+=pvprobsinit.value(x, y, z, 1);
-	  tmp=pvprobsinit.value(x, y, z, 1)*(m_Mri.value(x, y, z)-m_mean[clas])*(m_Mri.value(x, y, z)-m_mean[clas]);
-	  pvvariance+=tmp;
-	} 
-  tmp=pvvariance/sum;
-  return tmp;
-}
-
-
 void ZMRISegmentation::takeexpo()
 {
   for(int z=0;z<m_nDepth;z++)
     for(int y=0;y<m_nHeight;y++)
       for(int x=0;x<m_nWidth;x++)
-	m_Finalbias(x, y, z)=exp(-m_Finalbias(x, y, z));
+	m_BiasField(x, y, z)=exp(-m_BiasField(x, y, z));
 }
-
 
 void ZMRISegmentation::InitSimple(const NEWIMAGE::volume<float>& pcsf, const NEWIMAGE::volume<float>& pgm, const NEWIMAGE::volume<float>& pwm)
 {
@@ -876,7 +855,7 @@ void ZMRISegmentation::InitSimple(const NEWIMAGE::volume<float>& pcsf, const NEW
   m_post=0;
   m_prob=0;
   talpriors=0;
-  if(noclasses==3)
+  if(nClasses==3)
   {
     for(int z=0;z<m_nDepth;z++)
       for(int y=0;y<m_nHeight;y++)
@@ -890,13 +869,13 @@ void ZMRISegmentation::InitSimple(const NEWIMAGE::volume<float>& pcsf, const NEW
 	      m_post.value(x, y, z, 2)=m_prob.value(x, y, z, 2)=talpriors.value(x, y, z, 2)=pgm.value(x, y, z)/norm2;
 	      m_post.value(x, y, z, 3)=m_prob.value(x, y, z, 3)=talpriors.value(x, y, z, 3)=pwm.value(x, y, z)/norm2;
 	    }
-	    else for(int c=1;c<=noclasses;c++)
+	    else for(int c=1;c<=nClasses;c++)
 	      m_post.value(x, y, z, c)=m_prob.value(x, y, z, c)=talpriors.value(x, y, z, c)=1.0/3.0f;	      
 	  }
     Classification();
   }
  
-  if(noclasses==2)
+  if(nClasses==2)
   {
     for(int z=0;z<m_nDepth;z++)
       for(int y=0;y<m_nHeight;y++)
@@ -909,19 +888,19 @@ void ZMRISegmentation::InitSimple(const NEWIMAGE::volume<float>& pcsf, const NEW
 		m_post.value(x, y, z, 1)=m_prob.value(x, y, z, 1)=talpriors.value(x, y, z, 1)=pcsf.value(x, y, z)/norm2;
 		m_post.value(x, y, z, 2)=m_prob.value(x, y, z, 2)=talpriors.value(x, y, z, 2)=(pgm.value(x, y, z)+pwm.value(x, y, z))/norm2;
 	      }
-	      else for(int c=1;c<=noclasses;c++)
+	      else for(int c=1;c<=nClasses;c++)
 		m_post.value(x, y, z, c)=m_prob.value(x, y, z, c)=talpriors.value(x, y, z, c)=1.0/2.0f;
 	    }
     Classification();
   }
-  MeansVariances(noclasses, m_post);
+  MeansVariances(nClasses, m_post);
 }
 
 
 void ZMRISegmentation::Volumesquant(const NEWIMAGE::volume4D<float>& probs)
 {
   double tot=0.0;
-  for(int c=1;c<noclasses+1;c++)
+  for(int c=1;c<nClasses+1;c++)
   {
     volumequant[c]=probs[c].sum(m_mask);
     volumequant[c]*=m_nxdim*m_nydim*m_nzdim;
@@ -947,105 +926,35 @@ void ZMRISegmentation::InitKernel(float kernalsize)
   kernelz=gaussian_kernel1D(sigma, radius);
 }
 
-
-NEWIMAGE::volume<float> ZMRISegmentation::Convolve(NEWIMAGE::volume<float>& resfieldimage)
-{
-  return convolve_separable(resfieldimage, kernelx, kernely, kernelz);
-}
-
-
 void ZMRISegmentation::MeansVariances(int numberofclasses, NEWIMAGE::volume4D<float>& probability )
 {
-  volume4D<float> foo=m_Mri*probability;
-  volume4D<float> foo2=m_Mri*m_Mri*probability;
+  volume4D<float> meanP=m_Mri*probability;
+  volume4D<float> varianceP=m_Mri*meanP;
   for(int c=1;c<=numberofclasses;c++)
   {
-    m_mean[c] = foo[c].sum(m_mask)/probability[c].sum(m_mask);
-    m_variance[c] = foo2[c].sum(m_mask)/probability[c].sum(m_mask)-m_mean[c]*m_mean[c];
-  }
-
-  for(int c=1;c<=numberofclasses;c++)
-  {
-    double normtemp=0.0f;
-    double s=0.0f;
-    double t=0.0f;
-    for(int z=0;z<m_nDepth;z++)
-      for(int y=0;y<m_nHeight;y++)
-	for(int x=0;x<m_nWidth;x++)
-	  if(m_mask.value(x, y, z)==1)
-	  {
-	    double ppp=probability.value(x, y, z, c);
-	    double val=m_Mri.value(x, y, z);
-	    double temp=val*ppp;
-	    t+=temp;
-	    double tempsqr=temp*val;
-	    s+=tempsqr;
-	    normtemp+=ppp;
-	  }     
-     m_mean[c]=t/normtemp;
-     m_variance[c]= s/normtemp - m_mean[c]*m_mean[c];
-   }
-}
-
-
-void ZMRISegmentation::BiasRemoval()
-{ 
-  p_bias=0;
-
-  if(biasfieldremoval) {
-    volume<float> p_meaninvcov(p_bias),p_resmean(p_bias);
-    for(int z=0;z<m_nDepth;z++)
-      for(int y=0;y<m_nHeight;y++)
-	for(int x=0;x<m_nWidth;x++)
-	  if(m_mask.value(x, y, z)==1)
-	    for(int c=1;c<noclasses+1;c++) 
-	    {
-	      float tempf=m_post(x, y, z, c)/m_variance[c];
-	      p_meaninvcov.value(x, y, z)+=tempf;
-	      p_resmean.value(x, y, z)+=tempf*(m_Mricopy.value(x, y, z)-m_mean[c]);
-	    }
-    p_meaninvcov=Convolve(p_meaninvcov);
-    p_resmean=Convolve(p_resmean);
-    p_bias=divide(p_resmean,p_meaninvcov,m_mask);
-    p_bias-=p_bias.mean(m_mask); // subtract off within-mask mean of p_bias
-    p_bias*=m_mask;  //Zero out regions outside of mask ( is this needed?)
-    m_Mri=m_Mricopy-p_bias;
+    m_mean[c] = meanP[c].sum(m_mask)/probability[c].sum(m_mask);
+    m_variance[c] = varianceP[c].sum(m_mask)/probability[c].sum(m_mask)-m_mean[c]*m_mean[c];
   }
 }
 
-NEWIMAGE::volume4D<float> ZMRISegmentation::pvprobs(int c)
+void ZMRISegmentation::Initclass()
 {
-  volume4D<float> probability(m_nWidth, m_nHeight, m_nDepth, 2);
-  probability=0.0;
-  for(int z=0;z<m_nDepth;z++)
-    for(int y=0;y<m_nHeight;y++)
-       for(int x=0;x<m_nWidth;x++)
-         if(m_mask.value(x, y, z)==1 && members(x, y, z, c-1)>=0.51) //experiment here m_members
-	   probability.value(x, y, z, 1)=exp(-1.0*logGaussian(m_Mri.value(x, y, z), m_mean[c], m_variance[c]));
-                 
-  return probability;
-}
-
-
-NEWIMAGE::volume4D<float> ZMRISegmentation::Initclass(int numberofsegs)
-{
-  volume4D<float> probability(m_nWidth, m_nHeight, m_nDepth, noclasses+1);
-  probability=0.0;
+  m_prob=0;
   for(int z=0;z<m_nDepth;z++)
     for(int y=0;y<m_nHeight;y++)
       for(int x=0;x<m_nWidth;x++)
 	if(m_mask.value(x, y, z)==1)
         {
 	  float tot=0.0f;
-	  for(int c=1;c<numberofsegs+1;c++)
+	  for(int c=1;c<nClasses+1;c++)
 	  {
-	    probability.value(x, y, z, c)=logGaussian(m_Mri.value(x, y, z), m_mean[c], m_variance[c]);
-	    tot+=probability(x, y, z, c)=max(exp(-probability(x, y, z, c)),0.0f); // Need max? Can prob be less than zero?
+	    m_prob.value(x, y, z, c)=logGaussian(m_Mri.value(x, y, z), m_mean[c], m_variance[c]);
+	    tot+=m_prob(x, y, z, c)=max(exp(-m_prob(x, y, z, c)),0.0f); // Need max? Can prob be less than zero?
 	  }
-	  for(int c=1;c<numberofsegs+1 && tot>0;c++)
-	    probability.value(x, y, z, c)/=tot; 
+	  for(int c=1;c<nClasses+1 && tot>0;c++)
+	    m_prob.value(x, y, z, c)/=tot; 
 	}
-  return probability;
+  m_post=m_prob;
 }
 
 void ZMRISegmentation::UpdateMembers(NEWIMAGE::volume4D<float>& probability)
@@ -1055,39 +964,36 @@ void ZMRISegmentation::UpdateMembers(NEWIMAGE::volume4D<float>& probability)
       for(int z=0;z<m_nDepth;z++)
 	if(m_mask(x, y, z)==1) {
 	  float sum=0.0f;
-	  for(int c=0;c<noclasses;c++)
+	  for(int c=0;c<nClasses;c++)
 	    sum+=members(x, y, z, c)=max(weight[c]*probability(x, y, z, c+1),0.0f); // Need max? Can weight*prob be less than zero?
-	  for(int c=0;c<noclasses && sum>0;c++)
+	  for(int c=0;c<nClasses && sum>0;c++)
 	    members(x, y, z, c)/=sum;
 	}
 }
 
 void ZMRISegmentation::WeightedKMeans()
 { 
-  ifstream inputfile;
-  float* input_mean = new float[noclasses];
-  int input_c=0;
+  vector<float> inputMeans;
   if (mansegfile!="") 
   {  
-    inputfile.open(mansegfile.c_str(), ifstream::in);
-    while ( (inputfile >> input_mean[++input_c]) && (input_c<=noclasses) );
+    ifstream inputfile(mansegfile.c_str());
+    copy(istream_iterator<float> (inputfile),istream_iterator<float> (),back_inserter(inputMeans));
     inputfile.close();
   }
 
   m_post=m_prob=0.0f;
 
-  float perc=1.0/((float)(noclasses+1.0));     
-  for(int c=1;c<noclasses+1;c++)
+  float perc=1.0/((float)(nClasses+1.0));     
+  for(int c=1;c<nClasses+1;c++)
   {
-    if ( input_c == noclasses+1 ) m_mean[c]=log(input_mean[c]);
+    if ( (int)inputMeans.size()==nClasses ) m_mean[c]=(inputMeans[c-1]);
     else m_mean[c]=m_Mricopy.percentile((float)(perc*c), m_mask);
     if (verboseusage) cout << c << " " << m_mean[c] << endl;
   }
 
-  for(int c=1;c<noclasses+1;c++)
+  for(int c=1;c<nClasses+1;c++)
     for(int c2=1;c2<c;c2++)
       if(m_mean[c]==m_mean[c2]) throw kmeansexc;
-
   for(int z=0;z<m_nDepth;z++)
     for(int y=0;y<m_nHeight;y++)
       for(int x=0;x<m_nWidth;x++)
@@ -1095,7 +1001,7 @@ void ZMRISegmentation::WeightedKMeans()
 	{
 	  int minclass=0;
 	  float mindist=1e31;
-	  for(int c=1;c<=noclasses;c++)
+	  for(int c=1;c<=nClasses;c++)
 	  {
 	    if((m_Mricopy.value(x, y, z)-m_mean[c])*(m_Mricopy.value(x, y, z)-m_mean[c])<mindist)
 	    {
@@ -1109,19 +1015,18 @@ void ZMRISegmentation::WeightedKMeans()
   for(int initfiter=0;initfiter<initfixed+inititerations;initfiter++)
   {
     UpdateMembers(m_post);
-    MeansVariances(noclasses, m_post);
+    MeansVariances(nClasses, m_post);
     if(verboseusage) 
       cout<<"KMeans Iteration "<<initfiter<<"\n";
-    m_post=m_prob=Initclass(noclasses);
+    Initclass();
   }
-  delete[] input_mean;
 }
 
 void ZMRISegmentation::qsort()
 {
   // sorts images so that 0 is csf, 1 is grey, 2 is white
   if(imagetype==2)  // for a T2 image reverse the intensity order
-    for(int n=1; n<=noclasses; n++)
+    for(int n=1; n<=nClasses; n++)
       m_mean[n]*=-1.0f;
         
   vector<float> meancopy(m_mean), varcopy(m_variance);
@@ -1129,23 +1034,17 @@ void ZMRISegmentation::qsort()
 
   sort(m_mean.begin()+1, m_mean.end());
 
-  for (int n=1; n<=noclasses; n++)
-    for (int m=1; m<=noclasses; m++)
-      if(meancopy[m]==m_mean[n]) 
+  for (int n=1; n<=nClasses; n++)
+    for (int m=1; m<=nClasses; m++)
+      if(m_mean[n]==meancopy[m]) 
       {
 	m_variance[n]=varcopy[m];
-	for(int z=0;z<m_nDepth;z++)
-          for(int y=0;y<m_nHeight;y++)
-            for(int x=0;x<m_nWidth;x++)
-              if(m_mask.value(x, y, z)==1)
-              {
-		m_post.value(x, y, z ,n)=postcopy.value(x, y, z, m);
-		m_prob.value(x, y, z ,n)=probcopy.value(x, y, z, m);
-		Classification(x, y, z);
-	      }
+        m_post[n]=postcopy[m];
+        m_prob[n]=probcopy[m];
       }
+  Classification();
 
   if(imagetype==2)
-    for(int n=1; n<=noclasses; n++)
+    for(int n=1; n<=nClasses; n++)
       m_mean[n]*=-1.0f;
 }

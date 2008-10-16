@@ -164,7 +164,8 @@ namespace NEWIMAGE {
     mutable T padvalue;
     mutable T extrapval;  // the reference target for all extrapolations
 
-
+    float displayMaximum;
+    float displayMinimum;
 
     // Internal functions
     inline T* basicptr(int x, int y, int z)
@@ -233,12 +234,17 @@ namespace NEWIMAGE {
     inline float xdim() const { return Xdim; }
     inline float ydim() const { return Ydim; }
     inline float zdim() const { return Zdim; }
+    inline float getDisplayMaximum() const { return displayMaximum; }
+    inline float getDisplayMinimum() const { return displayMinimum; }
 
     void setxdim(float x) { Xdim = fabs(x); }
     void setydim(float y) { Ydim = fabs(y); }
     void setzdim(float z) { Zdim = fabs(z); }
     void setdims(float x, float y, float z) 
       { setxdim(x); setydim(y); setzdim(z); }
+    void setDisplayMaximumMinimum(const float maximum, const float minimum) {  displayMaximum=maximum; displayMinimum=minimum; }
+    void setDisplayMaximum(const float maximum) { setDisplayMaximumMinimum(maximum,displayMinimum); }
+    void setDisplayMinimum(const float minimum) { setDisplayMaximumMinimum(displayMaximum,minimum); }
     unsigned long int nvoxels() const { return no_voxels; }
 
     // ROI FUNCTIONS
@@ -628,6 +634,8 @@ namespace NEWIMAGE {
       { if (vols.size()>0) return vols[0].zdim(); else return 1.0; }
     inline float tdim() const { return p_TR; }
     inline float TR() const { return p_TR; }
+    inline float getDisplayMaximum() const { if (vols.size()>0) return vols[0].getDisplayMaximum(); else return 0; }
+    inline float getDisplayMinimum() const { if (vols.size()>0) return vols[0].getDisplayMinimum(); else return 0; }
 
     void setxdim(float x);
     void setydim(float y);
@@ -639,6 +647,9 @@ namespace NEWIMAGE {
     unsigned long int nvoxels() const 
       { if (vols.size()>0) return vols[0].nvoxels(); else return 0; }
     int ntimepoints() const { return this->tsize(); }
+    void setDisplayMaximumMinimum(const float maximum, const float minimum);
+    void setDisplayMaximum(const float maximum) { setDisplayMaximumMinimum(maximum,vols[0].getDisplayMinimum()); }
+    void setDisplayMinimum(const float minimum) { setDisplayMaximumMinimum(vols[0].getDisplayMaximum(),minimum); }
 
     void setinterpolationmethod(interpolation interpmethod) const;
     interpolation getinterpolationmethod() const;
@@ -1114,6 +1125,9 @@ namespace NEWIMAGE {
     dest.p_interpmethod = source.p_interpmethod;
     dest.p_extrapmethod = source.p_extrapmethod;
     dest.padvalue = (D) source.padvalue;
+
+    dest.displayMaximum=source.displayMaximum;
+    dest.displayMinimum=source.displayMinimum;
   }
 
 

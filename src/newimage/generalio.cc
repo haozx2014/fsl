@@ -103,6 +103,9 @@ void set_volume_properties(FSLIO* IP1, volume<T>& target)
   float p1, p2, p3;
   FslGetIntent(IP1, &intent_code, &p1, &p2, &p3);
   target.set_intent(intent_code,p1,p2,p3);
+  FslGetCalMinMax(IP1,&p1,&p2);
+  target.setDisplayMinimum(p1);
+  target.setDisplayMaximum(p2);
 }
 
 template void set_volume_properties(FSLIO* IP1, volume<char>& target);
@@ -289,6 +292,11 @@ int read_volume4DROI(volume4D<T>& target, const string& filename,
 
   FslGetDataType(IP1,&dtype);
 
+  float maximum,minimum;
+  FslGetCalMinMax(IP1,&minimum,&maximum);
+  target.setDisplayMinimum(minimum);
+  target.setDisplayMinimum(maximum);
+
   vinfo = blank_vinfo();
   FslCloneHeader(&vinfo,IP1);
   FslSetFileType(&vinfo,FslGetFileType(IP1));
@@ -338,7 +346,7 @@ int save_basic_volume(const volume<T>& source, const string& filename,
   if (!save_orig && !source.RadiologicalFile && currently_rad) const_cast< volume <T>& > (source).makeneurological();
   FSLIO *OP = NewFslOpen(filename.c_str(),"wb",filetype,vinfo,use_vinfo);
   if (OP==0) { imthrow("Failed to open volume "+filename+" for writing",23); }
-  set_fsl_hdr(source,OP,1,1);
+  set_fsl_hdr(source,OP,1,1,!use_vinfo);
   FslWriteAllVolumes(OP,&(source(0,0,0)));
   FslClose(OP);
   if (!save_orig && !source.RadiologicalFile && currently_rad) const_cast< volume <T>& > (source).makeradiological();
@@ -367,8 +375,7 @@ int save_basic_volume4D(const volume4D<T>& source, const string& filename,
   // if filetype < 0 then it is ignored, otherwise it overrides everything
   FSLIO *OP = NewFslOpen(filename.c_str(),"wb",filetype,vinfo,use_vinfo);
   if (OP==0) { imthrow("Failed to open volume "+filename+" for writing",23); }
-
-  set_fsl_hdr(source[0],OP,source.tsize(),source.tdim());
+  set_fsl_hdr(source[0],OP,source.tsize(),source.tdim(),!use_vinfo);
   if (filetype>=0) FslSetFileType(OP,filetype);
   FslWriteHeader(OP);
   if (source.nvoxels()>0) {
