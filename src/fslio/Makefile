@@ -8,10 +8,10 @@ OBJS=fslio.o
 
 SCRIPTS = remove_ext fsloutputtype imtest imglob imcp imln imrm immv
 
-all: libfslio.a
+all: libfslio
 
-libfslio.a: ${OBJS}
-	${AR} -r libfslio.a ${OBJS}
+libfslio: ${OBJS}
+	${CXX} -shared -o libfslio.so $(OBJS) -fPIC ${LDFLAGS}
 
 TESTOBJS = exttest.o
 TESTLIBS = -lfslio -lniftiio -lznz -lz
