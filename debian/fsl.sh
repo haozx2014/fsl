@@ -17,7 +17,7 @@ export PATH
 
 # The following variable selects the default output image type
 # Legal values are:
-# ANALYZE, NIFTI, NIFTI_PAIR, ANALYZE_GZ, NIFTI_GZ, NIFTI_PAIR_GZ
+# NIFTI, NIFTI_PAIR, NIFTI_GZ, NIFTI_PAIR_GZ
 # This would typically be overwritten in ${HOME}/.fsl/fsl.sh if the user
 # wished to write files with a different format
 FSLOUTPUTTYPE=NIFTI_GZ

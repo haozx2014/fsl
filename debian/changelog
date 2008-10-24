@@ -1,3 +1,12 @@
+fsl (4.1.1-2) unstable; urgency=low
+
+  * Compile and use fslio library version that comes with the FSL sources.
+    This fixes a bug when FSL 4.1 is used with ANALYZE images, which it
+    cannot reliably do anymore (only NIfTI is supported). Also updated the
+    configuration documentation (in /etc/fsl/fsl.sh) accordingly.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Fri, 24 Oct 2008 12:27:38 +0200
+
 fsl (4.1.1-1) unstable; urgency=low
 
   * New Upstream Version fixing a number of bugs in FEAT, FDT and FNIRT.

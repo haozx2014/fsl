@@ -12,7 +12,7 @@ include /usr/share/octave/debian/defs.make
 export DH_OPTIONS
 
 # specify all FSL projects that shall be built
-PROJECTS = utils miscmaths newimage libhfunc libvis meshclass fslvtkio \
+PROJECTS = utils fslio miscmaths newimage libhfunc libvis meshclass fslvtkio \
            misc_tcl basisfield warpfns bint shapeModel avwutils bet2 cluster \
            fast4 feat5 film filmbabe flirt fabber fslpres fslvbm mcflirt \
            melodic misc_c miscvis mm randomise siena slicetimer susan tbss \
@@ -153,7 +153,8 @@ install: build
 		-resize x32 -crop 32x32+6+0 debian/tmp/fsl.xpm
 	
 	# install fslio scripts
-	install -p -t debian/tmp/bin -m 0755 src/fslio/im* src/fslio/remove_ext
+	# XXX maybe not necessary anymore
+	#install -p -t debian/tmp/bin -m 0755 src/fslio/im* src/fslio/remove_ext
 	
 	# install fsl config
 	cp -r -t debian/tmp etc
