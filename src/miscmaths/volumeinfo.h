@@ -66,7 +66,7 @@
     University, to negotiate a licence. Contact details are:
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
-#include <fslio.h>
+#include "fslio/fslio.h"
 
 namespace MISCMATHS {
   

@@ -68,7 +68,7 @@
 
 #include <iostream>
 #include <cstdlib>
-#include <fslio.h>
+#include "fslio/fslio.h"
 
 #include "newmatap.h"
 #include "newmatio.h"

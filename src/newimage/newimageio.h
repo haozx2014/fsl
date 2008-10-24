@@ -78,7 +78,7 @@
 #include "newmatio.h"
 #include "newimage.h"
 #include "complexvolume.h"
-#include <fslio.h>
+#include "fslio/fslio.h"
 #include "miscmaths/miscmaths.h"
 
 using namespace NEWMAT;
