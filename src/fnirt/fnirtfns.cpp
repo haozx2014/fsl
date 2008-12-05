@@ -916,6 +916,58 @@ double spmlike_mean(NEWIMAGE::volume<float>&  ima)
   return(mean);
 }
 
+
+////////////////////////////////////////////////////////////////////////////
+//
+// Check for attempt to register to self
+//
+////////////////////////////////////////////////////////////////////////////
+
+bool trying_to_register_to_self(const string&                    ref_fname,
+				const NEWIMAGE::volume<float>&   ref,
+				const string&                    obj_fname,
+				const NEWIMAGE::volume<float>&   obj,
+                                const NEWMAT::Matrix&            aff)
+{
+  if (is_identity(aff)) {
+    if (ref_fname == obj_fname) return(true);
+    if (ref == obj) return(true);
+  }
+  
+  return(false);
+}
+
+bool is_identity(const NEWMAT::Matrix&   A,
+                 double                  prec)
+{
+  if (A.Nrows() != A.Ncols()) return(false);
+  if ((A - IdentityMatrix(A.Nrows())).MaximumAbsoluteValue() < prec) return(true);
+  return(false);
+}
+
+////////////////////////////////////////////////////////////////////////////
+//
+// Write results relevant to self-registration
+//
+////////////////////////////////////////////////////////////////////////////
+
+void write_self_results(const fnirt_clp&                clp,
+                        const NEWIMAGE::volume<float>&  ref)
+{
+  // Create a cf-object to do the job for us
+  std::vector<boost::shared_ptr<basisfield> >   field = init_warpfield(clp);
+  boost::shared_ptr<IntensityMapper>            intmap = init_intensity_mapper(clp);
+  boost::shared_ptr<SSD_fnirt_CF>   cf = boost::shared_ptr<SSD_fnirt_CF>(new SSD_fnirt_CF(ref,ref,IdentityMatrix(4),field,intmap));
+
+  cf->SaveDefCoefs(clp.CoefFname());                                      // Coefficients
+  if (clp.FieldFname().length()) cf->SaveDefFields(clp.FieldFname());     // Field
+  if (clp.JacFname().length()) cf->SaveJacobian(clp.JacFname());          // Jacobian
+  if (clp.RefOutFname().length()) cf->SaveScaledRef(clp.RefOutFname());   // Intensity modulated ref scan
+  if (clp.ObjOutFname().length()) cf->SaveScaledRef(clp.ObjOutFname());   // Warped object image
+  // Intensity-mapping
+  if (clp.IntensityMappingFname().length()) cf->SaveIntensityMapping(clp.IntensityMappingFname());  
+}
+
 ////////////////////////////////////////////////////////////////////////////
 //
 // Try to find existing file matching the name ref_fname

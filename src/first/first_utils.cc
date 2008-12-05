@@ -1723,9 +1723,9 @@ void do_work_bvars(){
 									
 									//update average mesh
 									//these vector store tstats to plot on mesh
-									vector<float> tstatsx;
-									vector<float> tstatsy;
-									vector<float> tstatsz;
+									vector<float> meandifx;
+									vector<float> meandify;
+									vector<float> meandifz;
 									
 									
 									Mesh m=vMeshes.at(0);//mesh.at(0) is used to determien topology/number of verteices
@@ -1767,9 +1767,9 @@ void do_work_bvars(){
 											//	float norm=sqrt(vecx*vecx+vecy*vecy+vecz*vecz);
 											
 											//scalign occurs later
-											tstatsx.push_back(vecx);///norm);
-												tstatsy.push_back(vecy);///norm);
-													tstatsz.push_back(vecz);///norm);
+											meandifx.push_back(vecx);///norm);
+												meandify.push_back(vecy);///norm);
+													meandifz.push_back(vecz);///norm);
 														
 														//for each point calculate mean vertex for each group
 														(*i)->_update_coord = Pt(meanx1,meany1,meanz1);
@@ -1816,17 +1816,12 @@ void do_work_bvars(){
 										fout->setPoints(model1->smean);
 										fout->setPolygons(model1->cells);
 																																																																
-										for (int sh=0; sh<1;sh++){
-												fout->addFieldData<float>(tstatsx,"tstatx","float");
-												fout->addFieldData<float>(tstatsy,"tstaty","float");
-												fout->addFieldData<float>(tstatsz,"tstatz","float");
-
-											
-									//		model1->setShapeTstatX(sh,tstatsx);
-									//		model1->setShapeTstatY(sh,tstatsy);
-									//		model1->setShapeTstatZ(sh,tstatsz);
-									//		model1->setShapeScalars(sh,scalarsT);
-										}
+									
+												fout->setScalars(scalarsT); 
+												Matrix Mmeandif(meandifx.size(),3);
+												for (unsigned int mj=0; mj<meandifx.size(); mj++) { Mmeandif.element(mj,0)=meandifx.at(mj);  Mmeandif.element(mj,1)=meandify.at(mj); Mmeandif.element(mj,2)=meandifz.at(mj); }
+												fout->setVectors(Mmeandif); 
+									
 										//save the mesg with vectors
 										fout->save(outname.value()+evnum+".vtk");//,5,0);
 									}
