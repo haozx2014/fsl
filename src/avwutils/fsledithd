@@ -84,7 +84,7 @@ if [ _$FSLDIR = _ ] ; then
 fi
 
 if [ X$FSLEDITOR = X ] ; then
-    FSLEDITOR=pico
+    FSLEDITOR=nano
 fi
 if [ $# -ge 2 ] ; then
     FSLEDITOR=$2

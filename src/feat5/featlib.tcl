@@ -3235,7 +3235,7 @@ balloonhelp_for $w0.evsnb.gammasigma$i "This sets the half-width of the Gamma sm
 LabelSpinBox  $w0.evsnb.gammadelay$i -textvariable fmri(gammadelay$i) -label "    Mean lag (s)" -range {0.01 10000 0.1 }  
 balloonhelp_for $w0.evsnb.gammadelay$i "This sets the mean lag of the Gamma smoothing of the input waveform."
 
-FileEntry $w0.evsnb.bfcustom$i -textvariable fmri(bfcustom$i) -label "    Filename" -title "Select a custom HRF convolution file" -width 30 -filedialog directory  -filetypes * -command "feat5:checkbfcustom $w $i"
+FileEntry $w0.evsnb.bfcustom$i -textvariable fmri(bfcustom$i) -label "    Filename" -title "Select a custom HRF convolution file" -width 30 -filedialog directory  -filetypes * -command "feat5:checkbfcustom $w $i dummy; feat5:setup_model_update_contrasts $w"
 
 label $w0.evsnb.bfcustomlabel$i -text "      (create a custom optimal basis set with Utils->Make_flobs)"
 
@@ -3436,7 +3436,6 @@ proc feat5:setup_model_update_contrasts_real_per_orig { w } {
 
 proc feat5:setup_model_update_contrasts_mode { w update_gui } {
     global fmri
-
     # if called from feat5:write, will have been called with mode=C
     if { ! $update_gui } {
 	set fmri(con_mode_old) c
@@ -3460,7 +3459,6 @@ proc feat5:setup_model_update_contrasts_mode { w update_gui } {
 
 	    if { $real_per_orig > 0 } {
 		#{{{ do the case of basis functions or sinusoidal harmonics
-
 set fmri(ncon_real)    [ expr $real_per_orig * $fmri(ncon_orig) ]
 set fmri(nftests_real) [ expr $fmri(nftests_orig) + $fmri(ncon_orig) ]
 
@@ -3548,7 +3546,7 @@ set fmri(nftests_real) $fmri(nftests_orig)
 #}}}
 #{{{ feat5:setup_model_update_contrasts
 
-proc feat5:setup_model_update_contrasts { w } {
+proc feat5:setup_model_update_contrasts { w { dummy dummy } } {
     global fmri
 
     #{{{ setup evs_real etc/
@@ -3582,7 +3580,6 @@ if { $fmri(level) == 1 } {
 }
 
 #}}}
-
     for { set i 1 } { $i <= $fmri(ncon_$fmri(con_mode)) } { incr i 1 } {
 	if { ! [ info exists fmri(conpic_$fmri(con_mode).$i) ] } {
 	    set fmri(conpic_$fmri(con_mode).$i) 1
@@ -3890,7 +3887,7 @@ pack $w0.ok $w0.zeros -in $w0 -side bottom -padx 3 -pady 5
 #}}}
 #{{{ feat5:checkbfcustom
 
-proc feat5:checkbfcustom { w i } {
+proc feat5:checkbfcustom { w i dummy } {
     global fmri
 
     if { [ string compare [ file extension $fmri(bfcustom$i) ] .flobs ] == 0 } {
@@ -6876,7 +6873,7 @@ proc feat5:proc_stop { } {
 
     cd $fmri(outputdir)
 
-    catch { exec sh -c "grep -i 'error' logs/* | wc -l" } errorCount 
+    catch { exec sh -c "grep -i '\<error\>' logs/* | wc -l" } errorCount 
     catch { exec sh -c "cat logs/* > report_log.html" } putserr
 
     if { $errorCount == 0 } { feat5:report_insert report.html running "Finished at [exec date]" } else {

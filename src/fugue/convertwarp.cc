@@ -123,7 +123,7 @@ Option<string> postmatname(string("--postmat"), string(""),
 			  string("filename of post-affine transform"),
 			  false, requires_argument);
 Option<string> shiftmapname(string("-s,--shiftmap"), string(""),
-		       string("filename for shiftmap (applied last)"),
+		       string("filename for shiftmap (applied first)"),
 		       false, requires_argument);
 Option<string> warp1name(string("-w,--warp1"), string(""),
 		       string("filename for initial warp (follows pre-affine)"),
@@ -200,6 +200,14 @@ int convert_warp()
   midmat = IdentityMatrix(4);
   postmat = IdentityMatrix(4);
 
+  // apply shiftmap first (if it exists)
+  if (shiftmapname.set()) {
+    volume<float> shiftmap;
+    read_volume(shiftmap,shiftmapname.value());
+    shift2warp(shiftmap,nextwarp,shiftdir.value());
+    update_warp(finalwarp,nextwarp,warpset);
+  }
+
   if (prematname.set()) {
     premat = read_ascii_matrix(prematname.value());
     affine2warp(premat,nextwarp,refvol);
@@ -231,14 +239,6 @@ int convert_warp()
   if (postmatname.set()) {
     postmat = read_ascii_matrix(postmatname.value());
     affine2warp(postmat,nextwarp,refvol);
-    update_warp(finalwarp,nextwarp,warpset);
-  }
-
-  // apply shiftmap last (if it exists)
-  if (shiftmapname.set()) {
-    volume<float> shiftmap;
-    read_volume(shiftmap,shiftmapname.value());
-    shift2warp(shiftmap,nextwarp,shiftdir.value());
     update_warp(finalwarp,nextwarp,warpset);
   }
 

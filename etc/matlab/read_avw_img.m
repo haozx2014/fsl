@@ -15,7 +15,7 @@ fp=fopen(fnimg,'r',endian);
 if (datatype==4),
   dat=fread(fp,'short');
 elseif (datatype==2),
-  dat=fread(fp,'char');
+  dat=fread(fp,'uint8');
 elseif (datatype==8),
   dat=fread(fp,'int');
 elseif (datatype==64),

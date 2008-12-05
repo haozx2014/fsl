@@ -89,7 +89,7 @@ bool abs_warp=true;
 // COMMAND LINE OPTIONS
 
 string title="invwarp (Version 1.2)\nCopyright(c) 2007, University of Oxford (Mark Jenkinson)";
-string examples="invwarp -w warpvol -o invwarpvol";
+string examples="invwarp -w warpvol -o invwarpvol -r refvol";
 
 Option<bool> verbose(string("-v,--verbose"), false, 
 		     string("switch on diagnostic messages"), 
@@ -611,7 +611,6 @@ int invwarp()
  
  // read in images
   volume4D<float>    invwarp;
-  volumeinfo         vinfo;
   volume4D<float>    warpvol;
   AbsOrRelWarps      spec_wt=UnknownWarps;        // Specified warp convention
   Matrix             skrutt=IdentityMatrix(4);    // Not used
@@ -625,11 +624,12 @@ int invwarp()
   convertwarp_rel2abs(warpvol); 
 
   // read reference volume and set size of invwarp
-  read_volume4D(invwarp,refvolname.value(),vinfo);
+  read_volume4D(invwarp,refvolname.value());
   while (invwarp.tsize()<3) { invwarp.addvolume(invwarp[0]); }
   while (invwarp.tsize()>3) { invwarp.deletevolume(invwarp.maxt()); }
   // inwarp.tsize() == 3 here
   invwarp=0.0f;
+  invwarp.setDisplayMaximumMinimum(0,0);
   if (debug.value()) { print_volume_info(invwarp,"invwarp"); }
 
   // set up the initial warp field
@@ -644,7 +644,7 @@ int invwarp()
     print_volume_info(invwarp,"invwarp");
     if (outname.set()) {   // save results
       if (fnirtfile.AbsOrRel()==RelativeWarps) { convertwarp_abs2rel(invwarp); }
-      save_volume4D(invwarp,fslbasename(outname.value())+"_init",vinfo);
+      save_volume4D(invwarp,fslbasename(outname.value())+"_init");
       if (fnirtfile.AbsOrRel()==RelativeWarps) { convertwarp_rel2abs(invwarp); }
     }
   }
@@ -657,7 +657,7 @@ int invwarp()
 
   if (debug.value()) { 
       if (fnirtfile.AbsOrRel()==RelativeWarps) { convertwarp_abs2rel(invwarp); }
-      save_volume4D(invwarp,fslbasename(outname.value())+"_prefill",vinfo);
+      save_volume4D(invwarp,fslbasename(outname.value())+"_prefill");
       if (fnirtfile.AbsOrRel()==RelativeWarps) { convertwarp_rel2abs(invwarp); }
   }
 
@@ -667,7 +667,7 @@ int invwarp()
     
     if (debug.value()) { 
       if (fnirtfile.AbsOrRel()==RelativeWarps) { convertwarp_abs2rel(invwarp); }
-      save_volume4D(invwarp,fslbasename(outname.value())+"_postfill",vinfo);
+      save_volume4D(invwarp,fslbasename(outname.value())+"_postfill");
       if (fnirtfile.AbsOrRel()==RelativeWarps) { convertwarp_rel2abs(invwarp); }
     }
     if (verbose.value()) { cout << "Constrain Jacobian" << endl; }
@@ -684,10 +684,12 @@ int invwarp()
   if (verbose.value()) { cout <<"Constrained Jacobian"<< endl; }
 
   if (fnirtfile.AbsOrRel()==RelativeWarps) { convertwarp_abs2rel(invwarp); }
-  save_volume4D(invwarp,outname.value(),vinfo);
+  save_volume4D(invwarp,outname.value());
   if (debug.value()) {
-    save_volume4D(deriv,fslbasename(outname.value())+"_deriv",vinfo);
-    save_volume4D(costim,fslbasename(outname.value())+"_costim",vinfo);
+    copybasicproperties(invwarp,deriv);
+    copybasicproperties(invwarp,costim);
+    save_volume4D(deriv,fslbasename(outname.value())+"_deriv");
+    save_volume4D(costim,fslbasename(outname.value())+"_costim");
   }
 
   return(EXIT_SUCCESS);

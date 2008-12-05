@@ -131,13 +131,14 @@ namespace MISCMATHS {
   {
     string cline;
     while (!fs.eof()) {
+      streampos curpos = fs.tellg();
       getline(fs,cline);
       cline += " "; // force extra entry in parsing
       istringstream ss(cline.c_str());
       string cc="";
       ss >> cc;
       if (isnum(cc)) {
-	fs.seekg(-((int)cline.size()),ios::cur);
+	if (!fs.eof()) { fs.seekg(curpos); } else { fs.clear(); fs.seekg(0,ios::beg); }
 	return cline;
       }
     }
@@ -505,25 +506,6 @@ namespace MISCMATHS {
     {
 	return a*a + b*b + c*c;
     }
-
-  int Identity(Matrix& m)
-    {
-      Tracer tr("Identity");
-      m=0.0;
-      for (int j=1; j<=m.Nrows(); j++)
-	m(j,j)=1.0;
-      return 0;
-    }
-
-  ReturnMatrix Identity(int num)
-    {
-      Tracer tr("Identity");
-      Matrix eye(num,num);
-      Identity(eye);
-      eye.Release();
-      return eye;
-    }
-
 
   int diag(Matrix& m, const float diagvals[])
     {
@@ -1014,8 +996,6 @@ namespace MISCMATHS {
       Matrix rotmat(3,3);
       rotmat = aff3 * scales.i() * (skew.SubMatrix(1,3,1,3)).i();
       ColumnVector transl(3);
-      //transl = affmat.SubMatrix(1,3,4,4);
-      //transl = transl - (Identity(3) - rotmat)*centre;
       transl = affmat.SubMatrix(1,3,1,3)*centre + affmat.SubMatrix(1,3,4,4)
 	         - centre;
       for (int i=1; i<=3; i++)  { params(i+3) = transl(i); }
