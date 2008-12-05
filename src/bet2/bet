@@ -361,17 +361,14 @@ ${FSLDIR}/bin/betsurf -o -m -s $IN ${OUT}_tmp_T2_to_T1 ${OUT}_mesh.vtk ${OUT}_tm
 elif [ $variation = 7 ] ; then
     # {{{ SIENA bias field & neck cleanup
 
-#### run in robust mode in order to get skull
-${FSLDIR}/bin/bet $IN $OUT -s $bet2opts -R -d
-
 #### run betpremask
 ${FSLDIR}/bin/standard_space_roi $IN ${OUT}_tmp_premask -b -d
 
 #### run FAST to get bias field
-${FSLDIR}/bin/fast -oba 100 ${OUT}_tmp_premask >& /dev/null
+${FSLDIR}/bin/fast -b ${OUT}_tmp_premask >& /dev/null
 
 #### apply bias correction to original
-${FSLDIR}/bin/fslmaths $IN -mul ${OUT}_tmp_premask_abias ${OUT}_tmp_unbiased
+${FSLDIR}/bin/fslmaths $IN -div ${OUT}_tmp_premask_bias ${OUT}_tmp_unbiased
 
 #### re-run betpremask
 ${FSLDIR}/bin/standard_space_roi ${OUT}_tmp_unbiased ${OUT}_tmp_unbiased_premask -b -d

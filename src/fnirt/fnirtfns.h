@@ -57,7 +57,7 @@ private:
   std::string                                  obj;
   std::string                                  inwarp;
   std::string                                  in_int;
-  std::string                                  coef;
+  mutable std::string                          coef;
   std::string                                  objo;
   std::string                                  fieldo;
   std::string                                  jaco;
@@ -154,7 +154,7 @@ public:
   const std::string& Ref() const {return(ref);}
   const std::string& InWarp() const {return(inwarp);}
   const std::string& InInt() const {return(in_int);}
-  const std::string& CoefFname() {
+  const std::string& CoefFname() const {
     // If no name has been supplied we will derive it from the obj image name.
     if (!coef.length()) coef = FNIRT::path(obj) + FNIRT::filename(obj) + string("_warpcoef") + FNIRT::extension(obj);
     return(coef);
@@ -312,8 +312,18 @@ boost::shared_ptr<NEWIMAGE::volume<char> > make_mask(const string&              
                                                      bool                            impf, 
                                                      double                          impv);
 
+bool trying_to_register_to_self(const string&                    ref_fname,
+				const NEWIMAGE::volume<float>&   ref,
+				const string&                    obj_fname,
+				const NEWIMAGE::volume<float>&   obj,
+                                const NEWMAT::Matrix&            aff);
+
+void write_self_results(const fnirt_clp&                clp,
+                        const NEWIMAGE::volume<float>&  ref);
+
 void set_nlpars(NonlinParam&  nlp);
 double spmlike_mean(NEWIMAGE::volume<float>&  ima);
+bool is_identity(const NEWMAT::Matrix& A, double prec=1e-8);
 bool check_exist(const std::string& fname);
 std::string existing_conf_file(const std::string& cfname);
 std::string existing_ref_fname(const std::string& ref_fname);
