@@ -11,6 +11,10 @@
 FSLDIR=/usr/share/fsl
 export FSLDIR
 
+# Possum is installed in the same directory
+POSSUMDIR=$FSLDIR
+export POSSUMDIR
+
 # add the fsl binary path to the search path
 PATH=$PATH:/usr/lib/fsl
 export PATH
