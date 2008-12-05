@@ -12,7 +12,7 @@ include /usr/share/octave/debian/defs.make
 export DH_OPTIONS
 
 # specify all FSL projects that shall be built
-PROJECTS = utils miscmaths newimage libhfunc libvis meshclass fslvtkio \
+PROJECTS = utils fslio miscmaths newimage libhfunc libvis meshclass fslvtkio \
            misc_tcl basisfield warpfns bint shapeModel avwutils bet2 cluster \
            fast4 feat5 film filmbabe flirt fabber fslpres fslvbm mcflirt \
            melodic misc_c miscvis mm randomise siena slicetimer susan tbss \
