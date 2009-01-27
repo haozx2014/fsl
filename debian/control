@@ -8,6 +8,7 @@ Homepage: http://www.fmrib.ox.ac.uk/fsl/
 Vcs-Browser: http://git.debian.org/?p=pkg-exppsy/fsl.git
 Vcs-Git: git://git.debian.org/git/pkg-exppsy/fsl.git
 XS-Autobuild: yes
+XS-DM-Upload-Allowed: yes
 
 Package: fsl
 Architecture: any
