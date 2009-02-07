@@ -12,14 +12,14 @@ include /usr/share/octave/debian/defs.make
 export DH_OPTIONS
 
 # specify all FSL projects that shall be built
-PROJECTS = utils fslio miscmaths newimage libhfunc libvis meshclass fslvtkio \
+PROJECTS = miscmaths newimage libhfunc libvis meshclass fslvtkio \
            misc_tcl basisfield warpfns bint shapeModel avwutils bet2 cluster \
            fast4 feat5 film filmbabe flirt fabber fslpres fslvbm mcflirt \
            melodic misc_c miscvis mm randomise siena slicetimer susan tbss \
            fnirt fugue fdt first possum sgeutils flameo
 
 # specify FSL extras to be built
-EXTRAS = libprob libcprob cprob
+EXTRAS = libprob libcprob
 
 # set essential config vars for FSL build process
 FSLDIR=$(CURDIR)
@@ -41,7 +41,7 @@ CFLAGS = -Wall -g -ansi -pedantic -DHAVE_LIBFREETYPE -fPIC \
 
 # default linker flags
 # apply to FSL as 'ARCHLDFLAGS'
-LDFLAGS = -Wl,--no-undefined -Wl,--as-needed
+LDFLAGS = -Wl,--no-undefined -Wl,--as-needed -L/usr/lib/fsl/lib
 
 # where are the internal libs
 FSL_LIBRARY_PATH=$(CURDIR)/lib
@@ -153,8 +153,7 @@ install: build
 		-resize x32 -crop 32x32+6+0 debian/tmp/fsl.xpm
 	
 	# install fslio scripts
-	# XXX maybe not necessary anymore
-	#install -p -t debian/tmp/bin -m 0755 src/fslio/im* src/fslio/remove_ext
+	install -p -t debian/tmp/bin -m 0755 src/fslio/im* src/fslio/remove_ext
 	
 	# install fsl config
 	cp -r -t debian/tmp etc
@@ -180,7 +179,7 @@ binary-common:
 	dh_fixperms
 	dh_installdeb
 	# dh_shlibdeps needs access to the private libs
-	LD_LIBRARY_PATH=$(FSL_LIBRARY_PATH)$${LD_LIBRARY_PATH:+:$${LD_LIBRARY_PATH}} dh_shlibdeps
+	LD_LIBRARY_PATH=$(FSL_LIBRARY_PATH):/usr/lib/fsl/lib$${LD_LIBRARY_PATH:+:$${LD_LIBRARY_PATH}} dh_shlibdeps
 	# get the correct dependency for octave
 	octave-depends
 	dh_gencontrol

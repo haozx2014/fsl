@@ -1,3 +1,12 @@
+fsl (4.1.2-2) unstable; urgency=low
+
+  * Use internals libs compiled by the fslview package, instead of building
+    them again from fsl sources.
+  * Added 'XS-DM-Upload-Allowed: yes' in debian/control.
+  * Install fslio im* scripts.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Sat, 07 Feb 2009 10:33:03 +0100
+
 fsl (4.1.2-1) unstable; urgency=low
 
   * New Upstream Version.

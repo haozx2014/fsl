@@ -16,7 +16,7 @@ mv_conffile()
 
     if [ -e "$CONFFILE" ]; then
         md5sum="`md5sum \"$CONFFILE\" | sed -e \"s/ .*//\"`"
-        old_md5sum=$(dpkg-query -W -f='${Conffiles}' arno-iptables-firewall | grep ${CONFFILE} | awk '{ print $2 }')
+        old_md5sum=$(dpkg-query -W -f='${Conffiles}' fsl | grep ${CONFFILE} | awk '{ print $2 }')
         if [ "$md5sum" = "$old_md5sum" ]; then
             rm -f "$CONFFILE"
         else
