@@ -4,6 +4,8 @@ debian/tmp/etc/fslconf/feat.tcl etc/fsl
 debian/tmp/fsl.xpm usr/share/pixmaps
 debian/tmp/etc usr/share/fsl
 
+src/fslio/*.tcl usr/share/fsl/tcl
+
 lib/*.so usr/lib/fsl
 doc/images usr/share/fsl/doc
 
