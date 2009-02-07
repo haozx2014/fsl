@@ -2,7 +2,7 @@ Source: fsl
 Section: non-free/science
 Priority: optional
 Maintainer: Michael Hanke <michael.hanke@gmail.com>
-Build-Depends: debhelper (>= 4.0.0), zlib1g-dev (>= 1.2.2), libboost-dev (>= 1.32.0), libpng12-dev (>= 1.2.8rel), libgd2-noxpm-dev (>= 2.0.33) | libgd2-xpm-dev (>= 2.0.33), libnewmat10-dev, libgdchart-gd2-noxpm-dev | libgdchart-gd2-xpm-dev, octave2.1-headers (>= 2.1.65) | octave3.0-headers, tcl8.4 (>=8.4.7), imagemagick, libnifti1-dev (>> 1.1.0-1)
+Build-Depends: debhelper (>= 4.0.0), zlib1g-dev (>= 1.2.2), libboost-dev (>= 1.32.0), libpng12-dev (>= 1.2.8rel), libgd2-noxpm-dev (>= 2.0.33) | libgd2-xpm-dev (>= 2.0.33), libnewmat10-dev, libgdchart-gd2-noxpm-dev | libgdchart-gd2-xpm-dev, octave2.1-headers (>= 2.1.65) | octave3.0-headers, tcl8.4 (>=8.4.7), imagemagick, libnifti1-dev (>> 1.1.0-1), fslview (>> 3.0.2+4.1.2-1)
 Standards-Version: 3.8.0
 Homepage: http://www.fmrib.ox.ac.uk/fsl/
 Vcs-Browser: http://git.debian.org/?p=pkg-exppsy/fsl.git
@@ -11,7 +11,7 @@ XS-Autobuild: yes
 
 Package: fsl
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, mozilla-firefox | www-browser, tcsh | c-shell, tk8.4 (>=8.4.7), tcl8.4 (>=8.4.7), fslview, bc, dc
+Depends: ${shlibs:Depends}, ${misc:Depends}, mozilla-firefox | www-browser, tcsh | c-shell, tk8.4 (>=8.4.7), tcl8.4 (>=8.4.7), fslview (>> 3.0.2+4.1.2-1), bc, dc
 Recommends: fsl-doc (= ${source:Version}), fsl-atlases
 Suggests: fsl-feeds, ${octave:Depends}, dicomnifti, fsl-possum-data, fsl-first-data
 Conflicts: fsl-fslview
