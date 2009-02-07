@@ -21,4 +21,4 @@ quick:${OBJS} quick.o
 	${CXX}  ${CXXFLAGS} ${LDFLAGS} -o $@ ${OBJS} quick.o ${LIBS}
 
 libmiscmaths: ${OBJS}
-	${CXX} -shared -o libmiscmaths.so ${OBJS} -fPIC ${LDFLAGS} -lnewmat -lutils -lfslio -lniftiio -lcprob
+	${CXX} -shared -o libmiscmaths.so ${OBJS} -fPIC ${LDFLAGS} -lnewmat -lutils -lfslio -lniftiio -lprob
