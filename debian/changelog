@@ -1,3 +1,11 @@
+fsl (4.1.2-3) unstable; urgency=low
+
+  * Reverse the order of the octave*-headers build-dependency alternatives
+    to account for the removal of octave2.1-headers from unstable
+    (Closes: #523826).
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Tue, 14 Apr 2009 01:50:41 +0200
+
 fsl (4.1.2-2) unstable; urgency=low
 
   * Use internals libs compiled by the fslview package, instead of building
