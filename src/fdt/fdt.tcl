@@ -750,6 +750,15 @@ proc fdt:apply { w dialog } {
       	    if { [ file exists $probtrack(output) ] } {
       		set canwrite [  YesNoWidget "Overwrite $probtrack(output)?" Yes No ]
 	    }
+
+	    set deslashedFileName [ rmSlash  $probtrack(output) ]
+            if {[string index $deslashedFileName 0] != "/"} {
+		#remove ./ if name only typed in by tailing value
+		set deslashedFileName [file tail $deslashedFileName ]
+		set deslashedFileName [pwd]/$deslashedFileName
+		set probtrack(output) [rmSlash $deslashedFileName]
+	    }
+
        	    if { $canwrite } {
        		puts "rm -rf $probtrack(output)"
        		exec rm -rf $probtrack(output)
@@ -787,6 +796,7 @@ proc fdt:apply { w dialog } {
 	    }
             switch $probtrack(mode) {
 	       simple { 
+		    set singleFileName [ file tail $probtrack(output) ]
 		    set fd [ open "${filebase}_coordinates.txt" w ]
 		    set x $probtrack(x)
 		    set y $probtrack(y)
@@ -810,7 +820,7 @@ proc fdt:apply { w dialog } {
 		    puts $log "set probtrack(y) $probtrack(y)"
 		    puts $log "set probtrack(z) $probtrack(z)"
 		    puts $log "set probtrack(units) $probtrack(units)"
-                    set flags "--mode=simple --seedref=$probtrack(reference) -o $probtrack(output) -x ${filebase}_coordinates.txt $flags"
+		   set flags "--mode=simple --seedref=$probtrack(reference) -o ${probtrack(output)}/${singleFileName} -x ${filebase}_coordinates.txt $flags"
 	       } 
                seedmask {
 		   if { [ file exists ${FSLDIR}/bin/reord_OM ] } {
@@ -840,8 +850,7 @@ proc fdt:apply { w dialog } {
 	    puts $log "set probtrack(reference) $probtrack(reference)"
 	    puts $log "set probtrack(output) $probtrack(output)"
        	    if { $canwrite } {
-       		set copylog "fdt.log"
-
+       		set copylog "$probtrack(output)/fdt.log"
 	        if { $probtrack(waypoint_yn) == 1 } {
                     fdt_exp w $w.data.targets.wf.tf.targets $probtrack(output)/waypoints.txt
 		    puts $log "set probtrack(waypoint_yn) $probtrack(waypoint_yn)"

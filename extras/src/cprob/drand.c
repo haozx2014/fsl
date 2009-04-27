@@ -159,3 +159,12 @@ unkans.s[3] = r;
 *a = unkans.d;
 return 0;
 }
+
+void sdrand( int seed1, int seed2, int seed3 )
+{ /* Seeds _must_ be in the range of 1..30000 )*/
+  /*printf("%d %d %d\n",sx,sy,sz);*/
+  sx=( seed1 % 30000 + 1 );
+  sy=( seed2 % 30000 + 1 );
+  sz=( seed3 % 30000 + 1 );
+  /*printf("%d %d %d\n",sx,sy,sz);*/
+}

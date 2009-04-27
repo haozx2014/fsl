@@ -64,6 +64,7 @@
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
 #include "newimage/newimageall.h"
+#include "fslio/fslio.h"
 #include <iostream>
 using namespace NEWIMAGE;
 
@@ -71,6 +72,7 @@ void print_usage(const string& progname)
 {
   cout << endl;
   cout << "Usage: fslcorrecthd <input> <output>" << endl;
+  cout << "       Note that fslcorrecthd only works uncompressed NIFTI or ANALYZE files" << endl;
 }
 
 int main(int argc,char *argv[])
@@ -83,9 +85,7 @@ int main(int argc,char *argv[])
   FSLIO* fslio=NULL;
   fslio = FslOpen(FslMakeBaseName(argv[1]),"rb");
   FslClose(fslio);
-  int ft;
   struct dsr *hdr;
-  ft = FslGetFileType(fslio);
   hdr = (struct dsr *)calloc(1,sizeof(struct dsr));
   FslReadRawHeader(hdr,fslio->niftiptr->fname);
   if (fslio->niftiptr->byteorder != nifti_short_order()) 
@@ -94,35 +94,47 @@ int main(int argc,char *argv[])
     AvwSwapHeader(hdr);
   } 
   //check nifti-libs output versus raw header info
-  ft =(int) ( fslio->niftiptr->iname_offset - hdr->dime.vox_offset );
+  int offset =(int) ( fslio->niftiptr->iname_offset - hdr->dime.vox_offset );
   int minft=(int)MIN(fslio->niftiptr->iname_offset,hdr->dime.vox_offset);
-  cerr << "number of bytes wrong: " << ft << endl;
-  cerr << "start at byte location: " << minft << endl;
+  cout << "number of bytes wrong: " << offset << endl << "start at byte location: " << minft << endl;
+
+  if (offset==0) {
+    cout << "No byte correction needed, exiting." << endl;
+    return 0;
+  }
+
+  if (FslIsCompressedFileType(FslGetFileType(fslio))) {
+    cerr << "Error: fslcorrecthd requires uncompressed input" << endl;         
+    return 1;
+  }
 
  ifstream input_file;
  ofstream output_file;
+ char *temp,*outputName; 
+ FslGetHdrImgNames(argv[2],fslio,&temp,&outputName);
  char byte[1];
  input_file.open(argv[1],ios::in | ios :: binary);
- output_file.open(argv[2],ofstream::out | ofstream::binary);
- for(int i=1;i<=minft;i++)
+ output_file.open(outputName,ofstream::out | ofstream::binary);
+
+ for(int i=1;i<=minft;i++) //Write Header
  {
    input_file.read(byte,1);
    if (input_file.eof()) break;
    output_file.write(byte,1);
  }
 
- for(int i=1;i<=abs(ft) && ft>0;i++)
+ for(int i=1;i<=abs(offset) && offset>0;i++) //Pad if we have missing 4 bytes
  {
    byte[0]=0;
    output_file.write(byte,1);
-   }
+ }
 
- for(int i=1;i<=abs(ft) && ft<0;i++)
+ for(int i=1;i<=abs(offset) && offset<0;i++) //Read past bad extensions/junk 
  {
    input_file.read(byte,1);
  }
 
- while(true)
+ while(true) //Copy the data
  {
    input_file.read(byte,1);
    if (input_file.eof()) break;
@@ -130,7 +142,12 @@ int main(int argc,char *argv[])
  }  
  output_file.close();
  input_file.close();
-  return 0;
+
+ system(("FSLOUTPUTTYPE=NIFTI; ${FSLDIR}/bin/fslmaths " + string(outputName)).c_str());  //To clean up header
+ free(temp);
+ free(outputName);
+ free(hdr);
+ return 0;
 }
 
 

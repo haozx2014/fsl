@@ -14,11 +14,16 @@
 #include <fstream>
 #include <stdio.h>
 //#include <vector>
+ #include "newmat.h"
+ #include "newmatap.h"
 
+#include "first_lib/first_newmat_vec.h"
 #include <cmath>
 #include <algorithm>
 #include "math.h"
 using namespace std;
+using namespace NEWMAT;
+using namespace FIRST_LIB;
 namespace SHAPE_MODEL_NAME{
 	
 	shapeModel::shapeModel()
@@ -33,8 +38,11 @@ namespace SHAPE_MODEL_NAME{
 		smodes=modesshape;
 		seigs=se;
 		sqrtseigs=se;
+	
+
 		for (vector<float>::iterator i=sqrtseigs.begin();i!=sqrtseigs.end();i++)
 			*i = sqrt(*i);
+		sqrtseigs_ci=sqrtseigs;
 		imean=ishape;
 		imodes=modesint;
 		ieigs=ie;
@@ -56,8 +64,11 @@ shapeModel::shapeModel( const vector<float> & mshape, const vector< vector<float
 	smodes=modesshape;
 	seigs=se;
 	sqrtseigs=se;
+
+
 	for (vector<float>::iterator i=sqrtseigs.begin();i!=sqrtseigs.end();i++)
 		*i = sqrt(*i);
+	sqrtseigs_ci=sqrtseigs;
 	imean=ishape;
 	imodes=modesint;
 	i_precision=Iprec;
@@ -130,7 +141,7 @@ vector<float> shapeModel::getDeformedIGrid( const vector<float> & vars) const {
 	vector<float> newigrid=imean;
 	for (unsigned int i=0; i< vars.size();i++){
 		for (unsigned int j=0; j< imean.size(); j++){
-			newigrid.at(j)+=vars.at(i)*sqrtseigs.at(i)*imodes.at(i).at(j);
+		  newigrid.at(j)+=vars.at(i)*sqrtseigs_ci.at(i)*imodes.at(i).at(j);
 		}
 	}
 	return newigrid;
@@ -176,6 +187,28 @@ vector<float> shapeModel::getDeformedIGrid( const vector<float> & vars) const {
 			}
 			
 		}
+		
+		Matrix M_smodes= first_newmat_vector::vectorOfVectorsToMatrix<float>(smodes);
+
+			Matrix U,U2,V;
+			DiagonalMatrix D,D2;
+
+			SVD(M_smodes.t(),D,U,V);
+			DiagonalMatrix Eigs= first_newmat_vector::vectorToDiagonalMatrix(seigs);
+
+			SVD(D*V.t()*Eigs*V*D,D2,U2);
+
+			smodes= first_newmat_vector::matrixToVector<float>((U*U2).SubMatrix(1,U.Nrows(),1,D2.Nrows()));
+			vector<float> veigs, vsqrt_eigs;
+			for (unsigned int i=0;i<D2.Nrows();i++)//static_cast<unsigned int>(D2.Nrows());i++)
+			{
+				veigs.push_back(D2.element(i));
+				vsqrt_eigs.push_back(sqrt(D2.element(i)));
+			}			
+			seigs=veigs;
+			sqrtseigs=vsqrt_eigs;
+
+		
 
 	}
 }

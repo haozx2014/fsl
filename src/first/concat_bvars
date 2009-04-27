@@ -4,9 +4,9 @@
 #   "first". The script retains a single header and keeps track of the number 
 #   subjects. All bvars should correspond to the same model.  
 #
-#   Brian Patenaude, FMRIB Image Analysis Group
+#   Brian Patenaude and Mark Jenkinson, FMRIB Image Analysis Group
 #
-#   Copyright (C) 2006-2007 University of Oxford
+#   Copyright (C) 2006-2009 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -74,16 +74,28 @@ Usage() {
     echo ""
     echo "Usage:   concat_bvars <output_bvars.bvars> <list_of_input_bvars>"
     echo ""
-    echo "e.g.:  concat_bvars  lhipp_all.bvars sub1_lhipp.bvars sub2_lhipp.bvars ... subN_lhipp.bvars"
+    echo "e.g.:  concat_bvars lhipp_all.bvars sub1_lhipp.bvars sub2_lhipp.bvars ... subN_lhipp.bvars"
     echo ""
+}
+
+Usage_and_exit() {
+    Usage
     exit
 }
 
-[ "${1}_" = "_"  ] && Usage
+[ "${1}_" = "_"  ] && Usage_and_exit
 
 output=$1;
 shift;
-echo "make sure all bvar files use the same model!!!!"
+#echo "make sure all bvar files use the same model!!!!"
+
+if [ -f $output ] ; then
+    Usage
+    echo " "
+    echo "ERROR: Output file already exists!"
+    echo "Check the above usage and, if necssary, remove this file before running"
+    exit 1
+fi
 
 count=0;
 totalsub=0;

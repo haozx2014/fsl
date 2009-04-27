@@ -206,7 +206,7 @@ inline SymmetricMatrix vec2tens(ColumnVector& Vec){
 }
 
 
-void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,ColumnVector& evec3,float& f,float& s0,float& mode,ColumnVector& Dvec, const Matrix& Amat,const ColumnVector& S)
+void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,ColumnVector& evec3,float& f,float& s0,float& mode,ColumnVector& Dvec, float& sse, const Matrix& Amat,const ColumnVector& S)
 {
   //Initialise the parameters using traditional DTI analysis
   ColumnVector logS(S.Nrows());
@@ -241,6 +241,7 @@ void tensorfit(DiagonalMatrix& Dd,ColumnVector& evec1,ColumnVector& evec2,Column
       logS(i)=(S(i)/s0)>0.01 ? log(S(i)):log(0.01*s0);
     }
   Dvec = -pinv(Amat)*logS;
+  sse = (Amat*Dvec+logS).SumSquare();
   
   s0=exp(-Dvec(7));
   if(s0<S.Sum()/S.Nrows()){ s0=S.Sum()/S.Nrows();  }
@@ -316,12 +317,18 @@ int main(int argc, char** argv)
   if(b.Nrows()>1) b=b.t();
   volume4D<float> data;
   volume<int> mask;
-  volumeinfo tempinfo;
   if(opts.verbose.value()) cout<<"reading data"<<endl;
-  read_volume4D(data,opts.dtidatafile.value(),tempinfo);
+  read_volume4D(data,opts.dtidatafile.value());
   if(opts.verbose.value()) cout<<"reading mask"<<endl;
   read_volume(mask,opts.maskfile.value());
   if(opts.verbose.value()) cout<<"ok"<<endl;
+
+  // check that the entries have the same dimensions
+  if( b.Ncols() != r.Ncols() ){ cerr << "Error: bvecs and bvals don't have the same number of entries" << endl; return(-1);}
+  if( r.Nrows() !=3 ){cerr << "Error: bvecs must be either 3xN or Nx3" << endl; return(-1);}
+  if( data.tsize() != b.Ncols() ){cerr << "Error: data and bvals/bvecs do not contain the same number of entries" << endl;return(-1);}
+
+
   int minx=opts.littlebit.value() ? opts.x_min.value():0;
   int maxx=opts.littlebit.value() ? opts.x_max.value():mask.xsize();
   int miny=opts.littlebit.value() ? opts.y_min.value():0;
@@ -341,7 +348,8 @@ int main(int argc, char** argv)
   volume4D<float> V2(maxx-minx,maxy-miny,maxz-minz,3);
   volume4D<float> V3(maxx-minx,maxy-miny,maxz-minz,3);
   volume4D<float> Delements(maxx-minx,maxy-miny,maxz-minz,6);
-//   volume4D<float> cni_cope;
+  volume4D<float> cni_cope;
+  volume<float> sse;
 
 
   if(opts.verbose.value()) cout<<"copying input properties to output volumes"<<endl;
@@ -362,18 +370,25 @@ int main(int argc, char** argv)
   DiagonalMatrix evals(3);
   ColumnVector evec1(3),evec2(3),evec3(3);
   ColumnVector S(data.tsize());
-  float fa,s0,mode;
+  float fa,s0,mode,sseval;
   Matrix Amat, cni; 
   if(opts.verbose.value()) cout<<"Forming A matrix"<<endl;
   if(opts.cni.value()!=""){
     cni=read_ascii_matrix(opts.cni.value());
     Amat = form_Amat(r,b,cni);
-//     cni_cope.reinitialize(maxx-minx,maxy-miny,maxz-minz,cni.Ncols());
-//     copybasicproperties(data[0],cni_cope[0]);
+    cni_cope.reinitialize(maxx-minx,maxy-miny,maxz-minz,cni.Ncols());
+    copybasicproperties(data[0],cni_cope[0]);
+    cni_cope=0;
   }
   else{
     Amat = form_Amat(r,b);
   }
+  if(opts.sse.value()){
+    sse.reinitialize(maxx-minx,maxy-miny,maxz-minz);
+    copybasicproperties(data[0],sse);
+    sse=0;
+  }
+
   if(opts.verbose.value()) cout<<"starting the fits"<<endl;
   ColumnVector Dvec(7); Dvec=0;
   for(int k = minz; k < maxz; k++){
@@ -386,7 +401,7 @@ int main(int argc, char** argv)
 	    for(int t=0;t < data.tsize();t++){
 	      S(t+1)=data(i,j,k,t);
 	    }
-	    tensorfit(evals,evec1,evec2,evec3,fa,s0,mode,Dvec,Amat,S);
+	    tensorfit(evals,evec1,evec2,evec3,fa,s0,mode,Dvec,sseval,Amat,S);
 	    l1(i-minx,j-miny,k-minz)=evals(1);
 	    l2(i-minx,j-miny,k-minz)=evals(2);
 	    l3(i-minx,j-miny,k-minz)=evals(3);
@@ -410,11 +425,13 @@ int main(int argc, char** argv)
 	    Delements(i-minx,j-miny,k-minz,4)=Dvec(5);
 	    Delements(i-minx,j-miny,k-minz,5)=Dvec(6);
 	    
-// 	    if(opts.cni.value()!=""){
-// 	      for(int iter=0;iter<cni.Ncols();iter++)
-// 		cni_cope(i-minx,j-miny,k-minz,iter)=Dvec(8+iter);
-// 	    }
-
+ 	    if(opts.cni.value()!=""){
+ 	      for(int iter=0;iter<cni.Ncols();iter++)
+ 		cni_cope(i-minx,j-miny,k-minz,iter)=Dvec(8+iter);
+ 	    }
+	    if(opts.sse.value()){
+	      sse(i-minx,j-miny,k-minz)=sseval;
+	    }
 
 
 //	    EigenValues(dyad,dyad_D,dyad_V);
@@ -468,40 +485,48 @@ int main(int argc, char** argv)
       tensfile+="littlebit";
     }
 
-  
-    FslSetCalMinMax(&tempinfo,0,1);
-    save_volume(FA,fafile,tempinfo);
+    FA.setDisplayMaximumMinimum(1,0);
+    save_volume(FA,fafile);
+    S0.setDisplayMaximumMinimum(S0.max(),0);
+    save_volume(S0,s0file);
+    MODE.setDisplayMaximumMinimum(1,-1);
+    save_volume(MODE,MOfile);
+    V1.setDisplayMaximumMinimum(1,-1);
+    save_volume4D(V1,v1file);
+    V2.setDisplayMaximumMinimum(1,-1);
+    save_volume4D(V2,v2file);
+    V3.setDisplayMaximumMinimum(1,-1);
+    save_volume4D(V3,v3file);
+    l1.setDisplayMaximumMinimum(l1.max(),0);
+    save_volume(l1,l1file);
+    l2.setDisplayMaximumMinimum(l1.max(),0);
+    save_volume(l2,l2file);
+    l3.setDisplayMaximumMinimum(l1.max(),0);
+    save_volume(l3,l3file);
+    MD.setDisplayMaximumMinimum(l1.max(),0);
+    save_volume(MD,MDfile);
 
-    FslSetCalMinMax(&tempinfo,0,S0.max());
-    save_volume(S0,s0file,tempinfo);
+    if(opts.savetensor.value()) {
+      Delements.setDisplayMaximumMinimum(l1.max(),0);
+      save_volume4D(Delements,tensfile);
+    }
 
-    FslSetCalMinMax(&tempinfo,-1,1);
-    save_volume(MODE,MOfile,tempinfo);
-    save_volume4D(V1,v1file,tempinfo);
-    save_volume4D(V2,v2file,tempinfo);
-    save_volume4D(V3,v3file,tempinfo);
-
-    FslSetCalMinMax(&tempinfo,0,l1.max());
-    save_volume(l1,l1file,tempinfo);
-    save_volume(l2,l2file,tempinfo);
-    save_volume(l3,l3file,tempinfo);
-    save_volume(MD,MDfile,tempinfo);
-
-    if(opts.savetensor.value())
-      save_volume4D(Delements,tensfile,tempinfo);
-    
-
-//     if(opts.cni.value()!=""){
-//       string cnifile=opts.ofile.value()+"_cnicope";
-//       if(opts.littlebit.value()){
-// 	cnifile+="littlebit";
-//       }
-//       FslSetCalMinMax(&tempinfo,0,cni_cope.max());
-//       save_volume4D(cni_cope,cnifile,tempinfo);
-//     }
-
-
-
+    if(opts.cni.value()!=""){
+      string cnifile=opts.ofile.value()+"_cnicope";
+      if(opts.littlebit.value()){
+	cnifile+="littlebit";
+      }
+      cni_cope.setDisplayMaximumMinimum(cni_cope.max(),0);
+      save_volume4D(cni_cope,cnifile);
+    }
+    if(opts.sse.value()){
+      string ssefile=opts.ofile.value()+"_sse";
+      if(opts.littlebit.value()){
+	ssefile+="littlebit";
+      }
+      sse.setDisplayMaximumMinimum(sse.max(),0);
+      save_volume(sse,ssefile);
+    }
   return 0;
 }
 

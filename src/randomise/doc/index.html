@@ -357,19 +357,13 @@ structure of the data).
 <p><b>Permutation tests for the General Linear Model</b>
 
 <P>For an arbitrary GLM <b>randomise</b> uses the method of
-Kennedy (1995, as cited in Anderson &amp; Robinson, 2001).
-<!-- Freeman &amp; Lane (1983, as cited in Anderson &amp; Robinson,
-2001). --> Based on the contrast (or set of contrasts defining an F
+Freeman &amp; Lane (1983). Based on the contrast (or set of contrasts
+defining an F 
 test), the design matrix is automatically partitioned into tested
 effects and nuisance (confound) effects. 
-<!-- ******* To be deleted with next version ********* -->
-It is no longer necessary for you to create a separate confound design
-matrix; just include the nuisance regressors (EVs) in your main design
-matrix, as you would in FEAT.
-<!-- ************ -->
 The data are first fit to the nuisance effects alone and
 nuisance-only residuals are formed.  These residuals are permuted,
-<!-- and then the estimated nuisance signal is added back on,  -->
+and then the estimated nuisance signal is added back on, 
 creating
 an (approximate) realization of data under the null hypothesis.  This
 realization is fit to the full model and the desired test 
@@ -378,6 +372,15 @@ distribution of test statistics equivalent under the null hypothesis
 specified by the contrast(s).  For the simple models above, this
 method is equivalent to the standard exact tests; otherwise, it
 accounts for nuisance variation present under the null.
+
+<!-- Delete after release of  next version -->
+Note, that randomise v2.0 and earlier used a method due to 
+Kennedy (1995).  While both
+the Freedman-Lane and Kennedy methods are accurate for large <i>n</i>,
+for small <i>n</i> the Kennedy method can tend to false inflate
+significances.  For a review of these issues and even more possible
+methods, see  Anderson &amp; Robinson (2001)
+<!-- ----------------------------------- -->
 
 <!-- <P>(For computational efficiency, the method is actually implimented in -->
 <!-- the following manner.  As an intitialization step, the -->
@@ -536,9 +539,9 @@ Global, voxel, and cluster tests, by theory and
                   structural MR images of the brain.
 <em>IEEE TMI</em>, 18(1):32-42, 1999.
 
-<!-- <P>D Freedman &amp; D Lane.   -->
-<!-- A nonstocastic interpretation of reported significance levels.   -->
-<!-- <em>J. Bus. Econom. Statist.</em> 1:292-298, 1983. -->
+<P>D Freedman &amp; D Lane.
+A nonstocastic interpretation of reported significance levels.   
+<em>J. Bus. Econom. Statist.</em> 1:292-298, 1983. 
 
 <P>S Hayasaka &amp; TE Nichols.
 Validating cluster size inference: random field and permutation methods.

@@ -2,9 +2,9 @@
 
 #   perfusion_subtract - tag-control subtraction with half-TR shifting and no decimation
 #
-#   Stephen Smith, Karla Miller and Mark Woolrich, FMRIB
+#   Stephen Smith, Karla Miller, Mark Woolrich and Matthew Webster, FMRIB
 #
-#   Copyright (C) 2006 University of Oxford
+#   Copyright (C) 2006-2009 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -81,6 +81,7 @@ IN=`$FSLDIR/bin/remove_ext $1`
 OUT=`$FSLDIR/bin/remove_ext $2`
 shift 2
 
+tmpbase=`$FSLDIR/bin/tmpnam`
 invert=""
 demean="-add ${tmpbase}_asl_subtract/mean"
 while [ _$1 != _ ] ; do
@@ -95,7 +96,6 @@ while [ _$1 != _ ] ; do
     fi
 done
 
-tmpbase=`$FSLDIR/bin/tmpnam`
 mkdir ${tmpbase}_asl_subtract
 
 ${FSLDIR}/bin/fslmaths $IN -Tmean ${tmpbase}_asl_subtract/mean

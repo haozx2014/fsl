@@ -100,6 +100,7 @@ namespace MISCMATHS {
 #endif
 
 #define OUT(t) cout<<#t "="<<t<<endl;
+#define LOGOUT(t) LogSingleton::getInstance().str()<<#t "="<<t<<endl;
 
   // IO/string stuff
   template <class T> string num2str(T n, int width=-1);
@@ -109,11 +110,12 @@ namespace MISCMATHS {
 #endif
 
   string size(const Matrix& mat);
-  bool isnum(const string& str);
+  bool isNumber(const string& str);
   ReturnMatrix read_ascii_matrix(const string& filename, int nrows, int ncols);
   ReturnMatrix read_ascii_matrix(int nrows, int ncols, const string& filename);
   ReturnMatrix read_ascii_matrix(const string& filename);
   ReturnMatrix read_vest(string p_fname);
+  int read_binary_matrix(Matrix& mres, const string& filename);
   ReturnMatrix read_binary_matrix(const string& filename);
   ReturnMatrix read_matrix(const string& filename);
 
@@ -130,6 +132,7 @@ namespace MISCMATHS {
   ReturnMatrix read_ascii_matrix(ifstream& fs, int nrows, int ncols);
   ReturnMatrix read_ascii_matrix(int nrows, int ncols, ifstream& fs);
   ReturnMatrix read_ascii_matrix(ifstream& fs);
+  int read_binary_matrix(Matrix& mres, ifstream& fs);
   ReturnMatrix read_binary_matrix(ifstream& fs);
   int write_ascii_matrix(const Matrix& mat, ofstream& fs, int precision=-1);
   int write_ascii_matrix(ofstream& fs, const Matrix& mat, int precision=-1);
@@ -180,8 +183,6 @@ namespace MISCMATHS {
   double norm2sq(double a, double b, double c);
   float norm2sq(float a, float b, float c);
 
-  int Identity(Matrix& m);
-  ReturnMatrix Identity(int num);
   ColumnVector seq(const int num);
 
   int diag(Matrix& m, const float diagvals[]);
@@ -273,8 +274,10 @@ namespace MISCMATHS {
   ReturnMatrix dist2(const Matrix& mat1, const Matrix& mat2);
   ReturnMatrix abs(const Matrix& mat);
   ReturnMatrix sqrt(const Matrix& mat);
+  ReturnMatrix sqrtm(const Matrix& mat);
   ReturnMatrix log(const Matrix& mat);
   ReturnMatrix exp(const Matrix& mat);
+  ReturnMatrix expm(const Matrix& mat);
   ReturnMatrix tanh(const Matrix& mat);
   ReturnMatrix pow(const Matrix& mat, const double exp);
   ReturnMatrix sum(const Matrix& mat, const int dim = 1);
