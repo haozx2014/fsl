@@ -73,6 +73,7 @@
 #include <string>
 #include <iostream>
 #include <vector>
+#include <cmath>
 #include <boost/shared_ptr.hpp>
 #include "newmat.h"
 #include "miscmaths/bfmatrix.h"
