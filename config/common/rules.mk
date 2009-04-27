@@ -308,7 +308,13 @@ depend:
 	${MAKE} depend.mk
 
 depend.mk:
-# disable the whole thing for the Debian package
-	touch depend.mk
+	@echo Building dependency file depend.mk
+	@for srcfile in *.c *.cc *.cpp *.inc *.hpp verylongdummyname ; do \
+		if [ -f $$srcfile ] ; then \
+			${CC} ${DEPENDFLAGS} ${AccumulatedIncFlags} $$srcfile >> depend.mk ; \
+		else \
+			touch depend.mk; \
+		fi \
+	done
 
-#include depend.mk
+include depend.mk
