@@ -11,7 +11,7 @@ USRLDFLAGS = -L${LIB_NEWMAT}  -L${LIB_ZLIB}
 all: shapeModel
 
 shapeModel: ${SHAPEOBJS}
-	${CXX} -shared -o libshapeModel.so ${SHAPEOBJS} ${LDFLAGS} -fPIC -lmeshclass -lnewimage -lnewmat
+	${CXX} -shared -o libshapeModel.so ${SHAPEOBJS} ${LDFLAGS} -fPIC -lmeshclass -lnewimage -lnewmat -lfirst_lib
 
 
 
