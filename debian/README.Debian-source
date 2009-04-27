@@ -21,11 +21,4 @@ package.
 This source package provides the non-free (non-commercial) source code of the
 FSL suite.
 
-Since version 4.1.2-2 the Debian package makes use of some internal shared
-libraries which were previously duplicated in the fslview package. Since the
-corrsponding source code is available in both source packages (due to both of
-them originating from the same source tarball) there is no dedicated -dev
-package, but only the compiled shared libraries are provided by the fslview
-package for FSL internal use.
-
  -- Michael Hanke <michael.hanke@gmail.com>, Sat, 7 Feb 2009 10:02:00 +0200
