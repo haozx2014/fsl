@@ -106,6 +106,7 @@ namespace Gs {
     Option<float> zupperthreshold;
     Option<bool> fixmeanfortfit;
     Option<bool> infer_outliers;
+    Option<bool> no_pe_output;
     Option<string> runmode;
     Option<string> model_select_mode;
     Option<int> seed;
@@ -114,8 +115,7 @@ namespace Gs {
     Option<float> sigma_smooth_flame2_dofs;
     Option<float> sigma_smooth_globalproboutlier;
     Option<int> io_niters;
-
-
+  
     void parse_command_line(int argc, char** argv, Log& logger);
   
   private:
@@ -197,6 +197,9 @@ namespace Gs {
     infer_outliers(string("--io,--inferoutliers"), false, 
 		   string("Infer outliers -- note that does not apply to fixed effects"), 
 		   false, no_argument),
+    no_pe_output(string("--npo,--nopeoutput"), false, 
+		   string("Do not output PE files"), 
+		   false, no_argument),
     runmode(string("--runmode"), string(""), 
 	    string("Inference to perform: runmode=fe (fixed effects), runmode=ols (mixed effects - OLS), runmode=flame1 (mixed effects - FLAME stage 1), runmode=flame12 (mixed effects - FLAME stage 1+2)"), 
 	    true, requires_argument),
@@ -205,7 +208,7 @@ namespace Gs {
 	    false, requires_argument),
     seed(string("--seed"), 10, 
 	 string("seed for pseudo random number generator"), 
-	 false, no_argument),
+	 false, requires_argument),
     voxelwise_ev_numbers(string("--voxelwise_ev_numbers,--ven"), vector<int>(), 
 	 string("List of numbers indicating voxelwise EVs position in the design matrix (list corresponds in order to files in voxelwise_ev_filenames)"), 
 	 false, requires_argument),
@@ -215,13 +218,13 @@ namespace Gs {
     sigma_smooth_flame2_dofs(string("--sdof,--sigma_dofs"), 1,
 				   string("sigma (in mm) to use for Gaussian smoothing the DOFs in FLAME 2. Default is 1mm, -1 indicates no smoothing"),
 	 false, requires_argument),
-    sigma_smooth_globalproboutlier(string("--so,--sigma_outliers"), -1,
-				   string("sigma (in mm) to use for Gaussian smoothing the Global Prob(Outlier) when the --infer_outliers option is in use. Default is -1, -1 indicates no smoothing"),
+    sigma_smooth_globalproboutlier(string("--so"), -1,
+				   string(""),
 	 false, requires_argument),
     io_niters(string("--ioni"), 10,
 				   string("Number of max iterations to use when inferring outliers. Default is 10."),
 	 false, requires_argument),
-    options("flame","")
+    options("flameo"," flameo --cope=filtered_func_data --mask=mask --dm=design.mat --tc=design.con --cs=design.grp --runmode=ols\n flameo --cope=filtered_func_data --varcope=var_filtered_func_data --mask=mask --dm=design.mat --tc=design.con --cs=design.grp --runmode=flame1")
   {
     try {
       options.add(verbose);
@@ -244,6 +247,7 @@ namespace Gs {
       options.add(zupperthreshold);
       options.add(fixmeanfortfit);
       options.add(infer_outliers);
+      options.add(no_pe_output);
       options.add(runmode);
       options.add(model_select_mode);
       options.add(seed);

@@ -321,11 +321,10 @@ int segmentSingleChannel(int argc, char* argv[])
     }
   }
   int bapused=prior_registration(inputName,outname.value(), pCSF, pGM, pWM);
-
+  inputImage.setDisplayMaximumMinimum(0,0);
   ZMRISegmentation	mri;
   mri.TanakaCreate(inputImage, fbeta.value(), nclass.value(), nblowpass.value(),!removeBias.value(), pve.value(), fpveMRFmixeltype.value(), nbiter.value(),initfixity.value(), inititer.value(), bapused, Hyp.value(), verbose.value(),manualsegmentation.value(),typeofimage.value());
   if (mri.TanakaMain(pCSF, pGM, pWM)) return -1;
-  mri.m_Segment.setDisplayMaximumMinimum(0,0);
   save_volume(mri.m_Segment,outname.value()+"_seg");
   if(segments.value())
   {
@@ -415,13 +414,13 @@ int segmentMultiChannel(int argc, char* argv[])
 	    else images[c].threshold(0,images[c].max(),inclusive);
 	  }
 	}
+	images[c].setDisplayMaximumMinimum(0,0);
       }
       int bapused=prior_registration(inputName,outname.value(), pCSF, pGM, pWM);
 
       ZMRIMULTISegmentation mri;
       mri.TanakaCreate(images, nclass.value(), false, nbiter.value(), nblowpass.value(), fbeta.value(), bapused, pve.value(), nchannel.value(),!removeBias.value(),initfixity.value(), verbose.value(), pve.value(), inititer.value(),fpveMRFmixeltype.value(), Hyp.value(),manualsegmentation.value(),typeofimage.value());
-      if (mri.TanakaMain(pCSF, pGM, pWM)) return -1;
-      mri.m_Segment.setDisplayMaximumMinimum(0,0);     
+      if (mri.TanakaMain(pCSF, pGM, pWM)) return -1; 
       save_volume(mri.m_Segment, outname.value()+"_seg");
 
       if(segments.value())

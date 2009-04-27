@@ -286,11 +286,14 @@ fnirt_clp::fnirt_clp(const Utilities::Option<string>&                     pref,
   if (bf == Spline) {
     vector<unsigned int>     tmpksp(3,0);
     for (int i=0; i<3; i++) {
-      tmpksp[i] = static_cast<unsigned int>(floor(tmpwres[i]/pxs[i] + 0.5));
-      // cout << "tmpwres[" << i << "]=" << tmpwres[i] << ", pxs[" << i << "]=" << pxs[i] << ", tmpksp[" << i << "]=" << tmpksp[i];
+      tmpksp[i] = max(static_cast<unsigned int>(1),static_cast<unsigned int>(floor(tmpwres[i]/pxs[i] + 0.5)));
+      // cout << "tmpwres[" << i << "]=" << tmpwres[i] << ", pxs[" << i << "]=" << pxs[i] << ", tmpksp[" << i << "]=" << tmpksp[i] << endl;
     }
     ksp = vector<vector<unsigned int> >(nlev);
     for (unsigned int i=0; i<nlev; i++) ksp[i] = tmpksp;
+    if (!(tmpksp[0]/ss[nlev-1])) throw fnirt_error("fnirt_clp: Incompatible combination of --subsamp, --warpres and voxel size in x-direction");
+    if (!(tmpksp[1]/ss[nlev-1])) throw fnirt_error("fnirt_clp: Incompatible combination of --subsamp, --warpres and voxel size in y-direction");
+    if (!(tmpksp[2]/ss[nlev-1])) throw fnirt_error("fnirt_clp: Incompatible combination of --subsamp, --warpres and voxel size in z-direction");
   }
   else if (bf == DCT) {
     vector<int> tmpdco(3,0);
@@ -298,7 +301,7 @@ fnirt_clp::fnirt_clp(const Utilities::Option<string>&                     pref,
     dco = vector<vector<unsigned int> >(nlev);
     for (unsigned int i=0; i<nlev; i++) {
       for (int j=0; j<3; j++) {
-        dco[i][j] = static_cast<unsigned int>(floor(float(tmpdco[j])/float(ss[i]/ss[nlev]) + 0.5));
+        dco[i][j] = static_cast<unsigned int>(floor(float(tmpdco[j])/float(ss[i]/ss[nlev-1]) + 0.5));
       }
     }
   }

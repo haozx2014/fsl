@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.25 2008/08/10 17:22:45 brian Exp $
+# $Id: Makefile,v 1.26 2009/03/20 10:17:02 brian Exp $
 include ${FSLCONFDIR}/default.mk
 
 PROJNAME = first
@@ -8,7 +8,7 @@ USRINCFLAGS = -I${INC_NEWMAT}
 USRLDFLAGS = -L${LIB_NEWMAT} 
 
 
-LIBS= -lshapeModel -lfslvtkio -lmeshclass -lnewimage -lprob -lmiscmaths -lfslio -lniftiio -lznz -lnewmat  -lutils -lz 
+LIBS= -lshapeModel -lfirst_lib -lfslvtkio -lmeshclass -lnewimage -lprob -lmiscmaths -lfslio -lniftiio -lznz -lnewmat  -lutils -lz 
 
 XFILES= first first_utils
 

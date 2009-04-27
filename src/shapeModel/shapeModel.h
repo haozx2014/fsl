@@ -9,7 +9,7 @@
  #ifndef SHAPEMODEL_H
  #define SHAPEMODEL_H
  #include <vector>
- 
+
 namespace SHAPE_MODEL_NAME{
 
 
@@ -58,6 +58,8 @@ unsigned int getKPred() const { return kpred; }
 	std::vector< std::vector<float> > smodes;
 	std::vector< float > seigs;
 	std::vector< float > sqrtseigs;
+	std::vector< float > sqrtseigs_ci;
+
 	std::vector< int > labels;
 
 	std::vector<float> imean;

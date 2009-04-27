@@ -126,6 +126,9 @@ class probtrackxOptions {
   Option<int> fibst;
   Option<bool> modeuler;
   Option<int> rseed;
+  Option<bool> seedcountastext;
+  FmribOption<bool> splitmatrix2;
+
   void parse_command_line(int argc, char** argv,Log& logger);
   void modecheck();
   void modehelp();
@@ -220,7 +223,7 @@ class probtrackxOptions {
 	 string("Activate network mode - only keep paths going through at least one seed mask (required if multiple seed masks)"),
        false, no_argument),
    meshfile(string("--mesh"), string(""),
-	 string(""),
+	 string("Freesurfer-type surface descriptor (in ascii format)"),
        false, requires_argument),
   lrmask(string("--lrmask"), string(""),
 	 string("low resolution binary brain mask for stroring connectivity distribution in matrix2 mode"),
@@ -232,19 +235,19 @@ class probtrackxOptions {
 	 string("Use the actual directory name given - i.e. don't add + to make a new directory"),
 	 false, no_argument),
   nparticles(string("-P,--nsamples"), 5000,
-	 string("Number of samples"),
+	 string("Number of samples - default=5000"),
 	 false, requires_argument),
    nsteps(string("-S,--nsteps"), 2000,
-	    string("Number of steps per sample"),
+	    string("Number of steps per sample - default=2000"),
 	    false, requires_argument),
    c_thr(string("-c,--cthr"), 0.2, 
 	 string("Curvature threshold - default=0.2"), 
 	 false, requires_argument),
   fibthresh(string("--fibthresh"), 0.01, 
-	    string("volume fraction before subsidary fibre orientations are considered default=0.01"), 
+	    string("volume fraction before subsidary fibre orientations are considered - default=0.01"), 
 	 false, requires_argument),
    steplength(string("--steplength"), 0.5, 
-	 string("steplength"), 
+	 string("steplength in mm - default=0.5"), 
 	 false, requires_argument),
    loopcheck(string("-l,--loopcheck"), false, 
 	 string("perform loopchecks on paths - slower, but allows lower curvature threshold"), 
@@ -256,14 +259,20 @@ class probtrackxOptions {
 	 string("Select randomly from one of the fibres"), 
 	 false, no_argument),
   fibst(string("--fibst"),1, 
-	 string("Force a starting fibre for tracking (default=1)"), 
+	 string("Force a starting fibre for tracking - default=1, i.e. first fibre orientation"), 
 	 false, requires_argument),
   modeuler(string("--modeuler"), false, 
 	   string("Use modified euler streamlining"), 
 	   false, no_argument),
-   rseed(string("--rseed"), 12345,
-	 string("Random seed"),
-	 false, requires_argument), 
+  rseed(string("--rseed"), 12345,
+	string("Random seed"),
+	false, requires_argument), 
+  seedcountastext(string("--seedcountastext"), false,
+		  string("Output seed-to-target counts as a text file (useful when seeding from a mesh)"),
+		  false, no_argument), 
+  splitmatrix2(string("--splitmatrix2"), false,
+		  string("split matrix 2 (in case it is too big)"),
+		  false, no_argument), 
    options("probtrackx","probtrackx -s <basename> -m <maskname> -x <seedfile> -o <output> --targetmasks=<textfile>\n probtrackx --help\n")
    {
      
@@ -307,6 +316,8 @@ class probtrackxOptions {
        options.add(fibst);
        options.add(modeuler);
        options.add(rseed);
+       options.add(seedcountastext);
+       options.add(splitmatrix2);
      }
      catch(X_OptionError& e) {
        options.usage();

@@ -89,21 +89,24 @@ void GsOptions::parse_command_line(int argc, char** argv, Log& logger)
 
   // do once to establish log directory name
   for(int a = options.parse_command_line(argc, argv); a < argc; a++);
-    
-  // setup logger directory
-  logger.makeDir(logdir.value());
-  
-  cout << "Log directory is: " << logger.getDir() << endl;
-
-  // do again so that options are logged
-  for(int a = 0; a < argc; a++)
-    logger.str() << argv[a] << " ";
-  logger.str() << endl << "---------------------------------------------" << endl << endl;
 
   if(help.value() || ! options.check_compulsory_arguments())
-    {
+    { 
       options.usage();
       throw Exception("Not all of the compulsory arguments have been provided");
+    }
+  else
+    {   
+      // setup logger directory
+      logger.makeDir(logdir.value());
+      
+      cout << "Log directory is: " << logger.getDir() << endl;
+      
+      // do again so that options are logged
+      for(int a = 0; a < argc; a++)
+	logger.str() << argv[a] << " ";
+      logger.str() << endl << "---------------------------------------------" << endl << endl;
+      
     }      
 }
 

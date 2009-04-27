@@ -45,6 +45,8 @@ FNIRT v1.0&beta - User Guide
 <li><a href="#fnirt_parameters">List of paramaters</a></li>
 <li><a href="#fnirt_now_what">Now what? -- applywarp</a></li>
 <li><a href="#fnirt_examples">Example uses</a></li>
+<li><a href="./warp_utils.html">List of tools for handling warps</a></li>
+<li><a href="./combining_warps.html">Some examples of combining warps</a></li>
 </ul>
 </ul>
 
@@ -205,7 +207,7 @@ We can see from the images above that for this subject the linear registration (
 In fnirt this can be addressed using the various intensity modulation options that are available. For the example above the "local linear" option would be suitable. It is implemented by altering the cost-function to
 </p>
 <img border=0, src="cost_function_with_bias.png">
-</p>
+<p>
 where <i>b</i> is now a bias-field that is explicitly modelled as part of the registration and where the parameters <b><i>&beta</i></b> are estimated along with <b>w</b> Applying this model to the example above we obtain
 </p>
 <table class="image">

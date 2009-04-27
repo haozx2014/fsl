@@ -95,6 +95,7 @@ class dtifitOptions {
   Option<string> bvecsfile;
   Option<string> bvalsfile;
   Option<string> cni; //confounds of no interest. 
+  Option<bool> sse; // Sum of squared errors
   Option<bool> littlebit;
   Option<bool> savetensor;
   Option<int> z_min;
@@ -130,7 +131,7 @@ class dtifitOptions {
    help(string("-h,--help"), false,
 	string("display this message"),
 	false, no_argument),
-   dtidatafile(string("-k,--data"), string("dtidata"),
+   dtidatafile(string("-k,--data"), string("data"),
 	       string("dti data file"),
 	       true, requires_argument),  
    ofile(string("-o,--out"), string("dti"),
@@ -146,8 +147,11 @@ class dtifitOptions {
 	     string("b values file"),
 	     true, requires_argument), 
    cni(string("--cni"), string(""),
-	     string("counfound regressors"),
+	     string("Input counfound regressors"),
 	     false, requires_argument), 
+   sse(string("--sse"), false,
+	     string("Output sum of squared errors"),
+	     false, no_argument), 
    littlebit(string("--littlebit"), false, 
 	     string("Only process small area of brain"), 
 	     false, no_argument),
@@ -185,6 +189,7 @@ class dtifitOptions {
        options.add(bvecsfile);
        options.add(bvalsfile);
        options.add(cni);
+       options.add(sse);
        options.add(littlebit);
        options.add(savetensor);
        options.add(z_min);

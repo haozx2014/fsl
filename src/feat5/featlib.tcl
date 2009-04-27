@@ -4453,10 +4453,7 @@ optionMenu2 $fmri(temp).tcmenu fmri(tagfirst) 1 "First timepoint is tag" 0 "Firs
 label $fmri(temp).hplabel -text "Highpass"
 checkbutton $fmri(temp).hp_yn -variable fmri(temphp_yn)
 
-label $fmri(temp).lplabel -text "Lowpass"
-checkbutton $fmri(temp).lp_yn -variable fmri(templp_yn)
-
-pack $fmri(temp).label $fmri(temp).pslabel $fmri(temp).ps_yn $fmri(temp).hplabel $fmri(temp).hp_yn $fmri(temp).lplabel $fmri(temp).lp_yn -in $fmri(temp) -side top -side left
+pack $fmri(temp).label $fmri(temp).pslabel $fmri(temp).ps_yn $fmri(temp).hplabel $fmri(temp).hp_yn -in $fmri(temp) -side top -side left
 if { ! $fmri(inmelodic) } {
     balloonhelp_for $fmri(temp) "\"Perfusion subtraction\" is a pre-processing step for perfusion FMRI
 (as opposed to normal BOLD FMRI) data. It subtracts even from odd
@@ -4480,11 +4477,6 @@ manual for more information.
 remove low frequency artefacts. This is preferable to sharp rolloff
 FIR-based filtering as it does not introduce autocorrelations into the
 data.
-
-\"Lowpass\" temporal filtering reduces high frequency noise by Gaussian
-smoothing (sigma=2.8s), but also reduces the strength of the signal of
-interest, particularly for single-event experiments. It is not
-generally considered to be helpful, so is turned off by default.
 
 By default, the temporal filtering that is applied to the data will also be
 applied to the model."
@@ -5480,6 +5472,7 @@ proc feat5:proc_film { session } {
     }
 
     new_file stats
+    
     fsl:exec "$FSLDIR/bin/film_gls -rn stats $film_opts filtered_func_data design.mat $absbrainthresh"
 
     if { ! [ imtest stats/pe1 ] } {
@@ -6576,15 +6569,15 @@ switch $fmri(mixed_yn) {
 	    set zut 20
 	}
 	set FLAME "$FLAME --runmode=flame12 --nj=10000 --bi=500 --se=1 --fm --zlt=$zlt --zut=$zut"
-	set ps "$ps FLAME (FMRIB's Local Analysis of Mixed Effects) stage 1 and stage 2${ROBUST} \[Beckmann 2003, Woolrich 2004\]."
+	set ps "$ps FLAME (FMRIB's Local Analysis of Mixed Effects) stage 1 and stage 2${ROBUST} \[Beckmann 2003, Woolrich 2004, Woolrich 2008\]."
     }
     2 {
 	set FLAME "$FLAME --runmode=flame1"
-	set ps "$ps FLAME (FMRIB's Local Analysis of Mixed Effects) stage 1${ROBUST} \[Beckmann 2003, Woolrich 2004\]."
+	set ps "$ps FLAME (FMRIB's Local Analysis of Mixed Effects) stage 1${ROBUST} \[Beckmann 2003, Woolrich 2004, Woolrich 2008\]."
     }
     3 {
 	set FLAME "$FLAME --runmode=fe"
-	set ps "$ps a fixed effects model, by forcing the random effects variance to zero in FLAME (FMRIB's Local Analysis of Mixed Effects) \[Beckmann 2003, Woolrich 2004\]."
+	set ps "$ps a fixed effects model, by forcing the random effects variance to zero in FLAME (FMRIB's Local Analysis of Mixed Effects) \[Beckmann 2003, Woolrich 2004, Woolrich 2008\]."
     }
 }
 
@@ -6598,13 +6591,12 @@ if { $fmri(evs_vox) > 0 } {
     set FLAME "$FLAME --voxelwise_ev_numbers=${EVNUMS} --voxelwise_ev_filenames=${EVNAMES}"
 }
 
-if { $fmri(mixed_yn) != 0 } {
     set rs "<p><b>References</b><br>
 \[<a href=\"http://www.fmrib.ox.ac.uk/analysis/techrep/#TR01CB1\">Beckmann 2003</a>\] C. Beckmann, M. Jenkinson and S.M. Smith. General multi-level linear modelling for group analysis in FMRI. NeuroImage 20(1052-1063) 2003.<br>
 \[<a href=\"http://www.fmrib.ox.ac.uk/analysis/techrep/#TR03MW1\">Woolrich 2004</a>\] M.W. Woolrich, T.E.J Behrens, C.F. Beckmann, M. Jenkinson and S.M. Smith. Multi-level linear modelling for FMRI group analysis using Bayesian inference. NeuroImage 21:4(1732-1747) 2004<br>
 \[Woolrich 2008\] M.W. Woolrich. Robust Group Analysis Using Outlier Inference. NeuroImage 41:2(286-301) 2008<br>
 "
-}
+
 
 set NumPoints [ exec sh -c "grep NumPoints design.mat | awk '{ print \$2 }'" ]
 set NumWaves  [ exec sh -c "grep NumWaves  design.mat | awk '{ print \$2 }'" ]

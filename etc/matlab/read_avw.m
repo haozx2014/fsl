@@ -14,16 +14,35 @@ function [img,dims,scales,bpp,endian] = read_avw(fname)
 %  See also: SAVE_AVW
 
 % remove extension if it exists
-if ( (length(findstr(fname,'.hdr.gz')>0)) | ...
-        (length(findstr(fname,'.img.gz')>0)) | ...
-        (length(findstr(fname,'.nii.gz')>0)) ),
-  fname=fname(1:(length(fname)-7));
+
+[PATHSTR,NAME1,EXT,VERSN] = fileparts(fname);
+
+if(strcmp(EXT,'.gz'))
+    [PATHSTR,NAME2,EXT,VERSN] = fileparts([PATHSTR filesep NAME1]);
+    if(strcmp(EXT,'.img') | strcmp(EXT,'.nii') | strcmp(EXT,'.hdr'))
+        NAME1 = NAME2;
+    end
+elseif(~strcmp(EXT,'.nii')&~strcmp(EXT,'.hdr')&~strcmp(EXT,'.img'))
+    NAME1 = [PATHSTR filesep NAME1 EXT];
 end
-if ( (length(findstr(fname,'.hdr'))>0) | ...
-        (length(findstr(fname,'.img')>0)) | ...
-        (length(findstr(fname,'.nii')>0)) ),
-  fname=fname(1:(length(fname)-4));
-end
+
+
+
+
+%         
+% if ( (length(findstr(fname,'.hdr.gz')>0)) | ...
+%         (length(findstr(fname,'.img.gz')>0)) | ...
+%         (length(findstr(fname,'.nii.gz')>0)) ),
+%   fname=fname(1:(length(fname)-7));
+% end
+% if ( (length(findstr(fname,'.hdr'))>0) | ...
+%         (length(findstr(fname,'.img')>0)) | ...
+%         (length(findstr(fname,'.nii')>0)) ),
+%   fname=fname(1:(length(fname)-4));
+% end
+
+
+
 
 %% convert to uncompressed nifti pair (using FSL)
 tmpname = tempname;
