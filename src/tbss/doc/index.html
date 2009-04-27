@@ -581,12 +581,19 @@ into if you are going to use the result to seed tractography analysis.
 
 <p>Finally, you can add the <code>-n</code> flag to the end of the
 <code>tbss_deproject</code> command to tell the transformations of
-your original skeleton voxels to use nearest-neighbour interpolation
-instead of trilinear. The advantage of trilinear is that you get a
-more continuous interpolation of the skeleton voxels into native
-space; the advantage of nearest-neighbour is that the exact
-skeleton-space values are maintained, which might be important, for
-example, if they are cluster index numbers.
+your original skeleton voxels to keep the exact values in your input
+data (rather than allowing them to be smoothly interpolated) when
+applying the reverse transformations. For example, if your skeleton-space
+image that you feed into <code>tbss_deproject</code> contains mask
+index numbers 1, 2 and 3 at different mask locations on the skeleton,
+you would use the <code>-n</code> option, and then the output images
+from <code>tbss_deproject</code> will contain the same set of index
+numbers without any alteration cause by the interpolations. Note that
+this will take a long time to run if you have lots of distinct integer
+values in the input image, as the deprojections are run separately for
+every different index number! If your data has continuous values
+(e.g. Z-statistic or p-values) you should not use the <code>-n</code>
+option.
 
 <!-- }}} -->
 <!-- {{{ what's new -->
@@ -613,7 +620,7 @@ example, if they are cluster index numbers.
   and put in the right place (see manual).
 
 <p>The threshold entered for tbss_4_prestats is now in the same units
-  of FA, e.g. 0.2, and no longer scaled up by a factor of 10000.
+  as FA, e.g. 0.2, and no longer scaled up by a factor of 10000.
 
 <p><b>v1.1</b>
 

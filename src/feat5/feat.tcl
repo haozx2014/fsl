@@ -211,7 +211,9 @@ multi-subject statistics.
 
 Outlier de-weighting is only available for the mixed effects options
 as it doesn't make sense in the context of a fixed effects model. It
-inceases the computation time considerably."
+inceases the computation time considerably.
+
+The estimated outlier behaviour is stored in the <b>stats</b> directory in the higher-level FEAT directory. The prob_outlier1.nii.gz file is a 4D niftii file giving the probability that each subject has outlier data on a voxelwise basis. The global_prob_outlier1.nii.gz file is a 3D niftii file that indicates the size of the outlier population expressed as the proportion of subjects that are outliers. Note there are versions of these files for each variance group in the analysis."
 
 button $w.wizard -width 20 -text "Model setup wizard" -command "feat5:wizard $w"
 balloonhelp_for $w.wizard "This lets you easily setup simple common experimental designs.

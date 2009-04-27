@@ -1,8 +1,8 @@
 /*  miscmaths.cc
 
-    Mark Jenkinson & Mark Woolrich & Christian Beckmann & Tim Behrens, FMRIB Image Analysis Group
+    Mark Jenkinson, Mark Woolrich, Christian Beckmann, Tim Behrens and Matthew Webster, FMRIB Image Analysis Group
 
-    Copyright (C) 1999-2000 University of Oxford  */
+    Copyright (C) 1999-2009 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -116,28 +116,28 @@ namespace MISCMATHS {
     }
   }
 
-
   // General string/IO functions
-
-  bool isnum(const string& str)
+  bool isNumber( const string& input)
   {
-    // assumes that initial whitespace has been removed
-    if (isdigit(str[0])) return true;
-    if ( (str[0]=='-') || (str[0]=='+') || (str[0]=='.') )  return true;
-    return false;
-  }
-    
+    if (input.size()==0) return false;
+    char *pend;
+    strtod(input.c_str(),&pend);
+    if (*pend!='\0') return false;
+    return true; 
+  } 
+
   string skip_alpha(ifstream& fs) 
   {
     string cline;
     while (!fs.eof()) {
+      streampos curpos = fs.tellg();
       getline(fs,cline);
       cline += " "; // force extra entry in parsing
       istringstream ss(cline.c_str());
-      string cc="";
-      ss >> cc;
-      if (isnum(cc)) {
-	fs.seekg(-((int)cline.size()),ios::cur);
+      string firstToken="";
+      ss >> firstToken; //Put first non-whitespace sequence into cc
+      if (isNumber(firstToken)) {
+	if (!fs.eof()) { fs.seekg(curpos); } else { fs.clear(); fs.seekg(0,ios::beg); }
 	return cline;
       }
     }
@@ -183,7 +183,7 @@ namespace MISCMATHS {
       for (int c=1; c<=ncols; c++) {
 	if (!fs.eof()) {
 	  fs >> ss;
-	  while ( !isnum(ss) && !fs.eof() ) {
+	  while ( !isNumber(ss) && !fs.eof() ) {
 	    fs >> ss;
 	  }
 	  mat(r,c) = atof(ss.c_str());
@@ -214,36 +214,36 @@ namespace MISCMATHS {
 
   ReturnMatrix read_ascii_matrix(ifstream& fs)
   {
-    int rcount=0, cmax=0;
-    string cline;
+    int nRows(0), nColumns(0);
+    string currentLine;
     // skip initial non-numeric lines
     //  and count the number of columns in the first numeric line
-    cline = skip_alpha(fs);
-    cline += " ";
+    currentLine = skip_alpha(fs);
+    currentLine += " ";
     {
-      istringstream ss(cline.c_str());
-      string cc="";
+      istringstream ss(currentLine.c_str());
+      string dummyToken="";
       while (!ss.eof()) {
-	cmax++;
-	ss >> cc;
+	nColumns++;
+	ss >> dummyToken;
       }
     }
-    cmax--;
+    nColumns--;
 
     do {
-      getline(fs,cline);
-      cline += " "; // force extra entry in parsing
-      istringstream ss(cline.c_str());
-      string cc="";
-      ss >> cc;
-      if (!isnum(cc)) break;  // stop processing when non-numeric line found
-      rcount++;  // add new row to matrix
+      getline(fs,currentLine);
+      currentLine += " "; // force extra entry in parsing
+      istringstream ss(currentLine.c_str()); 
+      string firstToken("");
+      ss >> firstToken; //Put first non-whitespace sequence into cc
+      if (!isNumber(firstToken)) break;  // stop processing when non-numeric line found
+      nRows++;  // add new row to matrix
     } while (!fs.eof());
     
     // now know the size of matrix
     fs.clear();
     fs.seekg(0,ios::beg);    
-    return read_ascii_matrix(fs,rcount,cmax);
+    return read_ascii_matrix(fs,nRows,nColumns);
 
   }
 
@@ -251,21 +251,35 @@ namespace MISCMATHS {
 
   ReturnMatrix read_binary_matrix(const string& filename)
   {
-    Matrix mat;
-    if ( filename.size()<1 ) return mat;
-    ifstream fs(filename.c_str(), ios::in | ios::binary);
-    if (!fs) { 
-      cerr << "Could not open matrix file " << filename << endl;
-      return mat;
-    }
-    mat = read_binary_matrix(fs);
-    fs.close();
-    mat.Release();
-    return mat;
+    Matrix mres;
+    read_binary_matrix(mres,filename);
+    mres.Release();
+    return mres;
   }
 
 
+  int read_binary_matrix(Matrix& mres, const string& filename)
+  {
+    if ( filename.size()<1 ) return 1;
+    ifstream fs(filename.c_str(), ios::in | ios::binary);
+    if (!fs) { 
+      cerr << "Could not open matrix file " << filename << endl;
+      return 2;
+    }
+    read_binary_matrix(mres,fs);
+    fs.close();
+    return 0;
+  }
+
   ReturnMatrix read_binary_matrix(ifstream& fs)
+  {
+    Matrix mres;
+    read_binary_matrix(mres,fs);
+    mres.Release();
+    return mres;
+  }
+
+  int read_binary_matrix(Matrix& mres, ifstream& fs)
   {
     bool swapbytes = false;
     unsigned int testval;
@@ -276,9 +290,7 @@ namespace MISCMATHS {
       Swap_Nbytes(1,sizeof(testval),&testval);
       if (testval!=BINFLAG) { 
 	cerr << "Unrecognised binary matrix file format" << endl;
-	Matrix mres;
-	mres.Release();
-	return mres;
+	return 2;
       }
     }
 
@@ -295,7 +307,9 @@ namespace MISCMATHS {
 
     // set up and read matrix (rows fast, cols slow)
     double val;
-    Matrix mres(nx,ny);
+    if ( (((unsigned int) mres.Ncols())!=ny) || (((unsigned int) mres.Nrows())<nx) ) {
+      mres.ReSize(nx,ny);
+    }
     for (unsigned int y=1; y<=ny; y++) {
       for (unsigned int x=1; x<=nx; x++) {
 	fs.read((char*)&val,sizeof(val));
@@ -304,8 +318,7 @@ namespace MISCMATHS {
       }
     }
     
-    mres.Release();
-    return mres;
+    return 0;
   }
 
 
@@ -505,25 +518,6 @@ namespace MISCMATHS {
     {
 	return a*a + b*b + c*c;
     }
-
-  int Identity(Matrix& m)
-    {
-      Tracer tr("Identity");
-      m=0.0;
-      for (int j=1; j<=m.Nrows(); j++)
-	m(j,j)=1.0;
-      return 0;
-    }
-
-  ReturnMatrix Identity(int num)
-    {
-      Tracer tr("Identity");
-      Matrix eye(num,num);
-      Identity(eye);
-      eye.Release();
-      return eye;
-    }
-
 
   int diag(Matrix& m, const float diagvals[])
     {
@@ -1014,8 +1008,6 @@ namespace MISCMATHS {
       Matrix rotmat(3,3);
       rotmat = aff3 * scales.i() * (skew.SubMatrix(1,3,1,3)).i();
       ColumnVector transl(3);
-      //transl = affmat.SubMatrix(1,3,4,4);
-      //transl = transl - (Identity(3) - rotmat)*centre;
       transl = affmat.SubMatrix(1,3,1,3)*centre + affmat.SubMatrix(1,3,4,4)
 	         - centre;
       for (int i=1; i<=3; i++)  { params(i+3) = transl(i); }
@@ -1436,6 +1428,16 @@ ReturnMatrix sqrt(const Matrix& mat)
   return res;
 }
 
+ReturnMatrix sqrtm(const Matrix& mat)
+{
+	Matrix res, tmpU, tmpV;
+	DiagonalMatrix tmpD;
+	SVD(mat, tmpD, tmpU, tmpV);
+	res = tmpU*sqrt(tmpD)*tmpV.t();
+	res.Release();
+	return res;
+}
+
 ReturnMatrix log(const Matrix& mat)
 {
   Matrix res = mat;
@@ -1465,6 +1467,73 @@ ReturnMatrix exp(const Matrix& mat)
   res.Release();
   return res;
 }
+
+  // optimised code for calculating matrix exponential
+ReturnMatrix expm(const Matrix& mat){
+  float nmat = sum(mat).Maximum();
+  int nc=mat.Ncols(),nr=mat.Nrows();
+  Matrix res(nr,nc);
+  IdentityMatrix id(nr);
+  Matrix U(nr,nc),V(nr,nc);
+
+  if(nmat <= 1.495585217958292e-002){ // m=3
+    Matrix mat2(nr,nc);
+    mat2=mat*mat;
+    U = mat*(mat2+60.0*id);
+    V = 12.0*mat2+120.0*id;
+    res = (-U+V).i()*(U+V);
+  }
+  else if(nmat <= 2.539398330063230e-001){ // m=5
+    Matrix mat2(nr,nc),mat4(nr,nc);
+    mat2=mat*mat;mat4=mat2*mat2;
+    U = mat*(mat4+420.0*mat2+15120.0*id);
+    V = 30.0*mat4+3360.0*mat2+30240.0*id;
+    res = (-U+V).i()*(U+V);
+  }
+  else if(nmat <= 9.504178996162932e-001){ // m=7
+    Matrix mat2(nr,nc),mat4(nr,nc),mat6(nr,nc);
+    mat2=mat*mat;mat4=mat2*mat2,mat6=mat4*mat2;
+    U = mat*(mat6+1512.0*mat4+277200.0*mat2+8648640.0*id);
+    V = 56.0*mat6+25200.0*mat4+1995840.0*mat2+17297280.0*id;
+    res = (-U+V).i()*(U+V);
+  }
+  else if(nmat <= 2.097847961257068e+000){
+    Matrix mat2(nr,nc),mat4(nr,nc),mat6(nr,nc),mat8(nr,nc);
+    mat2=mat*mat;mat4=mat2*mat2,mat6=mat4*mat2,mat8=mat6*mat2;
+    U = mat*(mat8+3960.0*mat6+2162160.0*mat4+302702400.0*mat2+8821612800.0*id);
+    V = 90.0*mat8+110880.0*mat6+30270240.0*mat4+2075673600.0*mat2+17643225600.0*id;
+    res = (-U+V).i()*(U+V);
+  }
+  else if(nmat <= 5.371920351148152e+000){
+    Matrix mat2(nr,nc),mat4(nr,nc),mat6(nr,nc);
+    mat2=mat*mat;mat4=mat2*mat2,mat6=mat4*mat2;
+    U = mat*(mat6*(mat6+16380.0*mat4+40840800.0*mat2)+
+	     +33522128640.0*mat6+10559470521600.0*mat4+1187353796428800.0*mat2+32382376266240000.0*id);
+    V = mat6*(182.0*mat6+960960.0*mat4+1323241920.0*mat2)
+      + 670442572800.0*mat6+129060195264000.0*mat4+7771770303897600.0*mat2+64764752532480000.0*id;
+    res = (-U+V).i()*(U+V);
+  }
+  else{
+    double t;int s;
+    t = frexp(nmat/5.371920351148152,&s);
+    if(t==0.5) s--;
+    t = std::pow(2.0,s);
+    res = (mat/t);
+    Matrix mat2(nr,nc),mat4(nr,nc),mat6(nr,nc);
+    mat2=res*res;mat4=mat2*mat2,mat6=mat4*mat2;
+    U = res*(mat6*(mat6+16380*mat4+40840800*mat2)+
+	     +33522128640.0*mat6+10559470521600.0*mat4+1187353796428800.0*mat2+32382376266240000.0*id);
+    V = mat6*(182.0*mat6+960960.0*mat4+1323241920.0*mat2)
+      + 670442572800.0*mat6+129060195264000.0*mat4+7771770303897600.0*mat2+64764752532480000.0*id;
+    res = (-U+V).i()*(U+V);
+    for(int i=1;i<=s;i++)
+      res = res*res;
+  }
+
+  res.Release();
+  return res;
+}
+
 
 ReturnMatrix tanh(const Matrix& mat)
 {

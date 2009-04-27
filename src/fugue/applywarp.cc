@@ -185,8 +185,7 @@ int applywarp()
 
   // read in-images
   volume4D<float> invol;
-  volumeinfo      vinfo;
-  read_volume4D(invol,inname.value(),vinfo);
+  read_volume4D(invol,inname.value());
   
   // Read in/create warps from file
   FnirtFileReader  fnirtfile;
@@ -206,8 +205,8 @@ int applywarp()
   //
   volume<float>    refvol;
   read_volume(refvol,refname.value());
-  volume4D<float>  outvol(refvol.xsize(),refvol.ysize(),refvol.zsize(),invol.tsize()); 
-  for (int i=0; i<invol.tsize(); i++) outvol[i] = refvol;
+  volume4D<float>  outvol;
+  for (int i=0; i<invol.tsize(); i++) outvol.addvolume(refvol);
 
   //
   // Assert and decode supersampling parameters
@@ -312,12 +311,13 @@ int applywarp()
     if (maskname.set()) { outvol[t] *= mask; }
   }
 
+  outvol.setDisplayMaximumMinimum(0,0);
   // save the results
   if (datatype.set()) {
-    save_volume4D_dtype(outvol,outname.value(),dtypecode,vinfo);
+    save_volume4D_dtype(outvol,outname.value(),dtypecode);
   }
   else {
-    save_volume4D_dtype(outvol,outname.value(),dtype(inname.value()),vinfo);
+    save_volume4D_dtype(outvol,outname.value(),dtype(inname.value()));
   }
   
   return(EXIT_SUCCESS);

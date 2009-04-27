@@ -79,7 +79,7 @@ void print_usage(const string& progname) {
 
 ReturnMatrix calcFFT(const Matrix& Mat)
 {
-  Matrix res(Mat.Nrows()/2,Mat.Ncols()), empty(1,1);
+  Matrix res((int)ceil(Mat.Nrows()/2.0),Mat.Ncols()), empty(1,1);
   empty=0;
   ColumnVector tmpCol;
   ColumnVector FtmpCol_real;
@@ -120,28 +120,19 @@ int fmrib_main(int argc, char* argv[])
     outname=inname;
 
   Matrix iMat, oMat;
-  volume4D<float> vout;
+  volume4D<float> vin,vout;
   volume<float> mask;
-  volumeinfo volinfo;
-  float vinTR;
 
-  {
-    volume4D<float> vin;
-    read_volume4D(vin,argv[1],volinfo);
-
-    generate_masks(mask,stddevvol(vin));
-    iMat = vin.matrix(mask);
-    vinTR=vin.TR();
-  } 
+  read_volume4D(vin,argv[1]);
+  generate_masks(mask,stddevvol(vin));
+  iMat = vin.matrix(mask);  
 
   oMat = calcFFT(iMat);
  
   vout.setmatrix(oMat,mask);
-  vout.setTR(vinTR);
+  copybasicproperties(vin,vout);
 
-  int retval=0;
-  retval = save_volume4D(vout,outname,volinfo);
-  return retval;
+  return save_volume4D(vout,outname);
 }
 
   

@@ -44,6 +44,7 @@ extern double ndtri ( double y0 );
 extern double pdtrc ( int k, double m );
 extern double pdtr ( int k, double m );
 extern double pdtri ( int k, double y );
+extern void sdrand ( int seed1, int seed2, int seed3);
 extern double stdtr ( int k, double t );
 extern double stdtri ( int k, double p );
 extern double log1p ( double x );

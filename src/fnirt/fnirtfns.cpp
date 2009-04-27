@@ -286,11 +286,14 @@ fnirt_clp::fnirt_clp(const Utilities::Option<string>&                     pref,
   if (bf == Spline) {
     vector<unsigned int>     tmpksp(3,0);
     for (int i=0; i<3; i++) {
-      tmpksp[i] = static_cast<unsigned int>(floor(tmpwres[i]/pxs[i] + 0.5));
-      // cout << "tmpwres[" << i << "]=" << tmpwres[i] << ", pxs[" << i << "]=" << pxs[i] << ", tmpksp[" << i << "]=" << tmpksp[i];
+      tmpksp[i] = max(static_cast<unsigned int>(1),static_cast<unsigned int>(floor(tmpwres[i]/pxs[i] + 0.5)));
+      // cout << "tmpwres[" << i << "]=" << tmpwres[i] << ", pxs[" << i << "]=" << pxs[i] << ", tmpksp[" << i << "]=" << tmpksp[i] << endl;
     }
     ksp = vector<vector<unsigned int> >(nlev);
     for (unsigned int i=0; i<nlev; i++) ksp[i] = tmpksp;
+    if (!(tmpksp[0]/ss[nlev-1])) throw fnirt_error("fnirt_clp: Incompatible combination of --subsamp, --warpres and voxel size in x-direction");
+    if (!(tmpksp[1]/ss[nlev-1])) throw fnirt_error("fnirt_clp: Incompatible combination of --subsamp, --warpres and voxel size in y-direction");
+    if (!(tmpksp[2]/ss[nlev-1])) throw fnirt_error("fnirt_clp: Incompatible combination of --subsamp, --warpres and voxel size in z-direction");
   }
   else if (bf == DCT) {
     vector<int> tmpdco(3,0);
@@ -298,7 +301,7 @@ fnirt_clp::fnirt_clp(const Utilities::Option<string>&                     pref,
     dco = vector<vector<unsigned int> >(nlev);
     for (unsigned int i=0; i<nlev; i++) {
       for (int j=0; j<3; j++) {
-        dco[i][j] = static_cast<unsigned int>(floor(float(tmpdco[j])/float(ss[i]/ss[nlev]) + 0.5));
+        dco[i][j] = static_cast<unsigned int>(floor(float(tmpdco[j])/float(ss[i]/ss[nlev-1]) + 0.5));
       }
     }
   }
@@ -914,6 +917,58 @@ double spmlike_mean(NEWIMAGE::volume<float>&  ima)
   mean /= n;
   
   return(mean);
+}
+
+
+////////////////////////////////////////////////////////////////////////////
+//
+// Check for attempt to register to self
+//
+////////////////////////////////////////////////////////////////////////////
+
+bool trying_to_register_to_self(const string&                    ref_fname,
+				const NEWIMAGE::volume<float>&   ref,
+				const string&                    obj_fname,
+				const NEWIMAGE::volume<float>&   obj,
+                                const NEWMAT::Matrix&            aff)
+{
+  if (is_identity(aff)) {
+    if (ref_fname == obj_fname) return(true);
+    if (ref == obj) return(true);
+  }
+  
+  return(false);
+}
+
+bool is_identity(const NEWMAT::Matrix&   A,
+                 double                  prec)
+{
+  if (A.Nrows() != A.Ncols()) return(false);
+  if ((A - IdentityMatrix(A.Nrows())).MaximumAbsoluteValue() < prec) return(true);
+  return(false);
+}
+
+////////////////////////////////////////////////////////////////////////////
+//
+// Write results relevant to self-registration
+//
+////////////////////////////////////////////////////////////////////////////
+
+void write_self_results(const fnirt_clp&                clp,
+                        const NEWIMAGE::volume<float>&  ref)
+{
+  // Create a cf-object to do the job for us
+  std::vector<boost::shared_ptr<basisfield> >   field = init_warpfield(clp);
+  boost::shared_ptr<IntensityMapper>            intmap = init_intensity_mapper(clp);
+  boost::shared_ptr<SSD_fnirt_CF>   cf = boost::shared_ptr<SSD_fnirt_CF>(new SSD_fnirt_CF(ref,ref,IdentityMatrix(4),field,intmap));
+
+  cf->SaveDefCoefs(clp.CoefFname());                                      // Coefficients
+  if (clp.FieldFname().length()) cf->SaveDefFields(clp.FieldFname());     // Field
+  if (clp.JacFname().length()) cf->SaveJacobian(clp.JacFname());          // Jacobian
+  if (clp.RefOutFname().length()) cf->SaveScaledRef(clp.RefOutFname());   // Intensity modulated ref scan
+  if (clp.ObjOutFname().length()) cf->SaveScaledRef(clp.ObjOutFname());   // Warped object image
+  // Intensity-mapping
+  if (clp.IntensityMappingFname().length()) cf->SaveIntensityMapping(clp.IntensityMappingFname());  
 }
 
 ////////////////////////////////////////////////////////////////////////////

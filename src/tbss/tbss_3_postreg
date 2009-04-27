@@ -138,10 +138,24 @@ echo $best > best.msf
 mkdir -p ../stats
 
 # is target already in MNI152 space? (kludge)
-if [ `${FSLDIR}/bin/imtest target` = 1 -a `$FSLDIR/bin/fslval $best dim1` = 182 -a `$FSLDIR/bin/fslval $best dim2` = 218 -a `$FSLDIR/bin/fslval $best dim3` = 182 ] ; then
+if [ `${FSLDIR}/bin/imtest target` = 1 ] && [ `$FSLDIR/bin/fslval $best dim1` = 182 ] && [ `$FSLDIR/bin/fslval $best dim2` = 218 ] && [ `$FSLDIR/bin/fslval $best dim3` = 182 ] ; then
 
     echo "transforming all FA images into MNI152 space"
-    for f in `$FSLDIR/bin/imglob *_FA.nii* *_FA.img* *_FA.hdr*` ; do
+    filelist=`$FSLDIR/bin/imglob *_FA.nii* *_FA.img* *_FA.hdr*`;
+    # check that all the registration results are there!
+    missingwarps="";
+    for f in $filelist ; do
+	if [ `${FSLDIR}/bin/imtest ${f}_to_target_warp` = 0 ] ; then
+	    missingwarps="$missingwarps ${f}_to_target_warp"
+	fi
+    done
+    if [ `echo $missingwarps | wc -c` -gt 1 ] ; then
+	echo "ERROR:: cannot find the following warp results:"
+	echo "    $missingwarps"
+	echo "Please wait for registration (fnirt) to finish or re-run registrations";
+	exit 1;
+    fi
+    for f in $filelist ; do
 	echo $f
 	$FSLDIR/bin/applywarp -i $f -o ${f}_to_target -r target -w ${f}_to_target_warp --rel
     done

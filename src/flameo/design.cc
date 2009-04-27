@@ -280,41 +280,24 @@ namespace Gs {
 
     ColumnVector zero_ev=zero_evs.voxelts(x,y,z);
 
-    if(zero_ev.Sum()>0)
-      {
-	ret.ReSize(nevs);
-	ret=0;
+    if(zero_ev.Sum()>0) {
+      ret.ReSize(nevs);
+      ret=0;
+      vector<int> realIndex(nevs+1,-1);
+      int index(1);
+      for(int i=1; i<=nevs; i++) 
+	if (zero_ev(i) == 0) 
+	  realIndex.at(i)=index++;
 
-	int index=1;
-	for(int i=1; i<=nevs; i++) 
-	  {
-	    int index2=i+1;
-	    for(int j=i+1; j<=nevs; j++)   
-	      {		
-		if(zero_ev(i)==0 && zero_ev(j)==0)
-		  {
-		    ret(i,j)=covpetmp(index,index2);
-		    ret(j,i)=covpetmp(index2,index);
-		  }
-
-		if(zero_ev(j)==0)
-		  {		
-		    index2++;
-		  }
-	      }
-
-	    if(zero_ev(i)==0)
-	      {
-		ret(i,i)=covpetmp(index,index);
-		index++;
-	      }
-	    else
-	      {
-		ret(i,i)=1e32; // set variance very high for this parameter as it is a zero ev
-	      }
-	  }   
+      for(int i=1; i<=nevs; i++) {
+	for(int j=i; j<=nevs; j++) {
+	  if ( realIndex.at(i) > 0 && realIndex.at(j) > 0 ) 
+	    ret(i,j)=covpetmp(realIndex.at(i),realIndex.at(j));	  
+	}
+	if ( realIndex.at(i) ==- 1 )
+	  ret(i,i) = 1e32; // set variance very high for this parameter as it is a zero ev
       }
-	
+    }    
     ret.Release();
     return ret;
   }
@@ -358,8 +341,7 @@ namespace Gs {
     Tracer_Plus trace("Design::setup");  
  
     // read data
-    fslio=new FSLIO;
-    read_volume4D(copedata, GsOptions::getInstance().copefile.value(),*fslio);    
+    read_volume4D(copedata, GsOptions::getInstance().copefile.value());    
     //copedata.read(GsOptions::getInstance().copefile.value());
     
     // mask:
@@ -528,7 +510,6 @@ namespace Gs {
     // read in any voxelwise EVs
     voxelwise_ev_numbers=GsOptions::getInstance().voxelwise_ev_numbers.value();    
     vector<string> voxelwise_ev_filenames=GsOptions::getInstance().voxelwise_ev_filenames.value();
-    volumeinfo volinfo;
 
     if(voxelwise_ev_filenames.size() != voxelwise_ev_numbers.size())
       throw Exception("Number of filenames in voxelwise_ev_filenames command line option needs to be the same as the number of EV number in the voxelwise_ev_numbers command line option");
@@ -543,7 +524,7 @@ namespace Gs {
 	
 	voxelwise_dm=true;
 	//	voxelwise_evs[i].read(voxelwise_ev_filenames[i]);	
-	read_volume4D(voxelwise_evs[i], voxelwise_ev_filenames[i],volinfo);
+	read_volume4D(voxelwise_evs[i], voxelwise_ev_filenames[i]);
       }    
     
     // find if there are any zero voxelwise evs

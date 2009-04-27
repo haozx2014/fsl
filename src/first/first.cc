@@ -90,7 +90,7 @@ using namespace fslvtkio;
 
 
 
-string title="first (Version 1.0) University of Oxford (Brian Patenaude)";
+string title="first (Version 1.2) University of Oxford (Brian Patenaude)";
 string examples="first --baam  -i <input image> -l <flirt matrix> -m <model> -g <number of modes> -y <rob_min> -z <rob_max> ";
 
 
@@ -688,41 +688,51 @@ volume<short> make_mask_from_mesh(const volume<float> & image, const vector<floa
 float costfuncApp(const volume<float> & image, const shapeModel & model1, const vector<float> & vars, const bool & overide_fill)
 {
 	//do for a single shape
-	double cost=0;
-	
+	double cost=0;//
+	//  	cout<<"vars "<<endl;
+	//for (int i=0;i<10; i++)
+	// cout<<vars.at(i)<<" ";
+	// cout<<endl;
 	vector<float> dif;
 	vector<float> shape = model1.getDeformedGrid(vars);
+	//	cout<<" got shape"<<endl; 	
 	vector<float> igrid = model1.getDeformedIGrid(vars);
-
+	//	cout<<"got deformed grids "<<shape.size()<<" "<<igrid.size()<<endl;
 	if ((!model1.getFoundMode()) && (!overide_fill))
 	{
+		//cout<<" fill mesh"<<endl;
 		int bounds[6]={0,0,0,0,0,0};
 		getBounds(shape,bounds,image.xdim(),image.ydim(),image.zdim());
-	
+		
 		volume<short> mask=make_mask_from_mesh(image ,shape, model1.cells,model1.getLabel(0), bounds);
-	
+		
 		vector<float> v_intens;
 		intensity_hist(image,mask,shape,model1.getLabel(0),v_intens, bounds);
-	
-		if (v_intens.size()<=1)
+		
+		if (v_intens.size()<1)
 			throw firstException("WARNING: NO INTERIOR VOXELS TO ESTIMATE MODE");
 		float mode_val=mode(v_intens);
-
+		//cout<<"modeval "<<mode_val<<endl;
 		if (model1.getMode()==mode_val)
 		{
-			model1.setFoundMode(true);
+			//save_volume(image,"mask");
+		  	model1.setFoundMode(true);
+			//  model1.setMode(mode_val);
+			
 			if (verbose.value()) cout<<"found mode "<<mode_val<<endl;
-		}else
+		}else{
 			model1.setMode(mode_val);
+			cout<<"mode  "<<mode_val<<endl;
+		}
 	}
-
+	//cout<<"got mode"<<endl;
 	//calculate normals for vertices
 	vector<float> nx;
 	vector<float> ny;
 	vector<float> nz;
 	normal(shape,model1.localTri, model1.cells,nx,ny,nz);//could possibly optimize further
-	
-	int ipp=13;
+	//	cout<<"got nrmals"<<endl;
+	int ipp=13;//intesnity sample per profile
 	float mean=model1.getMode();
 	
 	const float xdim=image.xdim();
@@ -733,11 +743,11 @@ float costfuncApp(const volume<float> & image, const shapeModel & model1, const 
 	vector<float>::iterator ny_i=ny.begin();
 	vector<float>::iterator nz_i=nz.begin();
 	vector<float>::iterator igrid_i=igrid.begin();
-
+	
 	float inc_x= 0.5/xdim;
 	float inc_y= 0.5/ydim;
 	float inc_z= 0.5/zdim;
-	
+	int count=0;
 	for (vector<float>::iterator k = shape.begin(); k!= shape.end(); k+=3,nx_i++,ny_i++, nz_i++)
 	{
 		inc_x = (*nx_i) * 0.5/xdim;
@@ -749,10 +759,13 @@ float costfuncApp(const volume<float> & image, const shapeModel & model1, const 
 		(*(k+1))=*(k+1)/ydim - (ipp-1)*0.5 * inc_y;
 		(*(k+2))= *(k+2)/zdim - (ipp-1)*0.5 * inc_z;
 		
-		for (int j=0;j<ipp;j++,igrid_i++, (*k)+=inc_x, (*(k+1))+=inc_y, (*(k+2))+=inc_z)
+		for (int j=0;j<ipp;j++,igrid_i++, (*k)+=inc_x, (*(k+1))+=inc_y, (*(k+2))+=inc_z,count++)
+		{
 			dif.push_back(image.interpolate(*k,*(k+1),*(k+2))-(*igrid_i) - mean);
+			//	cout<<count<<" "<<*k<<" "<<*(k+1)<<" "<<*(k+2)<<" "<<(*igrid_i)<<" "<<igrid.at(count)<<" "<<mean<<" "<<dif.back()<<endl;
+		}
 	}
-	
+	//	cout<<"intesnity samples"<<endl;
 	//************Calculate conditional I | s *************************//
 	double probIcond=0;
 	vector<float> ::const_iterator ieigs_i = model1.ieigs.begin();
@@ -763,27 +776,32 @@ float costfuncApp(const volume<float> & image, const shapeModel & model1, const 
 		for (vector<float>::const_iterator row=(*col).begin();row!=(*col).end(); row++, dif_i++)
 			multemp+=(*dif_i)*(*row);
 		
-		probIcond+=multemp*multemp/(*ieigs_i);		
+		probIcond+=multemp*multemp*(1/(*ieigs_i) - 0.5*(1/model1.Errs.at(1)));		
 	}
-
+	//cout<<"probicond "<<probIcond<<endl;
 	//the multiplication by n-1 or n is left out becomes constant in log cost
 	//probI*=M;//this multiplication is performed later
 	//calculates inner product of difference between observed intensity and mean 
 	//this is todo 
 	float sdif=0;
-	for (vector<float>::iterator row=dif.begin();row!=dif.end();row++)
-		sdif+=(*row)*(*row);
-
+	//for (vector<float>::iterator row=dif.begin();row!=dif.end();row++)
+	//		sdif+=(*row)*(*row);
+	for (unsigned int row=0;row<dif.size();row++)
+	{
+	    // cout<<dif.at(row)<<endl;
+		sdif+=(dif.at(row))*(dif.at(row));
+		///	cout<<"sdif "<<sdif<<endl;
+	}
 	//work sonly if all are tied together
 	float M=model1.NumberOfSubjects;
 	//sdif*=M/(model1.getShape(0).getErrs().at(1)*2);
 	//the M multiplication is performed later
 	sdif*=1/(model1.Errs.at(1)*2);
 	probIcond+=sdif;
-
+	
 	//P(I) is exlcuded use proportionailty....doesn't work as well in practice
 	
-	
+	//	cout<<"probicond2 "<<probIcond<<endl;
 	/////%%%%%%%%%%%%%%%%%%%%%%%%% Now claculate costfunction
 	
 	//calculate cumulcative number of points across all meshes
@@ -799,35 +817,38 @@ float costfuncApp(const volume<float> & image, const shapeModel & model1, const 
 	//This is the Mahalnobis distance of the shape
 	for (vector<float>::const_iterator i=vars.begin();i!=vars.end();i++)
 		binner+=(*i)*(*i);
-
+	
 	//this is the intensity portion of the cost function
-	cost+= -(k1)/2*log((alp+k2)/(alp+binner*(gammav)))+(alp+k1+k2)/2*log(1+(M-1)*probIcond/(alp+binner*(gammav)));
-
+	cost+= -k1/2.0*log((alp+k2)/(alp+binner*(gammav)))+(alp+k1+k2)/2*log(1+(M-1)*probIcond/(alp+binner*(gammav)));
+	//cout<<"cost "<<cost<<endl;
 	//this is the shaoe prior ...chooeses between no condition, one conditional, or 2 conditionals
 	//add in shape prior term, it can handle 0,1, or 2 conditionals
 	if (model1.getCondSet())
 	{		
+		//cout<<"calc conditional stuff"<<endl;
 		ColumnVector mBx2map= vectorOfVectorsToMatrix(model1.getCondMat1());
 		ColumnVector bx1temp(vars.size());
 		for (unsigned int i=0;i<vars.size();i++)
 			bx1temp.element(i)=vars.at(i)-mBx2map.element(i);
-	
+		
+		//		cout<<"cond2"<<endl;
 		ColumnVector Bcx1= vectorOfVectorsToMatrix<float>(model1.getCondMat2()) * bx1temp; //mBx1inv*bx1temp;
 		
 		float Bcinner=0;
 		for (int i=0; i<Bcx1.Nrows();i++)
 			Bcinner+=Bcx1.element(i)*Bcx1.element(i);
-
+		//	cout<<"cond3"<<endl;
 		cost+=(alp+k2+model1.getKPred())/2*log(1+Bcinner/(alp+model1.getKPred()));
 		//and in posteriro bit
+		//	cout<<"cond4"<<endl;
 	}else
 	{
-	//p(x) prior--shape prior. No Conditional
-	cost+=(alp+k2)/2*log(1+binner*gammav/alp);
+		//p(x) prior--shape prior. No Conditional
+		cost+=(alp+k2)/2*log(1+binner*gammav/alp);
 	}
-	
+	//cout<<"cost "<<cost<<endl;
 	return cost;
-		
+	
 }
 
 
@@ -899,10 +920,10 @@ bool negGradient(const volume<float> & image, vector<float> & grad, const vector
 
 
 void conjGradient(const volume<float> & image, const shapeModel & model1,vector<float> &vars, \
-const vector<float> & relStd, const  vector<bool> & select, float & searchRes, const float & searchRmax){
-	//costtype defines whether to use AAM or ASM
+				  const vector<float> & relStd, const  vector<bool> & select, float & searchRes, const float & searchRmax){
+	
 	//define variable
-	vector<float>  svec, res, resPrev;//, pointCost;
+	vector<float>  svec, res, resPrev;
 	double gamma;
 	int n=vars.size();
 	double dpResPrev=0; 
@@ -920,17 +941,14 @@ const vector<float> & relStd, const  vector<bool> & select, float & searchRes, c
 	
 	//the statement within test also calculate values
 	if (negGradient(image,res,vars,model1,select,searchRes)){
-		if (verbose.value()){
-
+		if (verbose.value())
 		cout<<"return, no gradient"<<endl;
-	}
-			return ;//if graident == 0
-	
+			return ;
 	}
 	resPrev=res;
-	
 	svec=svectmp=res;
 	vector<float> tmpVar2;
+	
 	for (int i=0;i<n;i++){
 		tmpVar2.push_back(0);
 	}
@@ -1001,25 +1019,18 @@ const vector<float> & relStd, const  vector<bool> & select, float & searchRes, c
 						vars.at(s)=varstmp.at(s) + tmpVar2.at(s)*svec.at(s);
 					}
 				}
-				float cost=0;
+				float cost=costfuncApp(image, model1, vars,false);
 				
-				cost=costfuncApp(image, model1, vars,false);
-				
-				if (j==0){	     
-					tmpVar=j*searchRes;
-					tmpCost=cost;
-				}else if (cost<tmpCost){
+				if ( (j==0) || (cost<tmpCost) )
+				{
 					tmpVar=j*searchRes;
 					tmpCost=cost;
 					zerocount=0;//reset count when tmpvar is updated
-				}else{
+				}else
 					zerocount++;
-				}
-				
-				
-				if (zerocount>3){//causes break in linear search if nothing found in 5
-					j=searchDist;
-				}
+			
+				if (zerocount>3)//causes break in linear search if nothing found in 5
+					j=searchDist;//swicth to "break"
 				
 				j++;
 			}
@@ -1028,7 +1039,7 @@ const vector<float> & relStd, const  vector<bool> & select, float & searchRes, c
 			
 			//this enables single select
 			for (unsigned int s=0; s<svectmp.size(); s++){ 
-				if ((!vmax.at(s))|((vmax.at(s))&&(tmpVar<=tmpVar2.at(s)))){
+				if ((!vmax.at(s))||((vmax.at(s))&&(tmpVar<=tmpVar2.at(s)))){
 					vars.at(s)=varstmp.at(s)+tmpVar*svec.at(s);
 					svectmp.at(s)=tmpVar*svectmp.at(s);
 					delta+=tmpVar*svec.at(s)*tmpVar*svec.at(s);
@@ -1038,31 +1049,27 @@ const vector<float> & relStd, const  vector<bool> & select, float & searchRes, c
 					delta+=tmpVar2.at(s)*svec.at(s)*tmpVar2.at(s)*svec.at(s);
 				}
 				
-				//delta not actually used in algorithm
+				//delta is the sum of squares of deviation from current mode parameters, if less than 0.01 leave conjugate gradient
 			}
-			if (delta<0.01){
+			if (delta<0.01)
 				tmpVar=0;
-			}
+			
 			//write new parameters in neggradient call
 			
 			//incraese search resolution 
 			if (verbose.value()){
 				cout<<"vars:"<<endl;
-				for (unsigned int i=0;i<vars.size();i++){
+				for (unsigned int i=0;i<vars.size();i++)
 					cout<<vars.at(i)<<" ";
-				}
 				cout<<endl;
 			}
 			
-			if ((tmpVar==0)){
+			if ((tmpVar==0))
+			{
 				//play with this maaybe no chane in res
 				searchRes=searchRes/2;
-				//	cout<<"addvolume "<<endl;
-				//addVolumeTo4D(model1,*vars);
-				if (searchRes<searchRmax){
+				if (searchRes<searchRmax)
 					gradzero=true;
-				}
-				
 			}
 			
 			if(!gradzero){
@@ -1108,16 +1115,10 @@ const vector<float> & relStd, const  vector<bool> & select, float & searchRes, c
 			res=svectmp;
 			
 			//so that single selects may be used			
-			for (unsigned int i=0; i<svec.size(); i++){
-svectmp.at(i)=svec.at(i)=res.at(i)+gamma*svectmp.at(i);
-				
-	//		svec.at(i)=svectmp.at(i);
-
-				//This changes conjugate gradient to gradient
-			}
+			for (unsigned int i=0; i<svec.size(); i++)
+				svectmp.at(i)=svec.at(i)=res.at(i)+gamma*svectmp.at(i);
 			
 			}
-		//	addVolumeTo4D(model1,*vars);
 		}
 
 
@@ -1155,9 +1156,12 @@ if (verbose.value()) cout<<"read model"<<endl;
 	
 	SmodesM=unwrapMatrix(fmodel->getField("mode0"));
 	ImodesM=unwrapMatrix(fmodel->getField("Imode0"));
+	unsigned int M = static_cast<unsigned int>(fmodel->getField("numSubjects").element(0,0));
+	if (verbose.value()) cout<<"The model was constructed from "<<M<<" training subjects."<<endl;
+
+	unsigned int AllModes=M;
 	
-	
-	for (int i =1; i<MaxModes;i++)
+	for (unsigned int i =1; i<AllModes;i++)
 	{
 		stringstream ss;
 		ss<<i;
@@ -1167,7 +1171,7 @@ if (verbose.value()) cout<<"read model"<<endl;
 		ImodesM=ImodesM | unwrapMatrix(fmodel->getField("Imode"+mode));
 		
 	}
-	if (verbose.value()) cout<<MaxModes<<" modes of variation are retained."<<endl;
+	if (verbose.value()) cout<<AllModes<<" modes of variation are retained."<<endl;
 
 	
 	vector< vector<float > > Smodes = matrixToVector<float>(SmodesM);
@@ -1179,14 +1183,12 @@ if (verbose.value()) cout<<"read model"<<endl;
 	//process rest of information, including intensity variance
 	vector< vector<float > > Iprec = matrixToVector<float>(fmodel->getField("iCondPrec0").t());
 	vector<float > Errs =  vectorToVector<float>(fmodel->getField("ErrPriors0"));
-	vector<float > se =  vectorToVector<float>(fmodel->getField("eigenValues"), MaxModes);
+	vector<float > se =  vectorToVector<float>(fmodel->getField("eigenValues"), AllModes);
 	vector<float > ie =  vectorToVector<float>(fmodel->getField("iCondEigs0"));
 	vector<float > Imean =  vectorToVector<float>(unwrapMatrix(fmodel->getField("Imean")));
 	vector<int> labels =  vectorToVector<int>(fmodel->getField("labels"));
 
 
-	unsigned int M = static_cast<unsigned int>(fmodel->getField("numSubjects").element(0,0));
-	if (verbose.value()) cout<<"The model was constructed from "<<M<<" training subjects."<<endl;
 
 	//have read in all data and store in local structures, now delete the reader.
 	delete fmodel;
@@ -1222,7 +1224,7 @@ int do_work(const string & inname, const string & modelname, const string & mode
 	float searchRes=res_in;	
 	unsigned int refModes=10;
 	shapeModel* model1;//main model
-	shapeModel* modelRef;//used as a reference for intensity
+	shapeModel* modelRef = NULL;//used as a reference for intensity
 
 	//shape model data, used for multiple images
 	vector<float> smean1, smeanRef;
@@ -1241,7 +1243,7 @@ int do_work(const string & inname, const string & modelname, const string & mode
 	
 	if (intref)
 	{
-		modelRef=loadAndCreateShapeModel(modelname2, 10 );
+		modelRef=loadAndCreateShapeModel(modelname2, refModes );
 		if ( multiImageInput )
 		{
 			smeanRef=modelRef->smean;
@@ -1352,7 +1354,7 @@ int do_work(const string & inname, const string & modelname, const string & mode
 		}
 		
 			modelRef->registerModel(fmatv);
-			
+			cout<<"done registering model"<<endl;
 			vector<float> varsRef;
 			for (unsigned int i=0; i < refModes;i++)
 				varsRef.push_back(0);
@@ -1365,6 +1367,7 @@ int do_work(const string & inname, const string & modelname, const string & mode
 				
 			}
 			conjGradient(image, *modelRef,varsRef, relStdRef, selectRef, searchRes, 0.15);
+			//Has fit reference model
 			vector<float> shape = modelRef->getDeformedGrid(varsRef);
 			
 			int bounds[6]={0,0,0,0,0,0};
@@ -1374,7 +1377,7 @@ int do_work(const string & inname, const string & modelname, const string & mode
 			vector<float> v_intens;
 			intensity_hist(image,mask,shape,modelRef->getLabel(0),v_intens, bounds);
 			
-			if (v_intens.size()<=1)
+			if (v_intens.size()<1)
 				throw firstException("WARNING: NO INTERIOR VOXELS TO ESTIMATE MODE");
 			float mode_val=mode(v_intens);
 			
@@ -1385,9 +1388,8 @@ int do_work(const string & inname, const string & modelname, const string & mode
 			model1->setMode(mode_val);
 		}
 		
-			//------------------------SET UP NCESSARU VECTORS ----------------------//
+			//------------------------SET UP NECESSARY VECTORS ----------------------//
 
-		//this used for wbir	
 		vector<float> vars;
 		for (unsigned int i=0; i<MaxModes;i++)
 			vars.push_back(0);
@@ -1401,13 +1403,15 @@ int do_work(const string & inname, const string & modelname, const string & mode
 			
 		}
 			//-----------------------------LOAD PREVIOUS SEGMENTATION-----------------------//			
-		  if (loadbvars){
+		  if (loadbvars)
+		  {
 			if (verbose.value()) cout<<"Loads previous mode parameters."<<endl;
 		     read_bvars(bvarsname,vars,model1->smodes.size());
 		  }
 				//-------------------------SET UP CONDITIONAL IF NEEDED ----------------------//
 
-		  if (shcond){
+		  if (shcond)
+		  {
 			  	cout<<"shcond"<<endl;
 			  int M;
 			  Matrix mBx2;
@@ -1437,12 +1441,12 @@ int do_work(const string & inname, const string & modelname, const string & mode
 			  v_cmean=bTransform(vars,mBx2,M);
 			  			  	cout<<"shcond6"<<endl;
 
-			  for (int i=0;i<static_cast<int>(vars.size());i++)
-				  if (i<nmodes){
-					  vars.at(i)=v_cmean.at(i);
-				  }else{
-					  vars.at(i)=0;
-				  }
+			  for (unsigned int i=0;i<vars.size();i++)
+			    if (i<(unsigned)nmodes){
+			      vars.at(i)=v_cmean.at(i);
+			    }else{
+			      vars.at(i)=0;
+			    }
 			 
 		  }
 

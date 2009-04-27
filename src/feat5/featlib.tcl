@@ -3235,7 +3235,7 @@ balloonhelp_for $w0.evsnb.gammasigma$i "This sets the half-width of the Gamma sm
 LabelSpinBox  $w0.evsnb.gammadelay$i -textvariable fmri(gammadelay$i) -label "    Mean lag (s)" -range {0.01 10000 0.1 }  
 balloonhelp_for $w0.evsnb.gammadelay$i "This sets the mean lag of the Gamma smoothing of the input waveform."
 
-FileEntry $w0.evsnb.bfcustom$i -textvariable fmri(bfcustom$i) -label "    Filename" -title "Select a custom HRF convolution file" -width 30 -filedialog directory  -filetypes * -command "feat5:checkbfcustom $w $i"
+FileEntry $w0.evsnb.bfcustom$i -textvariable fmri(bfcustom$i) -label "    Filename" -title "Select a custom HRF convolution file" -width 30 -filedialog directory  -filetypes * -command "feat5:checkbfcustom $w $i dummy; feat5:setup_model_update_contrasts $w"
 
 label $w0.evsnb.bfcustomlabel$i -text "      (create a custom optimal basis set with Utils->Make_flobs)"
 
@@ -3436,7 +3436,6 @@ proc feat5:setup_model_update_contrasts_real_per_orig { w } {
 
 proc feat5:setup_model_update_contrasts_mode { w update_gui } {
     global fmri
-
     # if called from feat5:write, will have been called with mode=C
     if { ! $update_gui } {
 	set fmri(con_mode_old) c
@@ -3460,7 +3459,6 @@ proc feat5:setup_model_update_contrasts_mode { w update_gui } {
 
 	    if { $real_per_orig > 0 } {
 		#{{{ do the case of basis functions or sinusoidal harmonics
-
 set fmri(ncon_real)    [ expr $real_per_orig * $fmri(ncon_orig) ]
 set fmri(nftests_real) [ expr $fmri(nftests_orig) + $fmri(ncon_orig) ]
 
@@ -3548,7 +3546,7 @@ set fmri(nftests_real) $fmri(nftests_orig)
 #}}}
 #{{{ feat5:setup_model_update_contrasts
 
-proc feat5:setup_model_update_contrasts { w } {
+proc feat5:setup_model_update_contrasts { w { dummy dummy } } {
     global fmri
 
     #{{{ setup evs_real etc/
@@ -3582,7 +3580,6 @@ if { $fmri(level) == 1 } {
 }
 
 #}}}
-
     for { set i 1 } { $i <= $fmri(ncon_$fmri(con_mode)) } { incr i 1 } {
 	if { ! [ info exists fmri(conpic_$fmri(con_mode).$i) ] } {
 	    set fmri(conpic_$fmri(con_mode).$i) 1
@@ -3890,7 +3887,7 @@ pack $w0.ok $w0.zeros -in $w0 -side bottom -padx 3 -pady 5
 #}}}
 #{{{ feat5:checkbfcustom
 
-proc feat5:checkbfcustom { w i } {
+proc feat5:checkbfcustom { w i dummy } {
     global fmri
 
     if { [ string compare [ file extension $fmri(bfcustom$i) ] .flobs ] == 0 } {
@@ -4456,10 +4453,7 @@ optionMenu2 $fmri(temp).tcmenu fmri(tagfirst) 1 "First timepoint is tag" 0 "Firs
 label $fmri(temp).hplabel -text "Highpass"
 checkbutton $fmri(temp).hp_yn -variable fmri(temphp_yn)
 
-label $fmri(temp).lplabel -text "Lowpass"
-checkbutton $fmri(temp).lp_yn -variable fmri(templp_yn)
-
-pack $fmri(temp).label $fmri(temp).pslabel $fmri(temp).ps_yn $fmri(temp).hplabel $fmri(temp).hp_yn $fmri(temp).lplabel $fmri(temp).lp_yn -in $fmri(temp) -side top -side left
+pack $fmri(temp).label $fmri(temp).pslabel $fmri(temp).ps_yn $fmri(temp).hplabel $fmri(temp).hp_yn -in $fmri(temp) -side top -side left
 if { ! $fmri(inmelodic) } {
     balloonhelp_for $fmri(temp) "\"Perfusion subtraction\" is a pre-processing step for perfusion FMRI
 (as opposed to normal BOLD FMRI) data. It subtracts even from odd
@@ -4483,11 +4477,6 @@ manual for more information.
 remove low frequency artefacts. This is preferable to sharp rolloff
 FIR-based filtering as it does not introduce autocorrelations into the
 data.
-
-\"Lowpass\" temporal filtering reduces high frequency noise by Gaussian
-smoothing (sigma=2.8s), but also reduces the strength of the signal of
-interest, particularly for single-event experiments. It is not
-generally considered to be helpful, so is turned off by default.
 
 By default, the temporal filtering that is applied to the data will also be
 applied to the model."
@@ -5483,6 +5472,7 @@ proc feat5:proc_film { session } {
     }
 
     new_file stats
+    
     fsl:exec "$FSLDIR/bin/film_gls -rn stats $film_opts filtered_func_data design.mat $absbrainthresh"
 
     if { ! [ imtest stats/pe1 ] } {
@@ -6579,15 +6569,15 @@ switch $fmri(mixed_yn) {
 	    set zut 20
 	}
 	set FLAME "$FLAME --runmode=flame12 --nj=10000 --bi=500 --se=1 --fm --zlt=$zlt --zut=$zut"
-	set ps "$ps FLAME (FMRIB's Local Analysis of Mixed Effects) stage 1 and stage 2${ROBUST} \[Beckmann 2003, Woolrich 2004\]."
+	set ps "$ps FLAME (FMRIB's Local Analysis of Mixed Effects) stage 1 and stage 2${ROBUST} \[Beckmann 2003, Woolrich 2004, Woolrich 2008\]."
     }
     2 {
 	set FLAME "$FLAME --runmode=flame1"
-	set ps "$ps FLAME (FMRIB's Local Analysis of Mixed Effects) stage 1${ROBUST} \[Beckmann 2003, Woolrich 2004\]."
+	set ps "$ps FLAME (FMRIB's Local Analysis of Mixed Effects) stage 1${ROBUST} \[Beckmann 2003, Woolrich 2004, Woolrich 2008\]."
     }
     3 {
 	set FLAME "$FLAME --runmode=fe"
-	set ps "$ps a fixed effects model, by forcing the random effects variance to zero in FLAME (FMRIB's Local Analysis of Mixed Effects) \[Beckmann 2003, Woolrich 2004\]."
+	set ps "$ps a fixed effects model, by forcing the random effects variance to zero in FLAME (FMRIB's Local Analysis of Mixed Effects) \[Beckmann 2003, Woolrich 2004, Woolrich 2008\]."
     }
 }
 
@@ -6601,13 +6591,12 @@ if { $fmri(evs_vox) > 0 } {
     set FLAME "$FLAME --voxelwise_ev_numbers=${EVNUMS} --voxelwise_ev_filenames=${EVNAMES}"
 }
 
-if { $fmri(mixed_yn) != 0 } {
     set rs "<p><b>References</b><br>
 \[<a href=\"http://www.fmrib.ox.ac.uk/analysis/techrep/#TR01CB1\">Beckmann 2003</a>\] C. Beckmann, M. Jenkinson and S.M. Smith. General multi-level linear modelling for group analysis in FMRI. NeuroImage 20(1052-1063) 2003.<br>
 \[<a href=\"http://www.fmrib.ox.ac.uk/analysis/techrep/#TR03MW1\">Woolrich 2004</a>\] M.W. Woolrich, T.E.J Behrens, C.F. Beckmann, M. Jenkinson and S.M. Smith. Multi-level linear modelling for FMRI group analysis using Bayesian inference. NeuroImage 21:4(1732-1747) 2004<br>
 \[Woolrich 2008\] M.W. Woolrich. Robust Group Analysis Using Outlier Inference. NeuroImage 41:2(286-301) 2008<br>
 "
-}
+
 
 set NumPoints [ exec sh -c "grep NumPoints design.mat | awk '{ print \$2 }'" ]
 set NumWaves  [ exec sh -c "grep NumWaves  design.mat | awk '{ print \$2 }'" ]
@@ -6876,7 +6865,7 @@ proc feat5:proc_stop { } {
 
     cd $fmri(outputdir)
 
-    catch { exec sh -c "grep -i 'error' logs/* | wc -l" } errorCount 
+    catch { exec sh -c "grep -i '\<error\>' logs/* | wc -l" } errorCount 
     catch { exec sh -c "cat logs/* > report_log.html" } putserr
 
     if { $errorCount == 0 } { feat5:report_insert report.html running "Finished at [exec date]" } else {
