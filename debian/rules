@@ -12,14 +12,15 @@ include /usr/share/octave/debian/defs.make
 export DH_OPTIONS
 
 # specify all FSL projects that shall be built
-PROJECTS = miscmaths newimage libhfunc libvis meshclass fslvtkio \
-           misc_tcl basisfield warpfns bint shapeModel avwutils bet2 cluster \
-           fast4 feat5 film filmbabe flirt fabber fslpres fslvbm mcflirt \
-           melodic misc_c miscvis mm randomise siena slicetimer susan tbss \
-           fnirt fugue fdt first possum sgeutils flameo
+PROJECTS = \
+  utils fslio miscmaths newimage libhfunc libvis first_lib meshclass fslvtkio \
+  misc_tcl basisfield warpfns bint shapeModel MVdisc libmeshutils \
+  avwutils bet2 cluster fast4 feat5 film filmbabe flirt fabber fslpres fslvbm \
+  mcflirt melodic misc_c miscvis mm randomise siena slicetimer susan tbss \
+  fnirt fugue fdt first possum sgeutils flameo
 
 # specify FSL extras to be built
-EXTRAS = libprob libcprob
+EXTRAS = libprob libcprob cprob
 
 # set essential config vars for FSL build process
 FSLDIR=$(CURDIR)
@@ -58,6 +59,7 @@ DEB_BUILD_ENV=LD_LIBRARY_PATH=$(FSL_LIBRARY_PATH)$${LD_LIBRARY_PATH:+:$${LD_LIBR
 		DEB_DESTDIR="$(DEB_DESTDIR)" \
 		OPTFLAGS="$(OPTFLAGS)" \
 		ANSI_FLAGS="$(CFLAGS)" \
+		DEPENDFLAGS="$(CFLAGS)" \
 		ARCHLDFLAGS="$(LDFLAGS)"
 
 # build and install extra
@@ -127,7 +129,7 @@ clean: cextras cprojs
 	# remove leftovers
 	find $(CURDIR) -name '*.so' -exec rm {} \;
 	-rm src/fdt/{xfibres,fdt_matrix_ops,indexer,replacevols,probtrackx,reord_OM,sausages,probtrack_old}
-	-rm src/feat5/doc/{feat.tcl,top.html}
+	-rm src/feat5/doc/feat.tcl
 	-rm -r etc/standard lib
 
 	# clean the remaining temp dir
@@ -151,9 +153,6 @@ install: build
 	# make FSL logo for menu entries
 	convert debian/tmp/tcl/fsl-logo-tiny.ppm \
 		-resize x32 -crop 32x32+6+0 debian/tmp/fsl.xpm
-	
-	# install fslio scripts
-	install -p -t debian/tmp/bin -m 0755 src/fslio/im* src/fslio/remove_ext
 	
 	# install fsl config
 	cp -r -t debian/tmp etc
@@ -179,7 +178,7 @@ binary-common:
 	dh_fixperms
 	dh_installdeb
 	# dh_shlibdeps needs access to the private libs
-	LD_LIBRARY_PATH=$(FSL_LIBRARY_PATH):/usr/lib/fsl/lib$${LD_LIBRARY_PATH:+:$${LD_LIBRARY_PATH}} dh_shlibdeps
+	dh_shlibdeps -l $(FSL_LIBRARY_PATH)
 	# get the correct dependency for octave
 	octave-depends
 	dh_gencontrol
@@ -226,4 +225,3 @@ binary-arch: install
 
 binary: binary-arch binary-indep
 .PHONY: build clean binary-indep binary-arch binary
-

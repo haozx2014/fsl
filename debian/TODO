@@ -1,1 +1,3 @@
 * Make FSL use Debian bwidget package, but bwextras are not available ATM.
+
+* Turn recent library additions into shared libs.

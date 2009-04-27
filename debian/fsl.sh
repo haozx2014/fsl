@@ -58,7 +58,7 @@ export FSLLOCKDIR FSLMACHINELIST FSLREMOTECALL
 ###################################################
 
 # Configure the linker search path for Debian FSLs internal shared libraries
-LD_LIBRARY_PATH=/usr/lib/fsl:/usr/lib/fsl/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+LD_LIBRARY_PATH=/usr/lib/fsl${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 export LD_LIBRARY_PATH
 
 
