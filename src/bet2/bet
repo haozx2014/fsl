@@ -169,10 +169,10 @@ bet2opts=""
 # {{{ parse options
 
 while [ _$1 != _ ] ; do
-    if [ $1 = -o -o $1 = -m -o $1 = -s -o $1 = -n -o $1 = -t -o $1 = -e ] ; then
+    if [ $1 = -o ] || [ $1 = -m ] || [ $1 = -s ] || [ $1 = -n ] || [ $1 = -t ] || [ $1 = -e ] ; then
         bet2opts="$bet2opts $1"
         shift
-    elif [ $1 = -f -o $1 = -g -o $1 = -r ] ; then
+    elif [ $1 = -f ] || [ $1 = -g ] || [ $1 = -r ] ; then
 	[ "$2" = "" ] && Usage
         bet2opts="$bet2opts $1 $2"
         shift 2
@@ -247,7 +247,7 @@ while [ $i -gt 0 ] ; do
 	find_centre_in_voxels $OUT
 	diffsq=`echo "0 k $ox $x - 2 ^ $oy $y - 2 ^ + $oz $z - 2 ^ + 1 / p" | dc -`
 	#echo $diffsq
-	if [ $diffsq -lt 1 -o $i -gt 10 ] ; then
+	if [ $diffsq -lt 1 ] || [ $i -gt 10 ] ; then
 	    i=_10
 	fi
     fi
@@ -365,7 +365,7 @@ elif [ $variation = 7 ] ; then
 ${FSLDIR}/bin/standard_space_roi $IN ${OUT}_tmp_premask -b -d
 
 #### run FAST to get bias field
-${FSLDIR}/bin/fast -b ${OUT}_tmp_premask >& /dev/null
+${FSLDIR}/bin/fast -b ${OUT}_tmp_premask >/dev/null 2>&1
 
 #### apply bias correction to original
 ${FSLDIR}/bin/fslmaths $IN -div ${OUT}_tmp_premask_bias ${OUT}_tmp_unbiased

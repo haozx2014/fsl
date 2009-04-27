@@ -323,23 +323,23 @@ int concat_warps(const volume4D<float>& prewarp,
   // all warps are in absolute convention
   totalwarp = postwarp;  // set size
   totalwarp = 0.0;
-  ColumnVector xmid(4), xpre(4);
+  ColumnVector xmid(4), xmid_vox(4), xpre(4);
   Matrix extrap_aff;
   extrap_aff = best_fit_aff(prewarp);
-  xmid(4) = 1.0;  xpre(4)=1.0;
+  xmid(4) = 1.0; xmid_vox(4)=1.0; xpre(4)=1.0;
   for (int z=postwarp.minz(); z<=postwarp.maxz(); z++) {
     for (int y=postwarp.miny(); y<=postwarp.maxy(); y++) {
       for (int x=postwarp.minx(); x<=postwarp.maxx(); x++) {
 	xmid(1) = postwarp[0](x,y,z);
 	xmid(2) = postwarp[1](x,y,z);
 	xmid(3) = postwarp[2](x,y,z);
-	if (prewarp.in_bounds((float) xmid(1),(float) xmid(2),(float) xmid(3))) {
-	  // convert xmid from mm to voxels (of prewarp image)
-	  xmid = prewarp[0].sampling_mat().i() * xmid;
+	// convert xmid from mm to voxels (of prewarp image)
+	xmid_vox = prewarp[0].sampling_mat().i() * xmid;
+	if (prewarp.in_bounds((float) xmid_vox(1),(float) xmid_vox(2),(float) xmid_vox(3))) {
 	  // look up the coordinates in prewarp
-	  xpre(1) = prewarp[0].interpolate(xmid(1),xmid(2),xmid(3));
-	  xpre(2) = prewarp[1].interpolate(xmid(1),xmid(2),xmid(3));
-	  xpre(3) = prewarp[2].interpolate(xmid(1),xmid(2),xmid(3));
+	  xpre(1) = prewarp[0].interpolate(xmid_vox(1),xmid_vox(2),xmid_vox(3));
+	  xpre(2) = prewarp[1].interpolate(xmid_vox(1),xmid_vox(2),xmid_vox(3));
+	  xpre(3) = prewarp[2].interpolate(xmid_vox(1),xmid_vox(2),xmid_vox(3));
 	} else {
 	  // alternative interpolation for warp fields
 	  xpre = extrap_aff * xmid;

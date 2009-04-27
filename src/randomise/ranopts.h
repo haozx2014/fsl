@@ -97,6 +97,7 @@ class ranopts {
   Option<bool> parallelData;
   Option<int> n_perm;
   Option<bool> voxelwiseOutput;
+  Option<bool> doFOnly;
   Option<bool> tfce;
   Option<bool> tfce2D;
   Option<float> cluster_thresh;
@@ -110,13 +111,17 @@ class ranopts {
   Option<bool> help;
   Option<bool> verbose;
   Option<bool> cluster_norm;
+  Option<bool> outputRaw;
   Option<bool> outputText;
   Option<bool> output_permstat;
-  Option<string> logdir;
-  Option<int> confoundMethod;
   Option<int> randomSeed;
   Option<vector<int> > voxelwise_ev_numbers;
   Option<vector<string> > voxelwise_ev_filenames;
+  Option<int> nMultiVariate;
+  Option<bool> isDebugging;
+  Option<int> confoundMethod;
+  Option<bool> detectNullSubjects;
+  Option<bool> verbose_old;
 
   void parse_command_line(int argc, char** argv,Log& logger);
   
@@ -178,6 +183,9 @@ class ranopts {
    voxelwiseOutput(string("-x"),false,
 	    string("\toutput voxelwise (corrected and uncorrected) p-value images"),
 		 false, no_argument),  
+   doFOnly(string("--fonly"), false, 
+	   string("\tcalculate f-statistics only"), 
+	   false, no_argument),
    tfce(string("-T"), false, 
 	   string("\tcarry out Threshold-Free Cluster Enhancement"), 
 	   false, no_argument),
@@ -205,38 +213,48 @@ class ranopts {
    help(string("-h,--help"), false,
 	string("display this message"),
 	false, no_argument),
-   verbose(string("-V"), false, 
-	   string("\tswitch on diagnostic messages"),
+   verbose(string("--quiet"), true, 
+	   string("\tswitch off diagnostic messages"),
 	   false, no_argument),
    cluster_norm(string("-N"), false, 
 	   string("\tcarry out cluster normalisation thresholding"), 
 		false, no_argument,false),
+   outputRaw(string("-R"), false, 
+	   string("\toutput raw ( unpermuted ) statistic images"), 
+		false, no_argument),
    outputText(string("-P"), false, 
 	   string("\toutput permutation vector and null distribution text files"), 
 		false, no_argument),
    output_permstat(string("--permout"), false, 
 	   string("\toutput permuted tstat"), 
 		false, no_argument,false),
-   logdir(string("-l"), string("logdir"),
-	    string("~<logdir>\tlog directory"),
-	  false, requires_argument,false),  
-   confoundMethod(string("-U"),1,
-	    string("~<mode>\tconfound mode. 0: Use unconfounded design (old default). 1: Use original design. (new default) 2: Use confounded design concatenated with confound matrix. caution BETA option."),
-		 false, requires_argument), 
    randomSeed(string("--seed"),0,
 	    string("~<seed>\tspecific integer seed for random number generator"),
 		 false, requires_argument),
    voxelwise_ev_numbers(string("--vxl"), vector<int>(), 
          string("\tlist of numbers indicating voxelwise EVs position in the design matrix (list order corresponds to files in vxf option). caution BETA option."), 
          false, requires_argument),
-    voxelwise_ev_filenames(string("--vxf"), vector<string>(), 
+   voxelwise_ev_filenames(string("--vxf"), vector<string>(), 
          string("\tlist of 4D images containing voxelwise EVs (list order corresponds to numbers in vxl option). caution BETA option."), 
          false, requires_argument),
+   nMultiVariate(string("--multi"),1,
+	    string("~<dim>\tmultivariate dimension (default 1). caution BETA option."),
+		 false, requires_argument, false),
+   isDebugging(string("--debug"), false, 
+	   string("\tOutput debug information"),
+	       false, no_argument,false),
+   confoundMethod(string("-U"),1,
+	    string("~<mode>\tconfound mode. 0: Kennedy Y_a on X_a (old) 1: Freedman-Lane Y_a on X|Z (default) 2: Y on X|Z. Caution BETA option."),
+		  false, requires_argument, false),
+   detectNullSubjects(string("--detectNull"), false, 
+	   string("attempt to detect uninformative rows in the effective regressor and not permute them"), 
+		      false, no_argument, false),
+   verbose_old(string("-V"), false, 
+	   string("\tswitch on diagnostic messages (deprecated: now always on unless quiet)"),
+	       false, no_argument, false),
 
 
-
-
-   options("randomise v2.1", "randomise -i <input> -o <output> -d <design.mat> -t <design.con> [options]")
+   options("randomise v2.5", "randomise -i <input> -o <output> -d <design.mat> -t <design.con> [options]")
      {
     
      try {
@@ -252,7 +270,8 @@ class ranopts {
        options.add(how_many_perms);
        options.add(parallelData);
        options.add(n_perm);    
-       options.add(voxelwiseOutput);     
+       options.add(voxelwiseOutput);   
+       options.add(doFOnly);
        options.add(tfce);
        options.add(tfce2D);
        options.add(cluster_thresh);
@@ -263,16 +282,20 @@ class ranopts {
        options.add(help);
        options.add(verbose);
        options.add(cluster_norm);
+       options.add(outputRaw);
        options.add(outputText);
        options.add(output_permstat);
-       options.add(logdir);
-       options.add(confoundMethod);
        options.add(randomSeed);
-       options.add(voxelwise_ev_numbers);
-       options.add(voxelwise_ev_filenames);
        options.add(tfce_height);     
        options.add(tfce_size);     
-       options.add(tfce_connectivity);  
+       options.add(tfce_connectivity); 
+       options.add(voxelwise_ev_numbers);
+       options.add(voxelwise_ev_filenames); 
+       options.add(nMultiVariate); 
+       options.add(isDebugging);
+       options.add(confoundMethod);
+       options.add(detectNullSubjects);
+       options.add(verbose_old);
      }
      catch(X_OptionError& e) {
        options.usage();

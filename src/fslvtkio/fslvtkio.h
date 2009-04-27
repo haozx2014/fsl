@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <algorithm>
 #include "meshclass/meshclass.h"
+#include "first_lib/first_newmat_vec.h"
+
 //using namespace std;
 //using namespace mesh;
 
@@ -41,11 +43,14 @@ public:
 		~fslvtkIO();
 
 		
-		//----------------------SET COMMANDS----------------------------//
+		//----------------------SET COMMANDS-------------------------//
 		void setPoints(const Matrix & pts);
 		void setPoints(const vector<float> & pts);
 		void setCells(const vector< vector<unsigned int> > & c){ Cells=c; }
 		void setCells(const vector< vector<unsigned int> > & c, const vector<short> & c_t ){ Cells=c; Cell_Types=c_t; }
+		
+		void appendPointsAndPolygons(const Matrix & pts, const Matrix & Polygons);
+
 
 		void setPolygons(const Matrix& m){ Polygons=m; }
 		void setPolygons(const vector< vector<unsigned int> >& vm);
@@ -56,8 +61,6 @@ public:
 		void setVectors(const Matrix & vecs,const string &name);
 		void setVectors(const Matrix& m){ Vectors=m; }
 
-		
-		
 		template<class T>
 		void setScalars(const vector<T> & sc);
 		
@@ -74,11 +77,14 @@ public:
 		Matrix getPointsAsMatrix() const { return Points; }
 		
 		template<class T>
-		vector<T> getPointsAsVector();
+		std::vector<T> getPointsAsVector();
 		
 		template<class T>
-		vector< vector<T> > getPointsAsVectorOfVectors();
-		
+		std::vector< std::vector<T> > getPointsAsVectorOfVectors(){ return FIRST_LIB::first_newmat_vector::matrixToVectorOfVectors<T>(Points); }
+			
+		template<class T>
+		std::vector< std::vector<T> > getPolygonsAsVectorOfVectors(){ return FIRST_LIB::first_newmat_vector::matrixToVectorOfVectors<T>(Polygons); }
+
 		ReturnMatrix getPolygons() const { return Polygons; };
 		vector< vector<unsigned int> > getCells() const { return Cells; }
 		vector<short> getCellTypes() const { return Cell_Types; }
@@ -86,26 +92,40 @@ public:
 		string getFieldName(const int & ind) const { return fieldDataNumName.at(ind); };
 		unsigned int getNumberOfFields() const { return fieldDataNumName.size(); };
 		Matrix getField(const string & name); 
-	
-
+		
 		ReturnMatrix getScalars(){ return Scalars; }
 		ReturnMatrix getVectors(){ return Vectors; }
-
-	
+		
+		
 		//----------------------I/O COMMANDS----------------------------//
 		template<class T>
-		void writePoints(ofstream & fshape, const string & str_typename);
+			void writePoints(ofstream & fshape, const string & str_typename);
 		void writePolygons(ofstream & fshape);
 		void writeCells(ofstream & fshape);
-		void writeUnstructuredGridCells(ofstream & fshape);
+		//void writeUnstructuredGridCells(ofstream & fshape);
 		void writeUnstructuredGridCellTypes(ofstream & fshape);
 		void save(string s);
 		
 		void readUnstructuredGrid(string fname);
 		void readPolyData(string fname);
+		template<class T>
+			void writePointData(ofstream & fshape, const string & str_typename );
+		
+		template <class T>
+			void writeNumericField(ofstream & fvtk, const string & name, const string & type, const Matrix & Data);
+		void writeStringField(ofstream & fvtk, const string & name, const vector<string> & v_string);
+		
+		void readFieldData(ifstream & fvtk);
+		void readPointData(ifstream & fvtk, string & nextData);
+		bool  readPoints(ifstream & fvtk);
+		bool  readPolygons(ifstream & fvtk);
+		
+		template <class T>
+			ReturnMatrix readField(ifstream & fvtk, const int & nrows,const int & mcols);
+		
+		void displayNumericFieldDataNames(); 				
+				void displayNumericField(const string & name);
 
-		
-		
 		//----------------------SETTING/ACCESS OF STATE VARIABLES----------------------------//
 		void setSwitchRowsCols(bool n) { SWITCH_ROWS_COLS=n; }
 
@@ -137,7 +157,7 @@ private:
 				bool MAX_SET; //is a max number of columns imposed
 				bool SWITCH_ROWS_COLS;//SWITCHES THE COLUMN/ROWS , USED FOR FIXING OLD FILES
 
-				
+				unsigned int ST_COUNT;
 	
 					unsigned int MAX;
 					DataType dt;//i.e. POLYDATA
@@ -146,21 +166,7 @@ private:
 						
 						
 						//----------------------READ COMMANDS----------------------------//
-						void readFieldData(ifstream & fvtk);
-						void readPointData(ifstream & fvtk, string & nextData);
-						bool  readPoints(ifstream & fvtk);
-						bool  readPolygons(ifstream & fvtk);
-						
-						template <class T>
-							ReturnMatrix readField(ifstream & fvtk, const int & nrows,const int & mcols);
-						
-						template<class T>
-							void writePointData(ofstream & fshape, const string & str_typename );
-						
-						template <class T>
-							void writeNumericField(ofstream & fvtk, const string & name, const string & type, const Matrix & Data);
-						void writeStringField(ofstream & fvtk, const string & name, const vector<string> & v_string);
-						
+							
 						//----------------------DATA----------------------------//
 						
 						//point data
