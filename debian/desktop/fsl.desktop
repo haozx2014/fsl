@@ -1,7 +1,7 @@
 [Desktop Entry]
 Encoding=UTF-8
 GenericName=Software Collection for (f)MRI Data Analysis
-GenericName[de]=Software-Kollektion zur (f)MRT-Daten Analyse 
+GenericName[de]=Software-Kollektion zur (f)MRT-Daten Analyse
 Name=FSL
 Exec=fsl
 TryExec=fsl

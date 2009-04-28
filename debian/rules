@@ -153,7 +153,7 @@ install: build
 	# make FSL logo for menu entries
 	convert debian/tmp/tcl/fsl-logo-tiny.ppm \
 		-resize x32 -crop 32x32+6+0 debian/tmp/fsl.xpm
-	
+
 	# install fsl config
 	cp -r -t debian/tmp etc
 	# clean useless pieces
@@ -189,20 +189,20 @@ binary-common:
 # Build architecture independent packages using the common target.
 binary-indep: install
 	dh_installdirs -i
-	
+
 	# install docs (except images which are in fsl package)
 	cp -r doc/!(images) debian/fsl-doc/usr/share/fsl/doc
 	# wipe installer script - useless on Debian
 	rm debian/fsl-doc/usr/share/fsl/doc/fsl/fsl_installer.sh
-	
+
 	# cleanup doc path
 	rm debian/tmp/doc/feat5/DO
 	-rm debian/tmp/doc/fsl/fsl_installer.sh
-	
+
 	# clean empty dirs from doc package
 	find debian/fsl-doc/usr/share/fsl/doc -depth -type d -empty -exec rmdir {} \;
 	find debian/tmp/doc -depth -type d -empty -exec rmdir {} \;
-	
+
 	$(MAKE) -f debian/rules DH_OPTIONS=-i binary-common
 
 

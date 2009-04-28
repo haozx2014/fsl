@@ -1,6 +1,6 @@
-# FSL configuration file 
+# FSL configuration file
 #  - to be sourced by the user, typically in .bashrc or equivalent
-#  - note that the user should set 
+#  - note that the user should set
 
 # Written by Mark Jenkinson, FMRIB Analysis Group, University of Oxford
 # Modified for Debian by Michael Hanke <michael.hanke@gmail.com>
@@ -27,7 +27,7 @@ export PATH
 FSLOUTPUTTYPE=NIFTI_GZ
 export FSLOUTPUTTYPE
 
-# Comment out the definition of FSLMULTIFILEQUIT to enable 
+# Comment out the definition of FSLMULTIFILEQUIT to enable
 #  FSL programs to soldier on after detecting multiple image
 #  files with the same basename ( e.g. epi.hdr and epi.nii )
 FSLMULTIFILEQUIT=TRUE ; export FSLMULTIFILEQUIT

@@ -12,7 +12,7 @@ transference as long as there is no financial return (see license below).
 FSL license
 -----------
 
-FMRIB Software Library, Release 4.0 (c) 2007, The University of Oxford
+FMRIB Software Library, Release 4.1 (c) 1999-2009, The University of Oxford
 (the "Software")
 
 The Software remains the property of the University of Oxford ("the
@@ -244,11 +244,11 @@ for references.
 
 Here is a verbatim copy of the statement:
 
-  This email from Steve Moshier, the copyright owner of cephes, to Helen 
-  Faulkner (Debian maintainer of labplot), and other interested parties 
-  (labplot and grace authors, grace maintainer and labplot sponsor), confirms 
+  This email from Steve Moshier, the copyright owner of cephes, to Helen
+  Faulkner (Debian maintainer of labplot), and other interested parties
+  (labplot and grace authors, grace maintainer and labplot sponsor), confirms
   that we may release labplot with cephes licensed under the GPL.
- 
+
 
   -------- Original Message --------
   Subject: Re: licensing of cephes
@@ -257,14 +257,14 @@ Here is a verbatim copy of the statement:
   To: Helen Faulkner <helen_ml_faulkner@yahoo.co.uk>
   CC: twerner@debian.org, Ben Burton <bab@debian.org>, evgeny@stambulchik.net,
   Stefan Gerlach <gerlach@mbi-berlin.de>
-  References: <41D14354.4040506@yahoo.co.uk> 
-  <Pine.LNX.4.58.0412280836250.9987@moshier.net> 
+  References: <41D14354.4040506@yahoo.co.uk>
+  <Pine.LNX.4.58.0412280836250.9987@moshier.net>
   <41D17BE3.3020708@yahoo.co.uk>
-  <Pine.LNX.4.58.0412281219420.10873@moshier.net> 
-  <41D1FB8D.6030002@yahoo.co.uk> 
-  <Pine.LNX.4.58.0412291032190.15474@moshier.net> 
-  <41D2D8EF.9010702@yahoo.co.uk> 
-  <Pine.LNX.4.58.0412291632540.17032@moshier.net> 
+  <Pine.LNX.4.58.0412281219420.10873@moshier.net>
+  <41D1FB8D.6030002@yahoo.co.uk>
+  <Pine.LNX.4.58.0412291032190.15474@moshier.net>
+  <41D2D8EF.9010702@yahoo.co.uk>
+  <Pine.LNX.4.58.0412291632540.17032@moshier.net>
   <41D41B2E.80508@yahoo.co.uk>
 
 

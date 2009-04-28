@@ -9,7 +9,7 @@ set -e
 # Move a conffile. In case of an unmodified file simply
 # remove it to not trigger dpkg questions.
 # However, if the file is modified this question should occur.
-mv_conffile() 
+mv_conffile()
 {
     CONFFILE="$1"
     NEWLOCATION="$2"
@@ -30,13 +30,13 @@ case "$1" in
         if dpkg --compare-versions "$2" le "3.3.11-2"; then
             if [ -e /etc/fsl/fsl.conf ]; then
                 echo "Moving old FSL configuration to /etc/fsl/fsl.sh."
-            
-                if [ ! -d /etc/fsl ]; then 
+
+                if [ ! -d /etc/fsl ]; then
                     mkdir /etc/fsl
                 fi
-            
+
                 mv_conffile "/etc/fsl/fsl.conf" "/etc/fsl/fsl.sh"
-            fi	
+            fi
         fi
     ;;
 
