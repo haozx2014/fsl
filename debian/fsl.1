@@ -1,25 +1,29 @@
-.TH "FSL" "1" "October 2005" "Michael Hanke" ""
+.TH "FSL" "1" "April 2009" "Michael Hanke" ""
 .SH "NAME"
 fsl \- analysis tools for FMRI, MRI and DTI brain imaging
 .SH "DESCRIPTION"
-\fBFSL\fR is a comprehensive toolkit for the analysis of medical brain imaging data. 
-It provides tools for data preprocessing, brain extraction, image registration 
-as well as statistical analysis. \fBFSL\fR provides an easy to use GUI.
+\fBFSL\fR is a comprehensive toolkit for the analysis of medical brain
+imaging data.  It provides tools for data preprocessing, brain
+extraction, image registration as well as statistical analysis.
+\fBFSL\fR provides an easy to use GUI.
 .PP
-\fBFSL\fR requires a number of environment variables to be set properly. To achieve this 
-source the config script from /etc/fsl/fsl.sh. 
-One way to do this automatically is to add a line containing 
-.IP  
+\fBFSL\fR requires a number of environment variables to be set properly.
+To achieve this source the config script from /etc/fsl/fsl.sh.  One way
+to do this automatically is to add a line containing
+.IP
  \. /etc/fsl/fsl.sh
 .PP
-to the .bashrc file in a users home directory (or a corresponding file for other shells than bash).
+to the .bashrc file in a users home directory (or a corresponding file
+for other shells than bash).
 .PP
-However, it is not necessary to manually source the configuration to use the GUI applications
-included in FSL.
+However, it is not necessary to manually source the configuration to use
+the GUI applications included in FSL.
 .PP
-\fBFSL\fR documentation and online help is provided by the \fBfsl-doc\fR package.
+\fBFSL\fR documentation and online help is provided by the \fBfsl-doc\fR
+package.
 .PP
-Questions regarding the usage of \fBFSL\fR or related theory can be posted on the 
+Questions regarding the usage of \fBFSL\fR or related theory can be
+posted on the
 \fBFSL mailing list\fR (see \fIhttp://www.jiscmail.ac.uk/lists/fsl.html\fR).
 .SH "FILES"
 .IP /etc/fsl/fsl.sh
@@ -27,12 +31,13 @@ Main FSL configuration
 .IP /etc/fsl/feat.tcl
 Default settings for FEAT
 .SH "SEE ALSO"
-.BR fsl-selftest "(1)"
-.PP 
+.BR fsl-selftest "(1)",
+.BR fslview "(1)"
+.PP
 The FSL homepage at
 .I http://www.fmrib.ox.ac.uk
 .SH "AUTHOR"
 \fBFSL\fR was written by FMRIB, Oxford, UK.
-.PP 
+.PP
 This manual page was written by Michael Hanke <michael.hanke@gmail.com>,
 for the Debian project (but may be used by others).
