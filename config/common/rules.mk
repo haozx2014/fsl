@@ -303,7 +303,7 @@ update:
 commit:
 	cvs -q commit
 
-depend:
+depend: 
 	${RM} -f /tmp/fslgrot depend.mk
 	${MAKE} depend.mk
 
