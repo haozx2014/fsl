@@ -37,10 +37,14 @@ public:
 	std::vector<float> getDeformedGrid( const std::vector<float>  & vars ) const ;
 	
 	std::vector<float> getDeformedIGrid( const std::vector<float> & vars) const ;
-	
-	int getLabel( const unsigned int i) const { return labels.at(i); }
+	 void printLabel(const unsigned int & i) const ;
+	int getLabel( const unsigned int & i) const { return labels.at(i); }
 	
 	void registerModel(const std::vector< std::vector<float> > & flirtmat);
+	std::vector<float> getOrigSpaceBvars(const std::vector<float> & bvars ) const;
+	
+	std::vector< std::vector<float> > registerModeVectors( const std::vector< std::vector<float> >& vmodes, const std::vector< std::vector<float> >& flirtmat);
+
 	
 	void setFoundMode(bool found) const { MODE_FOUND=found; }
 	bool getFoundMode() const { return MODE_FOUND; } 
@@ -56,9 +60,13 @@ unsigned int getKPred() const { return kpred; }
 
 	std::vector<float> smean;
 	std::vector< std::vector<float> > smodes;
+	std::vector< std::vector<float> > u_xfm;
+	std::vector<float> d_xfm;
+	
 	std::vector< float > seigs;
 	std::vector< float > sqrtseigs;
-	std::vector< float > sqrtseigs_ci;
+
+	std::vector< float > sqrtseigsi;
 
 	std::vector< int > labels;
 
@@ -70,11 +78,13 @@ unsigned int getKPred() const { return kpred; }
 	std::vector<short> stmask;
 	
 	private:
-	
+		
 		mutable std::vector< std::vector<float> > condMat1;
 		mutable std::vector< std::vector<float> >  condMat2;
 		mutable unsigned int kpred;
 		mutable bool USE_COND;
+	mutable bool STORE_REG_XFM;
+
 		mutable bool MODE_FOUND;
 		mutable float mode;
 	

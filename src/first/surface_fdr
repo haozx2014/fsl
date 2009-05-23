@@ -1,10 +1,10 @@
 #!/bin/sh
 
-#   POSSUM
+#   surface_fdr - runs FDR correction on a FIRST surface (from vertex analysis)
 #
-#   Ivana Drobnjak & Mark Jenkinson, FMRIB Analysis Group
+#   Mark Jenkinson, FMRIB Image Analysis Group
 #
-#   Copyright (C) 2005-2007 University of Oxford
+#   Copyright (C) 2008-2009 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -68,80 +68,44 @@
 #   University, to negotiate a licence. Contact details are:
 #   innovation@isis.ox.ac.uk quoting reference DE/1112.
 
-subjdir=$1
-nproc=$2
 
-#$ -S /bin/sh
-#$ -V
-#$ -N p_possum
-#$ -m ae
+if [ $# -lt 1 ] ; then
+  echo "Usage: `basename $0` <input_vtk>"
+  echo "         where input_vtk is the vertex analysis vtk output"
+  echo "         Outputs are *_pvals.vtk  *_Fthresh.vtk and some nifti images"
+  echo "          (using the input vtk filename as the basename for output files)"
+#  echo "       For FSL4.1.2 or before:"
+#  echo "       `basename $0` <input vtk> <dof> <dof2>"
+#  echo "         For the second usage the two Degrees Of Freedom for the" 
+#  echo "         F-stats are specified directly."
+#  echo "         (NB: these are stored in the vtk file for FSL4.1.3 and later)"
+  exit 1
+fi
 
-echo "POSSUMDIR (before)" $POSSUMDIR
-if [ "${POSSUMDIR}" = "${FSLDEVDIR}" ] ; then
-   echo "POSSUMDIR (during)" $POSSUMDIR
+infile=`echo $1 | sed 's/.vtk$//'`;
+
+if [ $# -ge 3 ] ; then
+    dof=$2
+    dof2=$3
+elif [ $# -eq 2 ] ; then
+    txtfile=$2
+    dof=`cat ${txtfile} | grep -i pillai | head -1 | awk '{ print $5 }'`;
+    dof2=`cat ${txtfile} | grep -i pillai | head -1 | awk '{ print $6 }'`;
+    echo "Degrees of freedom are: $dof $dof2"
+fi
+if [ $# -ge 2 ] ; then
+  dofopts="--dof=$dof --dof2=$dof2"
 else
-    export POSSUMDIR=$FSLDIR
-fi
-echo "POSSUMDIR (after)" $POSSUMDIR
-
-run(){
- echo "$1" >> $2/possum.log
- $1 >> $2/possum.log 2>&1
- date >> $2/possum.log
-}
-
-echo Summing all signal from different proccesses into one total signal
-run "${POSSUMDIR}/bin/possum_sum -i ${subjdir}/diff_proc/signal_proc_ -o ${subjdir}/signal -n $nproc " ${subjdir}
-
-echo Converting the signal into the image
-run "${POSSUMDIR}/bin/signal2image -i ${subjdir}/signal -o ${subjdir}/image -p ${subjdir}/pulse -a --homo " ${subjdir}
-
-echo Removing intermediate files
-if [ -e ${subjdir}/signal ]; then
-      rm -rf ${subjdir}/diff_proc
+  dofopts=""
 fi
 
-echo Adding noise
-n=sigma
-m=0
-if [ -e ${subjdir}/noise ]; then
-  n=`cat ${subjdir}/noise | awk '{print $1 }'`
-  m=`cat ${subjdir}/noise | awk '{print $2 }'`
-fi
+$FSLDIR/bin/run_mesh_utils -m ${infile}.vtk -o ${infile}_Fvals --doScalarsToVolume
+$FSLDIR/bin/run_mesh_utils -m ${infile}.vtk -o ${infile}_pvals.vtk --doFtoP $dofopts
+$FSLDIR/bin/run_mesh_utils -m ${infile}_pvals.vtk -o ${infile}_pvals --doScalarsToVolume
+thr=`$FSLDIR/bin/fdr -i ${infile}_pvals -q 0.05 | grep -v '^ *[A-Za-z]'`;
+echo "FDR threshold is $thr"
+$FSLDIR/bin/fslmaths ${infile}_pvals -uthr $thr -bin ${infile}_fdrmask
+$FSLDIR/bin/fslmaths ${infile}_pvals -mas ${infile}_fdrmask ${infile}_pthresh
+$FSLDIR/bin/fslmaths ${infile}_Fvals -mas ${infile}_fdrmask ${infile}_Fthresh
+$FSLDIR/bin/run_mesh_utils -m ${infile}.vtk -i ${infile}_Fthresh -o ${infile}_Fthresh.vtk --doVolumeToScalars
 
-if [ `${FSLDIR}/bin/imtest ${subjdir}/image_homo` -eq 1 ]; then
-   imcp image_homo image_abs
-fi
-
-fslmaths ${subjdir}/image_abs -Tmean ${subjdir}/image_mean
-P98=`fslstats ${subjdir}/image_mean -P 98`
-P02=`fslstats ${subjdir}/image_mean -P 2`
-tresh=`echo "0.1 * $P98 + 0.9 * $P02 "|bc -l`
-fslmaths ${subjdir}/image_mean -thr $tresh ${subjdir}/image_mean
-medint=`fslstats ${subjdir}/image_mean -P 50`
-dim1=`fslval ${subjdir}/image_abs dim1`
-if [ $n = "snr" ]; then
-  snr=$m
-  if [ $snr != 0 ]; then
-     sigma=`echo " ${medint} / ( 2 * ${dim1} * ${snr} ) "| bc -l` #I worked this out ages ago.
-     echo "sigma ${sigma} snr ${snr} medintensity ${medint}" > ${subjdir}/noise 
-  else
-     echo "snr  0" > ${subjdir}/noise
-  fi
-else
-  sigma=$m
-  if [ $sigma != 0 ]; then
-     snr=`echo " ${medint} / ( 2 * ${dim1} * ${sigma} ) "| bc -l`
-     echo "sigma $sigma snr $snr" > ${subjdir}/noise
-  fi
-fi
-if [ $sigma != 0 ]; then
-   mv ${subjdir}/signal ${subjdir}/signal_nonoise
-   run "${POSSUMDIR}/bin/systemnoise --in=${subjdir}/signal_nonoise --out=${subjdir}/signal --sigma=${sigma}" $subjdir
-fi
-run "${POSSUMDIR}/bin/signal2image -i ${subjdir}/signal -o ${subjdir}/image -p ${subjdir}/pulse -a --homo" $subjdir
-imrm ${subjdir}/image_mean
-
-if [ `${FSLDIR}/bin/imtest ${subjdir}/image_homo` -eq 1 ]; then
-   imrm image_abs
-fi

@@ -71,8 +71,15 @@ public:
 		template< class T > 
 		void addFieldData(const vector<T> & m,const string & name, const string & type);
 		
+		void replaceFieldData(const Matrix& m,const string & name);
+
 		void addFieldData(const Matrix& m,const string & name, const string & type);
 		void addFieldData(vector< string >,string name);
+		
+		
+		void printFieldDataNames() { for (vector<string>::iterator i=fieldDataNumName.begin(); i!=fieldDataNumName.end();i++) cout<<"field "<<*i<<endl; }
+
+		
 		//----------------------GET COMMANDS----------------------------//
 		Matrix getPointsAsMatrix() const { return Points; }
 		
@@ -92,7 +99,8 @@ public:
 		string getFieldName(const int & ind) const { return fieldDataNumName.at(ind); };
 		unsigned int getNumberOfFields() const { return fieldDataNumName.size(); };
 		Matrix getField(const string & name); 
-		
+		Matrix getField(const string & name, unsigned int & ind); 
+
 		ReturnMatrix getScalars(){ return Scalars; }
 		ReturnMatrix getVectors(){ return Vectors; }
 		

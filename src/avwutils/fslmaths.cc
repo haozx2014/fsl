@@ -891,13 +891,13 @@ if (!separatenoise)
     else if (string(argv[i])=="-roi")
      { 
        int x0=atoi(argv[i+1]);
-       int x1=atoi(argv[i+1])+atoi(argv[i+2]);
+       int x1=atoi(argv[i+1])+atoi(argv[i+2])-1;
        int y0=atoi(argv[i+3]);
-       int y1=atoi(argv[i+3])+atoi(argv[i+4]);
+       int y1=atoi(argv[i+3])+atoi(argv[i+4])-1;
        int z0=atoi(argv[i+5]);
-       int z1=atoi(argv[i+5])+atoi(argv[i+6]);
+       int z1=atoi(argv[i+5])+atoi(argv[i+6])-1;
        int t0=atoi(argv[i+7]);
-       int t1=atoi(argv[i+7])+atoi(argv[i+8]);
+       int t1=atoi(argv[i+7])+atoi(argv[i+8])-1;
        ColumnVector v0(4), v1(4);
        v0 << x0 << y0 << z0 << 1.0;
        v1 << x1 << y1 << z1 << 1.0;
@@ -918,7 +918,7 @@ if (!separatenoise)
          for(int z=0;z<input_volume.zsize();z++)
            for(int y=0;y<input_volume.ysize();y++)	    
 	     for(int x=0;x<input_volume.xsize();x++)
-               if((x<x0) || (x>=x1) || (y<y0) || (y>=y1) || (z<z0) || (z>=z1) || (t<t0) || (t>=t1) )
+               if((x<x0) || (x>x1) || (y<y0) || (y>y1) || (z<z0) || (z>z1) || (t<t0) || (t>t1) )
                  input_volume.value(x,y,z,t)=0;
        i+=8;
      }

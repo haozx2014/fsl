@@ -97,8 +97,6 @@ namespace Gs{
 	{ 
 	}
 
-      ~Design() {delete fslio;}
-
       // load design matrix in from file and set it up
       void setup(bool loadcontrasts = true);
 
@@ -106,8 +104,6 @@ namespace Gs{
       const int getnevs() const { return nevs; }
       const int getntpts() const { return ntpts; }
       const int getngs() const { return ngs; }
-
-      FSLIO* get_fslio(){return fslio;}
 
        void setvarcopedata(float val){varcopedata=val;}
 
@@ -245,8 +241,6 @@ namespace Gs{
       ColumnVector evs_group;
 
       bool voxelwise_dm;
- 
-     FSLIO* fslio;
 
       // inputs
       volume4D<float> copedata;

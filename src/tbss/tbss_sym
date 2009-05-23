@@ -1,10 +1,10 @@
 #!/bin/sh
 
-#   POSSUM
+#   tbss_sym - make symmetric skeleton for TBSS left-right testing
 #
-#   Ivana Drobnjak & Mark Jenkinson, FMRIB Analysis Group
+#   Stephen Smith, FMRIB Image Analysis Group
 #
-#   Copyright (C) 2005-2007 University of Oxford
+#   Copyright (C) 2008-2009 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -68,80 +68,47 @@
 #   University, to negotiate a licence. Contact details are:
 #   innovation@isis.ox.ac.uk quoting reference DE/1112.
 
-subjdir=$1
-nproc=$2
-
-#$ -S /bin/sh
-#$ -V
-#$ -N p_possum
-#$ -m ae
-
-echo "POSSUMDIR (before)" $POSSUMDIR
-if [ "${POSSUMDIR}" = "${FSLDEVDIR}" ] ; then
-   echo "POSSUMDIR (during)" $POSSUMDIR
-else
-    export POSSUMDIR=$FSLDIR
-fi
-echo "POSSUMDIR (after)" $POSSUMDIR
-
-run(){
- echo "$1" >> $2/possum.log
- $1 >> $2/possum.log 2>&1
- date >> $2/possum.log
+Usage () {
+    echo ""
+    echo "Usage: tbss_sym <image-rootname>"
+    echo "e.g. tbss_sym FA"
+    echo "e.g. tbss_sym L2"
+    echo ""
+    exit 1
 }
 
-echo Summing all signal from different proccesses into one total signal
-run "${POSSUMDIR}/bin/possum_sum -i ${subjdir}/diff_proc/signal_proc_ -o ${subjdir}/signal -n $nproc " ${subjdir}
+[ "$1" = "" ] && Usage
 
-echo Converting the signal into the image
-run "${POSSUMDIR}/bin/signal2image -i ${subjdir}/signal -o ${subjdir}/image -p ${subjdir}/pulse -a --homo " ${subjdir}
+thresh=`cat thresh.txt`
+ALTIM=$1
 
-echo Removing intermediate files
-if [ -e ${subjdir}/signal ]; then
-      rm -rf ${subjdir}/diff_proc
+if [ `${FSLDIR}/bin/imtest mean_FA_symmetrised_skeleton_mask_dst` -eq 0 ]; then
+
+    echo "creating a symmetrised skeleton"
+    $FSLDIR/bin/fslmaths mean_FA_skeleton -thr $thresh -bin -dilF grotsym_dilated
+    $FSLDIR/bin/fslswapdim mean_FA -x y z grotsym > /dev/null
+    $FSLDIR/bin/fslmaths mean_FA -mas grotsym -add grotsym -div 2 mean_FA_symmetrised
+    $FSLDIR/bin/tbss_skeleton -i mean_FA_symmetrised -o grotsym_symmetrised_skeleton
+    $FSLDIR/bin/fslmaths grotsym_symmetrised_skeleton -thr $thresh -mas grotsym_dilated grotsym_symmetrised_skeleton
+    $FSLDIR/bin/fslswapdim grotsym_symmetrised_skeleton -x y z grotsym > /dev/null
+    $FSLDIR/bin/fslmaths grotsym_symmetrised_skeleton -mas grotsym mean_FA_symmetrised_skeleton
+    $FSLDIR/bin/fslmaths mean_FA_symmetrised_skeleton -bin mean_FA_symmetrised_skeleton_mask
+
+    echo "creating symmetrised skeleton distancemap"
+    ${FSLDIR}/bin/fslmaths mean_FA_mask -mul -1 -add 1 -add mean_FA_symmetrised_skeleton_mask mean_FA_symmetrised_skeleton_mask_dst
+    ${FSLDIR}/bin/distancemap -i mean_FA_symmetrised_skeleton_mask_dst -o mean_FA_symmetrised_skeleton_mask_dst
+
 fi
 
-echo Adding noise
-n=sigma
-m=0
-if [ -e ${subjdir}/noise ]; then
-  n=`cat ${subjdir}/noise | awk '{print $1 }'`
-  m=`cat ${subjdir}/noise | awk '{print $2 }'`
+echo "projecting all FA data onto symmetrised skeleton"
+if [ $ALTIM != "FA" ]; then
+    altim="-a all_${ALTIM}"
 fi
+${FSLDIR}/bin/tbss_skeleton -i mean_FA_symmetrised -p $thresh mean_FA_symmetrised_skeleton_mask_dst ${FSLDIR}/data/standard/LowerCingulum_1mm all_FA all_${ALTIM}_symmetrised_skeletonised $altim -s mean_FA_symmetrised_skeleton
 
-if [ `${FSLDIR}/bin/imtest ${subjdir}/image_homo` -eq 1 ]; then
-   imcp image_homo image_abs
-fi
+echo "flipping, substracting and half-masking 4D skeletonised FA"
+$FSLDIR/bin/fslswapdim all_${ALTIM}_symmetrised_skeletonised -x y z grotsym_all_${ALTIM}_symmetrised_flipped > /dev/null
+$FSLDIR/bin/fslmaths all_${ALTIM}_symmetrised_skeletonised -sub grotsym_all_${ALTIM}_symmetrised_flipped -roi 91 91 0 218 0 182 0 `$FSLDIR/bin/fslval all_FA_skeletonised dim4` all_${ALTIM}_skeletonised_left_minus_right
 
-fslmaths ${subjdir}/image_abs -Tmean ${subjdir}/image_mean
-P98=`fslstats ${subjdir}/image_mean -P 98`
-P02=`fslstats ${subjdir}/image_mean -P 2`
-tresh=`echo "0.1 * $P98 + 0.9 * $P02 "|bc -l`
-fslmaths ${subjdir}/image_mean -thr $tresh ${subjdir}/image_mean
-medint=`fslstats ${subjdir}/image_mean -P 50`
-dim1=`fslval ${subjdir}/image_abs dim1`
-if [ $n = "snr" ]; then
-  snr=$m
-  if [ $snr != 0 ]; then
-     sigma=`echo " ${medint} / ( 2 * ${dim1} * ${snr} ) "| bc -l` #I worked this out ages ago.
-     echo "sigma ${sigma} snr ${snr} medintensity ${medint}" > ${subjdir}/noise 
-  else
-     echo "snr  0" > ${subjdir}/noise
-  fi
-else
-  sigma=$m
-  if [ $sigma != 0 ]; then
-     snr=`echo " ${medint} / ( 2 * ${dim1} * ${sigma} ) "| bc -l`
-     echo "sigma $sigma snr $snr" > ${subjdir}/noise
-  fi
-fi
-if [ $sigma != 0 ]; then
-   mv ${subjdir}/signal ${subjdir}/signal_nonoise
-   run "${POSSUMDIR}/bin/systemnoise --in=${subjdir}/signal_nonoise --out=${subjdir}/signal --sigma=${sigma}" $subjdir
-fi
-run "${POSSUMDIR}/bin/signal2image -i ${subjdir}/signal -o ${subjdir}/image -p ${subjdir}/pulse -a --homo" $subjdir
-imrm ${subjdir}/image_mean
+$FSLDIR/bin/imrm grotsym*
 
-if [ `${FSLDIR}/bin/imtest ${subjdir}/image_homo` -eq 1 ]; then
-   imrm image_abs
-fi
