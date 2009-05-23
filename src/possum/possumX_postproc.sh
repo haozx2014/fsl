@@ -77,7 +77,7 @@ nproc=$2
 #$ -m ae
 
 echo "POSSUMDIR (before)" $POSSUMDIR
-if [ "${POSSUMDIR}" == "${FSLDEVDIR}" ] ; then
+if [ "${POSSUMDIR}" = "${FSLDEVDIR}" ] ; then
    echo "POSSUMDIR (during)" $POSSUMDIR
 else
     export POSSUMDIR=$FSLDIR
