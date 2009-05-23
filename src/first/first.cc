@@ -1,4 +1,3 @@
-
 /*  first.cc
     Brian Patenaude
     Copyright (C) 2006-2007 University of Oxford  */
@@ -256,25 +255,36 @@ ReturnMatrix vectorOfVectorsToMatrix( const vector< vector<T> > & vec){
 }
 
 
-void write_bvars(const string & imagename, const string & modelname, const vector<float> & vars, const string & outname)
+void write_bvars(const string & imagename, const string & modelname, const vector<float> & vars, const string & outname, const vector< vector<float> > & fmatv )
 { 
  	ofstream fout;
 	string name=outname+".bvars";
 	fout.open(outname.c_str());
+	fout.precision(10);
 	fout<<"this is a bvars file"<<endl; 
 	fout<<modelname<<endl;
 	fout<<"NumberOfSubjects "<<1<<endl;
 	fout<<imagename<<" ";
 	fout<<vars.size()<<" ";
+
 #ifdef PPC64
     int n=0;
 #endif
 	for (vector<float>::const_iterator i=vars.begin();i!=vars.end();i++){
-		fout<<*i<<" ";
+		fout.write(reinterpret_cast<const char *>(&(*i)),sizeof(*i));
+
+//		fout<<*i<<" ";
 #ifdef PPC64
         if ((n++ % 50) == 0) fout.flush();
 #endif
+	
+		
 	}
+	for (vector< vector<float> >::const_iterator i=fmatv.begin();i!=fmatv.end();i++)
+		for (vector<float>::const_iterator i2=i->begin();i2!=i->end();i2++)
+			fout.write(reinterpret_cast<const char *>(&(*i2)),sizeof(*i2));
+			//fout<<*i2<<" ";
+	
 	fout<<endl;
 	fout.close();
 }
@@ -773,9 +783,12 @@ float costfuncApp(const volume<float> & image, const shapeModel & model1, const 
 	{
 		float multemp=0;
 		vector<float>::iterator dif_i=dif.begin();
+		//		cout<<"ceigs "<<1/(*ieigs_i) - 0.5*(1/model1.Errs.at(1))<<" "<<*ieigs_i<<"  "<<model1.Errs.at(1)<<endl;
+
 		for (vector<float>::const_iterator row=(*col).begin();row!=(*col).end(); row++, dif_i++)
 			multemp+=(*dif_i)*(*row);
-		
+
+
 		probIcond+=multemp*multemp*(1/(*ieigs_i) - 0.5*(1/model1.Errs.at(1)));		
 	}
 	//cout<<"probicond "<<probIcond<<endl;
@@ -1192,9 +1205,10 @@ if (verbose.value()) cout<<"read model"<<endl;
 
 	//have read in all data and store in local structures, now delete the reader.
 	delete fmodel;
-	
+	cout<<"create shapeModel "<<endl;
 	//create shape model
 	shapeModel* model1 = new shapeModel(Smean, Smodes, se, Imean, Imodes,Iprec, ie, M,Errs,polygons,labels);
+	cout<<"done creating shapeModel "<<endl;
 
 	return model1;
 
@@ -1214,6 +1228,80 @@ void xfm_NEWMAT_To_Vector(const Matrix & fmatM, vector< vector<float> > & fmatv 
 	}
 }
 
+Mesh convertToMesh( const vector<float> & pts, const vector< vector<unsigned int> > & polys )
+{
+	Mesh mesh;
+	
+	mesh._points.clear();
+	mesh._triangles.clear();
+	
+	int i=0;
+	for (vector<float>::const_iterator p= pts.begin(); p!=pts.end(); p+=3,i++)
+    {
+		Mpoint * pt = new Mpoint(*p, *(p+1), *(p+2), i);
+		mesh._points.push_back(pt);
+    }
+	
+	
+	for (vector< vector<unsigned int> >::const_iterator p=polys.begin(); p!=polys.end(); p++)
+    {
+		Triangle * tr = new Triangle( mesh._points.at( p->at(0) ), mesh._points.at( p->at(1) ), mesh._points.at( p->at(2) ));
+		mesh._triangles.push_back(tr);
+    }
+	
+	return mesh;
+	
+}
+
+
+void meshReg(Mesh* m, const string & flirtmatname){
+	
+	//refsize is actually target image
+	int numPoints=m->nvertices();
+	Matrix MeshPts(4,numPoints);
+	Matrix NewMeshPts(4,numPoints);
+	Matrix flirtmat(4,4);
+	
+	//read in flirt matrix, uses ascii
+	
+	ifstream fmat;
+	fmat.open(flirtmatname.c_str());
+	float tmpfloat=0;
+	for (int i=0; i<4;i++){
+		for (int j=0; j<4;j++){
+			fmat>>tmpfloat;
+			flirtmat.element(i,j)=tmpfloat;
+			//	cout<<flirtmat.element(i,j)<<" ";
+		}
+		//cout<<endl;
+	}
+	flirtmat=flirtmat.i();
+	
+	
+	//	cout<<"transform mesh points..."<<endl;
+	int count=0;
+	for (vector<Mpoint*>::iterator i = m->_points.begin(); i!=m->_points.end(); i++ ){
+		//	cout<<"count "<<count<<endl;	
+		
+		MeshPts.element(0,count)=(*i)->get_coord().X;
+		MeshPts.element(1,count)=(*i)->get_coord().Y;
+		MeshPts.element(2,count)=(*i)->get_coord().Z;
+		MeshPts.element(3,count)=1;
+		
+		count++;
+	}
+	//		cout<<"mesh points loaded into matrix..."<<endl;
+	NewMeshPts=flirtmat*MeshPts;
+	count=0;
+	for (vector<Mpoint*>::iterator i = m->_points.begin(); i!=m->_points.end(); i++ ){
+		Pt newPt(NewMeshPts.element(0,count),NewMeshPts.element(1,count),NewMeshPts.element(2,count));
+		(*i)->_update_coord = newPt;
+		count++;
+	}
+	m->update();
+	
+	
+}
 
 
 int do_work(const string & inname, const string & modelname, const string & modelname2, const string & flirtmatname, const string & outname, const string & bmapname,const string & bvarsname, \
@@ -1230,7 +1318,7 @@ int do_work(const string & inname, const string & modelname, const string & mode
 	vector<float> smean1, smeanRef;
 	vector< vector<float> > smodes1, smodesRef;
 
-	vector< vector<float> > fmatv; //transformation matrix
+	vector< vector<float> > fmatv, fmatv_org; //transformation matrix
 	Matrix fmatM(4,4); //transformation matrix , NEWMAT form
 	Matrix fmatM_Prev(4,4); //transformation matrix from previous image , NEWMAT form
 	vector<string> image_list;
@@ -1335,7 +1423,7 @@ int do_work(const string & inname, const string & modelname, const string & mode
 		}
 		
 		//invert matrix and assigned previous for purpose of looping
-
+		xfm_NEWMAT_To_Vector(fmatM,fmatv_org);
 	fmatM=fmatM.i();
 //concert to vector form
 		xfm_NEWMAT_To_Vector(fmatM,fmatv);
@@ -1423,24 +1511,19 @@ int do_work(const string & inname, const string & modelname, const string & mode
 			  //load bx2 vars that were read
 			  for (unsigned int i=0;i<vars.size();i++)
 				  Bx2.element(i)=vars.at(i);
-			  			  	cout<<"shcond2 "<<endl;
-
+		
 			  Matrix mBx2map=mBx2*Bx2;
-			  			  	cout<<"shcond3"<<endl;
-
+		
 			  //bmap now directly reflects the transformation t0oo bc
 			  //mBx1inv=mBcx1;
 
 			  Matrix mBx1inv=mBcx1.i();
-			  	cout<<"shcond4"<<endl;
-			  
+					  
 			  model1->setCondMats(matrixToVector<float>(mBx2map), matrixToVector<float>(mBx1inv), kpred);
-			  			  	cout<<"shcond5"<<endl;
-
+		
 			  vector<float> v_cmean;
 			  v_cmean=bTransform(vars,mBx2,M);
-			  			  	cout<<"shcond6"<<endl;
-
+			
 			  for (unsigned int i=0;i<vars.size();i++)
 			    if (i<(unsigned)nmodes){
 			      vars.at(i)=v_cmean.at(i);
@@ -1461,9 +1544,17 @@ int do_work(const string & inname, const string & modelname, const string & mode
 		
 		if (verbose.value()) cout<<"Model has been registered to native space now fitting model to image."<<endl;
 		
-		
+		//		for (int i=0;i<vars.size();i++)
+		  //		  {
+		    //		    for (int j=0;j<select.size();j++)
+		      //		      if (j==i)
+			//			select.at(j)=true;
+		    //		      else
+			//			select.at(j)=false;
+			                       	    
+
 		conjGradient(image, *model1,vars, relStd, select, searchRes, 0.15);
-		
+		//	  }
 		if (verbose.value()) 
 		{
 			cout<<"Final mode parameters are: "<<endl;
@@ -1486,9 +1577,12 @@ int do_work(const string & inname, const string & modelname, const string & mode
 		if (multiImageInput)
 			name_out+=outname;
 	
-			save_volume(mask, name_out);
-			write_bvars(*im_iter, modelname, vars, name_out+".bvars");
-			write_vtk(shape, model1->cells, name_out + ".vtk", is_binary);
+		save_volume(mask, name_out);
+	
+		vector<float> bvars_old=model1->getOrigSpaceBvars(vars);
+				
+		write_bvars(*im_iter, modelname, bvars_old, name_out+".bvars",fmatv_org);
+		write_vtk(shape, model1->cells, name_out + ".vtk", is_binary);
 
 
 		if (verbose.value()) cout<<"FIRST has completed subject "<<*im_iter<<endl;

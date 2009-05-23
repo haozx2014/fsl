@@ -447,7 +447,7 @@ namespace Utilities {
      <pre>
 #include "options.h"
 
-// $Id: options.h,v 1.32 2008/02/08 17:34:10 mwebster Exp $ 
+// $Id: options.h,v 1.33 2009/04/24 15:34:42 flitney Exp $ 
 
 using namespace Utilities;
 
@@ -529,6 +529,8 @@ int main(unsigned int argc, char **argv) {
     */
     void add(BaseOption& o) { options_.push_back(&o); }
 
+    void describe_options();
+    void brief_usage();
     void usage();
     /**
        @param verbose If set then this method will carp about any option which

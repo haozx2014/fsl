@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.5 2008/11/19 19:09:31 brian Exp $
+# $Id: Makefile,v 1.7 2009/05/15 18:46:21 brian Exp $
 include ${FSLCONFDIR}/default.mk
 
 PROJNAME = fslvtkio
@@ -11,7 +11,6 @@ LIBS= -lmeshclass -lnewimage -lmiscmaths -lfslio -lniftiio -lznz -lnewmat -lutil
 SHAPEOBJS=fslvtkio.o
  
 MODELOBJS=fslvtkio.o
-
 
 all: fslvtkio.a 
 
