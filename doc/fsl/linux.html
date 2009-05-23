@@ -16,7 +16,7 @@ content="text/html;charset=utf-8" />
 <h3>Running the installer</h3>
 <p>
 We provide an installer script to automate the process of installing FSL, which can be downloaded from this location:</p>
-<ul><li><a href="fsl_installer.sh">fsl_installer.sh</a> - Version 1.0.5 17/1/2008</li></ul>
+<ul><li><a href="fsl_installer.sh">fsl_installer.sh</a> - Version 1.1 8/4/2009</li></ul>
 <p>Place the installer in the same folder as the downloaded FSL distribution tar ball. Then in a terminal window (in Cent OS you can open one of these by right clicking on the Desktop and choosing <i>Open Terminal</i>) change to this folder and run the installer. By example, if you downloaded the installer and the FSL <i>.tar.gz</i> file to your Desktop:</p>
 <pre>cd ~/Desktop
 bash fsl_installer.sh</pre>
@@ -66,7 +66,7 @@ To bring up a simple GUI which is just a menu of the main individual FSL GUI too
 </p>
 <h2>Linux System-wide Configuration</h2>
 <p>
-If you are administering a multi-user Linux system you can ensure that FSL is configured for all users by creating the files <i>/etc/profile.d/fsl.sh</i> and <i>/etc/profile.d/fsl.csh</i> with the contents specified above. This has been tested on Cent OS 5, but should work on other RedHat-like and SuSE distributions. 
+If you are administering a multi-user Linux system you can ensure that FSL is configured for all users by creating the files <i>/etc/profile.d/fsl.sh</i> and <i>/etc/profile.d/fsl.csh</i> with the contents specified above. This has been tested on Cent OS 5, but should work on other RedHat-like and SuSE distributions. If you are using the <i>fsl_installer.sh</i> script then you can carry out this configuration by running the script with the <i>-E</i> option.
 </p>
 <h2>Customising</h2>
 <p>

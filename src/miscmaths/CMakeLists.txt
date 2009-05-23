@@ -7,8 +7,6 @@ SET(MISCMATHS_SOURCES
   base2z.cc
   t2z.cc
   f2z.cc
-  volume.cc
-  volumeseries.cc
   minimize.cc
   cspline.cc
   sparse_matrix.cc

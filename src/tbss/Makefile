@@ -9,7 +9,7 @@ LIBS = -lnewimage -lmiscmaths -lprob -lfslio -lniftiio -lznz -lnewmat -lutils -l
 
 XFILES = distancemap tbss_skeleton
 
-SCRIPTS = tbss_1_preproc tbss_2_reg tbss_3_postreg tbss_4_prestats fsl_reg tbss_non_FA tbss_fill tbss_3_postreg_new tbss_non_FA_new tbss_deproject
+SCRIPTS = tbss_1_preproc tbss_2_reg tbss_3_postreg tbss_4_prestats fsl_reg tbss_non_FA tbss_fill tbss_3_postreg_new tbss_non_FA_new tbss_deproject tbss_sym
 
 all: ${XFILES} 
 
