@@ -186,7 +186,21 @@ Matrix fslvtkIO::getField(const string & name){
 	
 	return fieldDataNum.at(ind);
 }
-
+	Matrix fslvtkIO::getField(const string & name, unsigned int & indout ){
+		//search for field index
+		
+		int ind=-1;
+		for (unsigned int i=0;i<fieldDataNumName.size();i++)
+			if (!strcmp(fieldDataNumName.at(i).c_str(),name.c_str()))
+				ind=i;
+		if (ind==-1)
+			throw fslvtkIOException("No field data of that name."); 
+		
+		indout=ind;
+		
+		return fieldDataNum.at(ind);
+	}
+	
 
 
 template<class T>
@@ -213,7 +227,19 @@ void fslvtkIO::addCellFieldData(const Matrix & M, const string & name, const str
 	cd_list.push_back(name);
 	cd_type.push_back(vtkAttType);
 }
-
+	
+	
+	
+	
+	void fslvtkIO::replaceFieldData(const Matrix& M,const string & name)
+	{
+		unsigned int ind;
+		getField(name, ind);
+		fieldDataNum.at(ind)=M;
+	}
+	
+	
+	
 template< class T >
 void fslvtkIO::addFieldData(const vector<T> & vM, const string & name, const string & type){
 	ColumnVector M(vM.size());

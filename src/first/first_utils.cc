@@ -1,7 +1,6 @@
 /*  first_utils.cc
     Brian Patenaude and Mark Jenkinson
     Copyright (C) 2006-2009 University of Oxford  */
-
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
     fsl@fmrib.ox.ac.uk
@@ -64,7 +63,6 @@
     University, to negotiate a licence. Contact details are:
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
-//#include <math.h>
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -89,7 +87,7 @@ using namespace SHAPE_MODEL_NAME;
 using namespace MISCMATHS;
 using namespace fslvtkio;
 
-string title="firt_utils (Version 1.0) University of Oxford (Brian Patenaude)";
+string title="firt_utils (Version 1.2) University of Oxford (Brian Patenaude)";
 string examples="first_utils [options] -i input -o output ";
 
 
@@ -138,9 +136,18 @@ Option<bool> useNorm(string("--useNorm"), false,
 		     false, no_argument);
 
 
-Option<bool> meshToVol(string("--meshToVol"), false,
-		       string("Convert mesh to an image."),
+Option<bool> reconMeshFromBvars(string("--reconMeshFromBvars"), false,
+		       string("Convert bvars to mesh."),
 		       false, no_argument);
+Option<bool> readBvars(string("--readBvars"), false,
+								string("Read bvars from binary format"),
+								false, no_argument);
+Option<bool> concatBvars(string("--concatBvars"), false,
+					   string("Concat bvars from binary format"),
+					   false, no_argument);
+Option<bool> meshToVol(string("--meshToVol"), false,
+					   string("Convert mesh to an image."),
+					   false, no_argument);
 Option<bool> centreOrigin(string("--centreOrigin"), false,
 			  string("Places origin of mesh at the centre of the image"),
 			  false, no_argument);
@@ -154,7 +161,7 @@ Option<string> pathname(string("-a,--in"), string(""),
 			string("Specifies extra path to image in .bvars file"),
 			false, requires_argument);
 Option<string> flirtmatsname(string("-f,--in"), string(""),
-			     string("Text of flirt matrix names."),
+			     string("Text file containing filenames of flirt matrices (filenames, not numbers)."),
 			     false, requires_argument);
 Option<string> meshname(string("-m,--in"), string(""),
 			string("Filename of input mesh"),
@@ -206,10 +213,10 @@ void setShapeMesh(shapeModel * model1, const Mesh & m){
   }	
 }
 
-void meshReg(Mesh* m, const string & flirtmatname){
+void meshReg(Mesh & m, const string & flirtmatname){
 
   //refsize is actually target image
-  int numPoints=m->nvertices();
+  int numPoints=m.nvertices();
   Matrix MeshPts(4,numPoints);
   Matrix NewMeshPts(4,numPoints);
   Matrix flirtmat(4,4);
@@ -232,7 +239,7 @@ void meshReg(Mesh* m, const string & flirtmatname){
 	
   //	cout<<"transform mesh points..."<<endl;
   int count=0;
-  for (vector<Mpoint*>::iterator i = m->_points.begin(); i!=m->_points.end(); i++ ){
+  for (vector<Mpoint*>::iterator i = m._points.begin(); i!=m._points.end(); i++ ){
     //	cout<<"count "<<count<<endl;	
 		
     MeshPts.element(0,count)=(*i)->get_coord().X;
@@ -245,17 +252,60 @@ void meshReg(Mesh* m, const string & flirtmatname){
   //		cout<<"mesh points loaded into matrix..."<<endl;
   NewMeshPts=flirtmat*MeshPts;
   count=0;
-  for (vector<Mpoint*>::iterator i = m->_points.begin(); i!=m->_points.end(); i++ ){
+  for (vector<Mpoint*>::iterator i = m._points.begin(); i!=m._points.end(); i++ ){
     Pt newPt(NewMeshPts.element(0,count),NewMeshPts.element(1,count),NewMeshPts.element(2,count));
     (*i)->_update_coord = newPt;
     count++;
   }
-  m->update();
+  m.update();
 	
 	
 }
 
-
+void meshReg(Mesh & m, const vector< vector<float> > & flirtmatv){
+	
+	//refsize is actually target image
+	int numPoints=m.nvertices();
+	Matrix MeshPts(4,numPoints);
+	Matrix NewMeshPts(4,numPoints);
+	Matrix flirtmat(4,4);
+	
+	//read in flirt matrix, uses ascii
+	for (int i=0; i<4;i++){
+		for (int j=0; j<4;j++){
+			
+			flirtmat.element(i,j)=flirtmatv.at(i).at(j);
+				cout<<flirtmat.element(i,j)<<" ";
+		}
+		cout<<endl;
+	}
+	flirtmat=flirtmat.i();
+	
+	
+	//	cout<<"transform mesh points..."<<endl;
+	int count=0;
+	for (vector<Mpoint*>::iterator i = m._points.begin(); i!=m._points.end(); i++ ){
+		//	cout<<"count "<<count<<endl;	
+		
+		MeshPts.element(0,count)=(*i)->get_coord().X;
+		MeshPts.element(1,count)=(*i)->get_coord().Y;
+		MeshPts.element(2,count)=(*i)->get_coord().Z;
+		MeshPts.element(3,count)=1;
+		
+		count++;
+	}
+	//		cout<<"mesh points loaded into matrix..."<<endl;
+	NewMeshPts=flirtmat*MeshPts;
+	count=0;
+	for (vector<Mpoint*>::iterator i = m._points.begin(); i!=m._points.end(); i++ ){
+		Pt newPt(NewMeshPts.element(0,count),NewMeshPts.element(1,count),NewMeshPts.element(2,count));
+		(*i)->_update_coord = newPt;
+		count++;
+	}
+	m.update();
+	
+	
+}
 
 inline
 ReturnMatrix unwrapMatrix(const Matrix & m) 
@@ -766,38 +816,69 @@ Matrix overlaps(const volume<short> segIm, const volume<short> gold){
 
 //****************************BVARS I/O**************************************
 
+string read_bvars(string fname,Matrix & bvars, vector<string> & vnames, vector<int>& vnvars,string impath, vector< vector< vector<float> > > & fmatv){
+	string stemp;
+	string modelNames;
+	int N;//number of subjects
+	fmatv.clear();
+	ifstream fin;
+	fin.open(fname.c_str());
+	//throw away first three lines 
+	getline(fin,stemp);//this is bvars file
+	getline(fin,modelNames);//modelnames;
+	fin>>stemp>>N;
+	vnvars.clear();
+	//int NmaxBvars=0;
+	//vector< vector<float> > all_bvars;
+	
+	for (int i=0; i<N;i++){
+		vector<float> vbvars;
 
-string read_bvars(string fname,Matrix* bvars, vector<string>* vnames, vector<int>* vnvars,string impath){
-  string stemp;
-  string modelNames;
-  int N;//number of subjects
-  ifstream fin;
-  fin.open(fname.c_str());
-  //throw away first three lines 
-  getline(fin,stemp);//this is bvars file
-  getline(fin,modelNames);//modelnames;
-  fin>>stemp>>N;
-  for (int i=0; i<N;i++){
-    fin>>stemp;//read in subject id
-    vnames->push_back(impath+stemp);
-    int nvars;//how many vars written for the subject
-    fin>>nvars;
-    if (i==0){
-      bvars->ReSize(nvars,N);
-    }
-    vnvars->push_back(nvars);
-    for (int j=0;j<nvars;j++){
-      if (j<nvars){
-	float ftemp;
-	fin>>ftemp;
-	bvars->element(j,i)=ftemp;
-      }else{
-	bvars->element(j,i)=0;
-      }
-    }
-  }
-							
-  return modelNames;
+		fin>>stemp;//read in subject id
+		vnames.push_back(impath+stemp);
+		int nvars;//how many vars written for the subject
+		fin>>nvars;
+
+		vnvars.push_back(nvars);
+		char blank;
+		fin.read(reinterpret_cast<char*>(&blank),sizeof(char));
+
+		if (i==0){
+			bvars.ReSize(nvars,N);
+		}
+		vnvars.push_back(nvars);
+		for (int j=0;j<nvars;j++){
+			if (j<nvars){
+				float ftemp;
+			
+			//	fin>>ftemp;
+				fin.read(reinterpret_cast<char*>(&ftemp),sizeof(float));
+
+				bvars.element(j,i)=ftemp;
+			}else{
+				bvars.element(j,i)=0;
+			}
+		}
+	//	all_bvars.push_back(vbvars);
+		vector< vector<float> > mat;
+		for (int k=0;k<4;k++)
+		{
+			vector<float> row;
+			for (int l=0;l<4;l++)
+			{
+				float ftemp;
+			//	fin>>ftemp;
+				fin.read(reinterpret_cast<char*>(&ftemp),sizeof(float));
+
+				row.push_back(ftemp);
+			}
+			mat.push_back(row);
+		}
+		fmatv.push_back(mat);
+	}
+	
+
+	return modelNames;
 }
 
 void write_bvars(string fname,string modelname,Matrix bvars, int numModes,vector<string> vnames){
@@ -1116,6 +1197,7 @@ float MVGLM_fit(Matrix G, Matrix D, Matrix contrast, int& df1, int& df2){
   //caluclate E covariance matrix
   Matrix E=D-Yhat;
   E=E.t()*E;
+//	cout<<"hmm"<<G.t()*G<<endl<<contrast*G.t()*G*contrast.t()<<endl;
   //calculate H, the sum-square /cross square porduct for hypthosis test
   Matrix YhatH= G*contrast.t()*(contrast*G.t()*G*contrast.t()).i()*contrast*G.t()*D;
   Matrix H=D-YhatH;
@@ -1323,11 +1405,11 @@ Matrix rigid_linear_xfm(Matrix Data,ColumnVector meanm, Mesh mesh, bool writeToF
     }	
     m.update();
 				
-    //	string snum;
-    //stringstream ssnum;
-    //	ssnum<<subject;
-    //ssnum>>snum;
-    //m.save(snum+"reg.vtk",3);
+//    	string snum;
+ //   stringstream ssnum;
+   // ssnum<<subject;
+  //  ssnum>>snum;
+  //  m.save(snum+"reg.vtk",3);
   }
 	
   return DataNew;			
@@ -1397,8 +1479,8 @@ Matrix recon_meshesMNI( shapeModel* model1, Matrix bvars, ColumnVector* meanm, M
 
 }
 
-Matrix recon_meshesNative( string modelname, Matrix bvars, ColumnVector* meanm, Mesh * meshout, vector<string> subjectnames, vector<string> flirtmats,vector<Mesh>* vMeshes){
-  vMeshes->clear();
+Matrix recon_meshesNative( const string & modelname, const Matrix & bvars, ColumnVector & meanm, Mesh & meshout, const vector<string> & subjectnames, const vector< vector< vector<float> > > & flirtmats,vector<Mesh> & vMeshes){
+  vMeshes.clear();
   //fslvtkIO* fin = new fslvtkIO(modelname,static_cast<fslvtkIO::DataType>(0));
   shapeModel* model1=loadAndCreateShapeModel(modelname);
 
@@ -1409,7 +1491,7 @@ Matrix recon_meshesNative( string modelname, Matrix bvars, ColumnVector* meanm, 
   //	model1->load_bmv_binary(modelname,1);
 	
   //want to return mean mesh in vector form
-  meanm->ReSize(model1->smean.size());
+  meanm.ReSize(model1->smean.size());
   {
 		
     int count=0;
@@ -1419,11 +1501,11 @@ Matrix recon_meshesNative( string modelname, Matrix bvars, ColumnVector* meanm, 
       Mesh m=convertToMesh( model1->smean , model1->cells );
       //			m.save("targetMesh.vtk",3);
       //Mesh m=model1->getShapeMesh(sh);
-      *meshout=m;
+      meshout=m;
       for (vector<Mpoint*>::iterator i = m._points.begin(); i!=m._points.end(); i++ ){
-	meanm->element(3*cumnum+count)=(*i)->get_coord().X;
-	meanm->element(3*cumnum+count+1)=(*i)->get_coord().Y;
-	meanm->element(3*cumnum+count+2)=(*i)->get_coord().Z;
+	meanm.element(3*cumnum+count)=(*i)->get_coord().X;
+	meanm.element(3*cumnum+count+1)=(*i)->get_coord().Y;
+	meanm.element(3*cumnum+count+2)=(*i)->get_coord().Z;
 	//				cout<<"coord "<<meanm->element(3*cumnum+count)<<" "<<meanm->element(3*cumnum+count+1)<<" "<<meanm->element(3*cumnum+count+2)<<endl;
 
 	count+=3;
@@ -1450,8 +1532,9 @@ Matrix recon_meshesNative( string modelname, Matrix bvars, ColumnVector* meanm, 
     int cumnum=0;
     for (int sh=0; sh<1;sh++){
       Mesh m=convertToMesh(model1->getDeformedGrid(vars),model1->cells);	
-      meshReg(&m, flirtmats.at(j));
-      vMeshes->push_back(m);
+      meshReg(m, flirtmats.at(j));
+		
+      vMeshes.push_back(m);
       int count=0;
       for (vector<Mpoint*>::iterator i = m._points.begin(); i!=m._points.end(); i++ ){
 	MeshVerts.element(3*cumnum+count,j)=(*i)->get_coord().X;
@@ -1462,7 +1545,7 @@ Matrix recon_meshesNative( string modelname, Matrix bvars, ColumnVector* meanm, 
       cumnum+=model1->smean.size()/3;	
     }	
   }
-  cout<<"done recon"<<endl;
+
 
   return MeshVerts;
 	
@@ -1502,8 +1585,8 @@ void do_work_bvars(){
   Matrix target;	//target is only used for glm
   //must include a design matrix with bvars to use glm
   //modelname is used to set a path
-	
-  read_bvars(inname.value(),&bvars,&subjectnames, &vN, pathname.value());
+	vector< vector< vector<float> > > vec_fmats; 
+  read_bvars(inname.value(),bvars,subjectnames, vN, pathname.value(),vec_fmats);
   target=read_vest(designname.value());
   //can filter meshes
   if (usePCAfilter.value()){
@@ -1539,7 +1622,8 @@ void do_work_bvars(){
     }
 						
     //Reconstruct in native spoace of the image (it recons the mni then applies flirt matrix)
-    MeshVerts=recon_meshesNative( mname, bvars, &CVmodelMeanMesh, &modelMeanMesh,subjectnames, flirtmatnames, &vMeshes);
+    MeshVerts=recon_meshesNative( mname, bvars, CVmodelMeanMesh, modelMeanMesh,subjectnames, vec_fmats, vMeshes);
+	  cout<<"done recon"<<endl;
   }
   else if(useReconMNI.value()){
     //flirt matrix is not applied
@@ -1688,162 +1772,166 @@ void do_work_bvars(){
     }
 						
   }else{
-    ColumnVector CVnorm(target.Nrows());
-    // if chosen can include a normalization EV (i.e. control for size) ...useful for vertex shape statistics
-    if (useNorm.value()){
-      ifstream normIn;
-      float normtemp;
-      normIn.open(normname.value().c_str());
-      for (int subject=0;subject<target.Nrows();subject++){
-	normIn>>normtemp;
-	CVnorm.element(subject)=normtemp;
-      }
-      target=target | CVnorm ;
-    }
-						
-						
-						
-    //****************END DEMEAN DESIGN MATRIX AND ADD ONE COLUMS*********************/
-						
-    Matrix contrast(target.Ncols()-1,target.Ncols());
-    int EVmin=1;//ignore mean column first EV to examine
-    //int EVmax=1;//EV to include
-    int	EVmax=target.Ncols();
-
-								
-    for (int EV=EVmin;EV<EVmax;EV++){
-									
-      //append the EV number to the output
-      stringstream ev2st;
-      ev2st<<EV;
-      string evnum;
-      ev2st>>evnum;
-									
-      //update average mesh
-      //these vector store tstats to plot on mesh
-      vector<float> meandifx;
-      vector<float> meandify;
-      vector<float> meandifz;
-									
-      Mesh m=vMeshes.at(0);//mesh.at(0) is used to determine topology/number of vertices
-      int count=0;
-      for (vector<Mpoint*>::iterator i = m._points.begin(); i!=m._points.end(); i++ )
-	{ 
-	  float meanx1=0,meany1=0,meanz1=0,meanx2=0,meany2=0, meanz2=0;
-	  // for (int i=0;i<MeshVerts.Nrows();i=i+3){
-	  int n1=0,n2=0;
-	  for (int j=0;j<MeshVerts.Ncols();j++){
-	    if (target.element(j,EVmin) <= 0 ){ //handles demeaned data
-	      meanx1+=MeshVerts.element(count,j);
-	      meany1+=MeshVerts.element(count+1,j);
-	      meanz1+=MeshVerts.element(count+2,j);
-	      n1++;
-	    }else{
-	      meanx2+=MeshVerts.element(count,j);
-	      meany2+=MeshVerts.element(count+1,j);
-	      meanz2+=MeshVerts.element(count+2,j);
-	      n2++;
-	    }
+	  ColumnVector CVnorm(target.Nrows());
+	  // if chosen can include a normalization EV (i.e. control for size) ...useful for vertex shape statistics
+	  if (useNorm.value()){
+		  ifstream normIn;
+		  float normtemp;
+		  normIn.open(normname.value().c_str());
+		  for (int subject=0;subject<target.Nrows();subject++){
+			  normIn>>normtemp;
+			  CVnorm.element(subject)=normtemp;
+		  }
+		  target=target | CVnorm ;
 	  }
-	  // }
-	  meanx1/=n1;
-	  meany1/=n1;
-	  meanz1/=n1;
-											
-	  meanx2/=n2;
-	  meany2/=n2;
-	  meanz2/=n2;
-											
-	  //as binary classification was assumed we just finish calculating the mean for each group
-											
-	  //save vectors point from group1 mean to group2 mean, size 1 (they will be scaled to reflect
-	  //the test statistic)
-	  float vecx=meanx2-meanx1;
-	  float vecy=meany2-meany1;
-	  float vecz=meanz2-meanz1;
-	  //	float norm=sqrt(vecx*vecx+vecy*vecy+vecz*vecz);
-											
-	  //scaling occurs later
-	  meandifx.push_back(vecx);///norm);
-	  meandify.push_back(vecy);///norm);
-	  meandifz.push_back(vecz);///norm);
-														
-	  //for each point calculate mean vertex for each group
-	  (*i)->_update_coord = Pt(meanx1,meany1,meanz1);
-	  count+=3;
-	}
-      m.update();
-      setShapeMesh(model1,m);
-      vector<float> scalarsT;
-										
-      //this provides the option to do stats on the vertices 
-      //create F test contrast matrix (testing each EV separately
-      count=0;
-      for (int j=0;j<contrast.Ncols();j++){
-	if (j!=EV){
-	  for (int i=0;i<contrast.Ncols();i++){
-	    if(i==j){
-	      //if(i==EV){
-	      contrast.element(count,i)=1;
-	    }else{
-	      contrast.element(count,i)=0;
-	    }
-														
-	    cout<<contrast.element(count,i)<<" ";
-	  }
-	  cout<<endl;
-	  count++;
-	}
-      }
+	  
+	  
+	  
+	  //****************END DEMEAN DESIGN MATRIX AND ADD ONE COLUMS*********************/
+	  
+	  Matrix contrast(target.Ncols()-1,target.Ncols());
+	  int EVmin=1;//ignore mean column first EV to examine
+	  //int EVmax=1;//EV to include
+	  int	EVmax=target.Ncols();
+	  
+	  for (int EV=EVmin;EV<EVmax;EV++){
+		  cout<<"evs "<<EV<<endl;
 
-      // save vertex Matrix if requested
-      if (saveVertices.set()) {
-	Matrix ReshapedVerts(MeshVerts.Nrows(),MeshVerts.Ncols());
-	int nverts=MeshVerts.Nrows()/3;
-	int newm=1;
-	for (int m=1; m<=ReshapedVerts.Nrows(); m+=3) {
-	  for (int n=1; n<=ReshapedVerts.Ncols(); n++) {
-	    ReshapedVerts(newm,n)=MeshVerts(m,n);
-	    ReshapedVerts(newm+nverts,n)=MeshVerts(m+1,n);
-	    ReshapedVerts(newm+2*nverts,n)=MeshVerts(m+2,n);
-	  }
-	  newm++;
-	}
-	write_ascii_matrix(fslbasename(saveVertices.value())+"_mat.txt",ReshapedVerts);
-	volume4D<float> vertices(ReshapedVerts.Nrows()/3,3,1,ReshapedVerts.Ncols());
-	vertices.setmatrix(ReshapedVerts.t());
-	save_volume4D(vertices,saveVertices.value());
-      }
-											
-      //use multivariate test on each vertex
-      int dof1=0, dof2=0;
-      for (int i=0;i<MeshVerts.Nrows();i=i+3){
-	//use multivariate multiple regression on each veretx 
-	float F=MVGLM_fit(target, MeshVerts.SubMatrix(i+1,i+3,1,MeshVerts.Ncols()).t(),contrast,dof1,dof2);
-	//	tstatsx.at(i/3)*=wilkL;
-	//	tstatsy.at(i/3)*=wilkL;
-	//	tstatsz.at(i/3)*=wilkL;	
-	//this may 
-	scalarsT.push_back(F);
-      }
-										
-      fslvtkIO * fout = new fslvtkIO();
-      fout->setPoints(model1->smean);
-      fout->setPolygons(model1->cells);
-									
-      fout->setScalars(scalarsT); 
-      Matrix Mmeandif(meandifx.size(),3);
-      for (unsigned int mj=0; mj<meandifx.size(); mj++) { Mmeandif.element(mj,0)=meandifx.at(mj);  Mmeandif.element(mj,1)=meandify.at(mj); Mmeandif.element(mj,2)=meandifz.at(mj); }
-      fout->setVectors(Mmeandif);
+		  //append the EV number to the output
+		  stringstream ev2st;
+		  ev2st<<EV;
+		  string evnum;
+		  ev2st>>evnum;
+		  
+		  //update average mesh
+		  //these vector store tstats to plot on mesh
+		  vector<float> meandifx;
+		  vector<float> meandify;
+		  vector<float> meandifz;
+		  
+		  Mesh m=vMeshes.at(0);//mesh.at(0) is used to determine topology/number of vertices
+		  int count=0;
+		  for (vector<Mpoint*>::iterator i = m._points.begin(); i!=m._points.end(); i++ )
+		  { 
+			  float meanx1=0,meany1=0,meanz1=0,meanx2=0,meany2=0, meanz2=0;
+			  // for (int i=0;i<MeshVerts.Nrows();i=i+3){
+			  int n1=0,n2=0;
+			  for (int j=0;j<MeshVerts.Ncols();j++){
+				  if (target.element(j,EVmin) <= 0 ){ //handles demeaned data
+					  meanx1+=MeshVerts.element(count,j);
+					  meany1+=MeshVerts.element(count+1,j);
+					  meanz1+=MeshVerts.element(count+2,j);
+					  n1++;
+				  }else{
+					  meanx2+=MeshVerts.element(count,j);
+					  meany2+=MeshVerts.element(count+1,j);
+					  meanz2+=MeshVerts.element(count+2,j);
+					  n2++;
+				  }
+			  }
+			  // }
+			  meanx1/=n1;
+			  meany1/=n1;
+			  meanz1/=n1;
+			  
+			  meanx2/=n2;
+			  meany2/=n2;
+			  meanz2/=n2;
+			  
+			  //as binary classification was assumed we just finish calculating the mean for each group
+			  
+			  //save vectors point from group1 mean to group2 mean, size 1 (they will be scaled to reflect
+			  //the test statistic)
+			  float vecx=meanx2-meanx1;
+			  float vecy=meany2-meany1;
+			  float vecz=meanz2-meanz1;
+			  //	float norm=sqrt(vecx*vecx+vecy*vecy+vecz*vecz);
+			  
+			  //scaling occurs later
+			  meandifx.push_back(vecx);///norm);
+			  meandify.push_back(vecy);///norm);
+			  meandifz.push_back(vecz);///norm);
+			  
+			  //for each point calculate mean vertex for each group
+			  (*i)->_update_coord = Pt(meanx1,meany1,meanz1);
+			  count+=3;
+		  }
+		  m.update();
+		  setShapeMesh(model1,m);
+		  cout<<"set hsape Mesh"<<endl;
+		  vector<float> scalarsT;
+		  
+		  //this provides the option to do stats on the vertices 
+		  //create F test contrast matrix (testing each EV separately
+		  count=0;
+		  for (int j=0;j<contrast.Ncols();j++){
+			  if (j!=EV){
+				  for (int i=0;i<contrast.Ncols();i++){
+					  if(i==j){
+						  //if(i==EV){
+						  contrast.element(count,i)=1;
+					  }else{
+						  contrast.element(count,i)=0;
+					  }
+					  
+					  cout<<contrast.element(count,i)<<" ";
+				  }
+				  cout<<endl;
+				  count++;
+			  }
+		  }
+		  
+		  // save vertex Matrix if requested
+		  if (saveVertices.set()) {
+			  Matrix ReshapedVerts(MeshVerts.Nrows(),MeshVerts.Ncols());
+			  int nverts=MeshVerts.Nrows()/3;
+			  int newm=1;
+			  for (int m=1; m<=ReshapedVerts.Nrows(); m+=3) {
+				  for (int n=1; n<=ReshapedVerts.Ncols(); n++) {
+					  ReshapedVerts(newm,n)=MeshVerts(m,n);
+					  ReshapedVerts(newm+nverts,n)=MeshVerts(m+1,n);
+					  ReshapedVerts(newm+2*nverts,n)=MeshVerts(m+2,n);
+				  }
+				  newm++;
+			  }
+			  write_ascii_matrix(fslbasename(saveVertices.value())+"_mat.txt",ReshapedVerts);
+			  volume4D<float> vertices(ReshapedVerts.Nrows()/3,3,1,ReshapedVerts.Ncols());
+			  vertices.setmatrix(ReshapedVerts.t());
+			  save_volume4D(vertices,saveVertices.value());
+		  }
+		  
+		  //use multivariate test on each vertex
+		  int dof1=0, dof2=0;
+		  for (int i=0;i<MeshVerts.Nrows();i=i+3){
+			  //use multivariate multiple regression on each veretx 
+			  cout<<"do mvglm"<<endl;
+			  float F=MVGLM_fit(target, MeshVerts.SubMatrix(i+1,i+3,1,MeshVerts.Ncols()).t(),contrast,dof1,dof2);
+			  cout<<"done mvglm"<<endl;
 
-      // also save the DOFs
-      Matrix dofvals(2,1);
-      dofvals << dof1 << dof2;
-      fout->addFieldData(dofvals,"FStatDOFs","float");
-									
-      //save the mesg with vectors
-      fout->save(outname.value()+evnum+".vtk");//,5,0);
-    }
+			  //	tstatsx.at(i/3)*=wilkL;
+			  //	tstatsy.at(i/3)*=wilkL;
+			  //	tstatsz.at(i/3)*=wilkL;	
+			  //this may 
+			  scalarsT.push_back(F);
+		  }
+		  
+		  fslvtkIO * fout = new fslvtkIO();
+		  fout->setPoints(model1->smean);
+		  fout->setPolygons(model1->cells);
+		  
+		  fout->setScalars(scalarsT); 
+		  Matrix Mmeandif(meandifx.size(),3);
+		  for (unsigned int mj=0; mj<meandifx.size(); mj++) { Mmeandif.element(mj,0)=meandifx.at(mj);  Mmeandif.element(mj,1)=meandify.at(mj); Mmeandif.element(mj,2)=meandifz.at(mj); }
+		  fout->setVectors(Mmeandif);
+		  
+		  // also save the DOFs
+		  Matrix dofvals(2,1);
+		  dofvals << dof1 << dof2;
+		  fout->addFieldData(dofvals,"FStatDOFs","float");
+		  
+		  //save the mesg with vectors
+		  fout->save(outname.value()+evnum+".vtk");//,5,0);
+	  }
   }
 }		
 
@@ -1954,6 +2042,167 @@ while (y_in>>ftemp)
 		float F=MVGLM_fit(target,Y,contrast);
 	cout<<"F "<<F<<endl;
 }
+
+void do_work_reconMesh()
+{
+	string mname;
+	mname=read_bvars_ModelName(inname.value() );	
+	shapeModel* model1=loadAndCreateShapeModel(mname);
+	vector<string> subjectnames;
+	Matrix bvars;
+	vector<int> vN;	
+	Matrix flirtmat(4,4);
+	vector< vector< vector<float> > > fmatv;
+	read_bvars(inname.value(),bvars,subjectnames, vN, pathname.value(),fmatv);
+	vector<float> vars;
+	for (int i=0; i<bvars.Nrows();i++){
+		vars.push_back(bvars.element(i,0));
+	}
+	
+	
+	for (int i=0; i<4;i++){
+		for (int j=0; j<4;j++){
+			flirtmat.element(i,j)=fmatv.at(0).at(i).at(j);
+			//	cout<<flirtmat.element(i,j)<<" ";
+		}
+		//cout<<endl;
+	}
+	//flirtmat=flirtmat.i();
+	for (int i=0; i<4;i++){
+		for (int j=0; j<4;j++){
+			fmatv.at(0).at(i).at(j)=flirtmat.element(i,j);
+			//	cout<<flirtmat.element(i,j)<<" ";
+		}
+		//cout<<endl;
+	}
+	
+//	model1->registerModel(fmatv.at(0));
+	cout<<"vars "<<vars.size()<<endl;
+	Mesh m=convertToMesh(model1->getDeformedGrid(vars),model1->cells);	
+	meshReg(m,fmatv.at(0));
+
+	m.save(outname.value(),3);
+}	
+	
+void do_work_readBvars(const string & filename)
+{
+	string stemp,modelname,imagename;
+	int Nsubs,Nbvars;
+	ifstream fin;
+	fin.open(filename.c_str());
+	getline(fin,stemp);
+	fin>>modelname;
+	fin>>stemp>>Nsubs;
+	while (Nsubs!=0)
+	{
+		fin>>imagename>>Nbvars;
+		char blank;
+		fin.read(reinterpret_cast<char*>(&blank),sizeof(char));
+		float bvar;
+		cout<<"BVARS"<<endl;
+		cout<<imagename<<" ";
+		for (int i=0;i<Nbvars;i++)
+		{
+			fin.read(reinterpret_cast<char*>(&bvar),sizeof(float));
+			cout<<bvar<<" ";
+		}
+		cout<<endl;
+		cout<<"TRANSFORMATION MATRIX"<<endl;
+		for (int i=1;i<=16;i++)
+		{
+			float bvar;
+			fin.read(reinterpret_cast<char*>(&bvar),sizeof(float));
+			cout<<bvar<<" ";
+			if (i%4 == 0)
+				cout<<endl;
+		}
+		
+		
+		Nsubs--;
+	}
+}
+
+void do_work_concatBvars(const string & filename, const string & fileout)
+{
+	
+	ifstream flist;
+	flist.open(filename.c_str());
+	string fname,modelname,imagename;
+	vector< vector<float> > all_bvars;
+	vector< vector<float> > all_fmats;
+
+	vector<string> vimages;
+	int count=0;
+	while (flist>>fname)
+	{
+		count++;
+	
+		string stemp,modelname_temp;
+		int Nsubs,Nbvars;
+		ifstream fin;
+		fin.open(fname.c_str());
+		getline(fin,stemp);
+		fin>>modelname_temp;
+	
+		if (count==1)
+			modelname=modelname_temp;
+		if (strcmp(modelname.c_str(),modelname_temp.c_str()))
+		{
+			cerr<<"Bvars were generated with different models"<<endl;
+			exit (EXIT_FAILURE);
+		}
+		fin>>stemp>>Nsubs;
+		fin>>imagename>>Nbvars;
+	
+		vimages.push_back(imagename);
+		char blank;
+		fin.read(reinterpret_cast<char*>(&blank),sizeof(char));
+		float bvar;
+		vector<float> vbvars;
+		for (int i=0;i<Nbvars;i++)
+		{
+			fin.read(reinterpret_cast<char*>(&bvar),sizeof(float));
+			vbvars.push_back(bvar);
+		}
+		all_bvars.push_back(vbvars);
+		vector<float> fmat;
+		for (int i=1;i<=16;i++)
+		{
+			fin.read(reinterpret_cast<char*>(&bvar),sizeof(float));
+			fmat.push_back(bvar);
+			if (verbose.value()){
+				cout<<bvar<<" ";
+				if (i%4 == 0)
+					cout<<endl;
+			}
+		}
+
+		all_fmats.push_back(fmat);
+		fin.close();
+	}
+	
+	ofstream fout;
+	fout.open(fileout.c_str());
+	fout<<"This is a bvars file"<<endl;
+	fout<<modelname<<endl;
+	fout<<"NumberOfSubjects "<<count<<endl;
+	vector< vector<float> >::iterator i_bvars=all_bvars.begin();
+	vector< vector<float> >::iterator i_fmat=all_fmats.begin();
+	for (vector<string>::iterator i_f=vimages.begin();i_f!=vimages.end(); i_f++,i_bvars++,i_fmat++)
+	{
+		fout<<*i_f<<" "<<i_bvars->size()<<" ";
+		for (vector<float>::iterator i_bvars2=i_bvars->begin();i_bvars2!=i_bvars->end(); i_bvars2++ )
+				fout.write(reinterpret_cast<char *>(&(*i_bvars2)),sizeof(*i_bvars2));
+
+		for (vector<float>::iterator i_fmat2=i_fmat->begin(); i_fmat2!=i_fmat->end();i_fmat2++)
+				fout.write(reinterpret_cast<char *>(&(*i_fmat2)),sizeof(*i_fmat2));
+
+	}
+	
+
+}
+
+
 int main(int argc,char *argv[])
 {
 	
@@ -1981,7 +2230,8 @@ int main(int argc,char *argv[])
     options.add(useReconNative);
     options.add(useRigidAlign);
     options.add(designname);
-
+	options.add(reconMeshFromBvars);
+	options.add(readBvars);
     options.add(meshToVol);
     options.add(centreOrigin);
     options.add(saveVertices);
@@ -1991,6 +2241,8 @@ int main(int argc,char *argv[])
     options.add(help);
     options.add(singleBoundaryCorr);
 	options.add(doMVGLM);
+	  options.add(concatBvars);
+
     nonoptarg = options.parse_command_line(argc, argv);
 		
     // line below stops the program if the help was requested or 
@@ -2015,8 +2267,16 @@ int main(int argc,char *argv[])
       do_work_overlap();
     }else if (doMVGLM.value()){
 		do_work_MVGLM();
+	}else if (reconMeshFromBvars.value())
+	{
+		do_work_reconMesh();
+	}else if (readBvars.value())
+	{
+		do_work_readBvars(inname.value());
+	}else if (concatBvars.value())
+	{
+		do_work_concatBvars(inname.value(), outname.value());
 	}
-	
 		
 		
   }  catch(X_OptionError& e) {
