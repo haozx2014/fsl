@@ -2,7 +2,7 @@
 
     Mark Jenkinson and Matthew Webster, FMRIB Image Analysis Group
 
-    Copyright (C) 2003-2007 University of Oxford  */
+    Copyright (C) 2003-2009 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -71,17 +71,11 @@
 #include "newimage/costfns.h"
 #include "utils/fsl_isfinite.h"
 
-
 using namespace NEWIMAGE;
-using namespace MISCMATHS;
-
-bool masks_used=false;
-bool lthr_used=false;
-bool uthr_used=false;
 
 void print_usage(const string& progname) {
   cout << "Usage: fslstats <input> [options]" << endl << endl;
-  cout << endl;
+  cout << "Note - options are applied in order, e.g. -M -l 10 -M will report the non-zero mean, apply a threshold and then report the new nonzero mean" << endl << endl;
   cout << "-l <lthresh> : set lower threshold" << endl;
   cout << "-u <uthresh> : set upper threshold" << endl;
   cout << "-r           : output <robust min intensity> <robust max intensity>" << endl;
@@ -105,11 +99,9 @@ void print_usage(const string& progname) {
   cout << "-n           : treat NaN or Inf as zero for subsequent stats" << endl;
   cout << "-k <mask>    : use the specified image (filename) for masking - overrides lower and upper thresholds" << endl;
   cout << "-h <nbins>   : output a histogram (for the thresholded/masked voxels only) with nbins" << endl; 
-  cout << "-H <nbins> <min> <max>   : output a histogram (for the thresholded/masked voxels only) with nbins and histogram limits of min and max" << endl; 
-  cout << endl;
+  cout << "-H <nbins> <min> <max>   : output a histogram (for the thresholded/masked voxels only) with nbins and histogram limits of min and max" << endl << endl;
   cout << "Note - thresholds are not inclusive ie lthresh<allowed<uthresh" << endl;
 }
-
 
 // Some specialised nonzero functions just for speedup
 //  (it avoids generating masks when not absolutely necessary)
@@ -180,24 +172,19 @@ double nonzerostddev(const volume4D<float>& vol)
   return std::sqrt(var);
 }
 
-int generate_masks(volume4D<float> &mask, volume4D<float> &masknz, const volume4D<float> &vin,
-		   float& lthr, float& uthr) 
+int generateNonZeroMask(const volume4D<float> &mask, volume4D<float> &masknz, const volume4D<float> &input)
 {
-  if (!lthr_used) { lthr=vin.min()-1; }
-  if (!uthr_used) { uthr=vin.max()+1; }
-  mask = binarise(vin,lthr,uthr,exclusive);
-  if (mask.tsize()!=1) masknz = (binarise(vin,0.0f, 0.0f)-1.0f)*-1.0f*mask;
-  else masknz = (binarise(vin,0.0f, 0.0f)-1.0f)*-1.0f*mask[0];
+  masknz.reinitialize(mask.xsize(),mask.ysize(),mask.zsize(),input.tsize());
+  for (int t=input.mint(); t<=input.maxt(); t++) 
+    masknz[t]=((binarise(input[t],0.0f, 0.0f)-1.0f)*-1.0f*mask[t % mask.tsize()]);
   return 0;
 }
 
-int generate_masks(const volume4D<float> &mask, volume4D<float> &masknz, const volume4D<float> &vin)
+int generate_masks(volume4D<float> &mask, volume4D<float> &masknz, const volume4D<float> &input,float& lthr, float& uthr) 
 {
-  if (mask.tsize()!=1) masknz = (binarise(vin,0.0f, 0.0f)-1.0f)*-1.0f*mask;
-  else masknz = (binarise(vin,0.0f, 0.0f)-1.0f)*-1.0f*mask[0];
-  return 0;
+  mask = binarise(input,lthr,uthr,exclusive);
+  return generateNonZeroMask(mask,masknz,input);
 }
-
 
 int fmrib_main_float(int argc, char* argv[]) 
 {
@@ -207,15 +194,11 @@ int fmrib_main_float(int argc, char* argv[])
   cout.setf(ios::left, ios::adjustfield); 
   cout.precision(6);  
 
-  volume4D<float> vin, vol, mask, masknz;
+  volume4D<float> vol, mask, masknz;
   read_volume4D(vol,argv[1]);
 
-  float lthr=0, uthr=0;  // these initial values are not used
-  if (masks_used) {
-    vin = vol;
-    generate_masks(mask,masknz,vin,lthr,uthr);
-    vol = vin * mask;
-  }
+  float lthr(vol.min()-1);
+  float uthr=(vol.max()+1);    
 
   int narg=2;
   string sarg;
@@ -230,10 +213,10 @@ int fmrib_main_float(int argc, char* argv[])
               if (!isfinite((double)vol(x,y,z,t)))
 	        vol(x,y,z,t)=0;
     } else if (sarg=="-m") {
-      if (masks_used) cout <<  vol.mean(mask) << " ";
+      if (mask.nvoxels()>0) cout <<  vol.mean(mask) << " ";
       else cout << vol.mean() << " ";
     } else if (sarg=="-M") {
-      if (masks_used) cout << vol.mean(masknz) << " ";
+      if (masknz.nvoxels()>0) cout << vol.mean(masknz) << " ";
       else {
 	double nzmean=0;
 	nzmean = nonzeromean(vol);
@@ -242,7 +225,7 @@ int fmrib_main_float(int argc, char* argv[])
     } else if (sarg=="-X") {
       ColumnVector coord(4);
       coord(4)=1.0;
-      if (masks_used) {
+      if (mask.nvoxels()>0) {
 	coord(1) = vol.mincoordx(mask);
 	coord(2) = vol.mincoordy(mask);
 	coord(3) = vol.mincoordz(mask);
@@ -257,7 +240,7 @@ int fmrib_main_float(int argc, char* argv[])
     } else if (sarg=="-x") { 
       ColumnVector coord(4);
       coord(4)=1.0;
-      if (masks_used) {
+      if (mask.nvoxels()>0) {
 	coord(1) = vol.maxcoordx(mask);
 	coord(2) = vol.maxcoordy(mask);
 	coord(3) = vol.maxcoordz(mask);
@@ -270,12 +253,10 @@ int fmrib_main_float(int argc, char* argv[])
       cout << MISCMATHS::round(coord(1)) << " " << 
 	MISCMATHS::round(coord(2)) << " " << MISCMATHS::round(coord(3)) << " ";
     } else if (sarg=="-w") {
-      if (!masks_used) { 
-	if (vin.nvoxels()<1) { vin = vol; }
-	masks_used=true;
-	generate_masks(mask,masknz,vin,lthr,uthr); 
-	vol = vin * mask; 
-      }
+	if (masknz.nvoxels()<1) { //Need to generate non-zeromask 
+	  generate_masks(mask,masknz,vol,lthr,uthr); 
+	  vol*=mask; 
+	}
       int xmin=masknz.maxx(),xmax=masknz.minx(),ymin=masknz.maxy(),ymax=masknz.miny(),zmin=masknz.maxz(),zmax=masknz.minz(),tmin=masknz.maxt(),tmax=masknz.mint();
       
       for(int t=masknz.mint();t<=masknz.maxt();t++) {
@@ -314,13 +295,11 @@ int fmrib_main_float(int argc, char* argv[])
       if (zmin>zmax) { int tmp=zmax;  zmax=zmin;  zmin=tmp; }
       // now output nifti coords
       cout << xmin << " " << 1+xmax-xmin << " " << ymin << " " << 1+ymax-ymin << " " << zmin << " " << 1+zmax-zmin << " " << tmin << " " << 1+tmax-tmin << " ";
-    } else if (sarg=="-e") {
-      if (!masks_used) { 
-	if (vin.nvoxels()<1) { vin = vol; }
-	masks_used=true;
-	generate_masks(mask,masknz,vin,lthr,uthr); 
-	vol = vin * mask; 
-      }
+      } else if (sarg=="-e") {
+	if (mask.nvoxels()<1) {
+	  generate_masks(mask,masknz,vol,lthr,uthr); 
+	  vol*=mask; 
+	}
       ColumnVector hist;
       int nbins=1000;
       double entropy=0;
@@ -333,7 +312,7 @@ int fmrib_main_float(int argc, char* argv[])
       }
       entropy /= log((double) nbins);
       cout << entropy << " ";
-    } else if (sarg=="-E") { 
+      } else if (sarg=="-E") { 
       ColumnVector hist;
       int nbins=1000;
       double entropy=0;
@@ -367,19 +346,11 @@ int fmrib_main_float(int argc, char* argv[])
    	  mask.addvolume(mask[mask.maxt()]);
         }
       }
-      if (!masks_used) {
-	masks_used=true;
-	vin = vol;
-      }
-      float th= 0.5;
-      if (th!=0) {
-        mask.binarise(th);
-      } else {
-        mask.binarise(1);
-      }
-      generate_masks(mask,masknz,vin);
-        if (mask.tsize()!=1) vol=vin*mask; 
-	else vol=vin*mask[0];
+      
+      mask.binarise(0.5);
+      generateNonZeroMask(mask,masknz,vol);
+        if (mask.tsize()!=1) vol*=mask; 
+	else vol*=mask[0];
     } else if (sarg=="-l") {
       narg++;
       if (narg<argc) {
@@ -388,13 +359,8 @@ int fmrib_main_float(int argc, char* argv[])
 	cerr << "Must specify an argument to -l" << endl;
 	exit(2);
       }
-      lthr_used=true;
-      if (!masks_used) {
-	masks_used=true;
-	vin = vol;
-      }
-      generate_masks(mask,masknz,vin,lthr,uthr);
-      vol = vin * mask;
+      generate_masks(mask,masknz,vol,lthr,uthr);
+      vol*=mask;
     } else if (sarg=="-u") {
       narg++;
       if (narg<argc) {
@@ -403,17 +369,12 @@ int fmrib_main_float(int argc, char* argv[])
 	cerr << "Must specify an argument to -u" << endl;
 	exit(2);
       }
-      uthr_used=true;
-      if (!masks_used) {
-	masks_used=true;
-	vin = vol;
-      }
-      generate_masks(mask,masknz,vin,lthr,uthr);
-      vol = vin * mask;
+      generate_masks(mask,masknz,vol,lthr,uthr);
+      vol*=mask;
     } else if (sarg=="-a") {
       vol = abs(vol);
     } else if (sarg=="-v") {
-      if (masks_used) {
+      if (mask.nvoxels()>0) {
 	cout << (long int) mask.sum() << " " 
 	     << mask.sum() * vol.xdim() * vol.ydim() * vol.zdim() << " ";
       } else {
@@ -421,7 +382,7 @@ int fmrib_main_float(int argc, char* argv[])
 	     << vol.nvoxels() * vol.tsize() * vol.xdim() * vol.ydim() * vol.zdim() << " ";
       }
     } else if (sarg=="-V") {
-      if (masks_used) {
+      if (masknz.nvoxels()>0) {
 	cout << (long int) masknz.sum() << " " 
 	     << masknz.sum() * vol.xdim() * vol.ydim() * vol.zdim() << " ";
       } else {
@@ -434,19 +395,19 @@ int fmrib_main_float(int argc, char* argv[])
 	// hidden debug option!
       cout << vol.sum() << " ";
     } else if (sarg=="-s") {
-	if (masks_used) cout << vol.stddev(mask) << " ";
+	if (mask.nvoxels()>0) cout << vol.stddev(mask) << " ";
 	else cout << vol.stddev() << " ";
     } else if (sarg=="-S") {
-      if (masks_used) {
+      if (masknz.nvoxels()>0) {
 	cout << vol.stddev(masknz) << " ";
       } else {
 	cout << nonzerostddev(vol) << " ";
       }
     } else if (sarg=="-r") {
-        if (masks_used) cout << vol.robustmin(mask) << " " << vol.robustmax(mask) << " ";
+      if (mask.nvoxels()>0) cout << vol.robustmin(mask) << " " << vol.robustmax(mask) << " ";
         else cout << vol.robustmin() << " " << vol.robustmax() << " ";
     } else if (sarg=="-R") {
-	if (masks_used) cout << vol.min(mask) << " " << vol.max(mask) << " ";
+	if (mask.nvoxels()>0) cout << vol.min(mask) << " " << vol.max(mask) << " ";
 	else cout << vol.min() << " " << vol.max() << " ";
     } else if (sarg=="-c") {
 	ColumnVector cog(4);
@@ -475,7 +436,7 @@ int fmrib_main_float(int argc, char* argv[])
     	cerr << "Percentile must be between 0 and 100" << endl;
     	exit(1);
       }
-      if (masks_used) cout << vol.percentile((float) n/100.0, mask) << " ";
+      if (mask.nvoxels()>0) cout << vol.percentile((float) n/100.0, mask) << " ";
       else cout << vol.percentile((float) n/100.0) << " ";
     } else if (sarg=="-P") { 
       float n;
@@ -490,11 +451,9 @@ int fmrib_main_float(int argc, char* argv[])
     	cerr << "Percentile must be between 0 and 100" << endl;
     	exit(1);
       }
-      if (!masks_used) {
-	if (vin.nvoxels()<1) { vin = vol; }
-	masks_used=true;
-	generate_masks(mask,masknz,vin,lthr,uthr); 
-	vol = vin * mask; 
+      if (mask.nvoxels()<1) {
+	generate_masks(mask,masknz,vol,lthr,uthr); 
+	vol*=mask; 
       }
       cout << vol.percentile((float) n/100.0,masknz) << " ";
     } else if (sarg=="-h") {
@@ -511,7 +470,7 @@ int fmrib_main_float(int argc, char* argv[])
     	cerr << "Must specify at least 1 bin" << endl;
     	exit(1);
       }
-      if (masks_used) {
+      if (mask.nvoxels()>0) {
 	cout << vol.histogram(nbins,vol.min(),vol.max(),mask) << " ";
       } else {
 	cout << vol.histogram(nbins,vol.min(),vol.max()) << " ";
@@ -546,7 +505,7 @@ int fmrib_main_float(int argc, char* argv[])
 	cerr << "Must specify the histogram maximum intensity" << endl;
 	exit(2);
       }
-      if (masks_used) {
+      if (mask.nvoxels()>0) {
 	cout << vol.histogram(nbins,min,max,mask) << " ";
       } else {
 	cout << vol.histogram(nbins,min,max) << " ";

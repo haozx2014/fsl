@@ -449,6 +449,15 @@ namespace NEWIMAGE {
     template <class S>
     friend volume<S> operator-(const volume<S>& vol);
 
+    // Comparisons. These are used for "spatial" purposes
+    // so that if data is identical and all the "spatial
+    // fields of the header are identical then the volumes
+    // are considered identical.
+    template <class S>
+    friend bool operator==(const volume<S>& v1, const volume<S>& v2);
+    template <class S>
+    friend bool operator!=(const volume<S>& v1, const volume<S>& v2); // { return(!(v1==v2)); }
+    
     // GENERAL MANIPULATION
 
     void binarise(T lowerth, T upperth, threshtype tt=inclusive);
@@ -1258,6 +1267,26 @@ namespace NEWIMAGE {
   {
     return(vol * (static_cast<S>(-1)));
   }
+
+  template <class S>
+  bool operator==(const volume<S>& v1,
+		  const volume<S>& v2)
+  {
+    // Check relevant parts of header
+    if (!samesize(v1,v2,true)) return(false);
+    if (v1.sform_code() != v2.sform_code()) return(false);
+    if (v1.sform_mat() != v2.sform_mat()) return(false);
+    if (v1.qform_code() != v2.qform_code()) return(false);
+    if (v1.qform_mat() != v2.qform_mat()) return(false);
+    // Check data
+    for (typename volume<S>::fast_const_iterator it1=v1.fbegin(), it_end=v1.fend(), it2=v2.fbegin(); it1 != it_end; ++it1, ++it2) {
+      if ((*it1) != (*it2)) return(false);
+    }
+
+    return(true);
+  }
+  template <class S>
+  bool operator!=(const volume<S>& v1, const volume<S>& v2) {return(!(v1==v2));}
 
   template <class S>
   volume4D<S> operator+(S num, const volume4D<S>& vol)

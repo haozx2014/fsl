@@ -20,12 +20,10 @@ namespace fslvtkio {
 		BINARY=false;
 		MAX_SET=false;
 		MAX=0;
-
+				ST_COUNT=0;		
 #ifdef PPC64
-	       m_n=0;
+	m_n=0;
 #endif
-          
-
 	}
 	
 	fslvtkIO::fslvtkIO(const string & filename,const fslvtkIO::DataType i)
@@ -38,17 +36,14 @@ namespace fslvtkio {
 		MAX_SET=false;
 		MAX=0;
 		#ifdef PPC64
-		m_n=0;
+	m_n=0;
 #endif
-
-
-
-
 		switch (i)
 		{
 			case 0:
 				setDataType(i);
 				readPolyData(filename);
+				ST_COUNT=1;
 				break;
 			case 1:
 				setDataType(i);
@@ -66,6 +61,7 @@ namespace fslvtkio {
 	void fslvtkIO::setMesh(const  Mesh &  m){
 		//set points
 		//assume 3 dimensions
+		ST_COUNT=1;
 		Points.ReSize(m._points.size(),3);
 		int  count=0;
 		for (vector<Mpoint*>::iterator i =const_cast<Mesh &>(m)._points.begin(); i!=const_cast<Mesh &>(m)._points.end(); i++ )
@@ -96,7 +92,7 @@ namespace fslvtkio {
 	{
 		if (m.Ncols()==3)
 			Points=m;
-		else if ( (m.Ncols()==1) && ( (m.Ncols()%3) == 0) )
+		else if ( (m.Ncols()==1) && ( (m.Nrows()%3) == 0) )
 		{
 			Points.ReSize(m.Nrows()/3,3);
 		
@@ -128,6 +124,36 @@ namespace fslvtkio {
 		}
 	}
 	
+		void fslvtkIO::appendPointsAndPolygons(const Matrix & pts, const Matrix & polys)
+		{
+			cout<<"begin append"<<endl;
+
+			//if  ( (pts.Ncols()==1) && ( (pts.Nrows()%3) == 0) && (Points.Ncols()==3) )
+			//{
+			//}else 
+			if (pts.Ncols() != Points.Ncols())
+					throw fslvtkIOException("incompatible dimensions when appending points");
+
+			unsigned int Nprev=Points.Nrows();
+		//	unsigned int N=pts.Nrows();
+			Matrix Sc(pts.Nrows(),1);
+			Sc=ST_COUNT;
+			ST_COUNT++;
+			cout<<"append points "<<endl;
+			Points=Points & pts;
+			cout<<"append polys "<<polys.Nrows()<<" "<<polys.Ncols()<<endl;
+
+			Polygons=Polygons & (polys+Nprev);
+			if (ST_COUNT==1)	
+				Scalars=Sc;
+			else
+				Scalars=Scalars & Sc;
+			//shift polygons by N
+		//	for (unsigned int i=Nprev; i < (Nprev+N) ;i++)
+		//		for (unsigned int j=0; j < static_cast<unsigned int>(Polygons.Ncols()) ; j++)
+		//			Polygons.element(i,j)+=Nprev;
+			cout<<"end append"<<endl;
+		}
 
 	
 	template<class T>
@@ -145,28 +171,7 @@ template vector<float> fslvtkIO::getPointsAsVector<float>();
 template vector<double> fslvtkIO::getPointsAsVector<double>();
 
 
-template<class T>
-vector< vector<T> > fslvtkIO::getPointsAsVectorOfVectors(){
-	vector< vector<T> > allpoints;
-	vector<T> pointsX;
-	vector<T> pointsY;
-	vector<T> pointsZ;
-	
-	for (int i=0;i<Points.Nrows();i++)
-	{
-		pointsX.push_back(static_cast<T>(Points.element(i,0)));			
-		pointsY.push_back(static_cast<T>(Points.element(i,1)));			
-		pointsZ.push_back(static_cast<T>(Points.element(i,2)));			
-	}
-	allpoints.push_back(pointsX);
-	allpoints.push_back(pointsY);
-	allpoints.push_back(pointsZ);
-	
-	return allpoints;
-	
-}
-template vector< vector<float> > fslvtkIO::getPointsAsVectorOfVectors<float>();
-template vector< vector<double> > fslvtkIO::getPointsAsVectorOfVectors<double>();
+
 
 
 Matrix fslvtkIO::getField(const string & name){
@@ -181,7 +186,21 @@ Matrix fslvtkIO::getField(const string & name){
 	
 	return fieldDataNum.at(ind);
 }
-
+	Matrix fslvtkIO::getField(const string & name, unsigned int & indout ){
+		//search for field index
+		
+		int ind=-1;
+		for (unsigned int i=0;i<fieldDataNumName.size();i++)
+			if (!strcmp(fieldDataNumName.at(i).c_str(),name.c_str()))
+				ind=i;
+		if (ind==-1)
+			throw fslvtkIOException("No field data of that name."); 
+		
+		indout=ind;
+		
+		return fieldDataNum.at(ind);
+	}
+	
 
 
 template<class T>
@@ -208,7 +227,19 @@ void fslvtkIO::addCellFieldData(const Matrix & M, const string & name, const str
 	cd_list.push_back(name);
 	cd_type.push_back(vtkAttType);
 }
-
+	
+	
+	
+	
+	void fslvtkIO::replaceFieldData(const Matrix& M,const string & name)
+	{
+		unsigned int ind;
+		getField(name, ind);
+		fieldDataNum.at(ind)=M;
+	}
+	
+	
+	
 template< class T >
 void fslvtkIO::addFieldData(const vector<T> & vM, const string & name, const string & type){
 	ColumnVector M(vM.size());
@@ -352,7 +383,7 @@ bool  fslvtkIO::readPoints(ifstream & fvtk)
 	Points.ReSize(Npts,3);
 	
 	if (BINARY) 
-		getline(fvtk,stemp); //gets rid of newlinw		
+		getline(fvtk,stemp); //gets rid of newline		
 	
 	for (int i=0 ; i < Npts ; i++)
 	{
@@ -503,9 +534,10 @@ void fslvtkIO::save(string s)
 		addFieldData(cd_type, "CellFieldAttTypes");
 	}
 	
-	
+	cout<<"open file "<<s<<" to save."<<endl;
 	ofstream fshape;  
 	fshape.open(s.c_str());
+	cout<<"succesfully opennded file "<<s<<" to save."<<endl;
 
 	//calculate total number of points
 	
@@ -645,7 +677,7 @@ void fslvtkIO::readFieldData(ifstream & fvtk){
 		
 		if (SWITCH_ROWS_COLS){ N-=1; }//only used to fix old model!!!!!!!!
 		
-		//read in fireld
+		//read in field
 		for ( int fieldnum=0; fieldnum< N ; fieldnum++){
 			string fieldname;
 			fvtk>>fieldname;
@@ -687,6 +719,8 @@ void fslvtkIO::readFieldData(ifstream & fvtk){
 void fslvtkIO::readPointData( ifstream & fvtk, string & nextData){
 	//only handles SCALARS and VECTORS currently
 	//assumes POINT_DATA is found
+        // WARNING!!  NEED TO DEAL WITH nextData BEING SET, AS IT INDICATES THAT A STRING HAS BEEN 
+        //   REMOVED FROM THE STREAM BUT NOT YET PROCESSED!!
 	string stemp,stype;
 	int N;//number of Points
 		fvtk>>N;
@@ -858,19 +892,35 @@ void fslvtkIO::readPolyData(string name)
 		readPoints(fvtk);
 		readPolygons(fvtk);
 		
-		while (fvtk>>stemp)
+		bool already_read_stemp=false;
+		while (already_read_stemp || (fvtk>>stemp))
 		{
-			if (!strcmp(stemp.c_str(),"POINT_DATA"))
-				readPointData(fvtk,stemp);
-			else if(!strcmp(stemp.c_str(),"FIELD"))
-				readFieldData(fvtk);
+		  already_read_stemp=false;
+		  if (!strcmp(stemp.c_str(),"POINT_DATA")) {
+		    readPointData(fvtk,stemp);
+		    if (stemp.length()>0) {already_read_stemp=true;}
+		  } else { 
+		    if(!strcmp(stemp.c_str(),"FIELD"))
+		      readFieldData(fvtk);
+		  }
 		}
 	}else{
 		throw fslvtkIOException("Cannot open file.");
 	}
 }
 
-
+	void fslvtkIO::displayNumericFieldDataNames()
+	{
+		for (vector<string>::iterator i=fieldDataNumName.begin();i!=fieldDataNumName.end();i++)
+			cout<<*i<<endl;
+	}
+	
+	void fslvtkIO::displayNumericField(const string & name)
+	{
+		cout<<getField(name)<<endl;
+		
+	}
+	
 }
 
 

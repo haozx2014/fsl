@@ -76,7 +76,7 @@ Usage() {
     echo "1: just deproject <skeleton-space-input-image> onto the space of each subject in all_FA (output in \"stats\" directory)"
     echo "2: do the above and also invert nonlinear warping, to get back to subjects' native space in FA (outputs in \"FA\" directory)"
     echo ""
-    echo "-n : use nearest-neighbour interpolation (instead of trilinear) to keep exact values from <skeleton-space-input-image>"
+    echo "-n : assume that <skeleton-space-input-image> contains one or more integer index numbers and ensure that those exact values are deprojected without being changed by interpolations"
     echo ""
     exit 1
 }
@@ -124,7 +124,7 @@ if [ $SPACE -ge 2 ] ; then
 
 	if [ $interp != "tri" ] ; then
 
-	    maxn=`${FSLDIR}/bin/fslstats $nextvol -R | awk '{print "0 k " $2 "0.5 + 1 / p" }' | dc - `
+	    maxn=`${FSLDIR}/bin/fslstats $nextvol -R | awk '{print "0 k " $2 " 0.5 + 1 / p" }' | dc - `
 	    echo "max label value = $maxn"
 	    i=1
 	    while [ $i -le $maxn ] ; do

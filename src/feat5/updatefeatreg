@@ -1,9 +1,6 @@
 #!/bin/sh
 
-#   updatefeatreg - updates all inverse transforms and summary images based
-#                   on fundamental registration matrices:
-#                   i.e. example_func2highres.mat , highres2standard.mat
-#                 - this allows for manual/other correction of the matrices
+#   updatefeatreg
 #
 #   Mark Jenkinson & Steve Smith, FMRIB Image Analysis Group
 #
@@ -71,6 +68,15 @@
 #   University, to negotiate a licence. Contact details are:
 #   innovation@isis.ox.ac.uk quoting reference DE/1112.
 
+usage() {
+  echo "Usage: `basename $0` <feat_directory> [-pngs]"
+  echo "   Updates all inverse and concatenated transforms in a first-level"
+  echo "        FEAT run, as well as the images in the FEAT report,"
+  echo "        based on the fundamental registration matrices:"
+  echo "          i.e. example_func2highres.mat , highres2standard.mat"
+  echo "        This allows for manual/other correction of the registrations"
+}
+
 regupdate() {
     if [ -f ${1}2${2}.mat -a -f ${2}2${3}.mat ] ; then
 	echo concatenating ${1}2${2}.mat and ${2}2${3}.mat
@@ -111,7 +117,7 @@ picupdate() {
 dirnm=$1
 
 if [ X${dirnm}X = XX ] ; then
-  echo "Usage: $0 <feat_directory>"
+  usage 
   exit 1;
 fi
 
@@ -120,14 +126,16 @@ if [ X${dirnm}X = X.X ] ; then
 fi
 
 if [ ! -d $dirnm ] ; then
+  usage 
+  echo " "
   echo "$dirnm is not a valid directory"
-  echo "Usage: $0 <feat_directory> [-pngs]"
   exit -1
 fi
 
 if [ "X"`echo $dirnm | grep feat`"X" = "XX" ] ; then
+  usage
+  echo " "
   echo "Directory must be a feat directory"
-  echo "Usage: $0 <feat_directory>"
   exit -2
 fi
 

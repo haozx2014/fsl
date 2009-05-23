@@ -1,10 +1,10 @@
-#! /bin/sh
+#!/bin/sh
+
+#   tbss_sym - make symmetric skeleton for TBSS left-right testing
 #
-# fix_OCMR_fieldmaps - script to hopefully fix the OCMR fieldmap conversion errors, mainly caused by dicom2ana or dicom2nifti
+#   Stephen Smith, FMRIB Image Analysis Group
 #
-# Mark Jenkinson, Johannes Klein and Karla Miller, FMRIB Centre
-#
-# Copyright (C) 2004-2008 University of Oxford 
+#   Copyright (C) 2008-2009 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -67,90 +67,48 @@
 #   Innovation Limited ("Isis"), the technology transfer company of the
 #   University, to negotiate a licence. Contact details are:
 #   innovation@isis.ox.ac.uk quoting reference DE/1112.
-#
-# V1 2005_07_28 Johannes Klein/Mark Jenkinson, FMRIB Centre
-# V2 2007_07_05 KLM: added input for TE time (seems to be 2.46 now??)
-# V2 2007_07_06 KLM: added detection of magnitude image dimensions
-# V4 2007_09_15 KLM: changed to work with new fsltools
-# V5 2008_03_19 MJ: subsantially modified to do sanity checking and work with VARIAN - first supported version in FMRIB
-#
 
-usage() {
- echo "Usage: `basename $0` <phase_image> <magnitude_image>"
- echo " "
- echo "  Attempts to fix two specific conversion errors in OCMR fieldmap scans"
- echo "  - the z voxel-size and interleaved slices for magnitude scans"
- echo "  - writes corrected images with *_fixed filenames"
+Usage () {
+    echo ""
+    echo "Usage: tbss_sym <image-rootname>"
+    echo "e.g. tbss_sym FA"
+    echo "e.g. tbss_sym L2"
+    echo ""
+    exit 1
 }
 
+[ "$1" = "" ] && Usage
 
+thresh=`cat thresh.txt`
+ALTIM=$1
 
-if [ $# -lt 2 ] ; then
-  usage
-  exit 1
+if [ `${FSLDIR}/bin/imtest mean_FA_symmetrised_skeleton_mask_dst` -eq 0 ]; then
+
+    echo "creating a symmetrised skeleton"
+    $FSLDIR/bin/fslmaths mean_FA_skeleton -thr $thresh -bin -dilF grotsym_dilated
+    $FSLDIR/bin/fslswapdim mean_FA -x y z grotsym > /dev/null
+    $FSLDIR/bin/fslmaths mean_FA -mas grotsym -add grotsym -div 2 mean_FA_symmetrised
+    $FSLDIR/bin/tbss_skeleton -i mean_FA_symmetrised -o grotsym_symmetrised_skeleton
+    $FSLDIR/bin/fslmaths grotsym_symmetrised_skeleton -thr $thresh -mas grotsym_dilated grotsym_symmetrised_skeleton
+    $FSLDIR/bin/fslswapdim grotsym_symmetrised_skeleton -x y z grotsym > /dev/null
+    $FSLDIR/bin/fslmaths grotsym_symmetrised_skeleton -mas grotsym mean_FA_symmetrised_skeleton
+    $FSLDIR/bin/fslmaths mean_FA_symmetrised_skeleton -bin mean_FA_symmetrised_skeleton_mask
+
+    echo "creating symmetrised skeleton distancemap"
+    ${FSLDIR}/bin/fslmaths mean_FA_mask -mul -1 -add 1 -add mean_FA_symmetrised_skeleton_mask mean_FA_symmetrised_skeleton_mask_dst
+    ${FSLDIR}/bin/distancemap -i mean_FA_symmetrised_skeleton_mask_dst -o mean_FA_symmetrised_skeleton_mask_dst
+
 fi
 
-if [ `$FSLDIR/bin/imtest $1` -ne 1 ]; then
- echo "$1 not found/not an image file"
- exit 1
+echo "projecting all FA data onto symmetrised skeleton"
+if [ $ALTIM != "FA" ]; then
+    altim="-a all_${ALTIM}"
 fi
+${FSLDIR}/bin/tbss_skeleton -i mean_FA_symmetrised -p $thresh mean_FA_symmetrised_skeleton_mask_dst ${FSLDIR}/data/standard/LowerCingulum_1mm all_FA all_${ALTIM}_symmetrised_skeletonised $altim -s mean_FA_symmetrised_skeleton
 
-if [ `$FSLDIR/bin/imtest $2` -ne 1 ]; then
- echo "$2 not found/not an image file"
- exit 1
-fi
+echo "flipping, substracting and half-masking 4D skeletonised FA"
+$FSLDIR/bin/fslswapdim all_${ALTIM}_symmetrised_skeletonised -x y z grotsym_all_${ALTIM}_symmetrised_flipped > /dev/null
+$FSLDIR/bin/fslmaths all_${ALTIM}_symmetrised_skeletonised -sub grotsym_all_${ALTIM}_symmetrised_flipped -roi 91 91 0 218 0 182 0 `$FSLDIR/bin/fslval all_FA_skeletonised dim4` all_${ALTIM}_skeletonised_left_minus_right
 
-phaseroot=`$FSLDIR/bin/remove_ext $1`
-absroot=`$FSLDIR/bin/remove_ext $2`
-
-# copy and change filetype
-$FSLDIR/bin/fslmaths ${phaseroot} ${phaseroot}_fixed
-$FSLDIR/bin/fslmaths ${absroot} ${absroot}_fixed
-
-fix=no;
-
-# check if voxel sizes seem sensible
-nt=`$FSLDIR/bin/fslval ${absroot}_fixed dim3`;
-ny=`$FSLDIR/bin/fslval ${absroot}_fixed dim2`;
-nx=`$FSLDIR/bin/fslval ${absroot}_fixed dim1`;
-dz=`$FSLDIR/bin/fslval ${absroot}_fixed pixdim3`;
-dy=`$FSLDIR/bin/fslval ${absroot}_fixed pixdim2`;
-dx=`$FSLDIR/bin/fslval ${absroot}_fixed pixdim1`;
-if [ `echo "$dz / $dx < 0.9" | bc -l` -eq 1 ] ; then
-    pdz=`$FSLDIR/bin/fslval ${phaseroot}_fixed pixdim3`
-    echo "Detected unusual z-voxel size of $dz mm in magnitude image"
-    echo "Making it equal to the z-voxel size of the phase image: $pdz mm" 
-    $FSLDIR/bin/fslhd -x ${absroot}_fixed > ${absroot}_hdr.txt
-    cat ${absroot}_hdr.txt | sed "s/dz =.*/dz = \'$pdz\'/" > ${absroot}_newhdr.txt
-    $FSLDIR/bin/fslcreatehd ${absroot}_newhdr.txt ${absroot}_fixed
-    fix=yes;
-fi
-
-# determine if we need to decimate magnitude image 
-#   (should not be needed if reconstruction from dicom was OK)
-nabs=`$FSLDIR/bin/fslval ${absroot}_fixed dim3`
-nphs=`$FSLDIR/bin/fslval ${phaseroot}_fixed dim3`
-nphs2=`echo "$nphs * 2" | bc`
-tmpnm=`$FSLDIR/bin/tmpnam`
-if [ $nabs -eq $nphs2 ]; then
-    echo "Detected dual echo magnitude image in single file - correcting..."
-    $FSLDIR/bin/fslslice ${absroot}_fixed ${tmpnm}_tmp_abs
-    $FSLDIR/bin/fslmerge -z ${tmpnm}_tmp_abs_echo1 ${tmpnm}_tmp_abs_slice_0*[02468].*
-    rm -rf ${tmpnm}_tmp_abs_slice*
-    $FSLDIR/bin/imrm ${absroot}_fixed
-    $FSLDIR/bin/fslmaths ${tmpnm}_tmp_abs_echo1 ${absroot}_fixed
-    fix=yes;
-fi
-
-rm -rf ${tmpnm}_tmp_ph* ${tmpnm}_tmp_abs*  ${absroot}_*hdr.txt
-
-# report if fix has been done
-if [ $fix = yes ] ; then
-    echo " "
-    echo "Corrected phase image written as ${phaseroot}_fixed"
-    echo "Corrected magnitude image written as ${absroot}_fixed"
-else
-    echo " "
-    echo "Finished"
-fi
+$FSLDIR/bin/imrm grotsym*
 

@@ -76,7 +76,7 @@ set VARS(history) {}
 #{{{ featquery_select_label
 
 proc featquery_select_label { } {
-    global fmri atlasname atlaslabelcount atlaslabelid atlaslabelname
+    global FSLDIR fmri atlasname atlaslabelcount atlaslabelid atlaslabelname atlasimage
 
     set count 0
     set w0 ".dialog[incr count]"
@@ -99,7 +99,15 @@ proc featquery_select_label { } {
     bind $w0.f.viewport.f <Configure> "feat5:scrollform_resize $w0 $w0.f.viewport"
     pack $w0.f.viewport -side left -fill both -expand true -in $w0.f
 
-    for { set i 0 } { $i < $atlaslabelcount($fmri(atlasmask)) } { incr i 1 } {
+    # test for whether this is a label image, in which case omit the first ("0") label from the button list
+    set theatlasimage "[ string range $atlasimage($fmri(atlasmask)) 0 [ expr [ string last "mm" $atlasimage($fmri(atlasmask)) ] - 2 ] ]${fmri(regres)}mm"
+    set nvols [ fsl:exec "${FSLDIR}/bin/fslnvols ${FSLDIR}/data/atlases/$theatlasimage" -n ]
+    set starti 0
+    if { $nvols == 1 } {
+	set starti 1
+    }
+
+    for { set i $starti } { $i < $atlaslabelcount($fmri(atlasmask)) } { incr i 1 } {
 	button $w0.button$i -text "$atlaslabelid($fmri(atlasmask),$i) $atlaslabelname($fmri(atlasmask),$i)" -command "set fmri(atlaslabel) $i ; featquery_update ; destroy $w0" -anchor w
 	pack $w0.button$i -in $w0.f.viewport.f -side top -expand yes -fill both -padx 0 -pady 0
     }

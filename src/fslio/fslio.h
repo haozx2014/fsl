@@ -156,6 +156,7 @@ void   FslWriteHeader(FSLIO *fslio);
 
 int   FslFileExists(const char *filename);
 char *FslMakeBaseName(const char *fname);
+void  FslGetHdrImgNames(const char* filename, const FSLIO* fslio, char** hdrname, char** imgname);
 int   FslCheckForMultipleFileNames(const char* filename);
 int   FslGetEnvOutputType(void);
 

@@ -48,16 +48,37 @@ int main(int   argc,
     exit(EXIT_FAILURE);
   }
 
+  // Read --ref and --in volumes
+  boost::shared_ptr<volume<float> >     ref(new volume<float>);
+  boost::shared_ptr<volume<float> >     obj(new volume<float>);
+  try {
+    read_volume(*ref,clp->Ref());
+    read_volume(*obj,clp->Obj());
+  }
+  catch (const std::exception& error) {
+    cerr << "Error occurred when reading --ref or --obj file" << endl;
+    cerr << "Exception thrown with message: " << error.what() << endl; 
+    exit(EXIT_FAILURE);
+  }
+
+  // Check for registration to self (sometimes done in TBSS)
+  if (trying_to_register_to_self(clp->Ref(),*ref,clp->Obj(),*obj,clp->Affine())) {
+    try {
+      write_self_results(*clp,*ref);
+    } 
+    catch(const std::exception& error) {
+      cerr << "Error occurred when writing results of registration to self" << endl;
+      cerr << "Exception thrown with message: " << error.what() << endl; 
+    }
+    if (clp->Verbose()) cerr << "Input to fnirt was two identical images. Result is unity transform" << endl;
+    exit(EXIT_SUCCESS);  // Sort of
+  }
+
   // Prepare for fnirting
   boost::shared_ptr<SSD_fnirt_CF>       cf;
   boost::shared_ptr<NonlinParam>        nlpar;
-  boost::shared_ptr<volume<float> >     ref(new volume<float>);
-    boost::shared_ptr<volume<float> >   obj(new volume<float>);
   double                                objmean = 0.0;
   try {
-    // Read reference-volume
-    read_volume(*ref,clp->Ref());
-
     // Create refmask as combination of explicit and implicit masks.
     boost::shared_ptr<volume<char> > refmask;
     if (clp->UseRefMask(1)) refmask = make_mask(clp->RefMask(),InclusiveMask,*ref,clp->UseImplicitRefMask(),clp->ImplicitRefValue());
@@ -66,9 +87,6 @@ int main(int   argc,
     // Normalise ref global mean to 100
     double refmean = spmlike_mean(*ref);
     (*ref) *= (100.0/refmean);     
-
-    // Read object-volume and (maybe) object-mask
-    read_volume(*obj,clp->Obj());
 
     // Create objmask as a combination of explicit and implicit masks.
     boost::shared_ptr<volume<char> > objmask;

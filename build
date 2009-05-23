@@ -3,11 +3,12 @@
 if [ $# -ge 1 ] ; then
   PROJECTS="$@";
 else
-  PROJECTS="extras utils znzlib niftiio fslio miscmaths newimage libhfunc libvis meshclass fslvtkio misc_tcl basisfield warpfns bint shapeModel \
+  PROJECTS="extras utils znzlib niftiio fslio miscmaths newimage libhfunc libvis first_lib \ 
+meshclass fslvtkio misc_tcl basisfield warpfns bint shapeModel MVdisc fslvtkconv libmeshutils \
 avwutils bet2 cluster tissue fast4 feat5 film filmbabe flirt fabber basil \
 fslpres fslvbm mcflirt melodic misc_c miscvis mm \
 randomise siena slicetimer susan tbss fnirt fugue \
-ifit load_varian misc_scripts fdt first possum sgeutils flameo dpm";
+ifit load_varian load_dicom misc_scripts fdt first possum sgeutils flameo dpm oxford_asl relax";
 fi
 
 echo "Building projects - see build.log file for progress..."

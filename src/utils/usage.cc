@@ -69,12 +69,8 @@ namespace Utilities {
 
   using namespace std;
 
-  void OptionParser::usage()
+  void OptionParser::describe_options()
   {
-    cerr << endl << "Part of FSL (build " << build << ")"<< endl;
-    cerr << progname_ << endl << endl;
-    cerr << "Usage: " << endl << example_ << endl;
-
     for(Options::iterator option = options_.begin(); option != options_.end(); 
 	option++)
       {
@@ -106,4 +102,20 @@ namespace Utilities {
     cerr << endl;
   }
 
+  void OptionParser::brief_usage()
+  {
+    cerr << progname_ << endl << endl;
+    cerr << "Usage: " << endl << example_ << endl;
+
+    describe_options();
+  }
+
+  void OptionParser::usage()
+  {
+    cerr << endl << "Part of FSL (build " << build << ")"<< endl;
+    cerr << progname_ << endl << endl;
+    cerr << "Usage: " << endl << example_ << endl;
+
+    describe_options();
+  }
 }

@@ -103,6 +103,7 @@ int printUsage(const string& programName)
   cout << " -uthrP : use following percentage (0-100) of ROBUST RANGE of non-zero voxels and threshold above" << endl;
   cout << " -max   : take maximum of following input and current image" << endl;
   cout << " -min   : take minimum of following input and current image" << endl;
+  cout << " -seed  : seed random number generator with following number" << endl;
 
   cout << "\nBasic unary operations:" << endl;
   cout << " -exp   : exponential" << endl;
@@ -183,15 +184,6 @@ int printUsage(const string& programName)
   return 1;
 }
 
-bool isNumber( const string& x )
-{
- bool flag=true;
- char *pend;
- strtod(x.c_str(),&pend);
- if (*pend!='\0') flag=false;
- return flag; 
-} 
-
 template <class T>
 void loadNewImage(volume4D<T> &oldI, volume4D<T> &newI, string filename)
 {
@@ -209,10 +201,9 @@ template <class T>
 int inputParser(int argc, char *argv[], short output_dt, bool forceOutputType=false)
 {
   volume4D<T> input_volume;
-  volumeinfo vinfo;
   volume<float> kernel(box_kernel(3,3,3));
-  bool separable=false;
-  read_volume4D(input_volume,string(argv[1]),vinfo);
+  bool separable(false);
+  read_volume4D(input_volume,string(argv[1]));
 
   for (int i = 2; i < argc-1; i++)  //main loop
   {    
@@ -526,8 +517,12 @@ if (!separatenoise)
               if (!max && file) input_volume.value(x,y,z,t)=MIN(input_volume.value(x,y,z,t),temp_volume.value(x,y,z,t%temp_volume.tsize()));
               if (!max && !file) input_volume.value(x,y,z,t)=MIN(input_volume.value(x,y,z,t),param);
             }
+    }    
+    /***************************************************************/
+    else if (string(argv[i])=="-seed") {
+      srand(atoi(argv[++i]));
+      sdrand(rand(),rand(),rand());
     }
-
     /***************************************************************/
     /******************** Unary Operations *************************/
     /***************************************************************/
@@ -622,6 +617,16 @@ if (!separatenoise)
               if (input_volume.value(x,y,z,t)> 0) input_volume.value(x,y,z,t)=(T)sqrt(input_volume.value(x,y,z,t));
               else  input_volume.value(x,y,z,t)= 0; 
             }
+    }
+    /***************************************************************/
+    else if (string(argv[i])=="-pow")
+    {
+      for(int t=0;t<input_volume.tsize();t++)           
+        for(int z=0;z<input_volume.zsize();z++)
+          for(int y=0;y<input_volume.ysize();y++)	    
+	    for(int x=0;x<input_volume.xsize();x++)
+	      input_volume.value(x,y,z,t)=(T)pow(input_volume.value(x,y,z,t),atof(argv[i+1]));
+      i++;
     }
     /***************************************************************/
     else if (string(argv[i])=="-invbin")
@@ -886,13 +891,13 @@ if (!separatenoise)
     else if (string(argv[i])=="-roi")
      { 
        int x0=atoi(argv[i+1]);
-       int x1=atoi(argv[i+1])+atoi(argv[i+2]);
+       int x1=atoi(argv[i+1])+atoi(argv[i+2])-1;
        int y0=atoi(argv[i+3]);
-       int y1=atoi(argv[i+3])+atoi(argv[i+4]);
+       int y1=atoi(argv[i+3])+atoi(argv[i+4])-1;
        int z0=atoi(argv[i+5]);
-       int z1=atoi(argv[i+5])+atoi(argv[i+6]);
+       int z1=atoi(argv[i+5])+atoi(argv[i+6])-1;
        int t0=atoi(argv[i+7]);
-       int t1=atoi(argv[i+7])+atoi(argv[i+8]);
+       int t1=atoi(argv[i+7])+atoi(argv[i+8])-1;
        ColumnVector v0(4), v1(4);
        v0 << x0 << y0 << z0 << 1.0;
        v1 << x1 << y1 << z1 << 1.0;
@@ -913,7 +918,7 @@ if (!separatenoise)
          for(int z=0;z<input_volume.zsize();z++)
            for(int y=0;y<input_volume.ysize();y++)	    
 	     for(int x=0;x<input_volume.xsize();x++)
-               if((x<x0) || (x>=x1) || (y<y0) || (y>=y1) || (z<z0) || (z>=z1) || (t<t0) || (t>=t1) )
+               if((x<x0) || (x>x1) || (y<y0) || (y>y1) || (z<z0) || (z>z1) || (t<t0) || (t>t1) )
                  input_volume.value(x,y,z,t)=0;
        i+=8;
      }
@@ -1068,9 +1073,9 @@ if (!separatenoise)
 	    for(int x=0;x<input_volume.xsize();x++)
               input_volume.value(x,y,z,t)=(T) MISCMATHS::round(input_volume.value(x,y,z,t));
   }
- 
-  FslSetCalMinMax(&vinfo,input_volume.min(),input_volume.max());
-  save_volume4D_dtype(input_volume,string(argv[argc-1]),output_dt,vinfo,true);
+
+  input_volume.setDisplayMaximumMinimum((float)input_volume.max(),(float)input_volume.min());
+  save_volume4D_datatype(input_volume,string(argv[argc-1]),output_dt);
   return 0;
 }
 
