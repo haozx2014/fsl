@@ -220,9 +220,11 @@ if { $fmri(newdir_yn) } {
 cd $FD
 
 new_file old
-fsl:exec "/bin/mkdir -p old ; /bin/mv design* old ; /bin/cp old/design.fsf old/design.png old/design.lev ." -n
 
-if { $fmri(analysis) == 4 } {
+if { $fmri(analysis) == 0 } {
+  fsl:exec "/bin/mkdir -p old ; /bin/cp design* old" -n
+} else {
+    fsl:exec "/bin/mkdir -p old ; /bin/mv design* old ; /bin/cp old/design.fsf old/design.png old/design.lev ." -n
     fsl:exec "/bin/mv ?endered_thresh_* cluster_* lmax_* prob_mask_* thresh_* tsplot stats/cope* stats/neff* stats/tstat* stats/varcope* stats/zstat* stats/fstat* stats/zfstat* old" -n
 }
 
@@ -259,7 +261,15 @@ set confevs ""
 if { [ file exists confoundevs.txt ] } {
     set confevs "confoundevs.txt"
 }
-fsl:exec "${FSLDIR}/bin/feat_model design $confevs"
+
+if { ! [ info exists fmri(featModelOpts) ] } {
+set fmri(featModelOpts) ""
+}
+
+set featModelID 0
+if { $fmri(analysis) != 0 } {
+    set featModelID [ fsl:exec "${FSLDIR}/bin/feat_model design $confevs" $fmri(featModelOpts) -N feat0_model -l logs ]
+}
 set fsfroot ${FD}/design
 
 #}}}
@@ -360,7 +370,10 @@ if { $fmri(featwatcher_yn) } {
 	if { $fmri(melodic_yn) } {
 	    set howlong 300
 	}
-	set prestatsID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -I $session -prestats" -b $howlong -N feat2_pre -l logs ]
+	    if { [ info exists fmri(featModelOpts) ] } {
+		    set jobHalt {-h featModelID}
+		}
+	set prestatsID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -I $session -prestats" -b $howlong $jobHalt -N feat2_pre -l logs ]
     }
 
     if { $fmri(stats_yn) } {
@@ -489,7 +502,7 @@ fsl:echo logs/feat9 "</pre><br><br><br><br><br><br><br><br><br><br><br><br><br><
 if { $fmri(featwatcher_yn) } {
     FmribWebHelp file: ${FD}/report_log.html
 } else {
-    fsl:echo "" "To view the FEAT progres and final report, point your web browser at ${FD}/report_log.html"
+    fsl:echo "" "To view the FEAT progress and final report, point your web browser at ${FD}/report_log.html"
 }
 
 #}}}

@@ -105,6 +105,15 @@ after correction for bias field.
 
 <H3>ADVANCED OPTIONS</H3>
  
+<p><b>Bias field iterations</b> determines the number of passes made
+during the initial bias field estimation stage.  A greater number of
+iterations can help esitmate particularly strong bias fields.
+
+<p><b>Bias field smoothing</b> controls the amount of smoothness
+expected in the estimated bias field.  The value entered is the
+Full-Width Half-Maximum (FWHM) in mm.  A larger value here will impose more
+smoothness on the estimated bias field.
+
 <P><b>Use a-priori probability maps</b> tells FAST to start by
 registering the input image to standard space and then use standard
 tissue-type probability maps (from the MNI152 dataset) instead of the
