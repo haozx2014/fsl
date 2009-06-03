@@ -1,3 +1,10 @@
+fsl (4.1.4-2) unstable; urgency=low
+
+  * Include a number of upstream patches that went into 4.1.4 after the
+    4.1.4-1 package got uploaded.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Wed, 03 Jun 2009 13:16:47 +0200
+
 fsl (4.1.4-1) unstable; urgency=low
 
   * New upstream release.
