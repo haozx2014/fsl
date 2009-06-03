@@ -217,7 +217,6 @@ for s in $structs; do
 	    ;;
 	Late)
 	    nmodes=40;
-	    modelN=317
 	    intref=1;
 	    ;;
 	Pall)
@@ -234,7 +233,6 @@ for s in $structs; do
 	    ;;
 	Stem)
 	    nmodes=40;
-	    modelN=317
 	    ;;
 	*)
 	    echo "Structure $s unknown"
@@ -256,12 +254,8 @@ for s in $structs; do
 	    printf "${FSLDIR}/bin/run_first -i $iname -t ${affmat} -n $nmodes -o ${imfirst} -m ${FSLDIR}/data/first/models_${modelN}_bin/05mm/${s}_05mm.bmv" >> $COM
 	fi
     else
-	append=""
-	if [ $modelN -eq 317 ] ; then 
-	    append="_bin"
-	fi;
 	S_CUT=`awk 'BEGIN {print substr("'$s'",1,1)}'`
-	printf "${FSLDIR}/bin/run_first -i $iname -t ${affmat} -n $nmodes -o ${imfirst} -m ${FSLDIR}/data/first/models_${modelN}_bin/intref_thal/${s}${append}.bmv -intref ${FSLDIR}/data/first/models_336_bin/05mm/${S_CUT}_Thal_05mm.bmv" >> $COM
+	printf "${FSLDIR}/bin/run_first -i $iname -t ${affmat} -n $nmodes -o ${imfirst} -m ${FSLDIR}/data/first/models_${modelN}_bin/intref_thal/${s}.bmv -intref ${FSLDIR}/data/first/models_336_bin/05mm/${S_CUT}_Thal_05mm.bmv" >> $COM
     fi
     
     imcorr="${oname}-${s}_corr"

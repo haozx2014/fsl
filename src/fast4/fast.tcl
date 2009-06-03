@@ -233,7 +233,41 @@ set vars(manualSegment) ""
 
 FileEntry $advf.manualSegment -textvariable vars(manualSegment) -label "Use file of initial tissue-type means" -title "Select a file of initial tissue-type means" -width 30 -filedialog directory  -filetypes * 
 
+
+#
+
 #}}}
+
+#{{{ MRF parameter
+
+set vars(mrfbeta) 0.1
+
+LabelSpinBox $advf.mrfbeta -label "Main MRF parameter " -textvariable vars(mrfbeta) -range " 0.0 1000.0 0.1 " -command "$advf.mrfbeta.spin.e validate;fast:updateinputs $w" -modifycmd  "fast:updateinputs $w"
+
+pack $advf.mrfbeta -in $advf -side top -anchor w -padx 5 -pady 5
+
+#}}}
+
+#{{{ bias field iterations
+
+set vars(biasiter) 4
+
+LabelSpinBox $advf.biasiter -label "Number of iterations for bias field removal " -textvariable vars(biasiter) -range " 1 100 1 " -command "$advf.biasiter.spin.e validate;fast:updateinputs $w" -modifycmd  "fast:updateinputs $w"
+
+pack $advf.biasiter -in $advf -side top -anchor w -padx 5 -pady 5
+
+#}}}
+
+#{{{ bias field smoothing
+
+set vars(biassmooth) 20.0
+
+LabelSpinBox $advf.biassmooth -label "Bias field smoothing (FWHM in mm) " -textvariable vars(biassmooth) -range " 0.1 1000.0 0.1 " -command "$advf.biassmooth.spin.e validate;fast:updateinputs $w" -modifycmd  "fast:updateinputs $w"
+
+pack $advf.biassmooth -in $advf -side top -anchor w -padx 5 -pady 5
+
+#}}}
+
 
 pack $advf.apriori -in $advf -side top -anchor w -padx 5 -pady 5
 
@@ -353,7 +387,7 @@ proc fast:apply { w } {
 	lappend inlist $entries($w,$i)
     }
 
-    fast:proc $vars(channels) $inlist $vars(type) $entries($w,$MC) $vars(classes) $vars(segall) $vars(prob) $vars(pv) $vars(restored) $vars(bias) $vars(apriori) $vars(apriori_final) $vars(manualSegment) 
+    fast:proc $vars(channels) $inlist $vars(type) $entries($w,$MC) $vars(classes) $vars(segall) $vars(prob) $vars(pv) $vars(restored) $vars(bias) $vars(apriori) $vars(apriori_final) $vars(manualSegment) $vars(biasiter) $vars(biassmooth) $vars(mrfbeta)
 
     update idletasks
 }
@@ -361,7 +395,7 @@ proc fast:apply { w } {
 #}}}
 #{{{ fast:proc
 
-proc fast:proc { channels inlist type output classes segall prob pv restored bias apriori apriori_final manualSegment } {
+proc fast:proc { channels inlist type output classes segall prob pv restored bias apriori apriori_final manualSegment biasiter biassmooth mrfbeta } {
 
     #{{{ setup for running fast 
 
@@ -379,6 +413,10 @@ if { $channels == 1 } {
 }
 
 set thecommand "$thecommand -n $classes"
+set thecommand "${thecommand} -H $mrfbeta"
+set thecommand "${thecommand} -I $biasiter"
+set thecommand "${thecommand} -l $biassmooth"
+
 
 if { $segall } {
     set thecommand "${thecommand} -g"

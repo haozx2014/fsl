@@ -97,29 +97,7 @@ if [ -f $output ] ; then
     exit 1
 fi
 
-count=0;
-totalsub=0;
-if [ -f temp.txt ] ; then
-  rm temp.txt
-fi
-for i in $@; do 
-
-	#output models to test
-	cat ${i} | sed '2q;d';
-
-	#keep track of number of subject
-	numSub=`cat ${i} | sed '3q;d' | awk '{ print $2 }'`;
-	totalsub=`echo "${totalsub}+${numSub}" | bc`
-	cat ${i} | sed '1,3d'>>temp.txt;
-	
-  	#move to next file
-	count=`echo "${count}+1" | bc`
-	
-done;
-
-echo "this is a bvars file">${output}
-cat ${i} | sed '2q;d'>>${output};
-echo NumberOfSubjects ${totalsub} >> ${output}
-cat temp.txt >> ${output}
-rm temp.txt
-
+listfile=`$FSLDIR/bin/tmpnam`_bvars
+ls -1 $@ > ${listfile}.txt
+$FSLDIR/bin/first_utils --concatBvars -i ${listfile}.txt -o $output
+rm -f ${listfile}.txt
