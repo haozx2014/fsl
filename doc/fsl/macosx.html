@@ -62,14 +62,29 @@ In addition to installing the FSL programs, the install script is also capable o
 <pre>sh fsl_installer.sh -e</pre>
 <hr /><a id="maninst"></a><h2>Manual Installation</h2>
 <ol>
+  <li> <a id='md5'>Verify the download</a>
+    <ul>
+      <li> Visit our <a href="/fsl/cgi-bin/fslchecksums.pl">checksums page</a> to download the MD5 sum file that matches the <emph>.tar.gz</emph> package you have downloaded. Make sure that the <emph>.md5</emph> file is in the same directory as the downloaded FSL distribution file.</li>
+      <li> Open up a <i>Terminal</i> (you can find this application in <i>Utilities</i> folder inside the <i>Applications</i> folder).</li>
+      <li> In the terminal, change to the directory where you downloaded the FSL distribution, e.g.
+	<pre>cd ~/Downloads</pre>
+      </li>
+      <li> Check the file with
+	<pre>fsl=`ls -1 fsl-4.*-macosx.tar.gz`; md5 $fsl | diff -q - $fsl.md5</pre>
+	<strong>NB</strong> ` is on the key to the left of Z on the UK Mac keyboard, or to the left of 1 on the US Mac keyboard 
+      </li>
+      <li> If there is a problem with the download then you will receive a message like:
+	<pre>Files .... and .... differ</pre>
+      </li>
+    </ul>
   <li> Unpack the FSL distribution
     <ul>
       <li> Open up a <i>Terminal</i> (you can find this application in <i>Utilities</i> folder inside the <i>Applications</i> folder).</li>
       <li> In the terminal, change to the directory where you want FSL installed, e.g.
 	<pre>cd /usr/local</pre>
       </li>
-      <li> Unpack the fsl download file - for example, if you downloaded it onto your Desktop,
-	<pre>tar -zxvf ~/Desktop/fsl-*-macosx*.tar.gz</pre>
+      <li> Unpack the fsl download file - for example, if you downloaded it onto your Downloads folder,
+	<pre>tar -zxvf ~/Downloads/fsl-*-macosx.tar.gz</pre>
 	(omit the z in the -zxvf if your computer has already uncompressed the tarfile for you).
 	This will create a directory called fsl in the current directory which will contain all the required files for FSL and FSLView. Note that you might need to add <i>sudo</i> to the start of the tar command if you don't automatically have the right to create files in <i>/usr/local</i>. 
       </li>
@@ -149,7 +164,7 @@ setenv PATH ${FSLDIR}/bin:${PATH}</pre>
 	<pre>
 if ( $?TERM_PROGRAM ) then
  if ( "X$TERM_PROGRAM" == "XApple_Terminal" ) then; if ( ! $?DISPLAY ) then
-      set X11_FOLDER=/tmp/.X11-unix; set currentUser=`id -u`; set userX11folder=`find $X11_FOLDER -name 'X*' -user $currentUser -print 2>&amp;1 | tail -n 1`
+      set X11_FOLDER=/tmp/.X11-unix; set currentUser=`id -u`; set userX11folder=`find $X11_FOLDER -name 'X*' -user $currentUser -print | tail -n 1`
       if ( "X$userX11folder" != "X" ) then
         set displaynumber=`basename ${userX11folder} | grep -o '[[:digit:]]\+'`
         if ( "X$displaynumber" != "X" ) then

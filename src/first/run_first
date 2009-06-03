@@ -2,9 +2,9 @@
 
 #   run_flirt - wrapper script for "first", the main FIRST fitting
 #
-#   Brian Patenaude, FMRIB Image Analysis Group
+#   Brian Patenaude and Matthew Webster, FMRIB Image Analysis Group
 #
-#   Copyright (C) 2006-2007 University of Oxford
+#   Copyright (C) 2006-2009 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -75,7 +75,6 @@ Usage() {
     echo "-v                   : verbose"
     echo "-intref <model_name> : reference structure for the local intensity normalization"
     echo "-loadBvars <bvars>   : initializes FIRST with a previous estimate of the structure"
-    echo "-shcond <bmapfile>   : run FIRST on a structure given a previously segmented structure"
     echo "-multipleImages : run first on multiple images, need to provide a list of images, transformation matrices, and output names"
     echo ""
     echo "e.g.:  run_first -i im1 -t im1_to_mni.mat -n 60 -o output_name -m ${FSLDIR}/data/first/models_317_bin/L_Hipp_bin.bmv"
