@@ -29,7 +29,9 @@ FSLCONFDIR=$(FSLDIR)/config
 ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
 	OPTFLAGS = -O0
 else
-	OPTFLAGS = -O3 -fexpensive-optimizations
+	# -O3 seems to kill GCC for some pieces on some architectures, sometimes
+	# (miscmaths, avwutils)
+	OPTFLAGS = -O2
 endif
 
 # default compiler flags
