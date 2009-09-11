@@ -73,8 +73,6 @@
 #include <string>
 #include <iostream>
 #include <vector>
-// for roundl() ??
-#include <cmath>
 #include <boost/shared_ptr.hpp>
 #include "newmat.h"
 #include "miscmaths/bfmatrix.h"
@@ -1475,7 +1473,9 @@ unsigned int splinefield::fake_old_ksp(double        nvxs,
                                        unsigned int  nksp,
                                        double        ovxs) const
 {
-  return(static_cast<unsigned int>(roundl((ovxs/nvxs)*double(nksp))));
+  // No need for long double rounding and also causes FTBFS on ARMEL
+  //return(static_cast<unsigned int>(roundl((ovxs/nvxs)*double(nksp))));
+  return(static_cast<unsigned int>(MISCMATHS::round((ovxs/nvxs)*double(nksp))));
 }
 
 /////////////////////////////////////////////////////////////////////
