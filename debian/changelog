@@ -1,3 +1,13 @@
+fsl (4.1.4-3) unstable; urgency=low
+
+  * No longer compile with '-ansi -pedantic', since a significant part of the
+    sources is actually not ANSI compliant (Closes: #546003).
+  * Don't use roundl() to round doubles in src/basisfield/splinefield.cpp to
+    prevent FTFBS on ARMEL (Closes: #513272).
+  * Bumped Standard version to 3.8.3.0 -- no changes necessary.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Fri, 11 Sep 2009 15:53:53 -0400
+
 fsl (4.1.4-2) unstable; urgency=low
 
   * Include a number of upstream patches that went into 4.1.4 after the

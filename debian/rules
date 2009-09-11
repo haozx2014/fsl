@@ -36,7 +36,7 @@ endif
 
 # default compiler flags
 # apply to FSL as 'ANSI_FLAGS'
-CFLAGS = -Wall -g -ansi -pedantic -DHAVE_LIBFREETYPE -fPIC \
+CFLAGS = -Wall -g -DHAVE_LIBFREETYPE -fPIC \
          -I/usr/include/nifti \
          -I/usr/include/newmat \
          -I$(FSLDIR)/extras/src/libprob -I$(FSLDIR)/extras/src/libcprob \
