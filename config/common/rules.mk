@@ -317,4 +317,4 @@ depend.mk:
 		fi \
 	done
 
-include depend.mk
+#include depend.mk
