@@ -80,7 +80,8 @@ fslcluster_cell_settings=/usr/local/share/sge/default/common/settings.sh
 # `whoami`@${fslcluster_mailto_domain}
 fslcluster_mailto_domain=localhost
 # When should the cluster engine send status email (see qsub -m ... docs)
-# Don't send email by default
+# Don't send email by default; can be overidden by FSLCLUSTER_MAILOPTS
+# environment variable
 fslcluster_mailopts="n"
 
 
@@ -116,6 +117,11 @@ if [ "x$FSLPARALLEL" != "x" ] ; then
     METHOD=SGE
     # TODO: move cluster engine detection here to be able to support more than
     #       just SGE
+fi
+
+# Allow overriding mail settings
+if [ "x$FSLCLUSTER_MAILOPTS" != "x" ] ; then
+    fslcluster_mailopts=${FSLCLUSTER_MAILOPTS}
 fi
 
 
