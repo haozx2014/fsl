@@ -75,6 +75,23 @@
 # cluster.
 ###########################################################################
 
+fslcluster_cell_settings=/usr/local/share/sge/default/common/settings.sh
+# Domain mail should be sent to if necessary. The complete address will be
+# `whoami`@${fslcluster_mailto_domain}
+fslcluster_mailto_domain=localhost
+# When should the cluster engine send status email (see qsub -m ... docs)
+# Don't send email by default
+fslcluster_mailopts="n"
+# This is the name of the queue is for jobs which last under 30mins.
+fslcluster_veryshort_q=veryshort.q
+# This is the name of the queue is for jobs which last up to 2h. 
+fslcluster_short_q=short.q
+# This is the name of the queue is for jobs which last less than 24h.
+fslcluster_long_q=long.q
+# This is the name of the queue is for jobs which will take longer than 24h
+# CPU time.
+fslcluster_verylong_q=verylong.q
+
 
 ###########################################################################
 # The following section determines what to do when fsl_sub is called
@@ -89,15 +106,25 @@
 # cluster to be used.
 ###########################################################################
 
+# try autodetecting SGE, but see ovveride switch FSLPARALLEL below
 METHOD=SGE
 if [ "x$SGE_ROOT" = "x" ] ; then
-    if [ -f /usr/local/share/sge/default/common/settings.sh ] ; then
-	. /usr/local/share/sge/default/common/settings.sh
+    if [ -f ${fslcluster_cell_settings} ] ; then
+	. ${fslcluster_cell_settings}
     elif [ -f /usr/local/sge/default/common/settings.sh ] ; then
 	. /usr/local/sge/default/common/settings.sh
     else
 	METHOD=NONE
     fi
+fi
+
+# Allow to override the above automatic detection result with FSLPARALLEL
+if [ "x$FSLPARALLEL" != "x" ] ; then
+    # Whenever FSLPARALLEL is set enfore using SGE even if no SGE_ROOT is set
+    # which, for example, is the case on Debian systems running SGE
+    METHOD=SGE
+    # TODO: move cluster engine detection here to be able to support more than
+    #       just SGE
 fi
 
 
@@ -114,13 +141,13 @@ fi
 map_qname ()
 {
     if [ $1 -le 20 ] ; then
-	queue=veryshort.q
+	queue=${fslcluster_veryshort_q}
     elif [ $1 -le 120 ] ; then
-	queue=short.q
+	queue=${fslcluster_short_q}
     elif [ $1 -le 1440 ] ; then
-	queue=long.q
+	queue=${fslcluster_long_q}
     else
-	queue=verylong.q
+	queue=${fslcluster_verylong_q}
     fi
     #echo "Estimated time was $1 mins: queue name is $queue"
 }
@@ -200,9 +227,9 @@ fi
 # change. It also sets up the basic emailing control.
 ###########################################################################
 
-queue=long.q
-mailto=`whoami`@fmrib.ox.ac.uk
-MailOpts="n"
+queue=${fslcluster_long_q}
+mailto=`whoami`@${fslcluster_mailto_domain}
+MailOpts=${fslcluster_mailopts}
 
 
 ###########################################################################

@@ -55,7 +55,12 @@ if { [  string match -nocase *wish* $MYSHELL ] } {
 
 #Choose load_varian specific OR FSLPARALLEL
 set FSLPARALLEL 0
-if { [ info exists env(SGE_ROOT) ] && $env(SGE_ROOT) != "" } { set FSLPARALLEL 1 }
+# Instead of relying on SGE_ROOT let's use FSLPARALLEL itself to determine
+# whether using a cluster is desired. This allows for other cluster engines
+# to be used.
+#if { [ info exists env(SGE_ROOT) ] && $env(SGE_ROOT) != "" } { set FSLPARALLEL 1 }
+if { [ info exists env(FSLPARALLEL) ] && $env(FSLPARALLEL) != "" } { set FSLPARALLEL 1 }
+
 
 # what type of OS?
 set OSFLAVOUR unix
