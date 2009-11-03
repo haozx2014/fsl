@@ -25,6 +25,22 @@ package.
 Questions regarding the usage of \fBFSL\fR or related theory can be
 posted on the
 \fBFSL mailing list\fR (see \fIhttp://www.jiscmail.ac.uk/lists/fsl.html\fR).
+.SH "PARALLELIZATION"
+FSL can be configured to submit jobs to a running Sun Gridengine (SGE). While
+not all functionality implemented in FSL supports this kind of parallelization,
+the most demanding processing tools (e.g. POSSUM and FDT) do.
+.PP
+FSL should be able to use SGE even if the SGE_ROOT environment variable is not
+set, as in the case of the Debian package of SGE. To enable batch processing
+simply set
+.IP
+FSLPARALLEL=1
+.PP
+in the shell where FSL is running. This can be enabled permanently in
+.IP
+/etc/fsl/fsl.sh
+.PP
+or on a case by case basis.
 .SH "FILES"
 .IP /etc/fsl/fsl.sh
 Main FSL configuration
