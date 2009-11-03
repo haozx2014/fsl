@@ -231,7 +231,9 @@ echo Making possum directory structure
 mkdir -p ${subjdir}/diff_proc
 mkdir -p ${subjdir}/logs
 mkdir -p ${subjdir}/logs/pid_${$}
-mailto=`whoami`@fmrib.ox.ac.uk
+# This setting is already present in fsl_sub and allows for a more flexible,
+# centralized configuration
+#mailto=`whoami`@fmrib.ox.ac.uk
     
 echo Processing stage 
 date
@@ -244,9 +246,12 @@ do
     procnum=$(($procnum + 1))
 done
 
-echo "${FSLDIR}/bin/fsl_sub -T $ntime -l ${subjdir}/logs $arch -M $mailto -N possum -t ${subjdir}/possum.com"
+# don't specify a mailto address, but rely on fsl_sub doing it
+#echo "${FSLDIR}/bin/fsl_sub -T $ntime -l ${subjdir}/logs $arch -M $mailto -N possum -t ${subjdir}/possum.com"
+#possumid=`${FSLDIR}/bin/fsl_sub -T $ntime -l ${subjdir}/logs $arch -M $mailto -N possum -t ${subjdir}/possum.com ` 
+echo "${FSLDIR}/bin/fsl_sub -T $ntime -l ${subjdir}/logs $arch -N possum -t ${subjdir}/possum.com"
 
-possumid=`${FSLDIR}/bin/fsl_sub -T $ntime -l ${subjdir}/logs $arch -M $mailto -N possum -t ${subjdir}/possum.com ` 
+possumid=`${FSLDIR}/bin/fsl_sub -T $ntime -l ${subjdir}/logs $arch -N possum -t ${subjdir}/possum.com ` 
 
 echo Post processing stage
 date

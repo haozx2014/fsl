@@ -726,8 +726,11 @@ proc fdt:apply { w dialog } {
 	probtrackx {
 	    global probtrack env
 	    set errorStr ""
-            set FSLPARALLEL 0
-            if { [ info exists env(SGE_ROOT) ] && $env(SGE_ROOT) != "" } { set FSLPARALLEL 1 }
+	    # there seems to be no need to reset FSLPARALLEL since the desired
+	    # configuration is already determined in fslstart.tcl (sourced at the
+	    #top of this file) in a way that is not SGE-specific.
+        #set FSLPARALLEL 0
+        #if { [ info exists env(SGE_ROOT) ] && $env(SGE_ROOT) != "" } { set FSLPARALLEL 1 }
 	    if { $probtrack(bedpost_dir) == ""  } { set errorStr "You must specify the bedpostX directory!" }
 	    if { $probtrack(mode) == "simple" && $probtrack(usereference_yn) && $probtrack(reference) == "" } { set errorStr "$errorStr You must specify a reference image" } 
 	    if { $probtrack(mode) == "seedmask" && $probtrack(reference) == "" } { set errorStr "$errorStr You must specify a mask image" } 
@@ -880,7 +883,11 @@ proc fdt:apply { w dialog } {
                     puts $script "mv $logfile $copylog"
                     puts $script "rm ${filebase}_script.sh"
 		    close $script
-		    exec $FSLDIR/bin/fsl_sub -q long.q ${filebase}_script.sh
+			# Don't specify specific queue name (to leave the logic within
+			# fsl_sub, but specify a long time (20 hours) to achieve the same
+			# goal)
+		    #exec $FSLDIR/bin/fsl_sub -q long.q ${filebase}_script.sh
+		    exec $FSLDIR/bin/fsl_sub -T 1200 ${filebase}_script.sh
 		} else {
 
 		    fdt_monitor_short $w "$FSLDIR/bin/probtrackx $flags"
