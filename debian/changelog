@@ -5,8 +5,11 @@ fsl (4.1.4-3) unstable; urgency=low
   * Don't use roundl() to round doubles in src/basisfield/splinefield.cpp to
     prevent FTFBS on ARMEL (Closes: #513272).
   * Bumped Standard version to 3.8.3.0 -- no changes necessary.
+  * New config variable FSLPARALLEL. If set, FSL will submit jobs to a running
+    Sun Gridengine. By default, this setting is disabled in /etc/fsl/fsl.sh.
+    (Closes: #546238). Added suggested package 'gridengine-client'.
 
- -- Michael Hanke <michael.hanke@gmail.com>  Fri, 11 Sep 2009 15:53:53 -0400
+ -- Michael Hanke <michael.hanke@gmail.com>  Tue, 03 Nov 2009 15:44:42 -0500
 
 fsl (4.1.4-2) unstable; urgency=low
 
