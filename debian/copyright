@@ -12,7 +12,7 @@ transference as long as there is no financial return (see license below).
 FSL license
 -----------
 
-FMRIB Software Library, Release 4.1 (c) 1999-2009, The University of Oxford
+FMRIB Software Library, Release 4.1 (c) 1999-2010, The University of Oxford
 (the "Software")
 
 The Software remains the property of the University of Oxford ("the
@@ -308,7 +308,7 @@ Debian maintainer comment:
 
 Debian packaging
 ----------------
-The Debian packaging is (C) 2005-2007, Michael Hanke <michael.hanke@gmail.com>
+The Debian packaging is (C) 2005-2010, Michael Hanke <michael.hanke@gmail.com>
 
    The Debian packaging is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
