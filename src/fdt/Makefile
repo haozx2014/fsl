@@ -16,6 +16,7 @@ MED=medianfilter
 ROM=reord_OM
 SAUS=sausages
 XFIBRES=xfibres
+XFIBRES2=xfibres_2
 RV=replacevols
 MDV=make_dyadic_vectors
 FMO=fdt_matrix_ops
@@ -23,8 +24,12 @@ INDEXER=indexer
 TEST=testfile
 VECREG=vecreg
 KURTOSIS=kurtosis
+SWAPDYADS=swap_dyadic_vectors
+PVMFIT=pvmfit
+DTIGEN=dtigen
 
-DTIFITOBJS=dtifit.o dtifitOptions.o
+
+DTIFITOBJS=dtifit.o dtifitOptions.o diffmodels.o
 CCOPSOBJS=ccops.o ccopsOptions.o
 PTXOBJS=probtrackx.o probtrackxOptions.o streamlines.o ptx_simple.o ptx_seedmask.o ptx_twomasks.o ptx_nmasks.o ptx_meshmask.o
 FTBOBJS=find_the_biggest.o
@@ -32,23 +37,26 @@ PJOBJS=proj_thresh.o
 MEDOBJS=medianfilter.o 
 ROMOBJS=reord_OM.o
 SAUSOBJS=sausages.o
-XFIBOBJS=xfibres.o xfibresoptions.o
+XFIBOBJS=xfibres.o xfibresoptions.o diffmodels.o
+XFIBOBJS2=xfibres_2.o xfibresoptions.o
 RVOBJS=replacevols.o
 MDVOBJS=make_dyadic_vectors.o
 FMOOBJS=fdt_matrix_ops.o
 INDEXEROBJS=indexer.o
-TESTOBJS=testfile.o
+TESTOBJS=testfile.o 
 VECREGOBJS=vecreg.o
 KURTOSISOBJS=kurtosis.o dtifitOptions.o
-
+SWAPDYADSOBJS=swap_dyadic_vectors.o
+PVMFITOBJS=pvmfit.o pvmfitOptions.o diffmodels.o
+DTIGENOBJS=dtigen.o
 
 SGEBEDPOST = bedpost 
 SGEBEDPOSTX = bedpostx bedpostx_postproc.sh bedpostx_preproc.sh bedpostx_single_slice.sh bedpostx_datacheck
 
-SCRIPTS = eddy_correct zeropad maskdyads probtrack ${SGEBEDPOST} ${SGEBEDPOSTX} 
+SCRIPTS = eddy_correct zeropad maskdyads probtrack rotate_bvecs ${SGEBEDPOST} ${SGEBEDPOSTX} 
 FSCRIPTS = correct_and_average ocmr_preproc
 
-XFILES = dtifit ccops find_the_biggest medianfilter make_dyadic_vectors proj_thresh vecreg xfibres probtrackx
+XFILES = dtifit ccops find_the_biggest medianfilter make_dyadic_vectors proj_thresh vecreg xfibres probtrackx pvmfit
 
 FXFILES = reord_OM sausages replacevols fdt_matrix_ops indexer
 
@@ -87,6 +95,9 @@ ${SAUS}:    	${SAUSOBJS}
 ${XFIBRES}:    	${XFIBOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${XFIBOBJS} ${DLIBS}
 
+${XFIBRES2}:    	${XFIBOBJS2}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${XFIBOBJS2} ${DLIBS}
+
 ${RV}:    	${RVOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${RVOBJS} ${DLIBS}
 
@@ -108,4 +119,13 @@ ${VECREG}:    	${VECREGOBJS}
 
 ${KURTOSIS}:   ${KURTOSISOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${KURTOSISOBJS} ${DLIBS}
+
+${SWAPDYADS}: ${SWAPDYADSOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${SWAPDYADSOBJS} ${DLIBS}
+
+${PVMFIT}:    	${PVMFITOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${PVMFITOBJS} ${DLIBS}
+
+${DTIGEN}:    	${DTIGENOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${DTIGENOBJS} ${DLIBS}
 

@@ -88,23 +88,23 @@ done
 
 filename=`${FSLDIR}/bin/remove_ext $inputfile`;
 
-if [ -r ${filename}.nii -o -r ${filename}.nii.gz ] ; then
+if [ -r ${filename}.nii ] || [ -r ${filename}.nii.gz ] ; then
   echo "1";
   exit;
 fi
 
-if [ -r ${filename}.mnc -o -r ${filename}.mnc.gz ] ; then
+if [ -r ${filename}.mnc ] || [ -r ${filename}.mnc.gz ] ; then
   echo "1";
   exit;
 fi
 
-if [ ! -r ${filename}.hdr -a ! -r ${filename}.hdr.gz ] ; then
+if [ ! -r ${filename}.hdr ] && [ ! -r ${filename}.hdr.gz ] ; then
   # return 0 here as no header exists and no single image means no image!
   echo "0";
   exit;
 fi
 
-if [ ! -r ${filename}.img -a ! -r ${filename}.img.gz ] ; then
+if [ ! -r ${filename}.img ] && [ ! -r ${filename}.img.gz ] ; then
   # return 0 here as no img file exists and no single image means no image!
   echo "0";
   exit;

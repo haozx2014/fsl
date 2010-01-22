@@ -259,7 +259,8 @@ volume<float> FnirtFileReader::Jacobian(bool inc_aff) const
   else if (_type==FnirtSplineDispType || _type==FnirtDCTDispType) {
     volume<float>  jac(FieldSize()[0],FieldSize()[1],FieldSize()[2]);
     jac.setdims(VoxelSize()[0],VoxelSize()[1],VoxelSize()[2]);
-    deffield2jacobian(*(_coef_rep[0]),*(_coef_rep[1]),*(_coef_rep[2]),jac);
+    if (inc_aff) deffield2jacobian(*(_coef_rep[0]),*(_coef_rep[1]),*(_coef_rep[2]),AffineMat(),jac);
+    else deffield2jacobian(*(_coef_rep[0]),*(_coef_rep[1]),*(_coef_rep[2]),jac);
     return(jac);
   }
   else throw FnirtFileReaderException("Jacobian: Invalid _type");  
@@ -340,10 +341,55 @@ dctfield FnirtFileReader::FieldAsDctfield(unsigned int indx, vector<unsigned int
 
 /////////////////////////////////////////////////////////////////////
 //
-// This is a globally declared "helper" routine.
+// Here starts globally declared "helper" routine.
 //
 /////////////////////////////////////////////////////////////////////
 
+void deffield2jacobian(const BASISFIELD::basisfield&   dx,
+                       const BASISFIELD::basisfield&   dy,
+                       const BASISFIELD::basisfield&   dz,
+                       volume<float>&                  jac)
+{
+  NEWMAT::IdentityMatrix  eye(4);
+  deffield2jacobian(dx,dy,dz,eye,jac);
+}
+
+void deffield2jacobian(const BASISFIELD::basisfield&   dx,
+                       const BASISFIELD::basisfield&   dy,
+                       const BASISFIELD::basisfield&   dz,
+                       const NEWMAT::Matrix&           aff,
+                       volume<float>&                  jac)
+{
+  const boost::shared_ptr<ColumnVector>  dxdx = dx.Get(BASISFIELD::FieldIndex(1));  
+  const boost::shared_ptr<ColumnVector>  dxdy = dx.Get(BASISFIELD::FieldIndex(2));  
+  const boost::shared_ptr<ColumnVector>  dxdz = dx.Get(BASISFIELD::FieldIndex(3));  
+  const boost::shared_ptr<ColumnVector>  dydx = dy.Get(BASISFIELD::FieldIndex(1));  
+  const boost::shared_ptr<ColumnVector>  dydy = dy.Get(BASISFIELD::FieldIndex(2));  
+  const boost::shared_ptr<ColumnVector>  dydz = dy.Get(BASISFIELD::FieldIndex(3));  
+  const boost::shared_ptr<ColumnVector>  dzdx = dz.Get(BASISFIELD::FieldIndex(1));  
+  const boost::shared_ptr<ColumnVector>  dzdy = dz.Get(BASISFIELD::FieldIndex(2));  
+  const boost::shared_ptr<ColumnVector>  dzdz = dz.Get(BASISFIELD::FieldIndex(3));
+
+  NEWMAT::Matrix iaff = aff.i();
+  double a11=iaff(1,1), a21=iaff(2,1), a31=iaff(3,1);
+  double a12=iaff(1,2), a22=iaff(2,2), a32=iaff(3,2);
+  double a13=iaff(1,3), a23=iaff(2,3), a33=iaff(3,3);
+  for (unsigned int indx=0, k=0; k<dx.FieldSz_z(); k++) {
+    for (unsigned int j=0; j<dx.FieldSz_y(); j++) {
+      for (unsigned int i=0; i<dx.FieldSz_x(); i++) {
+	jac(i,j,k) = (a11+(1.0/dx.Vxs_x())*dxdx->element(indx)) * (a22+(1.0/dy.Vxs_y())*dydy->element(indx)) * (a33+(1.0/dz.Vxs_z())*dzdz->element(indx));
+        jac(i,j,k) += (a12+(1.0/dx.Vxs_y())*dxdy->element(indx)) * (a23+(1.0/dy.Vxs_z())*dydz->element(indx)) * (a31+(1.0/dz.Vxs_x())*dzdx->element(indx));
+	jac(i,j,k) += (a13+(1.0/dx.Vxs_z())*dxdz->element(indx)) * (a21+(1.0/dy.Vxs_x())*dydx->element(indx)) * (a32+(1.0/dz.Vxs_y())*dzdy->element(indx));
+        jac(i,j,k) -= (a31+(1.0/dz.Vxs_x())*dzdx->element(indx)) * (a22+(1.0/dy.Vxs_y())*dydy->element(indx)) * (a13+(1.0/dx.Vxs_z())*dxdz->element(indx));
+        jac(i,j,k) -= (a32+(1.0/dz.Vxs_y())*dzdy->element(indx)) * (a23+(1.0/dy.Vxs_z())*dydz->element(indx)) * (a11+(1.0/dx.Vxs_x())*dxdx->element(indx));
+        jac(i,j,k) -= (a33+(1.0/dz.Vxs_z())*dzdz->element(indx)) * (a21+(1.0/dy.Vxs_x())*dydx->element(indx)) * (a12+(1.0/dx.Vxs_y())*dxdy->element(indx));
+	indx++;
+      }
+    }
+  }
+}
+
+/*
 void deffield2jacobian(const BASISFIELD::basisfield&   dx,
                        const BASISFIELD::basisfield&   dy,
                        const BASISFIELD::basisfield&   dz,
@@ -372,6 +418,48 @@ void deffield2jacobian(const BASISFIELD::basisfield&   dx,
       }
     }
   }
+}
+*/
+
+void add_or_remove_affine_part(const NEWMAT::Matrix&     aff,
+                               unsigned int              indx,
+                               bool                      add,
+                               NEWIMAGE::volume<float>&  warps)
+{
+  if (indx > 2) throw FnirtFileReaderException("add_affine_part: indx out of range");
+  if ((aff-IdentityMatrix(4)).MaximumAbsoluteValue() > 1e-6) {
+    Matrix        M = (aff.i() - IdentityMatrix(4)) * warps.sampling_mat();
+    ColumnVector  mr(4);
+    for (unsigned int i=1; i<=4; i++) mr(i) = M(indx+1,i);
+    ColumnVector  xv(4);
+    int zs = warps.zsize(), ys = warps.ysize(), xs = warps.xsize();
+    xv(4) = 1.0;
+    for (int z=0; z<zs; z++) {
+      xv(3) = double(z);
+      for (int y=0; y<ys; y++) {
+        xv(2) = double(y);
+        for (int x=0; x<xs; x++) {
+          xv(1) = double(x); 
+          if (add) warps(x,y,z) += DotProduct(mr,xv);
+          else warps(x,y,z) -= DotProduct(mr,xv);
+	}
+      }
+    }
+  }
+}
+
+void add_affine_part(const NEWMAT::Matrix&     aff,
+                     unsigned int              indx,
+                     NEWIMAGE::volume<float>&  warps)
+{
+  add_or_remove_affine_part(aff,indx,true,warps);
+}
+
+void remove_affine_part(const NEWMAT::Matrix&     aff,
+                        unsigned int              indx,
+                        NEWIMAGE::volume<float>&  warps)
+{
+  add_or_remove_affine_part(aff,indx,false,warps);
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -495,6 +583,7 @@ vector<shared_ptr<basisfield> > FnirtFileReader::read_coef_file(const volume4D<f
   return(fields);
 }
 
+/*
 void FnirtFileReader::add_affine_part(Matrix aff, unsigned int indx, volume<float>& warps) const
 {
   if (indx > 2) throw FnirtFileReaderException("add_affine_part: indx out of range");
@@ -517,5 +606,6 @@ void FnirtFileReader::add_affine_part(Matrix aff, unsigned int indx, volume<floa
     }
   }
 }
+*/
 
 } // End namespace NEWIMAGE

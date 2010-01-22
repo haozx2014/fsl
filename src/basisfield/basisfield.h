@@ -128,6 +128,7 @@ protected:
   double get_coef(unsigned int i, unsigned int j, unsigned int k) const;
   double get_coef(unsigned int i) const;
   virtual void assign(const basisfield& inf);
+  virtual double peek_outside_fov(int i, int j, int k, FieldIndex fi) const {return(0.0);} // Should be replaced by proper method in derived classes
 
 public:
 
@@ -163,6 +164,14 @@ public:
     return(field[fi]->element(z*FieldSz_x()*FieldSz_y()+y*FieldSz_x()+x));
   }
   virtual double UnsafePeek(unsigned int vi, FieldIndex fi=FIELD) const {return(field[fi]->element(vi));}
+
+  // Get values at individual voxels of the field, where the voxel
+  // may be outside the actual defined FOV. I.e. x, y or z may be
+  // negative or greater than FieldSz. For DCT the field will just
+  // "continue" and for splines it will slowly taper off to zero
+  // over the range of a few knot-spacings.
+
+  virtual double PeekWide(int i, int j, int k, FieldIndex fi=FIELD);
 
   // Getting values of the field at non-integer voxel locations.
   // N.B. that the top one of these is pure virtual.

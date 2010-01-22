@@ -1,8 +1,8 @@
-/*  Log.h
+/*  pvmfitOptions.h
 
-    Mark Woolrich, FMRIB Image Analysis Group
+    Saad Jbabdi, FMRIB Image Analysis Group
 
-    Copyright (C) 1999-2000 University of Oxford  */
+    Copyright (C) 1999-2009 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -66,106 +66,113 @@
     University, to negotiate a licence. Contact details are:
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
+#if !defined(pvmfitOptions_h)
+#define pvmfitOptions_h
+
+#include <string>
 #include <iostream>
 #include <fstream>
-#include <iomanip>
-#include <string>
-#include <math.h>
-#include "newmatap.h"
-#include "newmatio.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include "utils/options.h"
+#include "commonopts.h"
+//#include "newmatall.h"
 
-using namespace NEWMAT;
-namespace UTILS{
+using namespace Utilities;
 
-#if !defined(__Log_h)
-#define __Log_h
+namespace PVMFIT {
+
+class pvmfitOptions {
+ public:
+  static pvmfitOptions& getInstance();
+  ~pvmfitOptions() { delete gopt; }
   
-  class Log
-    {
-    public:
-      static Log& getInstance();
-      ~Log() { delete logger; }
-
-      void establishDir(const string& name); 
-      void setDir(const string& name); 
-      void setLogFile(const string& name) {logfilename = name;}
-      const string& getDir() const { return dir; }
-      
-      void out(const string& p_fname, const Matrix& p_mat, bool p_addMatrixString = true);
-      void out(const string& p_fname, const RowVector& p_mat);
-      void out(const string& p_fname, const ColumnVector& p_mat);
-      
-      ofstream& str() { return logfileout; }
-      
-    private:
-      Log() {}
-      
-      const Log& operator=(Log&);
-      Log(Log&);
-      
-      static Log* logger;
-      string dir;
-      ofstream logfileout;
-      string logfilename;
-    };
+  Option<bool>   verbose;
+  Option<bool>   help;
+  Option<string> datafile;
+  Option<string> ofile;
+  Option<string> maskfile;
+  Option<string> bvecsfile;
+  Option<string> bvalsfile;
+  Option<int>    nfibres;
+  Option<int>    modelnum;
+  bool parse_command_line(int argc, char** argv);
   
-  inline void Log::out(const string& p_fname, const Matrix& p_mat, bool p_addMatrixString)
-    {
-      ofstream out;
-      out.open((dir + "/" + p_fname).c_str(), ios::out);
-      out.setf(ios::scientific, ios::floatfield);
+ private:
+  pvmfitOptions();  
+  const pvmfitOptions& operator=(pvmfitOptions&);
+  pvmfitOptions(pvmfitOptions&);
 
-      if(p_addMatrixString)
-	out << "/Matrix" << endl;
-      for(int i=1; i<=p_mat.Nrows(); i++)	   
-	{
-	  for(int j=1; j<=p_mat.Ncols(); j++)
-	    {
-	      out << p_mat(i,j) << " ";	
-	    }
-	  out << endl;
-	}
-
-      out.close();
-    }
-  
-  inline void Log::out(const string& p_fname, const ColumnVector& p_mat)
-    {
-      ofstream out;
-      out.open((dir + "/" + p_fname).c_str(), ios::out);     
-      out.setf(ios::scientific, ios::floatfield);
-      for(int j=1; j<=p_mat.Nrows(); j++)
-	{
-	  out << p_mat(j);	  
-	  out << endl;
-	}
+  OptionParser options; 
       
-      out.close();
-    }
-
-  inline void Log::out(const string& p_fname, const RowVector& p_mat)
-    {
-      ofstream out;
-      out.open((dir + "/" + p_fname).c_str(), ios::out);
-      out.setf(ios::scientific, ios::floatfield);
-
-      for(int j=1; j<=p_mat.Ncols(); j++)
-	{
-	  out << p_mat(j) << " ";	  
-	}
-      out << endl;
-      out.close();
-    }
-
-  inline Log& Log::getInstance(){
-    if(logger == NULL)
-      logger = new Log();
+  static pvmfitOptions* gopt;
   
-    return *logger;
-  }
+};
+
+ inline pvmfitOptions& pvmfitOptions::getInstance(){
+   if(gopt == NULL)
+     gopt = new pvmfitOptions();
+   
+   return *gopt;
+ }
+
+ inline pvmfitOptions::pvmfitOptions() :
+  verbose(string("-V,--verbose"), false, 
+	  string("switch on diagnostic messages"), 
+	  false, no_argument),
+   help(string("-h,--help"), false,
+	string("display this message"),
+	false, no_argument),
+   datafile(string("-k,--data"), "",
+	       string("data file"),
+	       true, requires_argument),  
+   ofile(string("-o,--out"), string("pvm"),
+	       string("Output basename - default='pvm'"),
+	       false, requires_argument),
+   maskfile(string("-m,--mask"), "",
+	    string("Bet binary mask file"),
+	    true, requires_argument),
+   bvecsfile(string("-r,--bvecs"), "",
+	     string("b vectors file"),
+	     true, requires_argument),  
+   bvalsfile(string("-b,--bvals"), "",
+	     string("b values file"),
+	     true, requires_argument), 
+   nfibres(string("-n,--nfibres"), 1,
+	     string("number of fibres to fit - default=1"),
+	     false, requires_argument), 
+   modelnum(string("--model"), 1,
+	     string("1:monoexponential;2:non mono-exponential"),
+	     false, requires_argument), 
+   options("pvmfit", "pvmfit -k <datafile> -m <maskfile> -r <bvecsfile> -b <bvalsfile> [-n 2]\n")
+   {
+     
+    
+     try {
+       options.add(verbose);
+       options.add(help);
+       options.add(datafile);
+       options.add(ofile);
+       options.add(maskfile);
+       options.add(bvecsfile);
+       options.add(bvalsfile);
+       options.add(nfibres);
+       options.add(modelnum);
+     }
+     catch(X_OptionError& e) {
+       options.usage();
+       cerr << endl << e.what() << endl;
+     } 
+     catch(std::exception &e) {
+       cerr << e.what() << endl;
+     }    
+     
+   }
+}
 
 #endif
 
-}
+
+
 
 

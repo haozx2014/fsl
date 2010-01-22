@@ -632,8 +632,7 @@ int main (int argc,char** argv)
   if (!globalopts. no_reporting) cerr << endl << "McFLIRT v 2.0 - FMRI motion correction" << endl << endl;
   int original_refvol=globalopts.refnum;
   if (!globalopts. no_reporting) cerr <<"Reading time series... " << endl;
-  volumeinfo vinfo;
-  read_volume4D(timeseries, globalopts.inputfname, vinfo);
+  read_volume4D(timeseries, globalopts.inputfname);
   globalopts.datatype = dtype(globalopts.inputfname);
   globalopts. no_volumes = timeseries.tsize();
   
@@ -800,6 +799,6 @@ int main (int argc,char** argv)
   }
   if (globalopts. costmeas) eval_costs(refvol, timeseries, mat_array0, current_scale);
   if (!globalopts. no_reporting) cerr << endl << "Saving motion corrected time series... " << endl;
-  save_volume4D_dtype(timeseries, globalopts.outputfname, 
-		      globalopts.datatype, vinfo);
+  timeseries.setDisplayMaximumMinimum(timeseries.max(),timeseries.min());
+  save_volume4D_dtype(timeseries, globalopts.outputfname, globalopts.datatype);
 }
