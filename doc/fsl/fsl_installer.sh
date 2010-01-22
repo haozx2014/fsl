@@ -2,9 +2,8 @@
 
 # A Simple script to install FSL and set up the environment
 
-VERSION="1.1"
+VERSION="1.2"
 POSIXLY_CORRECT=1
-TEMPDIR='/tmp'
 
 cecho () {
     string=$@
@@ -51,7 +50,7 @@ fsl_installer.sh [-f <fsl tar ball> [-d <install folder>] [-x] [-e] [-p] [-h] [-
 
  Options:
  =======
-    -f <fsl tar ball>   - the FSL distribution tar file
+    -f <fsl tar ball>   - the FSL distribution tar file (or patch file)
     -d <install folder> - where to install to
     -x                  - (Mac OS 10.4 only) do NOT set up the Apple Terminal.app
                           application to be able to launch X11 applications.
@@ -269,7 +268,7 @@ patch_for_terminal () {
 	    cat <<CSH_TERM >>${apple_profile}
 if ( \$?TERM_PROGRAM ) then
  if ( "X\$TERM_PROGRAM" == "XApple_Terminal" ) then; if ( ! \$?DISPLAY ) then
-      set X11_FOLDER=/tmp/.X11-unix; set currentUser=\`id -u\`; set userX11folder=\`find \$X11_FOLDER -name 'X*' -user \$currentUser -print 2>&1 | tail -n 1\`
+      set X11_FOLDER=/tmp/.X11-unix; set currentUser=\`id -u\`; set userX11folder=\`find \$X11_FOLDER -name 'X*' -user \$currentUser -print | tail -n 1\`
       if ( "X\$userX11folder" != "X" ) then
         set displaynumber=\`basename \${userX11folder} | grep -o '[[:digit:]]\+'\`
         if ( "X\$displaynumber" != "X" ) then
@@ -327,6 +326,45 @@ FIXMATLAB
 	fi
     fi
 }
+
+patch_systemprofile () {
+    install_location=$1
+    default_location=$2
+    tmp=$3
+
+    if [ "X${install_location}" = "X-NONE-" ]; then
+	install_location=`get_fsldir ${default_location} 1 "Where is FSL installed? [${default_location}]"`
+    fi
+    echo "Setting up FSL system-wide (will require administrator priviledges)..."
+    sysprofile_dir='/etc/profile.d'
+    if [ -d ${sysprofile_dir} ]; then
+	sudo touch "${sysprofile_dir}/.testfile" 2>&1 >/dev/null
+	if [ $? -eq 0 ]; then
+	    sudo rm -f "${sysprofile_dir}/.testfile"
+	    fsl_sh "${tmp}/fsl.sh.$$" "${install_location}/fsl" 1
+	    fsl_csh "${tmp}/fsl.csh.$$" "${install_location}/fsl" 1
+	    
+	    sudo mv "${tmp}/fsl.sh.$$" "${sysprofile_dir}/fsl.sh"
+	    if [ $? -ne 0 ]; then
+		failed "Can't setup for /bin/sh users"
+	    else
+		ok "/bin/sh configured"
+	    fi
+	    sudo mv "${tmp}/fsl.csh.$$" "${sysprofile_dir}/fsl.csh"
+	    if [ $? -ne 0 ]; then
+		failed "Can't setup for /bin/(t)csh users"
+	    else
+		ok "/bin/(t)csh configured"
+	    fi
+	else
+	    failed "I can't write to ${sysprofile_dir}"
+	fi
+    else
+	failed "I don't know how to do this on this platform"
+    fi
+}
+
+
 
 patch_environment () {
     install_location=$1
@@ -493,6 +531,49 @@ check_digest () {
     return $fileok
 }
 
+# Function that downloads and md5 sum and verifies the specified tarball
+verify_tarball () {
+    tarball=$1
+    install_from=$2
+    fsl_server=$3
+    fsl_dir=$4
+    digest_dir=$5
+    no_mdfive=$6
+    tarok=0
+
+    if [ ! -f ${install_from}/${tarball} ]; then
+	echo "${install_from}/${tarball} not found!"
+	tarok=1
+    else
+	test_tarball=`file -b ${tarball} | grep '\(gzip\)\|\(tar\)'`
+	if [ -z "${test_tarball}" ]; then
+	    echo "${tarball} doesn't appear to be a GZIP or tar file."
+	    tarok=1
+	fi 
+	if [ "X${no_mdfive}" = "X-NO-" ]; then
+	    get_digest ${fsl_server} ${fsl_dir} ${tarball} ${digest_dir}
+	    if [ $? = 0 ]; then
+		message=`check_digest ${tarball} ${install_from} ${digest_dir}`
+		status=$?
+		if [ $status = 1 ]; then
+		    echo "${tarball} appears to be corrupt. Aborting install"
+		    tarok=1
+		elif [ $status = 2 ]; then 
+		    tarok=3
+		else
+		    tarok=0
+		fi
+	    else
+		echo "There was an error getting the checksum from the FSL website. Perhaps you aren't connected to a network"
+		tarok=3
+	    fi
+	else
+	    tarok=3
+	fi
+    fi
+    return $tarok
+}
+
 # Function that takes the bit depth of the tar file we downloaded and confirms we have the correct version for this platform. Pass in 32 or 64 as the first argument
 check_platform () {
     expect_bits=$1
@@ -621,136 +702,29 @@ cpu_type () {
     uname -m
 }
 
-fsl_install () {
+query_continue () {
+    default=$1
+    read -p "Continue? [$default]" >&2 choice
+    if [ -z "${choice}" ]; then
+	choice="$default"
+    fi
+    choice=`to_lower ${choice}`
+    echo $choice
+}
+
+# Tarball expansion into the install location
+install_tarball () {
     tarball=$1
-    install_from=$2
-    install_location=$3
+    from=$2
+    to=$3
     need_sudo=$4
-    no_check=$5
-    my_sudo=''
-    fsl_server='http://www.fmrib.ox.ac.uk'
-    fsl_dir='fsldownloads/md5sums'
-    here=`pwd`
 
     if [ "X${need_sudo}" = "X-YES-" ]; then
 	my_sudo="sudo "
     fi
 
-    tgz_platform=`echo $tarball | grep -o 'centos\|macosx'`
-
-    echo "Checking OS release ..."
-    # Now check that this is the correct compilation for this host
-    if [ "X`os`" = "XLinux" ]; then
-	if [ "X$tgz_platform" = "Xcentos" ]; then
-	    my_centosrelease=` echo $tarball | sed -n 's/fsl-.*centos\([0-9]*\)_[0-9]*.tar\(.gz\)*/\1/p'`
-	    if [ "X$my_centosrelease" != "X" ]; then
-		message=`check_glibc ${my_centosrelease}`
-		if [ $? = 1 ]; then
-		    failed $message
-		    exit 1
-		elif [ $? = 2 ]; then
-		    warning $message
-		    read -p "Continue? [no]" >&2 choice
-		    if [ -z "${choice}" ]; then
-			choice='no'
-		    fi
-		    choice=`to_lower ${choice}`
-		    if [ "X${choice}" = "Xno" ]; then
-			exit 1
-		    fi
-		elif [ $? = 3 ]; then
-		    warning $message
-		    read -p "Continue? [yes]" >&2 choice
-		    if [ -z "${choice}" ]; then
-			choice='yes'
-		    fi
-		    choice=`to_lower ${choice}`
-		    if [ "X${choice}" != "Xyes" ]; then
-			exit 1
-		    fi
-		else
-		    ok
-		fi
-	    else
-		failed "This is Linux and you have provided a non-Linux build of FSL!"
-		exit 1
-	    fi
-	else
-	    failed "This is Linux and you have provided a non-Linux build of FSL!"
-	    exit 1
-	fi
-    elif [ "X`os`" = "XDarwin" ]; then
-	if [ "X$tgz_platform" = "Xmacosx" ]; then
-	    darwin_release=`darwin_release`
-	    if [ $darwin_release -lt 8 ]; then
-		failed "Sorry, we do not support Mac OS X 10.3. You could try building from the sources."
-		exit 1
-	    elif [ $darwin_release -gt 9 ]; then
-		warning "You are running an un-recognised version of Mac OS X. This may not work."
-	    else
-		ok
-	    fi
-	else
-	    failed "This is Mac OS X and you have provided a non-Mac OS X build of FSL!"
-	    exit 1
-	fi
-    elif [ "X`os`" = "XSunOS" ]; then
-	failed "We don't provide Solaris binaries. You could try building from the sources."
-	exit 1
-    else
-	skipped
-    fi
-    
-    echo "Checking CPU type..."
-    # First check the tarball is the right version
-    my_bitdepth=` echo $tarball | sed -n 's/fsl-.*_\([0-9]*\).tar\(.gz\)*/\1/p'`
-    if [ "X$my_bitdepth" != "X" ]; then
-	# This is not a bit agnostic install, check the tarball is the correct version
-	message=`check_platform $my_bitdepth`
-	status=$?
-	if [ $status = 1 ]; then
-	    failed $message
-	    exit 1
-	elif [ $status = 2 ]; then
-	    warning $message
-	    read -p "Continue? [yes]" choice
-	    if [ -z "${choice}" ]; then
-		choice='yes'
-	    fi
-	    choice=`to_lower ${choice}`
-	    if [ "X${choice}" != "Xyes" ]; then
-		exit 1
-	    fi
-	else
-	    ok
-	fi
-    else
-	skipped
-    fi
-    echo "Checking install file...(this may take several minutes)"
-    if [ "X${no_check}" = 'X-NO-' ]; then		
-        # Now verify the download
-	digest_dir='/tmp'
-	get_digest ${fsl_server} ${fsl_dir} ${tarball} ${digest_dir}
-	if [ $? = 0 ]; then
-	    check_digest ${tarball} ${install_from} ${digest_dir}
-	    if [ $? = 1 ]; then
-		failed "${tarball} appears to be corrupt. Aborting install"
-		exit 1
-	    elif [ $? = 2 ]; then 
-	        skipped
-	    else
-		ok
-	    fi
-	else
-	    skipped
-	fi
-    else
-	skipped
-    fi
-
-    echo "Installing FSL from ${install_from}/${tarball} into ${install_location}..."
-    cd ${install_location}
+    here=`pwd`
+    cd ${to}
     # Untar the distribution into the install location
     ${my_sudo} echo '' > /dev/null
     tar_opts='xf'
@@ -758,16 +732,214 @@ fsl_install () {
     if [ $? = 0 ]; then
 	tar_opts="z${tar_opts}"
     fi
-    $my_sudo tar ${tar_opts} ${install_from}/${tarball}
+ 
+    $my_sudo tar ${tar_opts} ${from}/${tarball}
     if [ $? -ne 0 ]; then
-	failed "Unable to install"
+	echo "Unable to install"
+	return 1
+    fi
+    cd ${here}
+    return 0
+}
+
+# Check that the patch matches the installed version of FSL
+check_patch_version () {
+    tarb=$1
+    installed_dir=$2
+    patchok=0
+    
+    my_patches=`echo $tarb | sed -n 's/fsl-.*-patch-[0-9.]*_from_\([0-9x.]*\).tar\(.gz\)/\1/p'`
+    my_to=`echo $tarb | sed -n 's/fsl-.*-patch-\([0-9.]*\)_from_[0-9x.]*.tar\(.gz\)/\1/p'`
+    my_major=`echo $my_patches | sed -n 's/\([0-9]*\).[0-9]*.[0-9x]*/\1/p'`
+    my_minor=`echo $my_patches | sed -n 's/[0-9]*.\([0-9]*\).[0-9x]*/\1/p'`
+    my_patch=`echo $my_patches | sed -n 's/[0-9]*.[0-9]*.\([0-9x]*\)/\1/p'`
+    
+    if [ ! -f ${installed_dir}/fsl/etc/fslversion ]; then
+	echo "The folder ${installed_dir}/fsl doesn't seem to contain a valid FSL install"
+	patchok=1
+    fi
+
+    my_fslversion=`cat ${installed_dir}/fsl/etc/fslversion`
+    my_fslmaj=`echo $my_fslversion | sed -n 's/\([0-9]*\).[0-9]*.[0-9]*/\1/p'`
+    my_fslmin=`echo $my_fslversion | sed -n 's/[0-9]*.\([0-9]*\).[0-9]*/\1/p'`
+    my_fslpatch=`echo $my_fslversion | sed -n 's/[0-9]*.[0-9]*.\([0-9]*\)/\1/p'`
+
+    if [ "X${my_fslversion}" = "X${my_to}" ]; then
+	echo "You already have ${my_to} installed"
+	patchok=1
+    else
+	if [ "X${my_patch}" = "Xx" ]; then
+	# This is a generic patch - check the major and minor version numbers
+	    if [ $my_fslmaj -ne $my_major -o $my_fslmin -ne $my_minor ]; then
+		echo "This patch is for FSL $my_major.$my_minor, the installed version is $my_fslversion"
+		patchok=1
+	    fi
+	elif [ "X${my_fslversion}" != "X${my_patches}" ]; then
+	    if [ $my_fslmaj -ne $my_major -a $my_fslmin -ne $my_minor ]; then
+		echo "Patch is not intended for this version of FSL ($my_fslversion)"
+		patchok=1
+	    elif [ $my_fslpatch -gt $my_patch ]; then
+		echo "Patch is for an older version of FSL ($my_patches), you have version $my_fslversion installed"
+		patchok=1
+	    else
+		echo "Patch is for version ${my_patches} but you have ${my_fslversion} installed, please try the ${my_major}.${my_minor}.x patch"
+		patchok=1
+	    fi
+	fi
+    fi
+
+    return $patchok
+}
+
+# Check that the tarball is intended for the running OS
+check_tarball_os () {
+    tarball=$1
+    tarosok=0
+
+    tgz_platform=`echo $tarball | grep -o 'centos\|macosx'`
+
+    # Now check that this is the correct compilation for this host
+    if [ "X`os`" = "XLinux" ]; then
+	if [ "X$tgz_platform" = "Xcentos" ]; then
+	    my_centosrelease=`echo $tarball | sed -n 's/fsl-.*centos\([0-9]*\)_[0-9]*\(-patch.*\)*.tar\(.gz\)*/\1/p'`
+	    my_bitdepth=`echo $tarball | sed -n 's/fsl-.*centos[0-9]*_\([0-9]*\)\(-patch.*\)*.tar\(.gz\)*/\1/p'`
+	    if [ "X$my_centosrelease" != "X" ]; then
+		message=`check_glibc ${my_centosrelease} ${my_bitdepth}`
+		status=$?
+		if [ $status = 1 ]; then
+		    echo $message
+		    tarosok=1
+		elif [ $status = 2 ]; then
+		    warning $message >&2
+		    choice=`query_continue no`
+		    if [ "X${choice}" = "Xno" ]; then
+			tarosok=2
+		    fi
+		elif [ $status = 3 ]; then
+		    warning $message >&2
+		    choice=`query_continue yes`
+		    if [ "X${choice}" != "Xyes" ]; then
+			tarosok=2
+		    fi
+		fi
+	    else
+		echo "This is Linux and you have provided a non-Linux build of FSL!"
+		tarosok=1
+	    fi
+	else
+	    echo "This is Linux and you have provided a non-Linux build of FSL!"
+	    tarosok=1
+	fi
+    elif [ "X`os`" = "XDarwin" ]; then
+	if [ "X$tgz_platform" = "Xmacosx" ]; then
+	    darwin_release=`darwin_release`
+	    if [ $darwin_release -lt 8 ]; then
+		echo "Sorry, we do not support Mac OS X 10.3. You could try building from the sources."
+		tarosok=1
+	    elif [ $darwin_release -gt 9 ]; then
+		echo "You are running an un-recognised version of Mac OS X. This may not work."
+		tarosok=2
+	    fi
+	else
+	    echo "This is Mac OS X and you have provided a non-Mac OS X build of FSL!"
+	    tarosok=1
+	fi
+    elif [ "X`os`" = "XSunOS" ]; then
+	echo "We don't provide Solaris binaries. You could try building from the sources."
+	tarosok=1
+    else
+	tarosok=3
+    fi
+    return $tarosok
+}
+
+# Verify that the tarball is appropriate for the bit depth of the running OS (where appropriate)
+check_tarball_bits () {
+    tarball=$1
+    tarbitsok=0
+
+    # First check the tarball is the right version
+    my_bitdepth=`echo $tarball | sed -n 's/fsl-.*_\([0-9]*\)\(-patch.*\)*.tar\(.gz\)*/\1/p'`
+    if [ "X$my_bitdepth" != "X" ]; then
+	# This is not a bit agnostic install, check the tarball is the correct version
+	message=`check_platform $my_bitdepth`
+	status=$?
+	if [ $status = 1 ]; then
+	    echo $message
+	    tarbitsok=1
+	elif [ $status = 2 ]; then
+	    warning $message >&2
+	    choice=`query_continue no`
+	    if [ "X${choice}" != "Xyes" ]; then
+		tarbitsok=1
+	    fi
+	else
+	    tarbitsok=0
+	fi
+    else
+	tarbitsok=3
+    fi
+    return $tarbitsok
+}
+
+ok_or_exit () {
+    state=$1
+    message=$2
+    if [ $state -eq 1 ]; then
+	failed $message
 	exit 1
+    elif [ $state -eq 2 ]; then
+	warning $message
+    elif [ $state -eq 3 ]; then
+	skipped
     else
 	ok
     fi
-    cd ${here}
-    if [ "X`os`" = "XDarwin" ]; then
-	read -p "Would you like to install FSLView.app into /Applications (requires Administrator priviledges)? [yes] " choice
+}
+
+# Main installation routine
+fsl_install () {
+    tarball=$1
+    install_from=$2
+    install_location=$3
+    need_sudo=$4
+    no_md5=$5
+    fsl_server=$6
+    fsl_dir=$7
+    is_patch=$8
+    temp_dir=$9
+    my_sudo=''
+
+    if [ "X${need_sudo}" = "X-YES-" ]; then
+	my_sudo="sudo "
+    fi
+
+    here=`pwd`
+
+    echo "Checking OS release ..."
+    message=`check_tarball_os $tarball`
+    ok_or_exit $? "$message"
+
+    echo "Checking CPU type..."
+    message=`check_tarball_bits $tarball`
+    ok_or_exit $? "$message"
+
+    if [ "X${is_patch}" = 'X-YES-' ]; then
+	echo "Checking FSL release..."
+	message=`check_patch_version $tarball "$install_location"`
+	ok_or_exit $? "$message"
+    fi
+
+    echo "Checking install file...(this may take several minutes)"
+    message=`verify_tarball ${tarball} "${install_from}" ${fsl_server} ${fsl_dir} "${temp_dir}" ${no_md5}`
+    ok_or_exit $? "$message"
+    
+    echo "Installing FSL from ${install_from}/${tarball} into ${install_location}..."
+    message=`install_tarball ${tarball} "${install_from}" "${install_location}" ${need_sudo}`
+    ok_or_exit $? "$message"
+    
+    if [ "X`os`" = "XDarwin" -a "X${is_patch}" = 'X-NO-' ]; then
+	read -p "Would you like to install FSLView.app into /Applications (requires Administrator priviledges)? [yes] " >&2 choice
 
 	if [ -z "${choice}" ]; then
 	    choice='yes'
@@ -810,6 +982,7 @@ to_lower () {
     echo `echo $1 | tr 'A-Z' 'a-z'`
 }
 
+# Check if X11 is installed on Mac OS X
 x11_not_installed () {
     if [ -d '/Applications/Utilities/X11.app' ]; then
 	return 0
@@ -831,7 +1004,7 @@ get_fsldir () {
 	if [ -z "${choice}" ]; then
 	    choice=${default_location}
 	fi
-	if [ -d ${choice} ]; then
+	if [ -d "${choice}" ]; then
 	    if [ $exists -eq 1 ]; then
 		if [ -f "${choice}/fsl/etc/fslversion" ]; then
 		    install_location=${choice}
@@ -854,6 +1027,10 @@ get_fsldir () {
 here=`pwd`
 platform=`os`
 release=`os_release`
+
+fsl_server='http://www.fmrib.ox.ac.uk'
+fsl_dir='fsldownloads/md5sums'
+tempdir='/tmp'
 
 install_from='-NONE-'
 setup_terminal='-NO-'
@@ -950,13 +1127,6 @@ EOF
     else
 	fsl_tarball=`basename ${fsl_tarball}`
     fi
-
-  # Validate the tar file
-    test_tarball=`file -b ${fsl_tarball} | grep '\(gzip\)\|\(tar\)'`
-    if [ -z "${test_tarball}" ]; then
-	failed "${fsl_tarball} doesn't appear to be a GZIP or tar file."
-	exit 1
-    fi 
     
   # Check if it is a patch file
     test_patchfile=`echo ${fsl_tarball} | grep patch`
@@ -994,9 +1164,10 @@ EOF
 	fi
     fi
 
+    # Check if FSL is already installed and ask if it needs removing
     if [ -d ${install_location}/fsl ]; then
 	if [ "X$is_patch" = "X-NO-" ]; then
-	    read -p "'${install_location}/fsl' exists - would you like to remove it? [yes] " choice
+	    read -p "'${install_location}/fsl' exists - would you like to remove it? [yes] " >&2 choice
 	    choice=`to_lower $choice`
 	    if [  -z "${choice}" -o "X${choice}" = "Xyes" ]; then
 		echo "Deleting '${install_location}/fsl'..."
@@ -1018,63 +1189,36 @@ EOF
     fi
     
     # Install FSL
-    fsl_install ${fsl_tarball} ${install_from} ${install_location} ${n_sudo} ${no_md5_check} ${darwin_release}
+    fsl_install ${fsl_tarball} ${install_from} ${install_location} ${n_sudo} ${no_md5_check} ${fsl_server} ${fsl_dir} ${is_patch} ${tempdir}
 fi
 
-if [ "X${no_profile}" = 'X-NO-' ]; then
-    # Set up the user's environment
-    echo "Patching environment"
-    if [ "X${install_location}" = 'X-NONE-' ]; then
-	install_location=`get_fsldir ${default_location} 1 "Where is FSL installed? [${default_location}]"`
-    fi
-    patch_environment ${install_location} ${setup_terminal}
-fi
-
-if [ "X`os`" = "XLinux" ]; then
-    if [ "X${system_profile}" != "X-YES-" ]; then
-	read -p "Are you sure you would like to configure FSL system wide? (Not recommended if ${install_location} is on an NFS share) [no] " >&2 choice
-	choice=`to_lower $choice`
-	if [ "X${choice}" = "Xyes" ]; then
-	    system_profile='X-YES-';
-	fi
-    fi
-    if [ "X${system_profile}" = "X-YES-" ]; then
-	if [ "X${install_location}" = "X-NONE-" ]; then
+if [ "X${is_patch}" = "X-NO-" ]; then
+    if [ "X${no_profile}" = 'X-NO-' ]; then
+    # Set up the users environment
+	echo "Patching environment"
+	if [ "X${install_location}" = 'X-NONE-' ]; then
 	    install_location=`get_fsldir ${default_location} 1 "Where is FSL installed? [${default_location}]"`
 	fi
-	echo "Setting up FSL system-wide (will require administrator priviledges)..."
-	sysprofile_dir='/etc/profile.d'
-	if [ -d ${sysprofile_dir} ]; then
-	    sudo touch "${sysprofile_dir}/.testfile" 2>&1 >/dev/null
-	    if [ $? -eq 0 ]; then
-		sudo rm -f "${sysprofile_dir}/.testfile"
-		fsl_sh "${TEMPDIR}/fsl.sh.$$" "${install_location}/fsl" 1
-		fsl_csh "${TEMPDIR}/fsl.csh.$$" "${install_location}/fsl" 1
-
-		sudo mv "${TEMPDIR}/fsl.sh.$$" "${sysprofile_dir}/fsl.sh"
-		if [ $? -ne 0 ]; then
-		    failed "Can't setup for /bin/sh users"
-		else
-		    ok "/bin/sh configured"
-		fi
-		sudo mv "${TEMPDIR}/fsl.csh.$$" "${sysprofile_dir}/fsl.csh"
-		if [ $? -ne 0 ]; then
-		    failed "Can't setup for /bin/(t)csh users"
-		else
-		    ok "/bin/(t)csh configured"
-		fi
-	    else
-		failed "I can't write to ${sysprofile_dir}"
-	    fi
-	else
-	    failed "I don't know how to do this on this platform"
-	fi
+	patch_environment ${install_location} ${setup_terminal}
     fi
-elif [ "X${system_profile}" = "X-YES-" ]; then
-    echo "Setting up FSL system-wide..."
-    skipped "We don't support system-wide FSL configuration on this platform."
-    echo "Run this script with -e for each user who will be running FSL"
-    echo "(or setup a shared profile somewhere)."
+    
+    # Ask if we want it configured system wide (Linux only at present)
+    if [ "X`os`" = "XLinux" ]; then
+	if [ "X${system_profile}" != "X-YES-" ]; then
+	    read -p "Would you like to configure FSL system wide? (Not recommended if ${install_location} is on an NFS share) [no] " >&2 choice
+	    choice=`to_lower $choice`
+	    if [ "X${choice}" = "Xyes" ]; then
+		system_profile='X-YES-';
+	    fi
+	fi
+	if [ "X${system_profile}" = "X-YES-" ]; then
+	    patch_systemprofile ${install_location} ${default_location} ${tempdir}
+	fi
+    elif [ "X${system_profile}" = "X-YES-" ]; then
+	echo "Setting up FSL system-wide..."
+	skipped "We don't support system-wide FSL configuration on this platform."
+	echo "Run this script with -e for each user who will be running FSL"
+	echo "(or setup a shared profile somewhere)."
+    fi
 fi
-
 exit 0

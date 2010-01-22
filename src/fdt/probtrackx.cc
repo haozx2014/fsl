@@ -89,6 +89,7 @@ int main ( int argc, char **argv ){
   srand(opts.rseed.value());
   
   
+  
   if(opts.verbose.value()>0){
     opts.status();
   }
@@ -104,7 +105,11 @@ int main ( int argc, char **argv ){
   }
   else if(opts.network.value()){ nmasks(); }
   else if(opts.meshfile.value()!=""){meshmask();}
-  else {cout << "exit without doing anything"<<endl;return 0;};
+  else {
+    cerr << "No seed mask detected! exit without doing anything"<<endl;
+    cerr << "If you are seeding from a list of coordinates, use --mode=simple"<<endl;
+    return 0;
+  };
 
   //else if(fopen(tmpin.c_str(),"r")!=NULL ){ track();}
 

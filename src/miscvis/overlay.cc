@@ -1,9 +1,9 @@
 
 /*  overlay.c - combine two images for colour overlay
 
-    Stephen Smith & Christian  Beckmann, FMRIB Image Analysis Group
+    Stephen Smith, Christian  Beckmann and Matthew Webster, FMRIB Image Analysis Group
 
-    Copyright (C) 1999-2002 University of Oxford  */
+    Copyright (C) 1999-2009 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -68,18 +68,18 @@
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
 #include "libvis/miscpic.h"
-//#include "fmribmain.h"
 
 using namespace NEWIMAGE;
 using namespace MISCPIC;
 
 void usage(void)
 {
-  printf("Usage: overlay <colour_type> <output_type> [-c] <background_image> <bg_min> <bg_max> <stat_image_1> <s1_min> <s1_max> [stat_image_2 s2min s2max] <output_image>\n");
+  printf("Usage: overlay <colour_type> <output_type> [-c] <background_image> <bg_min> <bg_max> <stat_image_1> <s1_min> <s1_max> [stat_image_2 s2min s2max] <output_image> [cbartype] [cbarfilename]\n");
   printf("colour_type: 0=solid 1=transparent colours\n");
   printf("output_type: 0=floating point (32 bit real) 1=integer (16 bit signed integer)\n");
   printf("-c : use checkerboard mask for overlay\n");
-  printf("<bg_min> <bg_max> can be replaced by -a for automatic estimation of background display range\n");
+  printf("<bg_min> <bg_max> can be replaced by -a for automatic estimation of background display range or -A to use the full image range\n");
+  printf("valid cbartypes colours are: ybg, valid cbartypes options are: s (stack) \n");
   exit(1);
 }
 
@@ -91,7 +91,6 @@ int fmrib_main(int argc, char* argv[], bool out_int)
   bool debug = false;
 
   volume<float> bg, s1, s2;
-  volumeinfo bginfo;
   string cbarfname = "";
   string cbartype = "";
 
@@ -108,11 +107,15 @@ int fmrib_main(int argc, char* argv[], bool out_int)
     argindex++;
   }
 
-  read_volume(bg,string(argv[argindex++]),bginfo);
+  read_volume(bg,string(argv[argindex++]));
 
   if (!strcmp(argv[argindex],"-a")) {
     bgmax = bg.percentile(0.98);
     bgmin = bg.percentile(0.02);
+    argindex++;
+  } else if (!strcmp(argv[argindex],"-A")) {
+    bgmax = bg.max();
+    bgmin = bg.min();
     argindex++;
   } else {
     bgmin=atof(argv[argindex++]);
@@ -148,13 +151,12 @@ int fmrib_main(int argc, char* argv[], bool out_int)
     volume<float> newvol;
 
     newpic.overlay(newvol, bg, s1, s2, bgmin, bgmax, s1min, s1max, 
-		   s2min, s2max, colour_type, checker, &bginfo, 
+		   s2min, s2max, colour_type, checker, 
 		   cbarfname, cbartype, out_int, debug);
-    
     if(out_int)
-      save_volume_dtype(newvol,string(argv[argindex]), DT_SIGNED_SHORT, bginfo);
+      save_volume_dtype(newvol,string(argv[argindex]), DT_SIGNED_SHORT);
     else
-      save_volume(newvol,string(argv[argindex]),bginfo);
+      save_volume(newvol,string(argv[argindex]));
 
     return 0;
   } 

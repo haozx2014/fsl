@@ -69,7 +69,7 @@
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 //
 
-#include <time.h>
+#include <ctime>
 #include <string>
 #include <iostream>
 #include <vector>
@@ -92,7 +92,7 @@ splinefield::splinefield(const std::vector<unsigned int>& psz,
 			 const std::vector<double>&       pvxs, 
 			 const std::vector<unsigned int>& ksp, 
 			 int                              order) 
-: basisfield(psz,pvxs), _sp(order,ksp)
+  : basisfield(psz,pvxs), _sp(order,ksp), _dsp(3)
 {
   if (order < 2 || order > 3) {throw BasisfieldException("splinefield::splinefield: Only quadratic and cubic splines implemented yet");}
   if (ksp.size() != NDim()) {throw BasisfieldException("splinefield::splinefield: Dimensionality mismatch");}
@@ -105,13 +105,19 @@ splinefield::splinefield(const std::vector<unsigned int>& psz,
     throw BasisfieldException("splinefield::splinefield: Invalid knot-spacing");
   }
 
+  for (unsigned int i=0; i<3; i++) {
+    std::vector<unsigned int>  deriv(3,0);
+    deriv[i] = 1;
+    _dsp[i] = boost::shared_ptr<Spline3D<double> >(new Spline3D<double>(order,ksp,deriv));
+  }
+
   boost::shared_ptr<NEWMAT::ColumnVector>  lcoef(new NEWMAT::ColumnVector(CoefSz()));
   *lcoef = 0.0;
   set_coef_ptr(lcoef);  
 }
 
 // Copy constructor
-splinefield::splinefield(const splinefield& inf) : basisfield(inf), _sp(inf._sp) 
+  splinefield::splinefield(const splinefield& inf) : basisfield(inf), _sp(inf._sp)
 {
   // basisfield::assign(inf);
   // splinefield::assign(inf);
@@ -120,6 +126,9 @@ splinefield::splinefield(const splinefield& inf) : basisfield(inf), _sp(inf._sp)
 void splinefield::assign(const splinefield& inf)
 {
   _sp = inf._sp;
+  for (unsigned int i=0; i<3; i++) {
+    _dsp[i] = boost::shared_ptr<Spline3D<double> >(new Spline3D<double>(*(inf._dsp[i])));
+  }
 }
 
 splinefield& splinefield::operator=(const splinefield& inf)
@@ -439,36 +448,43 @@ double splinefield::MemEnergy() const // Membrane energy of field
   const boost::shared_ptr<NEWMAT::ColumnVector> lcoef = GetCoef();
   if (!lcoef) {throw BasisfieldException("splinefield::MemEnergy: No coefficients set yet");}
 
-  std::vector<unsigned int>  csz(3,0);
-  csz[0] = CoefSz_x(); csz[1] = CoefSz_y(); csz[2] = CoefSz_z();
-
-  return(calculate_memen(*lcoef,_sp.KnotSpacing(),csz)); 
+  NEWMAT::ColumnVector AtAb = 0.5 * MemEnergyGrad();
+  double me = DotProduct(*lcoef,AtAb);
+  return(me);
 }
 
 double splinefield::BendEnergy() const // Bending energy of field
 {
   const boost::shared_ptr<NEWMAT::ColumnVector> lcoef = GetCoef();
-  if (!lcoef) {throw BasisfieldException("splinefield::BendEnergy: No coefficients set yet");}
+  if (!lcoef) {throw BasisfieldException("splinefield::MemEnergy: No coefficients set yet");}
 
-  std::vector<unsigned int>  csz(3,0);
-  csz[0] = CoefSz_x(); csz[1] = CoefSz_y(); csz[2] = CoefSz_z();
-
-  return(calculate_bender(*lcoef,_sp.KnotSpacing(),csz)); 
+  NEWMAT::ColumnVector AtAb = 0.5 * BendEnergyGrad();
+  double be = DotProduct(*lcoef,AtAb);
+  return(be);
 }
- 
-NEWMAT::ReturnMatrix splinefield::MemEnergyGrad() const // Gradient of membrane energy of field
+
+
+NEWMAT::ReturnMatrix splinefield::MemEnergyGrad() const // Gradient of bending energy of field
 {
   const boost::shared_ptr<NEWMAT::ColumnVector> lcoef = GetCoef();
   if (!lcoef) {throw BasisfieldException("splinefield::MemEnergyGrad: No coefficients set yet");}
 
   std::vector<unsigned int>  csz(3,0);
   csz[0] = CoefSz_x(); csz[1] = CoefSz_y(); csz[2] = CoefSz_z();
+  std::vector<unsigned int>  isz(3,0);
+  isz[0] = FieldSz_x(); isz[1] = FieldSz_y(); isz[2] = FieldSz_z();
+  std::vector<unsigned int>  ksp(3,0);
+  ksp[0] = Ksp_x(); ksp[1] = Ksp_y(); ksp[2] = Ksp_z();
+  std::vector<double> vxs(3,0);
+  vxs[0] = Vxs_x(); vxs[1] = Vxs_y(); vxs[2] = Vxs_z();
+
   NEWMAT::ColumnVector  grad(CoefSz());
 
-  calculate_memen_grad(*lcoef,_sp.KnotSpacing(),csz,grad);
+  calculate_memen_AtAb(*lcoef,ksp,isz,vxs,csz,Order(),grad);
+  grad *= 2.0;
 
   grad.Release();
-  return(grad); 
+  return(grad);
 }
 
 NEWMAT::ReturnMatrix splinefield::BendEnergyGrad() const // Gradient of bending energy of field
@@ -478,12 +494,20 @@ NEWMAT::ReturnMatrix splinefield::BendEnergyGrad() const // Gradient of bending 
 
   std::vector<unsigned int>  csz(3,0);
   csz[0] = CoefSz_x(); csz[1] = CoefSz_y(); csz[2] = CoefSz_z();
+  std::vector<unsigned int>  isz(3,0);
+  isz[0] = FieldSz_x(); isz[1] = FieldSz_y(); isz[2] = FieldSz_z();
+  std::vector<unsigned int>  ksp(3,0);
+  ksp[0] = Ksp_x(); ksp[1] = Ksp_y(); ksp[2] = Ksp_z();
+  std::vector<double> vxs(3,0);
+  vxs[0] = Vxs_x(); vxs[1] = Vxs_y(); vxs[2] = Vxs_z();
+
   NEWMAT::ColumnVector  grad(CoefSz());
 
-  calculate_bender_grad(*lcoef,_sp.KnotSpacing(),csz,grad);
+  calculate_bender_AtAb(*lcoef,ksp,isz,vxs,csz,Order(),grad);
+  grad *= 2.0;
 
   grad.Release();
-  return(grad); 
+  return(grad);
 }
 
 boost::shared_ptr<BFMatrix> splinefield::MemEnergyHess(MISCMATHS::BFMatrixPrecisionType   prec) const  // Hessian of membrane energy
@@ -834,177 +858,106 @@ const
    else return(0.0);
 }
 
-// Calculates bending energy
 
-double splinefield::calculate_bender(const NEWMAT::ColumnVector&        b,
-                                     const std::vector<unsigned int>&   lksp,
-                                     const std::vector<unsigned int>&   csz)
-const
-{
-  double memen = 0.0;
-  double vxs[] = {Vxs_x(), Vxs_y(), Vxs_z()};
 
-  // Sum over directions
-  for (unsigned int d1=0; d1<3; d1++) {
-    for (unsigned int d2=d1; d2<3; d2++) {
-      std::vector<unsigned int> deriv(3,0);
-      deriv[d1]++;
-      deriv[d2]++;
-      Spline3D<double>          spd(_sp.Order(),lksp,deriv);  // Spline twice differentiated
-      spd /= (vxs[d1]*vxs[d2]);                     // Derivative in mm^{-1}
-      NEWMAT::ColumnVector      hb = memen_HtHb_helper(spd,csz,b,Hb);
-      if (d1==d2) memen += DotProduct(hb,hb);
-      else memen += 2.0*DotProduct(hb,hb);
-    }
-  }
-  return(memen);
-}
-
-// Calculates membrane energy
-
-double splinefield::calculate_memen(const NEWMAT::ColumnVector&        b,
-                                    const std::vector<unsigned int>&   lksp,
-                                    const std::vector<unsigned int>&   csz)
-const
-{
-  double memen = 0.0;
-  double vxs[] = {Vxs_x(), Vxs_y(), Vxs_z()};
-
-  // Sum over directions
-  for (unsigned int d=0; d<3; d++) {
-    std::vector<unsigned int> deriv(3,0);
-    deriv[d] = 1;
-    Spline3D<double>          spd(_sp.Order(),lksp,deriv);  // Spline differentiated in one direction
-    spd /= vxs[d];                                // Derivative in mm^{-1}
-    NEWMAT::ColumnVector      hb = memen_HtHb_helper(spd,csz,b,Hb);
-    memen += DotProduct(hb,hb);
-  }
-  return(memen);
-}
-
-void splinefield::calculate_bender_grad(const NEWMAT::ColumnVector&       b,
-                                        const std::vector<unsigned int>&  lksp,
-                                        const std::vector<unsigned int>&  csz,
-                                        NEWMAT::ColumnVector&             grad)
-const
-{
-  if (static_cast<unsigned int>(grad.Nrows()) != csz[2]*csz[1]*csz[0]) grad.ReSize(csz[2]*csz[1]*csz[0]);
-  grad = 0.0;
-
-  double vxs[] = {Vxs_x(), Vxs_y(), Vxs_z()};
-
-  // Sum over directions
-  for (unsigned int d1=0; d1<3; d1++) {
-    for (unsigned int d2=d1; d2<3; d2++) {
-      std::vector<unsigned int> deriv(3,0);
-      deriv[d1]++;
-      deriv[d2]++;
-      Spline3D<double>          spd(_sp.Order(),lksp,deriv);  // Spline twice differentiated
-      spd /= (vxs[d1]*vxs[d2]);                     // Derivative in mm^{-1}
-      if (d1==d2) grad += memen_HtHb_helper(spd,csz,b,HtHb);
-      else grad += 2.0*memen_HtHb_helper(spd,csz,b,HtHb);
-    }
-  }
-  grad *= 2.0;     
-}
-
-void splinefield::calculate_memen_grad(const NEWMAT::ColumnVector&       b,
+//
+// Calculates 0.5 times the gradient of membrane energy
+//
+void splinefield::calculate_memen_AtAb(const NEWMAT::ColumnVector&       b,
                                        const std::vector<unsigned int>&  lksp,
+                                       const std::vector<unsigned int>&  isz,
+                                       const std::vector<double>&        vxs,
                                        const std::vector<unsigned int>&  csz,
+                                       unsigned int                      sp_ord,
                                        NEWMAT::ColumnVector&             grad)
 const
 {
-  if (static_cast<unsigned int>(grad.Nrows()) != csz[2]*csz[1]*csz[0]) grad.ReSize(csz[2]*csz[1]*csz[0]);
-  grad = 0.0;
-
-  double vxs[] = {Vxs_x(), Vxs_y(), Vxs_z()};
-
-  // Sum over directions
-  for (unsigned int d=0; d<3; d++) {
-    std::vector<unsigned int> deriv(3,0);
-    deriv[d] = 1;
-    Spline3D<double>          spd(_sp.Order(),lksp,deriv);  // Spline differentiated in one direction
-    spd /= vxs[d];                                // Derivative in mm^{-1}
-    grad += memen_HtHb_helper(spd,csz,b,HtHb);
+  // Get helper that is the sum of all the component
+  // helpers (dd/dx + dd/dy + dd/dy)
+  std::vector<unsigned int>  deriv(3,0);
+  deriv[0] = 1;
+  Spline3D<double>     sp1(sp_ord,lksp,deriv);
+  Memen_H_Helper       sum_hlpr(sp1);
+  for (unsigned int d=1; d<3; d++) {
+    deriv[d-1]=0; deriv[d]=1;
+    Spline3D<double>   sp2(sp_ord,lksp,deriv);
+    Memen_H_Helper     hlpr(sp2);
+    sum_hlpr += hlpr;
   }
-  grad *= 2.0;     
+  calculate_AtAb(b,isz,csz,sp1,sum_hlpr,grad);   
 }
 
-/////////////////////////////////////////////////////////////////////
 //
-// This is a helper-routine that calculates H*b or H'*H*b depending
-// on the switch "what". H in this case is the matrix such that 
-// b'*(H'*H)*b is the membrane energy for a field given by the 
-// coefficients b. It does so without explicitly representing H,
-// which is good because it can be very large. It is a helper both
-// for calculating the memebrane energy (as (H*b)'*(H*b)) and the 
-// gradient of the membrane energy (as H'*H*b).
-// N.B. that we want to assess the energy for the "entire field",
-// i.e. also the parts that extends beyond the FOV of the image.
-// That means that (H*b).Nrows() > FieldSz().
+// Calculates 0.5 times the gradient of bending energy
 //
-/////////////////////////////////////////////////////////////////////
-
-NEWMAT::ReturnMatrix splinefield::memen_HtHb_helper(const Spline3D<double>&            spd,
-                                                    const std::vector<unsigned int>&   csz,
-                                                    const NEWMAT::ColumnVector&        b,
-                                                    HtHbType                           what)
+void splinefield::calculate_bender_AtAb(const NEWMAT::ColumnVector&       b,
+                                        const std::vector<unsigned int>&  lksp,
+                                        const std::vector<unsigned int>&  isz,
+                                        const std::vector<double>&        vxs,
+                                        const std::vector<unsigned int>&  csz,
+                                        unsigned int                      sp_ord,
+                                        NEWMAT::ColumnVector&             grad)
 const
 {
-  NEWMAT::ColumnVector  hb(spd.TotalFullFOV(csz));   // H*b
-  hb = 0.0;
-  double                *hbp = hb.Store();
-  const double          *bp = b.Store();
-
-  // Generate indicies of first spline into Hb
-  unsigned int *indx = new unsigned int[spd.TotalKernelSize()];
-  for (unsigned int k=0, li=0; k<spd.KernelSize(2); k++) {
-    unsigned int b1 = k * spd.FullFOV(1,csz[1]) * spd.FullFOV(0,csz[0]);
-    for (unsigned int j=0; j<spd.KernelSize(1); j++) {
-      unsigned int b2 = j * spd.FullFOV(0,csz[0]);
-      for (unsigned int i=0; i<spd.KernelSize(0); i++, li++) {
-        indx[li] = b1 + b2 + i;
-      }
+  // Get helper that is the sum of all the component
+  // helpers (d2d/dx2 + d2d/dy2 + d2d/dz2 + 2*d2d/dxdy + ...
+  Spline3D<double>     sp(sp_ord,lksp);
+  Memen_H_Helper       sum_hlpr(sp);
+  sum_hlpr *= 0.0;
+  for (unsigned int d1=0; d1<3; d1++) {
+    for (unsigned int d2=d1; d2<3; d2++) {
+      std::vector<unsigned int>   deriv(3,0);
+      deriv[d1]++; deriv[d2]++;
+      Spline3D<double>   spd(sp_ord,lksp,deriv);   // Spline differentiated in 2 directions
+      spd /= (vxs[d1]*vxs[d2]);                         // Derivative in mm^{-1}
+      Memen_H_Helper   hlpr(spd);
+      if (d1 != d2) hlpr *= 2.0;
+      sum_hlpr += hlpr;
     }
   }
+  // Use the helper to calculate (A_1^T*A_1 + A_2^T*A_2 ...)*b
+  // where A_1 is a matrix with translated d2d/dx2 kernels etc
+  calculate_AtAb(b,isz,csz,sp,sum_hlpr,grad);   
+}
 
-  // Build H*b as linear combination of the columns of H
-  unsigned int is = spd.KnotSpacing(0);
-  unsigned int js = spd.KnotSpacing(1) * spd.FullFOV(0,csz[0]);
-  unsigned int ks = spd.KnotSpacing(2) * spd.FullFOV(1,csz[1]) * spd.FullFOV(0,csz[0]);
-  for (unsigned int ck=0, lci=0; ck<csz[2]; ck++) {
-    for (unsigned int cj=0; cj<csz[1]; cj++) {
-      for (unsigned int ci=0; ci<csz[0]; ci++, lci++) {
-        unsigned int offset = ck*ks + cj*js + ci*is;
-        for (unsigned int i=0; i<spd.TotalKernelSize(); i++) {
-          hbp[indx[i]+offset] += bp[lci] * spd[i];
+//
+// Heart of the calculation of the
+// gradient of membrane/bending-energy
+//
+void splinefield::calculate_AtAb(const NEWMAT::ColumnVector&       b,
+                                 const std::vector<unsigned int>&  isz,
+                                 const std::vector<unsigned int>&  csz,
+                                 const Spline3D<double>&           sp,
+                                 const Memen_H_Helper&             hlpr,
+                                 NEWMAT::ColumnVector&             grad)
+const
+{
+  grad = 0;
+  double *db=static_cast<double *>(b.Store());    // double[] representation of coefficients
+  double *dg=static_cast<double *>(grad.Store()); // double[] representation of gradient
+  std::vector<unsigned int>   ci(3,0);            // Index of coefficient
+  std::vector<unsigned int>   first(3,0);         // index of first overlapping coefficient
+  std::vector<unsigned int>   last(3,0);          // Index of last overlapping coefficient
+  unsigned int                li=0;               // Linear index of coefficient             
+  for (ci[2]=0; ci[2]<csz[2]; ci[2]++) {          // First three for loop over all coefficients
+    for (ci[1]=0; ci[1]<csz[1]; ci[1]++) {
+      for (ci[0]=0; ci[0]<csz[0]; ci[0]++, li++) {
+        double *optr = &(dg[li]);
+        sp.RangeOfOverlappingSplines(ci,isz,first,last);
+        int lastk=last[2]-ci[2]; int lastj=last[1]-ci[1]; int lasti=last[0]-ci[0];
+        for (int k=first[2]-ci[2]; k<lastk; k++) {
+          int offset = k*csz[1]*csz[0];
+          for (int j=first[1]-ci[1]; j<lastj; j++) {
+            int offset2 = li + offset + j*csz[0];
+            for (int i=first[0]-ci[0]; i<lasti; i++) {
+	      *optr += hlpr.Peek(i,j,k) * db[offset2+i];
+	      // grad.element(li) += hlpr(i,j,k) * b.element(offset2+i);
+	    }
+	  }
 	}
       }
     }
-  }
-  if (what == Hb) { // Return if that is all we shall do
-    delete [] indx;
-    hb.Release();
-    return(hb);
-  }
-
-  // Multiply by H'
-  NEWMAT::ColumnVector   hthb(csz[2]*csz[1]*csz[0]);
-  hthb = 0.0;
-  double                 *hthbp = hthb.Store();
-  for (unsigned int ck=0, lci=0; ck<csz[2]; ck++) {
-    for (unsigned int cj=0; cj<csz[1]; cj++) {
-      for (unsigned int ci=0; ci<csz[0]; ci++, lci++) {
-        unsigned int offset = ck*ks + cj*js + ci*is;
-        for (unsigned int i=0; i<spd.TotalKernelSize(); i++) {
-          hthbp[lci] += spd[i] * hbp[indx[i]+offset];
-	}
-      }
-    }
-  }
-  delete [] indx;
-  hthb.Release();
-  return(hthb);
+  }  
 }
 
 //
@@ -1030,7 +983,8 @@ const
       deriv[d] = 1;
       Spline3D<double>            spd(_sp.Order(),lksp,deriv);  // Spline differentiated in one direction
       spd /= vxs[d];                                  // Derivative in mm^{-1}
-      helpers[nh++] = boost::shared_ptr<Memen_H_Helper>(new Memen_H_Helper(spd));
+      helpers[nh] = boost::shared_ptr<Memen_H_Helper>(new Memen_H_Helper(spd));
+      *(helpers[nh++]) *= 2.0;                        // To get factor of 2 of entire matrix.
     }
   }
   else if (et == BendEn) {
@@ -1041,7 +995,9 @@ const
         deriv[d2]++;
         Spline3D<double>            spd(_sp.Order(),lksp,deriv);  // Spline twice differentiated
         spd /= (vxs[d1]*vxs[d2]);                       // Derivative in mm^{-1}
-        helpers[nh++] = boost::shared_ptr<Memen_H_Helper>(new Memen_H_Helper(spd));
+        helpers[nh] = boost::shared_ptr<Memen_H_Helper>(new Memen_H_Helper(spd));
+        if (d1 == d2) *(helpers[nh++]) *= 2.0;       // To get factor of 2 of entire matrix
+        else *(helpers[nh++]) *= 4.0;                // Count cross-terms twice
       }
     }
   }
@@ -1129,6 +1085,25 @@ void splinefield::hadamard(const NEWIMAGE::volume<float>& ima1,
   else hadamard(ima1,ima2,prod);
 }
 
+void splinefield::Set(const NEWIMAGE::volume<float>& pfield)
+{
+  if (int(FieldSz_x()) != pfield.xsize() || int(FieldSz_y()) != pfield.ysize() || int(FieldSz_z()) != pfield.zsize()) {
+    throw BasisfieldException("basisfield::Set:: Matrix size mismatch beween basisfield class and supplied field");
+  }
+  if (Vxs_x() != pfield.xdim() || Vxs_y() != pfield.ydim() || Vxs_z() != pfield.zdim()) {
+    throw BasisfieldException("basisfield::Set:: Voxel size mismatch beween basisfield class and supplied field");
+  }
+
+  helper_vol orig(pfield);
+  helper_vol conv = get_coefs_one_dim(orig,0,CoefSz_x(),Order(),Ksp_x());
+  if (NDim() > 1) conv = get_coefs_one_dim(conv,1,CoefSz_y(),Order(),Ksp_y());
+  if (NDim() > 2) conv = get_coefs_one_dim(conv,2,CoefSz_z(),Order(),Ksp_z());
+  
+  NEWMAT::ColumnVector lcoef = conv.AsNewmatVector();
+  SetCoef(lcoef);
+  return; 
+}
+
 
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 //
@@ -1178,8 +1153,22 @@ boost::shared_ptr<BASISFIELD::basisfield> splinefield::ZoomField(const std::vect
   if (nvxs != ovxs && !new_vxs_is_ok(nvxs)) throw BasisfieldException("ZoomField: The requested voxel-size is invalid");
 
   // If voxel size changed, fake an old knot-spacing for the purpose of estimating new coefficients
+  // This will always work when going from low->higher resolution (in which case the fake knot-spacing
+  // will be some integer multiple of the old knot-spacing). It will not always work when going from
+  // high->lower resolution since we may then get a fake knot-spacing that should really be a 
+  // non-integer #, which or present implementation cannot handle. This is really indicative of a 
+  // flawed implementation, but for the time being I will just work around it.
+
   std::vector<unsigned int> fksp = oksp;
-  if (nvxs != ovxs) fksp = fake_old_ksp(nvxs,nksp,ovxs);
+  if (nvxs != ovxs) { 
+    if (faking_works(nvxs,nksp,ovxs)) {
+      fksp = fake_old_ksp(nvxs,nksp,ovxs);
+    }
+    else {
+      return(zoom_field_in_stupid_way(nms,nvxs,nksp));
+    }
+  }
+  // cout << "fksp[0] = " << fksp[0] << ", fksp[1] = " << fksp[1] << ", fksp[2] = " << fksp[2] << endl;
   
   // Create the new field
   boost::shared_ptr<BASISFIELD::splinefield> tptr(new BASISFIELD::splinefield(nms,nvxs,nksp,this->Order()));
@@ -1265,11 +1254,26 @@ boost::shared_ptr<BASISFIELD::basisfield> splinefield::ZoomField(const std::vect
   return(tptr);    
 }
 
+/*
 void splinefield::SetToConstant(double fv)
 {
   NEWMAT::ColumnVector  lcoef(CoefSz());
   lcoef = fv;
   SetCoef(lcoef);
+}
+*/
+
+void splinefield::SetToConstant(double fv)
+{
+  vector<unsigned int>  sz(3,0);
+  sz[0] = FieldSz_x(); sz[1] = FieldSz_y(); sz[2] = FieldSz_z();
+  vector<double>        vxs(3,0.0);
+  vxs[0] = Vxs_x(); vxs[1] = Vxs_y(); vxs[2] = Vxs_z(); 
+  NEWIMAGE::volume<float>  vol(sz[0],sz[1],sz[2]);
+  vol.setdims(vxs[0],vxs[1],vxs[2]);
+  vol = fv;
+
+  Set(vol);
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -1478,6 +1482,155 @@ unsigned int splinefield::fake_old_ksp(double        nvxs,
   return(static_cast<unsigned int>(MISCMATHS::round((ovxs/nvxs)*double(nksp))));
 }
 
+bool splinefield::faking_works(const std::vector<double>&        nvxs,
+                               const std::vector<unsigned int>&  nksp,
+                               std::vector<double>               ovxs) const
+{
+  if (!ovxs.size()) {ovxs.resize(NDim()); ovxs[0]=Vxs_x(); if (NDim()>1) ovxs[1]=Vxs_y(); if (NDim()>2) ovxs[2]=Vxs_z();}
+  for (unsigned int i=0; i<ovxs.size(); i++) if (!faking_works(nvxs[i],nksp[i],ovxs[i])) return(false);
+  return(true);  
+}
+
+bool splinefield::faking_works(double        nvxs,
+                               unsigned int  nksp,
+                               double        ovxs) const
+{
+  double       dres = (ovxs/nvxs)*double(nksp);
+  unsigned int ires = static_cast<unsigned int>(roundl(dres));
+  if (fabs(double(ires)-dres) > 1e-6) return(false);
+  return(true);
+}
+
+boost::shared_ptr<BASISFIELD::basisfield> splinefield::zoom_field_in_stupid_way(const std::vector<unsigned int>&    nms,
+                                                                                const std::vector<double>&          nvxs,
+                                                                                const std::vector<unsigned int>&    nksp) const
+{
+  // Create new field
+  boost::shared_ptr<BASISFIELD::splinefield> tptr(new BASISFIELD::splinefield(nms,nvxs,nksp,this->Order()));
+
+  // See if we have non-zero field that we need to resample.
+  const boost::shared_ptr<NEWMAT::ColumnVector> ocoef = GetCoef();
+  NEWMAT::ColumnVector zerovec(ocoef->Nrows());
+  zerovec = 0.0;
+  if (*ocoef == zerovec) return(tptr);
+
+  // Get image representation of current field in resolution of new field
+  NEWIMAGE::volume<float>   nvol(nms[0],nms[1],nms[2]);
+  nvol.setdims(nvxs[0],nvxs[1],nvxs[2]);
+  double z=0.0;
+  for (unsigned int k=0; k<nms[2] && z<double(FieldSz_z()); k++, z+=(nvxs[2]/Vxs_z())) {
+    double y=0.0;
+    for (unsigned int j=0; j<nms[1] && y<double(FieldSz_y()); j++, y+=(nvxs[1]/Vxs_y())) {
+      double x=0.0;
+      for (unsigned int i=0; i<nms[0] && x<double(FieldSz_x()); i++, x+=(nvxs[0]/Vxs_x())) {
+        nvol(i,j,k) = Peek(x,y,z);
+      }
+    }
+  }
+
+  // Set this for new field, which means the coefficients will be calculated.
+  tptr->Set(nvol);
+
+  return(tptr);
+}
+
+helper_vol splinefield::get_coefs_one_dim(const helper_vol&                 in,
+                                          unsigned int                      dim,
+                                          unsigned int                      csz,
+                                          unsigned int                      order,
+                                          unsigned int                      ksp) const
+{
+  std::vector<unsigned int> nsz(3,0);
+  for (unsigned int i=0; i<3; i++) {if (i==dim) nsz[i]=csz; else nsz[i]=in.Size(i); }
+  helper_vol  out(nsz);
+  
+  unsigned int ii, jj;
+  switch (dim) {
+  case 0:
+    ii=in.Size(1);
+    jj=in.Size(2);
+    break;
+  case 1:
+    ii=in.Size(0);
+    jj=in.Size(2);
+    break;
+  case 2:
+    ii=in.Size(0);
+    jj=in.Size(1);
+    break;
+  default:
+    throw ;
+  }
+
+  Spline1D<double>  sp(order,ksp);
+  NEWMAT::Matrix A = sp.GetAMatrix(in.Size(dim),csz);
+  NEWMAT::Matrix S = get_s_matrix(in.Size(dim),csz);
+  NEWMAT::Matrix AS = A & 0.005*S;
+  NEWMAT::Matrix M = (AS.t()*AS).i()*A.t();
+  NEWMAT::ColumnVector y(in.Size(dim));
+  for (unsigned int i=0; i<ii; i++) {
+    for (unsigned int j=0; j<jj; j++) {
+      in.GetColumn(i,j,dim,static_cast<double *>(y.Store()));
+      NEWMAT::ColumnVector b = M*y;
+      out.SetColumn(i,j,dim,static_cast<double *>(b.Store()));
+    }
+  }
+  return(out); 
+}
+
+NEWMAT::ReturnMatrix splinefield::get_s_matrix(unsigned int isz,
+                                               unsigned int csz) const
+{
+  NEWMAT::Matrix S(isz,csz);
+  S = 0.0;
+  S(1,1) = 2.0; S(1,2) = -1.0; S(1,csz) = -1.0;
+  S(isz,1) = -1.0; S(isz,csz-1) = -1.0; S(isz,csz) = 2.0;
+
+  S.Release();
+  return(S);
+}
+
+// This routine will return a value for the field (or a derivative of the field)
+// from outside the "valid" FOV. Since the splines actually extend a bit outside
+// the FOV there will be a gradual taper off to zero.
+double splinefield::peek_outside_fov(int i, int j, int k, FieldIndex fi) const
+{
+  std::vector<double>  vox(3,0.0);
+  vox[0] = static_cast<double>(i); vox[1] = static_cast<double>(j); vox[2] = static_cast<double>(k);
+  std::vector<unsigned int> csz(3,0);
+  csz[0] = CoefSz_x(); csz[1] = CoefSz_y(); csz[2] = CoefSz_z();
+  std::vector<unsigned int> cindx(3,0);
+  std::vector<unsigned int> first(3,0), last(3,0);
+
+  double rval = 0.0;
+  if (fi == FIELD) {
+    _sp.RangeOfSplines(vox,csz,first,last);
+    // cout << "vox = " << vox[0] << ",  " << vox[1] << ",  " << vox[2] << endl;
+    // cout << "csz = " << csz[0] << ",  " << csz[1] << ",  " << csz[2] << endl;
+    // cout << "first = " << first[0] << ",  " << first[1] << ",  " << first[2] << endl;
+    // cout << "last = " << last[0] << ",  " << last[1] << ",  " << last[2] << endl;
+    for (cindx[2]=first[2]; cindx[2]<last[2]; cindx[2]++) {
+      for (cindx[1]=first[1]; cindx[1]<last[1]; cindx[1]++) {
+        for (cindx[0]=first[0]; cindx[0]<last[0]; cindx[0]++) {
+          // cout << "cindx = " << cindx[0] << ", " << cindx[1] << ", " << cindx[2] << endl;
+          rval += GetCoef(cindx[0],cindx[1],cindx[2]) * _sp.SplineValueAtVoxel(vox,cindx);
+	}
+      }
+    }
+  }
+  else {
+    _dsp[fi-1]->RangeOfSplines(vox,csz,first,last);
+    for (cindx[2]=first[2]; cindx[2]<last[2]; cindx[2]++) {
+      for (cindx[1]=first[1]; cindx[1]<last[1]; cindx[1]++) {
+        for (cindx[0]=first[0]; cindx[0]<last[0]; cindx[0]++) {
+          rval += GetCoef(cindx[0],cindx[1],cindx[2]) * _dsp[fi-1]->SplineValueAtVoxel(vox,cindx);
+	}
+      }
+    }
+  }
+  return(rval); 
+}
+ 
 /////////////////////////////////////////////////////////////////////
 //
 // Member-functions for the ZeroSplineMap class. The class will
@@ -1539,5 +1692,378 @@ double Memen_H_Helper::operator()(int i, int j, int k) const
   }
   return(Peek(i,j,k));
 }
-    
+
+/////////////////////////////////////////////////////////////////////
+//
+// Member-functions for the helper_vol class. It is a little helper 
+// class that is used when deconvolving a field to obtain the spline 
+// coefficients.
+//
+/////////////////////////////////////////////////////////////////////
+
+helper_vol::helper_vol(const std::vector<unsigned int>& sz) 
+{
+  if (sz.size()!=3) throw BasisfieldException("helper_vol::helper_vol: s must have 3 elements"); 
+  else {
+    _sz[0]=sz[0]; _sz[1]=sz[1]; _sz[2]=sz[2]; 
+    _data = new double[_sz[0]*_sz[1]*_sz[2]];
+  }
+}
+helper_vol::helper_vol(const std::vector<unsigned int>& sz,
+                       const NEWMAT::ColumnVector&      vec)
+{
+  if (sz.size()!=3) throw BasisfieldException("helper_vol::helper_vol: s must have 3 elements"); 
+  else {
+    _sz[0]=sz[0]; _sz[1]=sz[1]; _sz[2]=sz[2]; 
+    _data = new double[_sz[0]*_sz[1]*_sz[2]];
+    double *dp = static_cast<double *>(vec.Store());
+    memcpy(_data,dp,_sz[0]*_sz[1]*_sz[2]*sizeof(double));
+  }
+}
+helper_vol::helper_vol(const NEWIMAGE::volume<float>&   vol)
+{
+  _sz[0]=vol.xsize(); _sz[1]=vol.ysize(); _sz[2]=vol.zsize();
+  _data = new double[_sz[0]*_sz[1]*_sz[2]];
+  double *trgt = _data;
+  for (NEWIMAGE::volume<float>::fast_const_iterator it=vol.fbegin(), it_end=vol.fend(); it!=it_end; it++, trgt++) {
+    *trgt = static_cast<double>(*it);
+  }   
+}
+helper_vol::helper_vol(const helper_vol& in)
+{
+  _sz[0]=in._sz[0]; _sz[1]=in._sz[1]; _sz[2]=in._sz[2];
+  _data = new double[_sz[0]*_sz[1]*_sz[2]];
+  memcpy(_data,in._data,_sz[0]*_sz[1]*_sz[2]*sizeof(double));
+}
+helper_vol& helper_vol::operator=(const helper_vol& rhs)
+{
+  if (this == &rhs) return(*this);
+  _sz[0]=rhs._sz[0]; _sz[1]=rhs._sz[1]; _sz[2]=rhs._sz[2];
+  if (_data) delete [] _data;
+  _data = new double[_sz[0]*_sz[1]*_sz[2]];
+  memcpy(_data,rhs._data,_sz[0]*_sz[1]*_sz[2]*sizeof(double));
+  return(*this);
+} 
+NEWMAT::ReturnMatrix helper_vol::AsNewmatVector() const
+{
+  NEWMAT::ColumnVector  ovec(_sz[0]*_sz[1]*_sz[2]);
+  double *dp = ovec.Store();
+  memcpy(dp,_data,_sz[0]*_sz[1]*_sz[2]*sizeof(double));
+  ovec.Release();
+  return(ovec);
+}
+void helper_vol::GetColumn(unsigned int i, unsigned int j, unsigned int dim, double *col) const
+{
+  const double *endptr = end(i,j,dim);
+  unsigned int stp = step(dim);
+  for (const double *ptr=start(i,j,dim); ptr<endptr; ptr+=stp, col++) *col = *ptr;
+}
+void helper_vol::SetColumn(unsigned int i, unsigned int j, unsigned int dim, const double *col)
+{
+  const double *endptr = end(i,j,dim);
+  unsigned int stp = step(dim);
+  for (double *ptr=start(i,j,dim); ptr<endptr; ptr+=stp, col++) *ptr = *col;
+}
+double* helper_vol::start(unsigned int i, unsigned int j, unsigned int dim) const
+{
+  switch(dim) {
+  case 0:
+    return(&(_data[j*_sz[0]*_sz[1]+i*_sz[0]]));
+    break;
+  case 1:
+    return(&(_data[j*_sz[0]*_sz[1]+i]));
+    break;
+  case 2:
+    return(&(_data[j*_sz[0]+i]));
+    break;
+  default:
+    throw BasisfieldException("helper_vol::start: dim must be 0, 1 or 2");
+    break;
+  }
+}
+const double* helper_vol::end(unsigned int i, unsigned int j, unsigned int dim) const
+{
+  const double *ptr = start(i,j,dim);
+  ptr += _sz[dim]*step(dim);
+  return(ptr);
+}
+unsigned int helper_vol::step(unsigned dim) const
+{
+  switch (dim) {
+  case 0:
+    return(1);
+    break;
+  case 1:
+    return(_sz[0]);
+    break;
+  case 2:
+    return(_sz[1]*_sz[0]);
+  default:
+    throw BasisfieldException("helper_vol::start: dim must be 0, 1 or 2");
+    break;
+  }
+}
+
+     
 } // End namespace BASISFIELD
+
+/*
+
+////////////////////////////////////////////////////////////////
+//
+// Here is some decomissioned code that I don't dare to
+// delete just yet.
+//
+////////////////////////////////////////////////////////////////
+
+  double calculate_bender(const NEWMAT::ColumnVector&        b,
+                          const std::vector<unsigned int>&   lksp,
+                          const std::vector<unsigned int>&   csz) const;
+
+  double calculate_memen(const NEWMAT::ColumnVector&        b,
+                         const std::vector<unsigned int>&   lksp,
+                         const std::vector<unsigned int>&   csz) const;
+
+  void calculate_bender_grad(const NEWMAT::ColumnVector&       b,
+                             const std::vector<unsigned int>&  lksp,
+                             const std::vector<unsigned int>&  csz,
+                             NEWMAT::ColumnVector&             grad) const;
+
+  void calculate_memen_grad(const NEWMAT::ColumnVector&       b,
+                            const std::vector<unsigned int>&  lksp,
+                            const std::vector<unsigned int>&  csz,
+                            NEWMAT::ColumnVector&             grad) const;
+
+
+  NEWMAT::ReturnMatrix memen_HtHb_helper(const Spline3D<double>&            spd,
+                                         const std::vector<unsigned int>&   csz,
+                                         const NEWMAT::ColumnVector&        b,
+                                         HtHbType                           what) const;
+
+double splinefield::MemEnergy() const // Membrane energy of field
+{
+  const boost::shared_ptr<NEWMAT::ColumnVector> lcoef = GetCoef();
+  if (!lcoef) {throw BasisfieldException("splinefield::MemEnergy: No coefficients set yet");}
+
+  std::vector<unsigned int>  csz(3,0);
+  csz[0] = CoefSz_x(); csz[1] = CoefSz_y(); csz[2] = CoefSz_z();
+
+  return(calculate_memen(*lcoef,_sp.KnotSpacing(),csz)); 
+}
+
+double splinefield::BendEnergy() const // Bending energy of field
+{
+  const boost::shared_ptr<NEWMAT::ColumnVector> lcoef = GetCoef();
+  if (!lcoef) {throw BasisfieldException("splinefield::BendEnergy: No coefficients set yet");}
+
+  std::vector<unsigned int>  csz(3,0);
+  csz[0] = CoefSz_x(); csz[1] = CoefSz_y(); csz[2] = CoefSz_z();
+
+  return(calculate_bender(*lcoef,_sp.KnotSpacing(),csz)); 
+}
+ 
+NEWMAT::ReturnMatrix splinefield::MemEnergyGrad() const // Gradient of membrane energy of field
+{
+  const boost::shared_ptr<NEWMAT::ColumnVector> lcoef = GetCoef();
+  if (!lcoef) {throw BasisfieldException("splinefield::MemEnergyGrad: No coefficients set yet");}
+
+  std::vector<unsigned int>  csz(3,0);
+  csz[0] = CoefSz_x(); csz[1] = CoefSz_y(); csz[2] = CoefSz_z();
+  NEWMAT::ColumnVector  grad(CoefSz());
+
+  calculate_memen_grad(*lcoef,_sp.KnotSpacing(),csz,grad);
+
+  grad.Release();
+  return(grad); 
+}
+
+NEWMAT::ReturnMatrix splinefield::BendEnergyGrad() const // Gradient of bending energy of field
+{
+  const boost::shared_ptr<NEWMAT::ColumnVector> lcoef = GetCoef();
+  if (!lcoef) {throw BasisfieldException("splinefield::BendEnergyGrad: No coefficients set yet");}
+
+  std::vector<unsigned int>  csz(3,0);
+  csz[0] = CoefSz_x(); csz[1] = CoefSz_y(); csz[2] = CoefSz_z();
+  NEWMAT::ColumnVector  grad(CoefSz());
+
+  calculate_bender_grad(*lcoef,_sp.KnotSpacing(),csz,grad);
+
+  grad.Release();
+  return(grad); 
+}
+
+
+// Calculates bending energy
+
+double splinefield::calculate_bender(const NEWMAT::ColumnVector&        b,
+                                     const std::vector<unsigned int>&   lksp,
+                                     const std::vector<unsigned int>&   csz)
+const
+{
+  double memen = 0.0;
+  double vxs[] = {Vxs_x(), Vxs_y(), Vxs_z()};
+
+  // Sum over directions
+  for (unsigned int d1=0; d1<3; d1++) {
+    for (unsigned int d2=d1; d2<3; d2++) {
+      std::vector<unsigned int> deriv(3,0);
+      deriv[d1]++;
+      deriv[d2]++;
+      Spline3D<double>          spd(_sp.Order(),lksp,deriv);  // Spline twice differentiated
+      spd /= (vxs[d1]*vxs[d2]);                     // Derivative in mm^{-1}
+      NEWMAT::ColumnVector      hb = memen_HtHb_helper(spd,csz,b,Hb);
+      if (d1==d2) memen += DotProduct(hb,hb);
+      else memen += 2.0*DotProduct(hb,hb);
+    }
+  }
+  return(memen);
+}
+
+// Calculates membrane energy
+
+double splinefield::calculate_memen(const NEWMAT::ColumnVector&        b,
+                                    const std::vector<unsigned int>&   lksp,
+                                    const std::vector<unsigned int>&   csz)
+const
+{
+  double memen = 0.0;
+  double vxs[] = {Vxs_x(), Vxs_y(), Vxs_z()};
+
+  // Sum over directions
+  for (unsigned int d=0; d<3; d++) {
+    std::vector<unsigned int> deriv(3,0);
+    deriv[d] = 1;
+    Spline3D<double>          spd(_sp.Order(),lksp,deriv);  // Spline differentiated in one direction
+    spd /= vxs[d];                                // Derivative in mm^{-1}
+    NEWMAT::ColumnVector      hb = memen_HtHb_helper(spd,csz,b,Hb);
+    memen += DotProduct(hb,hb);
+  }
+  return(memen);
+}
+
+void splinefield::calculate_bender_grad(const NEWMAT::ColumnVector&       b,
+                                        const std::vector<unsigned int>&  lksp,
+                                        const std::vector<unsigned int>&  csz,
+                                        NEWMAT::ColumnVector&             grad)
+const
+{
+  if (static_cast<unsigned int>(grad.Nrows()) != csz[2]*csz[1]*csz[0]) grad.ReSize(csz[2]*csz[1]*csz[0]);
+  grad = 0.0;
+
+  double vxs[] = {Vxs_x(), Vxs_y(), Vxs_z()};
+
+  // Sum over directions
+  for (unsigned int d1=0; d1<3; d1++) {
+    for (unsigned int d2=d1; d2<3; d2++) {
+      std::vector<unsigned int> deriv(3,0);
+      deriv[d1]++;
+      deriv[d2]++;
+      Spline3D<double>          spd(_sp.Order(),lksp,deriv);  // Spline twice differentiated
+      spd /= (vxs[d1]*vxs[d2]);                     // Derivative in mm^{-1}
+      if (d1==d2) grad += memen_HtHb_helper(spd,csz,b,HtHb);
+      else grad += 2.0*memen_HtHb_helper(spd,csz,b,HtHb);
+    }
+  }
+  grad *= 2.0;     
+}
+
+void splinefield::calculate_memen_grad(const NEWMAT::ColumnVector&       b,
+                                       const std::vector<unsigned int>&  lksp,
+                                       const std::vector<unsigned int>&  csz,
+                                       NEWMAT::ColumnVector&             grad)
+const
+{
+  if (static_cast<unsigned int>(grad.Nrows()) != csz[2]*csz[1]*csz[0]) grad.ReSize(csz[2]*csz[1]*csz[0]);
+  grad = 0.0;
+
+  double vxs[] = {Vxs_x(), Vxs_y(), Vxs_z()};
+
+  // Sum over directions
+  for (unsigned int d=0; d<3; d++) {
+    std::vector<unsigned int> deriv(3,0);
+    deriv[d] = 1;
+    Spline3D<double>          spd(_sp.Order(),lksp,deriv);  // Spline differentiated in one direction
+    spd /= vxs[d];                                // Derivative in mm^{-1}
+    grad += memen_HtHb_helper(spd,csz,b,HtHb);
+  }
+  grad *= 2.0;     
+}
+
+/////////////////////////////////////////////////////////////////////
+//
+// This is a helper-routine that calculates H*b or H'*H*b depending
+// on the switch "what". H in this case is the matrix such that 
+// b'*(H'*H)*b is the membrane energy for a field given by the 
+// coefficients b. It does so without explicitly representing H,
+// which is good because it can be very large. It is a helper both
+// for calculating the memebrane energy (as (H*b)'*(H*b)) and the 
+// gradient of the membrane energy (as H'*H*b).
+// N.B. that we want to assess the energy for the "entire field",
+// i.e. also the parts that extends beyond the FOV of the image.
+// That means that (H*b).Nrows() > FieldSz().
+//
+/////////////////////////////////////////////////////////////////////
+
+NEWMAT::ReturnMatrix splinefield::memen_HtHb_helper(const Spline3D<double>&            spd,
+                                                    const std::vector<unsigned int>&   csz,
+                                                    const NEWMAT::ColumnVector&        b,
+                                                    HtHbType                           what)
+const
+{
+  NEWMAT::ColumnVector  hb(spd.TotalFullFOV(csz));   // H*b
+  hb = 0.0;
+  double                *hbp = hb.Store();
+  const double          *bp = b.Store();
+
+  // Generate indicies of first spline into Hb
+  unsigned int *indx = new unsigned int[spd.TotalKernelSize()];
+  for (unsigned int k=0, li=0; k<spd.KernelSize(2); k++) {
+    unsigned int b1 = k * spd.FullFOV(1,csz[1]) * spd.FullFOV(0,csz[0]);
+    for (unsigned int j=0; j<spd.KernelSize(1); j++) {
+      unsigned int b2 = j * spd.FullFOV(0,csz[0]);
+      for (unsigned int i=0; i<spd.KernelSize(0); i++, li++) {
+        indx[li] = b1 + b2 + i;
+      }
+    }
+  }
+
+  // Build H*b as linear combination of the columns of H
+  unsigned int is = spd.KnotSpacing(0);
+  unsigned int js = spd.KnotSpacing(1) * spd.FullFOV(0,csz[0]);
+  unsigned int ks = spd.KnotSpacing(2) * spd.FullFOV(1,csz[1]) * spd.FullFOV(0,csz[0]);
+  for (unsigned int ck=0, lci=0; ck<csz[2]; ck++) {
+    for (unsigned int cj=0; cj<csz[1]; cj++) {
+      for (unsigned int ci=0; ci<csz[0]; ci++, lci++) {
+        unsigned int offset = ck*ks + cj*js + ci*is;
+        for (unsigned int i=0; i<spd.TotalKernelSize(); i++) {
+          hbp[indx[i]+offset] += bp[lci] * spd[i];
+	}
+      }
+    }
+  }
+  if (what == Hb) { // Return if that is all we shall do
+    delete [] indx;
+    hb.Release();
+    return(hb);
+  }
+
+  // Multiply by H'
+  NEWMAT::ColumnVector   hthb(csz[2]*csz[1]*csz[0]);
+  hthb = 0.0;
+  double                 *hthbp = hthb.Store();
+  for (unsigned int ck=0, lci=0; ck<csz[2]; ck++) {
+    for (unsigned int cj=0; cj<csz[1]; cj++) {
+      for (unsigned int ci=0; ci<csz[0]; ci++, lci++) {
+        unsigned int offset = ck*ks + cj*js + ci*is;
+        for (unsigned int i=0; i<spd.TotalKernelSize(); i++) {
+          hthbp[lci] += spd[i] * hbp[indx[i]+offset];
+	}
+      }
+    }
+  }
+  delete [] indx;
+  hthb.Release();
+  return(hthb);
+}
+
+*/

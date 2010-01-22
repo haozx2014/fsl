@@ -151,6 +151,82 @@ void FnirtFileWriter::common_field_construction(const string&            fname,
                                                 const volume<float>&     fieldz, 
                                                 const Matrix&            aff)
 {
+  volume4D<float>   fields(ref.xsize(),ref.ysize(),ref.zsize(),3);
+  fields.copyproperties(ref); 
+
+  Matrix M;
+  bool   add_affine = false;
+  if (add_affine = ((aff-IdentityMatrix(4)).MaximumAbsoluteValue() > 1e-6)) { // Add affine part to fields
+    M = (aff.i() - IdentityMatrix(4))*ref.sampling_mat();
+  }
+
+  if (samesize(ref,fieldx,true)) { // If ref is same size as the original field
+    fields[0] = fieldx; fields[1] = fieldy; fields[2] = fieldz;
+    fields.copyproperties(ref);    // Put qform/sform and stuff back.
+    if (add_affine) {
+      ColumnVector xv(4), xo(4);
+      int zs = ref.zsize(), ys = ref.ysize(), xs = ref.xsize();
+      xv(4) = 1.0;
+      for (int z=0; z<zs; z++) {
+        xv(3) = double(z);
+        for (int y=0; y<ys; y++) {
+          xv(2) = double(y);
+          for (int x=0; x<xs; x++) {
+            xv(1) = double(x);
+            xo = M*xv;
+            fields(x,y,z,0) += xo(1);
+            fields(x,y,z,1) += xo(2);
+            fields(x,y,z,2) += xo(3);
+	  }
+        }
+      }
+    } 
+  }
+  else {
+    fieldx.setextrapolationmethod(extraslice);
+    fieldy.setextrapolationmethod(extraslice);
+    fieldz.setextrapolationmethod(extraslice);
+    Matrix R2F = fieldx.sampling_mat().i() * ref.sampling_mat();
+    ColumnVector xv(4), xo(4), xr(4);
+    int zs = ref.zsize(), ys = ref.ysize(), xs = ref.xsize();
+    xv(4) = 1.0;
+    for (int z=0; z<zs; z++) {
+      xv(3) = double(z);
+      for (int y=0; y<ys; y++) {
+        xv(2) = double(y);
+        for (int x=0; x<xs; x++) {
+          xv(1) = double(x);
+          xr = R2F*xv;
+          fields(x,y,z,0) = fieldx.interpolate(xr(1),xr(2),xr(3));
+          fields(x,y,z,1) = fieldy.interpolate(xr(1),xr(2),xr(3));
+          fields(x,y,z,2) = fieldz.interpolate(xr(1),xr(2),xr(3));
+          if (add_affine) {
+            xo = M*xv;
+            fields(x,y,z,0) += xo(1);
+            fields(x,y,z,1) += xo(2);
+            fields(x,y,z,2) += xo(3);
+	  }
+        }
+      }
+    }
+  }
+
+  fields.set_intent(FSL_FNIRT_DISPLACEMENT_FIELD,fields.intent_param(0),fields.intent_param(1),fields.intent_param(2));
+  fields.setDisplayMaximum(0.0);
+  fields.setDisplayMinimum(0.0);
+
+  // Save resulting field
+  save_volume4D(fields,fname);
+}
+
+/*
+void FnirtFileWriter::common_field_construction(const string&            fname,
+                                                const volume<float>&     ref,
+                                                const volume<float>&     fieldx,
+                                                const volume<float>&     fieldy,
+                                                const volume<float>&     fieldz, 
+                                                const Matrix&            aff)
+{
   volume4D<float>   fields(fieldx.xsize(),fieldx.ysize(),fieldx.zsize(),3);
   fields[0] = fieldx; fields[1] = fieldy; fields[2] = fieldz;
   fields.copyproperties(ref); 
@@ -180,5 +256,6 @@ void FnirtFileWriter::common_field_construction(const string&            fname,
   // Save resulting field
   save_volume4D(fields,fname);
 }
+*/
 
 } // End of namespace NEWIMAGE

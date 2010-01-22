@@ -399,7 +399,7 @@ double WhiteNoiseModel::CalcFreeEnergy(
   
   expectedLogPosteriorParts[3] =
     +0.5 * thetaPrior.GetPrecisions().LogDeterminant().LogValue()
-    -0.5 * nTimes * log(2*M_PI);
+    -0.5 * nTimes * log(2*M_PI)
     -0.5 * nTheta * log(2*M_PI);
   
   expectedLogPosteriorParts[4] = 
