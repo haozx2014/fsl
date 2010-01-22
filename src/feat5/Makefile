@@ -8,13 +8,13 @@ USRLDFLAGS =  -L${LIB_NEWMAT} -L${LIB_PROB} -L${LIB_ZLIB} -L${LIB_GD} -L${LIB_GD
 IOLIBS = -lfslio -lniftiio -lznz
 LIBS = -lutils -lnewimage -lmiscplot -lmiscpic -lmiscmaths -lprob -lnewmat $(IOLIBS) -lm -lz  -lgdc -lgd -lpng
 
-XFILES = feat_model tsplot prewhiten
+XFILES = cutoffcalc feat_model tsplot prewhiten
 
 RUNTCLS = Feat Renderhighres Featquery Glm
 
 SCRIPTS = easythresh feat mccutup renderhighres featregapply featquery fslerrorreport invfeatreg updatefeatreg estnoise perfusion_subtract match_smoothing fsl_motion_outliers feat_gm_prepare
 
-all: feat_model tsplot prewhiten defaultfiles
+all: cutoffcalc feat_model tsplot prewhiten defaultfiles
 
 defaultfiles:
 	sed s/VVV/`grep "set fmri(version)" featlib.tcl | grep "\." | awk '{print $$3}'`/g doc/ORIGtop.html > doc/top.html
@@ -32,6 +32,9 @@ tsplot: tsplot.cc featlib.o featlib.h
 
 prewhiten: prewhiten.cc featlib.o featlib.h
 	$(CXX) $(CXXFLAGS) -o prewhiten featlib.o prewhiten.cc $(LDFLAGS) $(LIBS)
+
+cutoffcalc: cutoffcalc.cc 
+	$(CXX) $(CXXFLAGS) -o cutoffcalc cutoffcalc.cc $(LDFLAGS) $(LIBS)
 
 feat_model: feat_model.cc featlib.o
 	$(CXX) $(CXXFLAGS) -o feat_model featlib.o feat_model.cc $(LDFLAGS) $(LIBS)

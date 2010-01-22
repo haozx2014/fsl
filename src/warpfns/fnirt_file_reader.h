@@ -49,14 +49,28 @@ public:
 enum DisplacementFileType {FnirtSplineDispType, FnirtDCTDispType, FnirtFieldDispType, UnknownDispType, InvalidDispType};
 enum AbsOrRelWarps {RelativeWarps, AbsoluteWarps, UnknownWarps};
 
-// This is a global routine that I have chosen to leave outside FnirtFileReader to
-// allow it to be called independently. It probably doesn't really belong here, but
-// I can't really come up with a better place for it.
+// These are global routines that I have chosen to leave outside FnirtFileReader to
+// allow them to be called independently. Theu probably don't really belong here, but
+// I can't really come up with a better place for them.
 
 void deffield2jacobian(const BASISFIELD::basisfield&   dx,
                        const BASISFIELD::basisfield&   dy,
                        const BASISFIELD::basisfield&   dz,
                        NEWIMAGE::volume<float>&        jac);
+
+void deffield2jacobian(const BASISFIELD::basisfield&   dx,
+                       const BASISFIELD::basisfield&   dy,
+                       const BASISFIELD::basisfield&   dz,
+                       const NEWMAT::Matrix&           aff,
+                       volume<float>&                  jac);
+
+void add_affine_part(const NEWMAT::Matrix&     aff,
+                     unsigned int              indx,
+                     NEWIMAGE::volume<float>&  warps);
+
+void remove_affine_part(const NEWMAT::Matrix&     aff,
+                        unsigned int              indx,
+                        NEWIMAGE::volume<float>&  warps);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -114,7 +128,7 @@ protected:
   void common_read(const std::string& fname, AbsOrRelWarps wt, bool verbose);
   std::vector<boost::shared_ptr<BASISFIELD::basisfield> > read_coef_file(const NEWIMAGE::volume4D<float>&   vcoef,
                                                                          bool                               verbose) const;
-  void add_affine_part(NEWMAT::Matrix aff, unsigned int indx, NEWIMAGE::volume<float>& warps) const;
+  // void add_affine_part(NEWMAT::Matrix aff, unsigned int indx, NEWIMAGE::volume<float>& warps) const;
 
 private:
   std::string                                                         _fname;

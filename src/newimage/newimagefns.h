@@ -2825,7 +2825,7 @@ void tfce(volume<T>& VolIntn, float H, float E, int NumConn, float minT, float d
   int sizeC=maxX*maxY*maxZ;
   int counter=0, edsta[27];
   float maxT=VolIntn.max();
-  if(deltaT==0) deltaT=maxT/100;
+  if(deltaT<=0) throw Exception("Error: tfce requires a positive deltaT input.");
   vector<VecSort> VecSortI(sizeC);
   queue<int> Qx, Qy, Qz;      
   for(int z0=-1; z0<=1; z0++)

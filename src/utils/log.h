@@ -123,7 +123,7 @@ namespace Utilities{
 
       /** Sets an existing directory to place results into. */
       /** The stream_to* variables define the streaming behaviour */
-      void setDir(const string& pdirname, const string& plogfilename = "logfile", bool pstream_to_logfile = true, bool pstream_to_cout = false); 
+      void setDir(const string& pdirname, const string& plogfilename = "logfile", bool pstream_to_logfile = true, bool pstream_to_cout = false, ios_base::openmode mode=ios::app); 
 
       /** Sets an existing directory to place results into. */
       /** If does not exist then makes it. */
@@ -131,7 +131,7 @@ namespace Utilities{
       void setthenmakeDir(const string& pdirname, const string& plogfilename = "logfile", bool pstream_to_logfile = true, bool pstream_to_cout = false);
 
       /** Closes old logfile buffer and attempts to open new one with name specified and sets streaming to logfile on */
-      void setLogFile(const string& plogfilename);
+      void setLogFile(const string& plogfilename, ios_base::openmode mode=ios::app);
 
       const string& getDir() const { if(!logEstablished)throw Exception("Log not setup");return dir; }
 
@@ -140,7 +140,15 @@ namespace Utilities{
       /** returns passed in filename appended onto the end of the dir name */
       const string appendDir(const string& filename) const;
 
-			inline void flush() { logfileout.flush();} 
+      ofstream& get_logfile_ofstream() { return  logfileout;}     
+
+      inline void flush() { 
+	if(stream_to_logfile)
+	  logfileout.flush();
+	
+	if(stream_to_cout)
+	  cout.flush();
+      } 
 
       /** allows streaming into cout and/or logfile depending upon the */
       /** stream_to_cout and stream_to_logfile respectively */
@@ -238,7 +246,7 @@ namespace Utilities{
     return *logger;
   }
   
-  inline void Log::setLogFile(const string& plogfilename) {
+  inline void Log::setLogFile(const string& plogfilename, ios_base::openmode mode) {
 
     if(!logEstablished)
       {
@@ -250,7 +258,7 @@ namespace Utilities{
     logfilename = plogfilename;
     
     // setup logfile
-    logfileout.open((dir + "/" + logfilename).c_str(), ios::out);
+    logfileout.open((dir + "/" + logfilename).c_str(), mode);
     if(logfileout.bad())
       {
 	throw Exception(string(string("Unable to setup logfile ")+logfilename+string(" in directory ")+dir).c_str());

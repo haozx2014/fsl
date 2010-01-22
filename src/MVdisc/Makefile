@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.4 2008/11/26 13:25:48 mwebster Exp $
+# $Id: Makefile,v 1.5 2009/07/09 10:49:22 mwebster Exp $
 include ${FSLCONFDIR}/default.mk
 
 PROJNAME = MVdisc
@@ -11,10 +11,6 @@ LIBS= -lfslvtkio -lmeshclass -lnewimage -lmiscmaths -lfslio -lniftiio -lznz -lne
 SHAPEOBJS=MVdisc.o
  
 MODELOBJS=MVdisc.o
-
-DBGFLAGS=-g
-ARCHLDFLAGS=
-ARCHFLAGS=
 
 all: MVdisc.a 
 

@@ -90,12 +90,14 @@ void track(){
     read_volume(seedref,opts.maskfile.value());
   }
 
-  Streamliner stline;
+  Streamliner stline(seedref);
   Counter counter(seedref,stline);
   counter.initialise();
   Seedmanager seedmanager(counter);
     
   Matrix Seeds = read_ascii_matrix(opts.seedfile.value());
+  if(Seeds.Ncols()!=3 && Seeds.Nrows()==3)
+	Seeds=Seeds.t();
   
   // convert coordinates from nifti (external) to newimage (internal)
   //   conventions - Note: for radiological files this should do nothing
@@ -117,6 +119,8 @@ void track(){
     counter.save_pathdist(add);
     counter.reset_prob();
   } //Close Seed number Loop
+  //counter.save_total(keeptot);
+  //counter.save();
 
   cout<<"finished"<<endl;
 }

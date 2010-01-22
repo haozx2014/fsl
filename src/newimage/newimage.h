@@ -81,6 +81,7 @@
 #include "miscmaths/miscmaths.h"
 #include "miscmaths/kernel.h"
 #include <nifti1.h>
+#include "miscmaths/splinterpolator.h"
  
 using namespace NEWMAT;
 using namespace LAZY;
@@ -98,7 +99,7 @@ namespace NEWIMAGE {
                        boundsassert, boundsexception, userextrapolation };
 
   enum interpolation { nearestneighbour, trilinear, sinc, userkernel, 
-		       userinterpolation };
+		       userinterpolation, spline };
 
   enum threshtype { inclusive , exclusive };
 
@@ -155,17 +156,21 @@ namespace NEWIMAGE {
     mutable int HISTbins;
     mutable T HISTmin;
     mutable T HISTmax;
+    lazy<SPLINTERPOLATOR::Splinterpolator<T>, volume<T> > splint;
 
     mutable kernel interpkernel;
     mutable extrapolation p_extrapmethod;
     mutable interpolation p_interpmethod;
+    mutable unsigned int splineorder;
     mutable T (*p_userextrap)(const volume<T>& , int, int, int);
     mutable float (*p_userinterp)(const volume<T>& , float, float, float);
     mutable T padvalue;
-    mutable T extrapval;  // the reference target for all extrapolations
+    mutable T extrapval;                 // the reference target for all extrapolations
+    mutable std::vector<bool> ep_valid;  // Indicates if extrapolation can produce "valid" values.
 
-    float displayMaximum;
-    float displayMinimum;
+    mutable float displayMaximum;
+    mutable float displayMinimum;
+    char auxFile[24];
 
     // Internal functions
     inline T* basicptr(int x, int y, int z)
@@ -182,6 +187,9 @@ namespace NEWIMAGE {
     const T& extrapolate(int x, int y, int z) const;
     float kernelinterpolation(const float x, const float y, 
 			      const float z) const;
+    float splineinterpolate(float x, float y, float z) const;
+    float spline_interp1partial(float x, float y, float z, int dir, float *deriv) const;
+    float spline_interp3partial(float x, float y, float z, float *dfdx, float *dfdy, float *dfdz) const;
 
     typedef T* nonsafe_fast_iterator;
     inline nonsafe_fast_iterator nsfbegin()
@@ -236,15 +244,17 @@ namespace NEWIMAGE {
     inline float zdim() const { return Zdim; }
     inline float getDisplayMaximum() const { return displayMaximum; }
     inline float getDisplayMinimum() const { return displayMinimum; }
+    inline string getAuxFile() const { return string(auxFile); }
 
     void setxdim(float x) { Xdim = fabs(x); }
     void setydim(float y) { Ydim = fabs(y); }
     void setzdim(float z) { Zdim = fabs(z); }
     void setdims(float x, float y, float z) 
       { setxdim(x); setydim(y); setzdim(z); }
-    void setDisplayMaximumMinimum(const float maximum, const float minimum) {  displayMaximum=maximum; displayMinimum=minimum; }
-    void setDisplayMaximum(const float maximum) { setDisplayMaximumMinimum(maximum,displayMinimum); }
-    void setDisplayMinimum(const float minimum) { setDisplayMaximumMinimum(displayMaximum,minimum); }
+    void setDisplayMaximumMinimum(const float maximum, const float minimum) const {  displayMaximum=maximum; displayMinimum=minimum; }
+    void setDisplayMaximum(const float maximum) const { setDisplayMaximumMinimum(maximum,displayMinimum); }
+    void setDisplayMinimum(const float minimum) const { setDisplayMaximumMinimum(displayMaximum,minimum); }
+    void setAuxFile(const string fileName) { strncpy(auxFile,fileName.c_str(),24); }
     unsigned long int nvoxels() const { return no_voxels; }
 
     // ROI FUNCTIONS
@@ -354,7 +364,25 @@ namespace NEWIMAGE {
       int iy=((int) floor(y)); 
       int iz=((int) floor(z));
       return((ix>=0) && (iy>=0) && (iz>=0) && ((ix+1)<ColumnsX) && ((iy+1)<RowsY) && ((iz+1)<SlicesZ));
-    } 
+    }
+    bool in_extraslice_bounds(float x, float y, float z) const
+    {
+      int ix=((int) floor(x)); 
+      int iy=((int) floor(y)); 
+      int iz=((int) floor(z));
+      return((ix>=-1) && (iy>=-1) && (iz>=-1) && (ix<ColumnsX) && (iy<RowsY) && (iz<SlicesZ));
+    }
+    inline bool valid(int x, int y, int z) const 
+    { 
+      return((ep_valid[0] || (x>=0 && x<ColumnsX)) && (ep_valid[1] || (y>=0 && y<RowsY)) && (ep_valid[2] || (z>=0 && z<SlicesZ)));
+    }
+    bool valid(float x, float y, float z) const
+    {
+      int ix=((int) floor(x)); 
+      int iy=((int) floor(y)); 
+      int iz=((int) floor(z));
+      return((ep_valid[0] || (ix>=0 && (ix+1)<ColumnsX)) && (ep_valid[1] || (iy>=0 && (iy+1)<RowsY)) && (ep_valid[2] || (iz>=0 && (iz+1)<SlicesZ)));
+    }
     inline T& operator()(int x, int y, int z)
       { set_whole_cache_validity(false); 
         if (in_bounds(x,y,z)) return *(basicptr(x,y,z)); 
@@ -385,9 +413,8 @@ namespace NEWIMAGE {
 
 
     // SECONDARY FUNCTIONS
-    void setextrapolationmethod(extrapolation extrapmethod) const 
-      { p_extrapmethod = extrapmethod;}; 
-    extrapolation getextrapolationmethod() const { return p_extrapmethod; }
+    void setextrapolationmethod(extrapolation extrapmethod) const { p_extrapmethod = extrapmethod; }
+    extrapolation getextrapolationmethod() const { return(p_extrapmethod); }
     void setpadvalue(T padval) const { padvalue = padval; }
     T getpadvalue() const { return padvalue; }
     void defineuserextrapolation(T (*extrap)(
@@ -395,6 +422,10 @@ namespace NEWIMAGE {
 
     void setinterpolationmethod(interpolation interpmethod) const;
     interpolation getinterpolationmethod() const { return p_interpmethod; }
+    void setsplineorder(unsigned int order) const;
+    unsigned int getsplineorder() const { return(splineorder); }
+    void setextrapolationvalidity(bool xv, bool yv, bool zv) const { ep_valid[0]=xv; ep_valid[1]=yv; ep_valid[2]=zv; }
+    std::vector<bool> getextrapolationvalidity() const { return(ep_valid); }
     void defineuserinterpolation(float (*interp)(
              const volume<T>& , float, float, float)) const;
     void definekernelinterpolation(const ColumnVector& kx, 
@@ -584,6 +615,8 @@ namespace NEWIMAGE {
     bool in_bounds(float x, float y, float z, int t) const
       { return ( (t>=0) && (t<this->tsize()) && 
 		 vols[Limits[3]].in_bounds(x,y,z) ); }
+    bool valid(int x, int y, int z) const {return(vols.size()>0 && vols[0].valid(x,y,z));}
+    bool valid(float x, float y, float z) const {return(vols.size()>0 && vols[0].valid(x,y,z));}
 
     inline T& operator()(int x, int y, int z, int t) 
       { set_whole_cache_validity(false);  
@@ -645,6 +678,7 @@ namespace NEWIMAGE {
     inline float TR() const { return p_TR; }
     inline float getDisplayMaximum() const { if (vols.size()>0) return vols[0].getDisplayMaximum(); else return 0; }
     inline float getDisplayMinimum() const { if (vols.size()>0) return vols[0].getDisplayMinimum(); else return 0; }
+    inline string getAuxFile() const { if (vols.size()>0) return vols[0].getAuxFile(); else return string(""); }
 
     void setxdim(float x);
     void setydim(float y);
@@ -656,12 +690,17 @@ namespace NEWIMAGE {
     unsigned long int nvoxels() const 
       { if (vols.size()>0) return vols[0].nvoxels(); else return 0; }
     int ntimepoints() const { return this->tsize(); }
-    void setDisplayMaximumMinimum(const float maximum, const float minimum);
-    void setDisplayMaximum(const float maximum) { setDisplayMaximumMinimum(maximum,vols[0].getDisplayMinimum()); }
-    void setDisplayMinimum(const float minimum) { setDisplayMaximumMinimum(vols[0].getDisplayMaximum(),minimum); }
+    void setDisplayMaximumMinimum(const float maximum, const float minimum) const;
+    void setDisplayMaximum(const float maximum) const { setDisplayMaximumMinimum(maximum,vols[0].getDisplayMinimum()); }
+    void setDisplayMinimum(const float minimum) const { setDisplayMaximumMinimum(vols[0].getDisplayMaximum(),minimum); }
+    void setAuxFile(const string fileName);
 
     void setinterpolationmethod(interpolation interpmethod) const;
     interpolation getinterpolationmethod() const;
+    void setsplineorder(unsigned int order) const;
+    unsigned int getsplineorder() const;
+    void setextrapolationvalidity(bool xv, bool yv, bool zv) const;
+    std::vector<bool> getextrapolationvalidity() const;
     void setextrapolationmethod(extrapolation extrapmethod) const;
     extrapolation getextrapolationmethod() const;
     void setpadvalue(T padval) const;
@@ -1134,9 +1173,12 @@ namespace NEWIMAGE {
     dest.p_interpmethod = source.p_interpmethod;
     dest.p_extrapmethod = source.p_extrapmethod;
     dest.padvalue = (D) source.padvalue;
+    dest.splineorder = source.splineorder;
+    dest.ep_valid = source.ep_valid;
 
     dest.displayMaximum=source.displayMaximum;
     dest.displayMinimum=source.displayMinimum;
+    dest.setAuxFile(source.getAuxFile());
   }
 
 

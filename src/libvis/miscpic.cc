@@ -2,9 +2,9 @@
 
 /*  miscpic - collection of image display and rendering routines
 
-    Stephen Smith & Christian Beckmann, FMRIB Image Analysis Group
+    Stephen Smith, Christian Beckmann and Matthew Webster, FMRIB Image Analysis Group
 
-    Copyright (C) 1999-2002 University of Oxford  */
+    Copyright (C) 1999-2009 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -72,10 +72,30 @@
 
 #include "miscpic.h"
 #include "gdfonts.h"
-//#include "gdfontmb.h"
+#include "gdfontt.h"
+
+using namespace NEWIMAGE;
 
 namespace MISCPIC{
 
+#include <sstream>
+
+class TextWriter
+{
+public:
+  unsigned int x,y;
+  string text;
+  TextWriter(int inputX, int inputY, string inputText);
+};
+
+TextWriter::TextWriter(int inputX, int inputY, string inputText)
+{
+  x=inputX;
+  y=inputY;
+  text=inputText;
+}
+
+vector<TextWriter> textWriterVector;
 /* {{{ read_lut */
 
 //template <class T>
@@ -609,6 +629,16 @@ int miscpic::write_png ( char *filename, int x_size, int y_size,
     }
   }
 
+  /*** TEST ***/
+  for (unsigned int i=0;writeText && i<textWriterVector.size();i++)
+  {
+    int fontclr   = gdImageColorResolve(outim, 255, 255, 255);
+    unsigned char *s = (unsigned char*)textWriterVector[i].text.c_str();
+    gdImageString(outim, gdFontTiny, textWriterVector[i].x , textWriterVector[i].y, s, fontclr);
+  }
+  /*** END OF TEST ***/
+
+
   if(!(cbartype==string(""))) add_cbar(cbartype);
   add_title(x_size);
 
@@ -726,7 +756,7 @@ void miscpic::addRlabel(int p, int width, int size_pic, int alt_size_pic,
 /* {{{ write sagittal slice */
 
 //template <class T>
-void miscpic::sag(float xx, int p, int width)
+void miscpic::sag(float xx, int p, int imageWidth)
 {
   float yy, zz;
   int   y, z;
@@ -734,47 +764,52 @@ void miscpic::sag(float xx, int p, int width)
     xx=-xx;
   else
     xx*=(float)x_size;
-  xx=MISCMATHS::Min(x_size-1.0001,xx);
+  xx=MISCMATHS::Min(x_size-1.0,xx);
+  ostringstream tempBuffer;
+  tempBuffer << (int)xx;
+  //Image top left is: (p%imageWidth,p/imageWidth)
+  TextWriter tempTextWriter((int)(p%imageWidth),(int)(p/imageWidth),"X="+tempBuffer.str());
+  textWriterVector.push_back(tempTextWriter);
 
   for(y=0; y<y_size_pic; y++)
     for(z=0; z<z_size_pic; z++)
       {
-	yy=MISCMATHS::Min(y_size-1.0001,y/inp1.ydim());
-	zz=MISCMATHS::Min(z_size-1.0001,z/inp1.zdim());
+	yy=MISCMATHS::Min(y_size-1.0,y/inp1.ydim());
+	zz=MISCMATHS::Min(z_size-1.00,z/inp1.zdim());
 
 	if (nlut==0) {
-	  picr[p+(z_size_pic-1-z)*width+y] = (unsigned char)MISCMATHS::Min(255,MISCMATHS::Max(0,inp1.interpolate(xx,yy,zz)));
+	  picr[p+(z_size_pic-1-z)*imageWidth+y] = (unsigned char)MISCMATHS::Min(255,MISCMATHS::Max(0,inp1.interpolate(xx,yy,zz)));
 
 	  if (compare)
 	    {
-	      picg[p+(z_size_pic-1-z)*width+y] = picr[p+(z_size_pic-1-z)*width+y];
-	      picb[p+(z_size_pic-1-z)*width+y] = picr[p+(z_size_pic-1-z)*width+y];
+	      picg[p+(z_size_pic-1-z)*imageWidth+y] = picr[p+(z_size_pic-1-z)*imageWidth+y];
+	      picb[p+(z_size_pic-1-z)*imageWidth+y] = picr[p+(z_size_pic-1-z)*imageWidth+y];
 	      if ( (inp2((int)(xx+0.5),(int)(yy+0.5),(int)(zz+0.5))>0) &&
 		   ((y+z)%2>trans) )
 		{
-		  picr[p+(z_size_pic-1-z)*width+y] = 255;
-		  picg[p+(z_size_pic-1-z)*width+y] = picb[p+(z_size_pic-1-z)*width+y] = 0;
+		  picr[p+(z_size_pic-1-z)*imageWidth+y] = 255;
+		  picg[p+(z_size_pic-1-z)*imageWidth+y] = picb[p+(z_size_pic-1-z)*imageWidth+y] = 0;
 		}
 	    }
 	} else {
-	  picr[p+(z_size_pic-1-z)*width+y]= (unsigned char)MISCMATHS::Min(255,MISCMATHS::Max(0,imr.interpolate(xx,yy,zz)));
-	  picg[p+(z_size_pic-1-z)*width+y]= (unsigned char)MISCMATHS::Min(255,MISCMATHS::Max(0,img.interpolate(xx,yy,zz)));
-	  picb[p+(z_size_pic-1-z)*width+y]= (unsigned char)MISCMATHS::Min(255,MISCMATHS::Max(0,imb.interpolate(xx,yy,zz)));
+	  picr[p+(z_size_pic-1-z)*imageWidth+y]= (unsigned char)MISCMATHS::Min(255,MISCMATHS::Max(0,imr.interpolate(xx,yy,zz)));
+	  picg[p+(z_size_pic-1-z)*imageWidth+y]= (unsigned char)MISCMATHS::Min(255,MISCMATHS::Max(0,img.interpolate(xx,yy,zz)));
+	  picb[p+(z_size_pic-1-z)*imageWidth+y]= (unsigned char)MISCMATHS::Min(255,MISCMATHS::Max(0,imb.interpolate(xx,yy,zz)));
 	}
       }
   // put in "R" label as appropriate
   int icode, jcode, kcode;
   get_axis_orientations(inp1,icode,jcode,kcode);
   // check if y-axis (x-axis in the figure) is left-right
-  if (jcode==NIFTI_L2R) { addRlabel(p,width,z_size_pic,y_size_pic,false); }
-  if (jcode==NIFTI_R2L) { addRlabel(p,width,z_size_pic,y_size_pic,true); }
+  if (jcode==NIFTI_L2R) { addRlabel(p,imageWidth,z_size_pic,y_size_pic,false); }
+  if (jcode==NIFTI_R2L) { addRlabel(p,imageWidth,z_size_pic,y_size_pic,true); }
 }
 
 /* }}} */
 /* {{{ write coronal slice */
 
 //template <class T>
-void miscpic::cor(float yy, int p, int width)
+void miscpic::cor(float yy, int p, int imageWidth)
 {
   float xx, zz;
   int   x, z;
@@ -782,103 +817,104 @@ void miscpic::cor(float yy, int p, int width)
     yy=-yy;
   else
     yy*=(float)y_size;
-  yy=MISCMATHS::Min(y_size-1.0001,yy);
+  yy=MISCMATHS::Min(y_size-1.0,yy);
+  ostringstream tempBuffer;
+  tempBuffer << (int)yy;
+  //Image top left is: (p%imageWidth,p/imageWidth)
+  TextWriter tempTextWriter((int)(p%imageWidth),(int)(p/imageWidth),"Y="+tempBuffer.str());
+  textWriterVector.push_back(tempTextWriter);
 
   for(x=0; x<x_size_pic; x++)
     for(z=0; z<z_size_pic; z++)
       {
-	xx=MISCMATHS::Min(x_size-1.0001,x/inp1.xdim());
-	zz=MISCMATHS::Min(z_size-1.0001,z/inp1.zdim());
+	xx=MISCMATHS::Min(x_size-1.0,x/inp1.xdim());
+	zz=MISCMATHS::Min(z_size-1.0,z/inp1.zdim());
 
 	if (nlut==0) {
-	  picr[p+(z_size_pic-1-z)*width+x] = (unsigned char)MISCMATHS::Min(255,MISCMATHS::Max(0,inp1.interpolate(xx,yy,zz)));
+	  picr[p+(z_size_pic-1-z)*imageWidth+x] = (unsigned char)MISCMATHS::Min(255,MISCMATHS::Max(0,inp1.interpolate(xx,yy,zz)));
 	  
 	  if (compare)
 	    {
-	      picg[p+(z_size_pic-1-z)*width+x] = picr[p+(z_size_pic-1-z)*width+x];
-	      picb[p+(z_size_pic-1-z)*width+x] = picr[p+(z_size_pic-1-z)*width+x];
+	      picg[p+(z_size_pic-1-z)*imageWidth+x] = picr[p+(z_size_pic-1-z)*imageWidth+x];
+	      picb[p+(z_size_pic-1-z)*imageWidth+x] = picr[p+(z_size_pic-1-z)*imageWidth+x];
 	      if ( (inp2((int)(xx+0.5),(int)(yy+0.5),(int)(zz+0.5))>0) &&
 		   ((x+z)%2>trans) )
 		{
-		  picr[p+(z_size_pic-1-z)*width+x] = 255;
-		  picg[p+(z_size_pic-1-z)*width+x] = picb[p+(z_size_pic-1-z)*width+x] = 0;
+		  picr[p+(z_size_pic-1-z)*imageWidth+x] = 255;
+		  picg[p+(z_size_pic-1-z)*imageWidth+x] = picb[p+(z_size_pic-1-z)*imageWidth+x] = 0;
 		}
 	    }
 	} else {
-	  picr[p+(z_size_pic-1-z)*width+x]= (unsigned char)MISCMATHS::Min(255,MISCMATHS::Max(0,imr.interpolate(xx,yy,zz)));
-	  picg[p+(z_size_pic-1-z)*width+x]= (unsigned char)MISCMATHS::Min(255,MISCMATHS::Max(0,img.interpolate(xx,yy,zz)));
-	  picb[p+(z_size_pic-1-z)*width+x]= (unsigned char)MISCMATHS::Min(255,MISCMATHS::Max(0,imb.interpolate(xx,yy,zz)));
+	  picr[p+(z_size_pic-1-z)*imageWidth+x]= (unsigned char)MISCMATHS::Min(255,MISCMATHS::Max(0,imr.interpolate(xx,yy,zz)));
+	  picg[p+(z_size_pic-1-z)*imageWidth+x]= (unsigned char)MISCMATHS::Min(255,MISCMATHS::Max(0,img.interpolate(xx,yy,zz)));
+	  picb[p+(z_size_pic-1-z)*imageWidth+x]= (unsigned char)MISCMATHS::Min(255,MISCMATHS::Max(0,imb.interpolate(xx,yy,zz)));
 	}
       }
   // put in "R" label as appropriate
   int icode, jcode, kcode;
   get_axis_orientations(inp1,icode,jcode,kcode);
   // check if x-axis (x-axis in the figure) is left-right
-  if (icode==NIFTI_L2R) { addRlabel(p,width,z_size_pic,x_size_pic,false); }
-  if (icode==NIFTI_R2L) { addRlabel(p,width,z_size_pic,x_size_pic,true); }
+  if (icode==NIFTI_L2R) { addRlabel(p,imageWidth,z_size_pic,x_size_pic,false); }
+  if (icode==NIFTI_R2L) { addRlabel(p,imageWidth,z_size_pic,x_size_pic,true); }
 }
 
 /* }}} */
 /* {{{ write axial slice */
 
 //template <class T>
-void miscpic::axi(float zz, int p, int width)
+void miscpic::axi(float zCoord, int p, int imageWidth)
 {
-  float xx, yy;
-  int   x, y;
-  if (zz<0)
-    zz=-zz;
+  if (zCoord<0)
+    zCoord=-zCoord;
   else
-    zz*=(float)z_size;
-  zz=MISCMATHS::Max(0,MISCMATHS::Min(z_size-1.0001,zz));
+    zCoord*=(float)z_size;
+  zCoord=MISCMATHS::Max(0,MISCMATHS::Min(z_size-1.0,zCoord));
+  ostringstream tempBuffer;
+  tempBuffer << (int)zCoord;
+  //Image top left is: (p%imageWidth,p/imageWidth)
+  TextWriter tempTextWriter((int)(p%imageWidth),(int)(p/imageWidth),"Z="+tempBuffer.str());
+  textWriterVector.push_back(tempTextWriter);
 
-  for(x=0; x<x_size_pic; x++)
-    for(y=0; y<y_size_pic; y++)
-      {
-	xx=MISCMATHS::Min(x_size-1.0001,x/inp1.xdim());
-	yy=MISCMATHS::Min(y_size-1.0001,y/inp1.ydim());
-
-	if (nlut==0) {
-	  picr[p+(y_size_pic-1-y)*width+x] = (unsigned char)MISCMATHS::Min(255,MISCMATHS::Max(0,inp1.interpolate(xx,yy,zz)));
-	  if (compare)
-	    {
-	      picg[p+(y_size_pic-1-y)*width+x] = picr[p+(y_size_pic-1-y)*width+x];
-	      picb[p+(y_size_pic-1-y)*width+x] = picr[p+(y_size_pic-1-y)*width+x];
-	      if ( (inp2((int)(xx+0.5),(int)(yy+0.5),(int)(zz+0.5))>0) &&
-		   ((x+y)%2>trans) )
-		{
-		  picr[p+(y_size_pic-1-y)*width+x] = 255;
-		  picg[p+(y_size_pic-1-y)*width+x] = picb[p+(y_size_pic-1-y)*width+x] = 0;
-		}
-	    }
-	} else {
-	  picr[p+(y_size_pic-1-y)*width+x]= (unsigned char)MISCMATHS::Min(255,MISCMATHS::Max(0,imr.interpolate(xx,yy,zz)));
-	  picg[p+(y_size_pic-1-y)*width+x]= (unsigned char)MISCMATHS::Min(255,MISCMATHS::Max(0,img.interpolate(xx,yy,zz)));
-	  picb[p+(y_size_pic-1-y)*width+x]= (unsigned char)MISCMATHS::Min(255,MISCMATHS::Max(0,imb.interpolate(xx,yy,zz)));
+  for(int x=0; x<x_size_pic; x++)
+    for(int y=0; y<y_size_pic; y++)
+    {
+      float xx(MISCMATHS::Min(x_size-1.0,x/inp1.xdim()));
+      float yy(MISCMATHS::Min(y_size-1.0,y/inp1.ydim()));
+      if (nlut==0) {
+	picr[p+(y_size_pic-1-y)*imageWidth+x] = (unsigned char)MISCMATHS::Min(255,MISCMATHS::Max(0,inp1.interpolate(xx,yy,zCoord)));
+	if (compare) {
+	  picg[p+(y_size_pic-1-y)*imageWidth+x] = picr[p+(y_size_pic-1-y)*imageWidth+x];
+	  picb[p+(y_size_pic-1-y)*imageWidth+x] = picr[p+(y_size_pic-1-y)*imageWidth+x];
+	  if ( (inp2((int)(xx+0.5),(int)(yy+0.5),(int)(zCoord+0.5))>0) && ((x+y)%2>trans) ) {
+	    picr[p+(y_size_pic-1-y)*imageWidth+x] = 255;
+	    picg[p+(y_size_pic-1-y)*imageWidth+x] = picb[p+(y_size_pic-1-y)*imageWidth+x] = 0;
+	  }
 	}
+      } else {
+	picr[p+(y_size_pic-1-y)*imageWidth+x]= (unsigned char)MISCMATHS::Min(255,MISCMATHS::Max(0,imr.interpolate(xx,yy,zCoord)));
+	picg[p+(y_size_pic-1-y)*imageWidth+x]= (unsigned char)MISCMATHS::Min(255,MISCMATHS::Max(0,img.interpolate(xx,yy,zCoord)));
+	picb[p+(y_size_pic-1-y)*imageWidth+x]= (unsigned char)MISCMATHS::Min(255,MISCMATHS::Max(0,imb.interpolate(xx,yy,zCoord)));
       }
+    }
   // put in "R" label as appropriate
   int icode, jcode, kcode;
   get_axis_orientations(inp1,icode,jcode,kcode);
   // check if x-axis (x-axis in the figure) is left-right
-  if (icode==NIFTI_L2R) { addRlabel(p,width,y_size_pic,x_size_pic,false); }
-  if (icode==NIFTI_R2L) { addRlabel(p,width,y_size_pic,x_size_pic,true); }
+  if (icode==NIFTI_L2R) { addRlabel(p,imageWidth,y_size_pic,x_size_pic,false); }
+  if (icode==NIFTI_R2L) { addRlabel(p,imageWidth,y_size_pic,x_size_pic,true); }
 }
 
 /* }}} */
 
 /* {{{ slicer */
-
-//template <class T>
-int miscpic::slicer(volume<float> vol1, volume<float> vol2, char *opts, volumeinfo *volinf, bool debug)
+int miscpic::slicer(const volume<float>& vol1, const volume<float>& vol2,vector<string> inputOptions,  bool labelSlices, bool debug)
 {
   /* {{{ vars */
-
 int  picsetup=0, sagcorskip=0, axiskip=0, height=0, picsize=0;
 
 /* }}} */
   /* {{{ first image stuff  */
-
+writeText=labelSlices;
 inp1=vol1;
 inp1.setinterpolationmethod(trilinear);
 inp1.setextrapolationmethod(zeropad);
@@ -889,33 +925,545 @@ z_size = inp1.zsize();
 
 size = x_size * y_size * z_size;
 
-lut = lutbase;
+if(inp1.max()==inp1.min()){
+  cerr << " WARNING: input image is empty " << endl;
+}
+
+ lut = lutbase + vol1.getAuxFile() + ".lut";
+
+float intensity_min(inp1.percentile(0.02)), intensity_max(inp1.percentile(0.98));
+
+{
+  FILE *tmpfp(NULL);
+  if( strlen(vol1.getAuxFile().c_str())>0 &&
+      ((tmpfp=fopen(lut.c_str(),"rb"))!=NULL) )
+    {
+      fclose(tmpfp);
+      intensity_max=vol1.getDisplayMaximum();
+      intensity_min=vol1.getDisplayMinimum(); 
+    }
+}
+
+if (intensity_min==intensity_max)
+{
+  intensity_min=inp1.min();
+  intensity_max=inp1.max();
+}
+
+float scale = MISCMATHS::Min(inp1.xdim(),MISCMATHS::Min(inp1.ydim(),inp1.zdim()));
+
+/* }}} */
+  /* {{{ read second (optional) image */
+
+volume<float> edge(vol2.xsize(),vol2.ysize(),vol2.zsize());
+float edgethreshold;
+
+if (vol2.nvoxels() > 1 )
+{
+  inp2=vol2;
+
+  int x, y, z;
+  compare=1;
+
+  if ( (x_size!=inp2.xsize()) || (y_size!=inp2.ysize()) || (z_size!=inp2.zsize()) )
+    {
+      cerr << "Images aren't the same size!" << endl;
+      return 1;
+    }
+
+  volume<float> tmpedge(inp2.xsize(),inp2.ysize(),inp2.zsize());
+  volume<char>  orient(inp2.xsize(),inp2.ysize(),inp2.zsize());
+  
+  inp2.setextrapolationmethod(mirror);
+  tmpedge.setextrapolationmethod(zeropad);
+   
+  for(z=inp2.minz(); z<=inp2.maxz(); z++)
+    for(y=inp2.miny(); y<=inp2.maxy(); y++)
+      for(x=inp2.minx(); x<=inp2.maxx(); x++)
+	{
+	  float xx=inp2(x+1,y,z)-inp2(x-1,y,z),
+	    yy=inp2(x,y+1,z)-inp2(x,y-1,z),
+	    zz=inp2(x,y,z+1)-inp2(x,y,z-1);
+
+	  xx*=xx; yy*=yy; zz*=zz;
+
+	  if ( (xx>yy) && (xx>zz) )
+	    orient.value(x,y,z)=0;
+	  else
+	    {
+	      if (yy>zz)
+		orient.value(x,y,z)=1;
+	      else
+		orient.value(x,y,z)=2;
+	    }
+
+	  tmpedge.value(x,y,z) = (float) xx+yy+zz;
+	}
+
+  edge = 0; 
+  for(z=tmpedge.minz(); z<=tmpedge.maxz(); z++)
+    for(y=tmpedge.miny(); y<=tmpedge.maxy(); y++)
+      for(x=tmpedge.minx(); x<=tmpedge.maxx(); x++)
+	{
+	  if (orient.value(x,y,z)==0)
+	    {
+	      if ( (tmpedge.value(x,y,z)>tmpedge(x-1,y,z)) 
+		   && (tmpedge.value(x,y,z)>=tmpedge(x+1,y,z)) ) 
+		edge.value(x,y,z)=std::sqrt(tmpedge.value(x,y,z))/2;
+	    }
+	  else
+	    {
+	      if (orient.value(x,y,z)==1)
+		{
+		  if ( (tmpedge.value(x,y,z)>tmpedge(x,y-1,z)) && (tmpedge.value(x,y,z)>=tmpedge(x,y+1,z)) )
+		    edge.value(x,y,z)=std::sqrt(tmpedge.value(x,y,z))/2;
+		}
+	      else
+		{
+		  if ( (tmpedge.value(x,y,z)>tmpedge(x,y,z-1)) && 
+		       (tmpedge.value(x,y,z)>=tmpedge(x,y,z+1)) )
+		    edge.value(x,y,z)=std::sqrt(tmpedge.value(x,y,z))/2;
+		}
+	    }
+	}
+
+  float edge2=edge.percentile(0.02);
+  float edge98=edge.percentile(0.98);
+
+  if (edge2==edge98)
+    edgethreshold = 0.5*(edge.max()-edge.min())+edge.min();
+  else
+    edgethreshold = 0.5*(edge98-edge2)+edge2;
+  
+
+  for(z=inp2.minz(); z<=inp2.maxz(); z++)
+    for(y=inp2.miny(); y<=inp2.maxy(); y++)
+      for(x=inp2.minx(); x<=inp2.maxx(); x++)
+	if(edge.value(x,y,z) > edgethreshold) inp2.value(x,y,z) = 1; 
+	else inp2.value(x,y,z) = 0;
+}
+
+/* }}} */
+  
+ for (unsigned int current=0;current<inputOptions.size();current++ ) {
+   char* input=new char[inputOptions[current].size()+1];
+   strcpy(input,inputOptions[current].c_str());
+   char* theopt=strtok(input," ");
+   const char* discard=" ";
+    if (strncmp(theopt,"-l",2)==0)
+      /* {{{ lut option lut */
+
+{
+  theopt = strtok(NULL,discard); 
+  if (!theopt || strncmp(theopt,"-",1)==0 )
+    {
+      cerr << "Error - must have a LUT name after the -l option." << endl;
+      exit (1);
+    }
+
+  if(strstr(theopt,"/")==NULL){
+    lut = lutbase + string(theopt)+".lut";}
+  else{
+    lut = string(theopt);}
+}
+
+/* }}} */
+    else if (strncmp(theopt, "-s", 2)==0)
+      /* {{{ set scale etc */
+
+{
+  theopt = strtok(NULL,discard);
+  if (!theopt || strncmp(theopt,"-",1)==0)
+    {
+      cerr << "Error - must have a scaling factor after the -s option." << endl;
+      exit (1);
+    }
+  scale /= atof(theopt);
+}
+
+/* }}} */
+    else if (strncmp(theopt, "-u", 2)==0)
+      /* {{{ Do not label the image (i.e. u for unlabeled!) */
+{
+  LR_label_flag = false;
+}
+
+/* }}} */
+    else if (strncmp(theopt, "-i", 2)==0)
+      /* {{{ set intensity range */
+
+{
+  theopt = strtok(NULL,discard);
+  if (!theopt)
+    {
+      cerr << "Error - must set min and max intensities after the -i option." << endl;
+      exit (1);
+    }
+  intensity_min=atof(theopt);
+
+  theopt = strtok(NULL,discard);
+  if (!theopt)
+    {
+      cerr << "Error - must set min and max intensities after the -i option." << endl;
+      exit (1);
+    }
+  intensity_max=atof(theopt);
+}
+
+/* }}} */
+    else if (strncmp(theopt, "-e", 2)==0)
+      /* {{{ user-defined edge threshold? */
+      {
+	theopt = strtok(NULL,discard);
+	if (!theopt)
+	  {
+	    cerr << "Error - must set threshold value after the -e option." << endl;
+	    exit (1);
+	  }
+	edgethresh=atof(theopt);
+	
+	if (edgethresh<0) edgethreshold=-edgethresh;  // negative values are abs (like in -x)
+	else edgethreshold = edgethresh*(edge.max()-edge.min()) + edge.min();
+	
+	if (inp2.nvoxels()>0) {
+	  for(int z=inp2.minz(); z<=inp2.maxz(); z++)
+	    for(int y=inp2.miny(); y<=inp2.maxy(); y++)
+	      for(int x=inp2.minx(); x<=inp2.maxx(); x++)
+		if(edge.value(x,y,z) > edgethreshold) inp2.value(x,y,z) = 1; 
+		else inp2.value(x,y,z) = 0;
+	}
+      }
+    
+/* }}} */
+    else if (strncmp(theopt, "-t", 2)==0)
+      /* {{{ transparent edges? */
+
+      {
+	cerr << "TRANS = 1" << endl;
+        trans=1;
+      }
+
+/* }}} */
+    else if (strncmp(theopt, "-n", 2)==0)
+      /* {{{ nearestneighbour interpolation? */
+
+inp1.setinterpolationmethod(nearestneighbour);
+
+/* }}} */
+    else
+      { 
+	if ( !picsetup )
+	  {
+	    /* {{{ read lut */
+
+read_lut();
+
+/* }}} */
+	    /* {{{ setup scaling and pictures sizes */
+
+inp1.setxdim(inp1.xdim()/scale);
+inp1.setydim(inp1.ydim()/scale);
+inp1.setzdim(inp1.zdim()/scale);
+  
+x_size_pic = (int)round(x_size*inp1.xdim());
+y_size_pic = (int)round(y_size*inp1.ydim());
+z_size_pic = (int)round(z_size*inp1.zdim());
+
+/*if(debug)
+  printf("%f %f %f %d %d %d\n",inp1.xdim(),inp1.ydim(),inp1.zdim(),x_size_pic,y_size_pic,z_size_pic);*/
+
+picsize = MISCMATHS::Max(x_size_pic,MISCMATHS::Max(y_size_pic,z_size_pic));
+picsize = picsize*picsize*MISCMATHS::Max(10,2*z_size);
+
+/*if(debug)
+  printf("%d %d %d %d\n",x_size_pic,y_size_pic,z_size_pic,picsize);*/
+
+picr = (unsigned char*)malloc(picsize);
+picg = (unsigned char*)malloc(picsize);
+picb = (unsigned char*)malloc(picsize);
+
+sagcorskip=0;
+axiskip=0;
+height=MISCMATHS::Max(y_size_pic,z_size_pic);
+
+if (y_size_pic>z_size_pic)
+  sagcorskip=(y_size_pic-z_size_pic)/2;
+else
+  axiskip=(z_size_pic-y_size_pic)/2;
+
+ /* }}} */
+	    /* {{{ rescale image intensity */
+
+if(debug)
+  cerr << "Entries in LUT: " << nlut << endl;
+
+if(debug)
+  cerr << " Intensity min, max : " << intensity_min 
+       << "  " << intensity_max << endl;
+
+
+if (nlut==0) /* otherwise (if using luts) then the display range should already have been set correctly */
+{ 
+  for(int z=inp1.minz(); z<=inp1.maxz(); z++)
+    for(int y=inp1.miny(); y<=inp1.maxy(); y++)
+      for(int x=inp1.minx(); x<=inp1.maxx(); x++)
+	if(intensity_max>intensity_min)
+	  inp1.value(x,y,z) =  (int)(((inp1.value(x,y,z) 
+				       - intensity_min ) * 255.001 ) 
+				     / (intensity_max-intensity_min));
+	else
+	  inp1.value(x,y,z) = 0;
+} else {
+  imr = inp1;
+  img = inp1;
+  imb = inp1;
+  imr.setextrapolationmethod(zeropad);
+  img.setextrapolationmethod(zeropad);
+  imb.setextrapolationmethod(zeropad);
+
+  for(int z=inp1.minz(); z<=inp1.maxz(); z++)
+    for(int y=inp1.miny(); y<=inp1.maxy(); y++)
+      for(int x=inp1.minx(); x<=inp1.maxx(); x++)
+  {
+    int tmp; 
+    if(intensity_max>intensity_min)
+      tmp = (int)(((float)inp1.value(x,y,z) - intensity_min ) * (nlut-1) 
+		  / (intensity_max-intensity_min));   
+    else
+      tmp = 0;
+
+    tmp = MISCMATHS::Min(nlut-1,MISCMATHS::Max(0,tmp));
+    imr.value(x,y,z) = rlut[tmp];
+    img.value(x,y,z) = glut[tmp];
+    imb.value(x,y,z) = blut[tmp];
+  }
+  if(debug){
+      save_volume(imr,"IMG_R");
+      save_volume(img,"IMG_G");
+      save_volume(imb,"IMG_B");
+  }
+}
+
+/* }}} */
+	    picsetup=1;
+	  }
+	/* {{{ zero picture */
+
+memset(picr,0,picsize);
+memset(picg,0,picsize);
+memset(picb,0,picsize);
+
+/* }}} */
+        /* {{{ can specify a title for each plot using -T */
+
+	if(!strncmp(theopt, "-T", 2))
+	  {
+	    string tmpstr = string("");
+	    int otheropt;
+	    do{
+	      theopt = strtok(NULL,discard);
+	      otheropt = 1;
+	      otheropt=(strncmp(theopt, "-x", 2)&&
+		    strncmp(theopt, "-y", 2)&&
+		    strncmp(theopt, "-z", 2)&&
+		    strncmp(theopt, "-a", 2)&&
+		    strncmp(theopt, "-A", 2)&&
+		    strncmp(theopt, "-S", 2));
+	      if(otheropt) tmpstr+= string(theopt) + " ";
+	    }while(otheropt);
+	    set_title(tmpstr);
+	  }
+
+/* }}} */
+
+	if (!strncmp(theopt, "-x", 2))
+	  /* {{{ write sagittal slice */
+
+{
+  theopt = strtok(NULL,discard);
+  if (theopt==NULL)
+    {
+      cerr << "Error - must have a slice choice after the -x option." << endl;
+      exit (1);
+    }
+  float slice=atof(theopt);
+
+  theopt = strtok(NULL,discard);
+  if (theopt==NULL)
+    {
+      cerr << "Error - must have a picture output filename when using the -x option." << endl;
+      exit (1);
+    }
+
+  sag(slice, sagcorskip*y_size_pic, y_size_pic);
+  write_pic(theopt,y_size_pic,height);
+}
+
+/* }}} */
+	else if (!strncmp(theopt, "-y", 2))
+	  /* {{{ write coronal slice */
+
+{
+  theopt = strtok(NULL,discard);
+  if (theopt==NULL)
+    {
+      cerr << "Error - must have a slice choice after the -y option." << endl;
+      exit (1);
+    }
+  float slice=atof(theopt);
+
+  theopt = strtok(NULL,discard);
+  if (theopt==NULL)
+    {
+      cerr << "Error - must have a picture output filename when using the -y option." << endl;
+      exit (1);
+    }
+
+  cor(slice, sagcorskip*x_size_pic, x_size_pic);
+  write_pic(theopt,x_size_pic,height);
+}
+
+/* }}} */
+	else if (!strncmp(theopt, "-z", 2))
+	  /* {{{ write axial slice */
+
+{
+  theopt = strtok(NULL,discard);
+  if (theopt==NULL)
+    {
+      cerr << "Error - must have a slice choice after the -z option." << endl;
+      exit (1);
+    }
+  float slice=atof(theopt);
+
+  theopt = strtok(NULL,discard);
+  if (theopt==NULL)
+    {
+      cerr << "Error - must have a picture output filename when using the -z option." << endl;
+      exit (1);
+    }
+
+  axi(slice, axiskip*x_size_pic, x_size_pic);
+  write_pic(theopt,x_size_pic,height);
+}
+
+/* }}} */
+	else if (!strncmp(theopt, "-a", 2))
+	  /* {{{ write default slices */
+
+{
+  theopt = strtok(NULL,discard);
+  if (theopt==NULL)
+    {
+      cerr << "Error - must have a picture output filename after the -a option." << endl;
+      exit (1);
+    }
+
+  int width=y_size_pic+2*x_size_pic;
+
+  sag(0.5,                         sagcorskip*width, width);
+  cor(0.5, y_size_pic            + sagcorskip*width, width);
+  axi(0.5, y_size_pic+x_size_pic + axiskip*width,    width);
+
+  write_pic(theopt,width,height);
+}
+
+/* }}} */
+	else if ( (!strncmp(theopt, "-A", 2)) || (!strncmp(theopt, "-S", 2)) )
+	  /* {{{ write all slices */
+
+{
+  int maxwidth, nx, ny, width, row, column, height, z=0, sample=1, slices;
+
+  if (!strcmp(theopt, "-S"))
+    {
+      theopt = strtok(NULL,discard);
+      if (theopt==NULL)
+	{
+	  cerr << "Error - must set the <sample> option choice when using the -S option." << endl;
+	  exit (1);
+	}
+      sample=atoi(theopt);
+    }
+
+  theopt = strtok(NULL,discard);
+  if (theopt==NULL)
+    {
+      cerr << "Error - must set the <width> option when using the -S or -A options." << endl;
+      exit (1);
+    }
+  maxwidth=atoi(theopt);
+
+  theopt = strtok(NULL,discard);
+  if (theopt==NULL)
+    {
+      cerr << "Error - must have a picture output filename after the -S or -A options." << endl;
+      exit (1);
+    }
+
+  slices=(int)(ceil(float(z_size / sample)));
+  nx=MISCMATHS::Min(MISCMATHS::Max(maxwidth/x_size_pic,1),slices);
+  ny=(int)ceil( ((float)slices) / nx);
+  width=x_size_pic*nx;
+  height=y_size_pic*ny;
+  /*printf("%d %d %d %d %d\n",slices,nx,ny,width,height);*/
+    
+  for(row=0;row<ny;row++)
+    for(column=0;column<nx;column++)
+      {
+	if (z<z_size)
+	  axi(-z, row*y_size_pic*width + x_size_pic*column, width);
+	z+=sample;
+      }
+
+  write_pic(theopt,width,height);
+}
+
+/* }}} */
+      }
+    delete [] input;
+}
+
+  return(0);
+}
+
+
+
+int miscpic::slicer(const volume<float>& vol1, const volume<float>& vol2, const char *opts,  bool labelSlices, bool debug)
+{
+  /* {{{ vars */
+
+int  picsetup=0, sagcorskip=0, axiskip=0, height=0, picsize=0;
+
+/* }}} */
+  /* {{{ first image stuff  */
+writeText=labelSlices;
+inp1=vol1;
+inp1.setinterpolationmethod(trilinear);
+inp1.setextrapolationmethod(zeropad);
+
+x_size = inp1.xsize();
+y_size = inp1.ysize();
+z_size = inp1.zsize();
+
+size = x_size * y_size * z_size;
 
 if(inp1.max()==inp1.min()){
   cerr << " WARNING: input image is empty " << endl;
 }
 
- char aux[24];
- if(volinf) {  
-   FslGetAuxFile(volinf, aux);
-   lut = lut + string(aux) + ".lut";
- }
+ lut = lutbase + vol1.getAuxFile() + ".lut";
 
-float intensity_min = 0.0, intensity_max = 0.0;
+float intensity_min(inp1.percentile(0.02)), intensity_max(inp1.percentile(0.98));
 
 {
-  FILE *tmpfp;
-  if( (volinf) &&
-      (strlen(aux)>0) &&
+  FILE *tmpfp(NULL);
+  if( strlen(vol1.getAuxFile().c_str())>0 &&
       ((tmpfp=fopen(lut.c_str(),"rb"))!=NULL) )
     {
       fclose(tmpfp);
-      FslGetCalMinMax(volinf, &intensity_min, &intensity_max);
-    }
-  else
-    {
-      intensity_min=inp1.percentile(0.02);
-      intensity_max=inp1.percentile(0.98);
+      intensity_max=vol1.getDisplayMaximum();
+      intensity_min=vol1.getDisplayMinimum(); 
     }
 }
 
@@ -982,20 +1530,20 @@ if (vol2.nvoxels() > 1 )
 	    {
 	      if ( (tmpedge.value(x,y,z)>tmpedge(x-1,y,z)) 
 		   && (tmpedge.value(x,y,z)>=tmpedge(x+1,y,z)) ) 
-		edge.value(x,y,z)=std::sqrt(tmpedge.value(x,y,z))/12;
+		edge.value(x,y,z)=std::sqrt(tmpedge.value(x,y,z))/2;
 	    }
 	  else
 	    {
 	      if (orient.value(x,y,z)==1)
 		{
 		  if ( (tmpedge.value(x,y,z)>tmpedge(x,y-1,z)) && (tmpedge.value(x,y,z)>=tmpedge(x,y+1,z)) )
-		    edge.value(x,y,z)=std::sqrt(tmpedge.value(x,y,z))/12;
+		    edge.value(x,y,z)=std::sqrt(tmpedge.value(x,y,z))/2;
 		}
 	      else
 		{
 		  if ( (tmpedge.value(x,y,z)>tmpedge(x,y,z-1)) && 
 		       (tmpedge.value(x,y,z)>=tmpedge(x,y,z+1)) )
-		    edge.value(x,y,z)=std::sqrt(tmpedge.value(x,y,z))/12;
+		    edge.value(x,y,z)=std::sqrt(tmpedge.value(x,y,z))/2;
 		}
 	    }
 	}
@@ -1039,8 +1587,6 @@ if (vol2.nvoxels() > 1 )
       exit (1);
     }
 
-  intensity_min=inp1.min();
-  intensity_max=inp1.max(); 
   if(strstr(theopt,"/")==NULL){
     lut = lutbase + string(theopt)+".lut";}
   else{
@@ -1191,9 +1737,9 @@ if (nlut==0) /* otherwise (if using luts) then the display range should already 
     imb.value(x,y,z) = blut[tmp];
   }
   if(debug){
-      save_volume(imr,"IMG_R",*volinf);
-      save_volume(img,"IMG_G",*volinf);
-      save_volume(imb,"IMG_B",*volinf);
+      save_volume(imr,"IMG_R");
+      save_volume(img,"IMG_G");
+      save_volume(imb,"IMG_B");
   }
 }
 
@@ -1375,7 +1921,7 @@ memset(picb,0,picsize);
 /* }}} */
       }
     theopt = strtok(NULL,discard);
-  }
+}
 
   return(0);
 }
@@ -1388,7 +1934,7 @@ int miscpic::overlay(volume<float>& newvol, volume<float>& bg,
 			volume<float>& s1,volume<float>& s2, 
 			float bgmin, float bgmax, float s1min,
 			float s1max, float s2min, float s2max, 
-			int colour_type, int checker, volumeinfo *volinf, 
+			int colour_type, int checker, 
 			string cbarfname, string cbartype, bool out_int, bool dbg)
 {
   float latitude = 0.00001, hrange, A , B;
@@ -1405,19 +1951,11 @@ int miscpic::overlay(volume<float>& newvol, volume<float>& bg,
 	 << "  s1min/s1max : " << s1min << " " << s1max<< endl
 	 << "  s2min/s2max : " << s2min << " " << s2max<< endl
 	 << "  colour_type : " << colour_type << " checker  : " << checker  << endl
-	 << "  cbarfname   : " << cbarfname   << " cbartype : " << cbartype << endl;
-
-    if(volinf){
-      char aux[25];
-      float intensity_min, intensity_max;
-      FslGetAuxFile(volinf, aux);
-      FslGetCalMinMax(volinf, &intensity_min, &intensity_max);
-
-      cerr << "  hdrinfo lut : " << string(aux)<< endl
-	   << "  hdr cal_min : " << intensity_min << endl
-	   << "  hdr cal_max : " << intensity_max << endl;
-	}
-    cerr << "  bg perc.    : " << bg.percentile(0.1) << " " << bg.percentile(0.9) << endl
+	 << "  cbarfname   : " << cbarfname   << " cbartype : " << cbartype << endl
+         << "  hdrinfo lut : " << newvol.getAuxFile() << endl
+	 << "  hdr cal_min : " << newvol.getDisplayMinimum() << endl
+	 << "  hdr cal_max : " << newvol.getDisplayMaximum() << endl
+         << "  bg perc.    : " << bg.percentile(0.1) << " " << bg.percentile(0.9) << endl
 	 << "  s1 perc.    : " << s1.percentile(0.1) << " " << s1.percentile(0.9) << endl;
     if(s2min != s2max)
       cerr << "  s2 perc.    : " << s2.percentile(0.1) << " " << s2.percentile(0.9) << endl;
@@ -1455,10 +1993,8 @@ int miscpic::overlay(volume<float>& newvol, volume<float>& bg,
     }
 
   hrange = B - A;
-  
-  FslSetCalMinMax(volinf, A, A + ( hrange * ( 1 + ( ns * ns )) ) );
-  
   tmpvol = bg;
+  tmpvol.setDisplayMaximumMinimum(A + ( hrange * ( 1 + ( ns * ns )) ) ,A);
   for(int z = bg.minz(); z<=bg.maxz();z++){
     for(int y = bg.miny(); y<=bg.maxy();y++){
       for(int x = bg.minx(); x<=bg.maxx();x++){
@@ -1520,13 +2056,11 @@ int miscpic::overlay(volume<float>& newvol, volume<float>& bg,
 
   if (colour_type == 1)
     lut += string("t"); 
-
-  FslSetAuxFile(volinf, lut.c_str());
+  tmpvol.setAuxFile(lut);
   
   lut = lutbase + lut + ".lut";
 
   copyconvert(tmpvol,newvol);
-
   // if(debug)
   //  cerr << " calling write_cbar() " << endl;
   if(cbarfname.length()>1)

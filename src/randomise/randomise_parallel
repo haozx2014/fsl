@@ -23,7 +23,7 @@ ROOTNAME=`echo $RANDOMISE_OUTPUT | awk '{print $3}'`
 BASENAME=`basename $ROOTNAME`
 DIRNAME=`dirname $ROOTNAME`
 
-mkdir ${DIRNAME}/${BASENAME}_logs
+mkdir -p ${DIRNAME}/${BASENAME}_logs
 
 PERMS_PER_FRAGMENT=`echo $RANDOMISE_OUTPUT | awk '{print $4}'`
 if [ x${REQUESTED_TIME} = 'x' ] ; then
@@ -53,14 +53,14 @@ if [ -e ${ROOTNAME}.generate ] ; then
 fi
 while [ $CURRENT_SEED -le $REQUESTED_SLOTS ] ; do
   SLEEPTIME=`expr 5 \* $CURRENT_SEED`
-  echo "FSLOUTPUTTYPE=NIFTI_GZ; sleep $SLEEPTIME ; ${FSLDIR}/bin/randomise $@ -n $PERMS_PER_SLOT -o ${ROOTNAME}_SEED${CURRENT_SEED} --seed=$CURRENT_SEED" >> ${ROOTNAME}.generate
+  echo "FSLOUTPUTTYPE=NIFTI_GZ; sleep $SLEEPTIME ; ${FSLDIR}/bin/randomise $@ -n $PERMS_PER_SLOT -o ${ROOTNAME}_SEED${CURRENT_SEED} --seed=$CURRENT_SEED" >> ${DIRNAME}/${BASENAME}.generate
   CURRENT_SEED=`expr $CURRENT_SEED + 1`
 done
 chmod a+x ${ROOTNAME}.generate
-GENERATE_ID=`$FSLDIR/bin/fsl_sub -T ${REQUESTED_TIME} -N ${BASENAME}.generate -l ${DIRNAME}/${BASENAME}_logs/ -t ${ROOTNAME}.generate` 
+GENERATE_ID=`$FSLDIR/bin/fsl_sub -T ${REQUESTED_TIME} -N ${BASENAME}.generate -l ${DIRNAME}/${BASENAME}_logs/ -t ${DIRNAME}/${BASENAME}.generate` 
 
 #stage2:
-cat <<combineScript > ${ROOTNAME}.defragment
+cat <<combineScript > ${DIRNAME}/${BASENAME}.defragment
 #!/bin/sh
 echo "Merging stat images"
 for FIRSTSEED in ${ROOTNAME}_SEED1_*_p_*.nii.gz ${ROOTNAME}_SEED1_*_corrp_*.nii.gz ; do 
@@ -111,11 +111,11 @@ done
  
 echo "Done"
 combineScript
-chmod +x ${ROOTNAME}.defragment
+chmod +x ${DIRNAME}/${BASENAME}.defragment
 
 DEFRAGMENT_TIME=20
 if [ ${REQUESTED_SLOTS} -ge 150 ] ; then
   DEFRAGMENT_TIME=40
 fi
 
-fsl_sub -j $GENERATE_ID -T ${DEFRAGMENT_TIME} -l ${DIRNAME}/${BASENAME}_logs/ -N ${BASENAME}.defragment ./${ROOTNAME}.defragment
+fsl_sub -j $GENERATE_ID -T ${DEFRAGMENT_TIME} -l ${DIRNAME}/${BASENAME}_logs/ -N ${BASENAME}.defragment ${DIRNAME}/${BASENAME}.defragment
