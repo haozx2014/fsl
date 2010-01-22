@@ -165,7 +165,7 @@ const Vec Mpoint::max_triangle() const
       temp=(*i)->area(this);
       Areas.push_back(temp.norm());
 		//don't need to store in vector anymore
-      if (Areas.back() > Areas.at(ind)){
+      if (Areas.back() >= Areas.at(ind)){
 		ind=Areas.size()-1;
 		vA = temp;
       }

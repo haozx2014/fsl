@@ -74,7 +74,8 @@
 using namespace NEWIMAGE;
 
 void print_usage(const string& progname) {
-  cout << "Usage: fslstats <input> [options]" << endl << endl;
+  cout << "Usage: fslstats [-t] <input> [options]" << endl << endl; 
+  cout << "-t will give a separate output line for each 3D volume of a 4D timeseries" << endl; 
   cout << "Note - options are applied in order, e.g. -M -l 10 -M will report the non-zero mean, apply a threshold and then report the new nonzero mean" << endl << endl;
   cout << "-l <lthresh> : set lower threshold" << endl;
   cout << "-u <uthresh> : set upper threshold" << endl;
@@ -180,31 +181,38 @@ int generateNonZeroMask(const volume4D<float> &mask, volume4D<float> &masknz, co
   return 0;
 }
 
-int generate_masks(volume4D<float> &mask, volume4D<float> &masknz, const volume4D<float> &input,float& lthr, float& uthr) 
+int generate_masks(volume4D<float>& mask, volume4D<float>& masknz, const volume4D<float>& input, const float& lthr, const float& uthr) 
 {
   mask = binarise(input,lthr,uthr,exclusive);
   return generateNonZeroMask(mask,masknz,input);
 }
 
-int fmrib_main_float(int argc, char* argv[]) 
+int fmrib_main_float(int argc, char* argv[],const bool timeseriesMode) 
 {
-
   cout.setf(ios::dec); 
   cout.setf(ios::fixed, ios::floatfield); 
   cout.setf(ios::left, ios::adjustfield); 
   cout.precision(6);  
 
-  volume4D<float> vol, mask, masknz;
-  read_volume4D(vol,argv[1]);
+  int nTimepoints(1);
+  volume4D<float> vol, inputMaster;
+  if ( timeseriesMode) {
+    read_volume4D(inputMaster,argv[1]);
+    nTimepoints=inputMaster.tsize();
+  } else 
+    read_volume4D(vol,argv[1]);
 
-  float lthr(vol.min()-1);
-  float uthr=(vol.max()+1);    
-
-  int narg=2;
-  string sarg;
+  for ( int timepoint=0; timepoint < nTimepoints ; timepoint++ )
+  {
+    if ( timeseriesMode )
+      vol=inputMaster[timepoint];
+    volume4D<float> mask, masknz;
+    float lthr(vol.min()-1);
+    float uthr=(vol.max()+1);    
+    int narg(2);
  
   while (narg<argc) {
-    sarg=argv[narg];
+    string sarg(argv[narg]);
     if (sarg=="-n") {
       for (int t=vol.mint(); t<=vol.maxt(); t++)
         for (int z=vol.minz(); z<=vol.maxz(); z++)
@@ -316,6 +324,10 @@ int fmrib_main_float(int argc, char* argv[])
       ColumnVector hist;
       int nbins=1000;
       double entropy=0;
+      if (mask.nvoxels()<1) {
+	generate_masks(mask,masknz,vol,lthr,uthr); 
+	vol*=mask; 
+      }
       hist = vol.histogram(nbins,masknz);
       double ntot = hist.Sum();
       for (int j=1; j<=nbins; j++) {
@@ -517,8 +529,8 @@ int fmrib_main_float(int argc, char* argv[])
   
     narg++;
   }
-
   cout << endl;
+  }
   return 0;
 }
 
@@ -528,14 +540,29 @@ int main(int argc,char *argv[])
 {
 
   Tracer tr("main");
+  string progname(argv[0]);
+  int retval(-1);
+  bool timeseriesMode(false);
+  if ( argc > 2 && string(argv[1])=="-t" ) {
+    argv++;
+    argc--;
+    timeseriesMode=true;
+  }
+  
 
-  string progname=argv[0];
-  if (argc<3) { 
-    print_usage(progname);
-    return 1; 
+  try {
+    if (argc < 3 ) { 
+      print_usage(progname);
+      return 1; 
+    }
+    retval = fmrib_main_float(argc,argv,timeseriesMode);
+  } catch(std::exception &e) {
+    cerr << e.what() << endl;
+  } catch (...) {
+    // do nothing - just exit without garbage message
   }
 
-  return fmrib_main_float(argc,argv);
-
+  return retval;
+  
 }
 

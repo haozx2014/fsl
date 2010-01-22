@@ -83,6 +83,10 @@
 
 namespace BASISFIELD {
 
+// Declare ahead
+class Memen_H_Helper;
+class helper_vol;
+
 enum EnergyType {MemEn, BendEn};
 enum HtHbType {HtHb, Hb};
 
@@ -108,7 +112,7 @@ public:
 
   // General utility functions
 
-  virtual unsigned int CoefSz_x() const {
+  virtual unsigned int CoefSz_x() const { 
     // cout << "Old value would have been " << static_cast<unsigned int>(ceil(((double(FieldSz_x())) + 1.0) / (double(Ksp_x())))) + 2 << endl;
     // cout << "New value is " << _sp.NCoef(0,FieldSz_x()) << endl;
     return(_sp.NCoef(0,FieldSz_x()));
@@ -137,6 +141,8 @@ public:
   virtual unsigned int KernelSz_z() const {return(_sp.KernelSize(2));}
  	
   // Functions that actually do some work
+
+  virtual void Set(const NEWIMAGE::volume<float>& pfield);
 
   virtual void SetToConstant(double fv);
 
@@ -247,7 +253,8 @@ public:
                                                               std::vector<unsigned int>           pksp=std::vector<unsigned int>()) const;
 
 private:
-  Spline3D<double>               _sp;       // Spline that we can ask questions of
+  Spline3D<double>                                _sp;       // Spline that we can ask questions of
+  vector<boost::shared_ptr<Spline3D<double> > >   _dsp;      // Derivatives
 
   // Functions for internal use
 
@@ -269,6 +276,27 @@ private:
                                          const std::vector<unsigned int>&  nksp,
                                          std::vector<double>               ovxs=std::vector<double>()) const;
   unsigned int fake_old_ksp(double nvxs, unsigned int nksp, double ovxs) const;
+
+  bool faking_works(const std::vector<double>&        nvxs,
+                    const std::vector<unsigned int>&  nksp,
+                    std::vector<double>               ovxs=std::vector<double>()) const;
+
+  bool faking_works(double nvxs, unsigned int nksp, double ovxs) const;
+
+  boost::shared_ptr<BASISFIELD::basisfield> zoom_field_in_stupid_way(const std::vector<unsigned int>&    nms,
+                                                                     const std::vector<double>&          nvxs,
+                                                                     const std::vector<unsigned int>&    nksp) const;
+
+  // Perform spline deconvolution along one dimension
+  helper_vol get_coefs_one_dim(const helper_vol&                 in,
+                               unsigned int                      dim,
+                               unsigned int                      csz,
+                               unsigned int                      order,
+                               unsigned int                      ksp) const;  
+
+  // Regularisation matrix to avoid blowing up end coefficients
+  NEWMAT::ReturnMatrix get_s_matrix(unsigned int isz,
+                                    unsigned int csz) const;
 
   void get_field(const Spline3D<double>&            sp,
                  const double                       *c,
@@ -305,34 +333,34 @@ private:
                  const unsigned int     *jcp,         // Array of indicies into irp
                  const double           *val) const;  // Array of values sorted as irp
 
-  double calculate_bender(const NEWMAT::ColumnVector&        b,
-                          const std::vector<unsigned int>&   lksp,
-                          const std::vector<unsigned int>&   csz) const;
+  void calculate_memen_AtAb(const NEWMAT::ColumnVector&       b,
+                            const std::vector<unsigned int>&  lksp,
+                            const std::vector<unsigned int>&  isz,
+                            const std::vector<double>&        vxs,
+                            const std::vector<unsigned int>&  csz,
+                            unsigned int                      sp_ord,
+                            NEWMAT::ColumnVector&             grad) const;
 
-  double calculate_memen(const NEWMAT::ColumnVector&        b,
-                         const std::vector<unsigned int>&   lksp,
-                         const std::vector<unsigned int>&   csz) const;
-
-  void calculate_bender_grad(const NEWMAT::ColumnVector&       b,
+  void calculate_bender_AtAb(const NEWMAT::ColumnVector&       b,
                              const std::vector<unsigned int>&  lksp,
+                             const std::vector<unsigned int>&  isz,
+                             const std::vector<double>&        vxs,
                              const std::vector<unsigned int>&  csz,
+                             unsigned int                      sp_ord,
                              NEWMAT::ColumnVector&             grad) const;
 
-  void calculate_memen_grad(const NEWMAT::ColumnVector&       b,
-                            const std::vector<unsigned int>&  lksp,
-                            const std::vector<unsigned int>&  csz,
-                            NEWMAT::ColumnVector&             grad) const;
+  void calculate_AtAb(const NEWMAT::ColumnVector&       b,
+                      const std::vector<unsigned int>&  isz,
+                      const std::vector<unsigned int>&  csz,
+                      const Spline3D<double>&           sp,
+                      const Memen_H_Helper&             hlpr,
+                      NEWMAT::ColumnVector&             grad) const;
 
   boost::shared_ptr<MISCMATHS::BFMatrix> calculate_memen_bender_H(const std::vector<unsigned int>&   lksp,
                                                                   const std::vector<unsigned int>&   csz,
                                                                   const std::vector<unsigned int>&   isz,
                                                                   EnergyType                         et,
                                                                   MISCMATHS::BFMatrixPrecisionType   prec) const;
-
-  NEWMAT::ReturnMatrix memen_HtHb_helper(const Spline3D<double>&            spd,
-                                         const std::vector<unsigned int>&   csz,
-                                         const NEWMAT::ColumnVector&        b,
-                                         HtHbType                           what) const;
 
   void hadamard(const NEWIMAGE::volume<float>& vol1,
                 const NEWIMAGE::volume<float>& vol2,
@@ -350,6 +378,7 @@ private:
 protected:
   // Functions for use in this and derived classes
   virtual void assign(const splinefield& inf);
+  virtual double peek_outside_fov(int i, int j, int k, FieldIndex fi) const;
 
 };
 
@@ -390,14 +419,23 @@ private:
 };
 
 
+
+/////////////////////////////////////////////////////////////////////
 //
 // This is a little helper class that stores all possible values
 // of sum-of-products for a given spline for all possible overlaps.
 //
+/////////////////////////////////////////////////////////////////////
+
 class Memen_H_Helper
 {
 public:
   Memen_H_Helper(const Spline3D<double>&  sp);
+  Memen_H_Helper(const Memen_H_Helper& inh) : _sz(inh._sz), _cntr(inh._cntr) // Copy construction
+  {
+    _data = new double[_sz[0]*_sz[1]*_sz[2]];
+    memcpy(_data,inh._data,_sz[0]*_sz[1]*_sz[2]*sizeof(double));
+  }
   ~Memen_H_Helper() {delete [] _data;}
   unsigned int Size(unsigned int dir) const {return(static_cast<unsigned int>(_sz[dir]));}
   int LowerLimit(unsigned int dir) const {return(- _cntr[dir]);}
@@ -407,12 +445,65 @@ public:
   {
     return(_data[(k+_cntr[2])*_sz[1]*_sz[0] + (j+_cntr[1])*_sz[0] + (i+_cntr[0])]);
   }
+  Memen_H_Helper& operator=(const Memen_H_Helper& inh)  // Assignment
+  {
+    if (this != &inh) {
+      delete[] _data;
+      _sz = inh._sz;
+      _cntr = inh._cntr;
+      _data = new double[_sz[0]*_sz[1]*_sz[2]];
+      memcpy(_data,inh._data,_sz[0]*_sz[1]*_sz[2]*sizeof(double));
+    }
+    return(*this);
+  }
+  Memen_H_Helper& operator*=(double s)                  // Multiplication of self by scalar
+  {
+    unsigned int sz=_sz[2]*_sz[1]*_sz[0];
+    for (unsigned int i=0; i<sz; i++) _data[i]*=s;
+    return(*this);
+  }
+  Memen_H_Helper& operator+=(const Memen_H_Helper& rhs)         // Addition of other helper to self
+  {
+    if (_sz[0]!=rhs._sz[0] || _sz[1]!=rhs._sz[1] || _sz[2]!=rhs._sz[2]) throw BasisfieldException("Memen_H_Helper::+=(): Size mismatch");
+    unsigned int sz=_sz[2]*_sz[1]*_sz[0];
+    for (unsigned int i=0; i<sz; i++) _data[i]+=rhs._data[i];
+    return(*this);
+  }
 private:
   std::vector<int>      _sz;
   std::vector<int>      _cntr;
   double                *_data;
 };
 
+/////////////////////////////////////////////////////////////////////
+//
+// This is a little helper class that is used when deconvolving
+// a field to obtain the spline coefficients.
+//
+/////////////////////////////////////////////////////////////////////
+
+class helper_vol
+{
+public:
+  helper_vol(const std::vector<unsigned int>& sz);
+  helper_vol(const std::vector<unsigned int>& sz,
+             const NEWMAT::ColumnVector&      vec);
+  helper_vol(const NEWIMAGE::volume<float>&   vol);
+  helper_vol(const helper_vol& in);
+  ~helper_vol() { delete [] _data; }
+  helper_vol& operator=(const helper_vol& rhs);
+  unsigned int Size(unsigned int dim) const { if (dim>2) throw BasisfieldException("helper_vol::Size: dim must be 0, 1 or 2"); return(_sz[dim]); } 
+  NEWMAT::ReturnMatrix AsNewmatVector() const;
+  void GetColumn(unsigned int i, unsigned int j, unsigned int dim, double *col) const;
+  void SetColumn(unsigned int i, unsigned int j, unsigned int dim, const double *col);
+private:
+  unsigned int _sz[3];
+  double       *_data;
+
+  double* start(unsigned int i, unsigned int j, unsigned int dim) const;
+  const double* end(unsigned int i, unsigned int j, unsigned int dim) const;
+  unsigned int step(unsigned int dim) const;
+};
 /////////////////////////////////////////////////////////////////////
 //
 // Templated member-functions for the ZeroSplineMap class. The 

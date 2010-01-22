@@ -425,15 +425,33 @@ namespace Gs {
     covsplit = 0;
     ntptsing.ReSize(ngs);
     ntptsing = 0;
+    nevsing.ReSize(ngs);
+    nevsing = 0;
     global_index.resize(ngs);
+    index_in_group.resize(ngs);
 
     for(int t = 1; t <= ntpts; t++)
       {
 	covsplit(t,int(group_index(t)))=1;
 	ntptsing(int(group_index(t)))++;
-	global_index[int(group_index(t))-1].push_back(t);
+	global_index[int(group_index(t))-1].push_back(t);	
       }
 
+
+    for(int g =1; g<=ngs; g++)
+      {
+
+	index_in_group[g-1].resize(ntpts);
+
+	for(int wt = 1; wt <= int(ntptsing(g)); wt++)
+	  {	  
+	    int gt=global_index[g-1][wt-1];
+
+	    index_in_group[g-1][gt-1]=wt;
+	  }
+      }
+
+      
     cout << "ntptsing=" << ntptsing << endl;
 //     cout << "group_index=" << group_index << endl;
 
@@ -449,6 +467,7 @@ namespace Gs {
 		if(evs_group(e)==0)
 		  {
 		    evs_group(e) = group_index(t);
+		    nevsing(int(group_index(t)))++;
 		  }
 		else if(evs_group(e)!=group_index(t))
 		  {
@@ -467,7 +486,8 @@ namespace Gs {
 	try
 	  {
 	    tcontrasts = read_vest(GsOptions::getInstance().tcontrastsfile.value());
-	    numTcontrasts = tcontrasts.Nrows();	    
+
+	    numTcontrasts = tcontrasts.Nrows();	
 	  }
 	catch(Exception exp)
 	  {
@@ -506,7 +526,7 @@ namespace Gs {
 	      setupfcontrasts();
 	  }    	
       }  
- 
+
     // read in any voxelwise EVs
     voxelwise_ev_numbers=GsOptions::getInstance().voxelwise_ev_numbers.value();    
     vector<string> voxelwise_ev_filenames=GsOptions::getInstance().voxelwise_ev_filenames.value();
@@ -577,7 +597,7 @@ namespace Gs {
       }
 
     //save_volume4D(zero_evs, LogSingleton::getInstance().appendDir("zero_evs"));	
-    
+
   }
   
   void Design::setupfcontrasts()

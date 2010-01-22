@@ -211,7 +211,7 @@ namespace Gs {
 
     // x is log(variance)
 
-    float ex=exp(x);
+    float ex=std::exp(x);
 
     // ex is variance
 
@@ -231,13 +231,13 @@ namespace Gs {
 	iU(t) = 1.0/(S(t)+ex);
       }
 
+
     Matrix tmp = z.t()*iU;
     SymmetricMatrix ziUz;
     ziUz << tmp*z;
     ColumnVector gam=ziUz.i()*tmp*y;  
 
     //   OUT(iU);
-    //   OUT(iU.LogDeterminant().LogValue());
     //   OUT(log(priorsum));
 
 //     float logprior = -x;
@@ -251,7 +251,7 @@ namespace Gs {
 
   }
   
-  float Gsmanager::log_likelihood_outlier(float beta, float beta_outlier, const ColumnVector& gam, const ColumnVector& Y, const Matrix& z, const ColumnVector& S, float global_prob_outlier)
+  float Gsmanager::log_likelihood_outlier(float beta, float beta_outlier, const ColumnVector& gam, const ColumnVector& Y, const Matrix& z, const ColumnVector& S, float global_prob_outlier, const ColumnVector& prob_outlier)
   {
     //Tracer tr("Gsmanager::log_likelihood_outlier");  
 
@@ -267,9 +267,13 @@ namespace Gs {
 	float vr1=S(t)+beta;
 	if(vr1 <= 0) return 1e32;
 	U1(t) = vr1;
-	float vr2=S(t)+beta+beta_outlier;
+	//	float vr2=S(t)+beta_outlier;
+	float vr2=beta_outlier;
 	if(vr2 <= 0) return 1e32;
+
 	U2(t) = vr2;
+	if(prob_outlier(t)>0.999)
+	  U2(t)=0;
 
 	ret+=std::log((1-global_prob_outlier)*normpdf(Y(t),(z.Row(t)*gam).AsScalar(),vr1)+global_prob_outlier*normpdf(Y(t),(z.Row(t)*gam).AsScalar(),vr2));
       }
@@ -293,24 +297,39 @@ namespace Gs {
 
     float beta=std::exp(log_beta);    // beta is a variance
     float beta_outlier=std::exp(log_beta_outlier);
-    
+
     if(beta <= 0 || beta_outlier <=0)
       {
 	return 1e32;
       }
-   
+
     DiagonalMatrix iU(y.Nrows());
     for(int t=1;t<=y.Nrows();t++)
       { 
-	float vr=Sqr(1-prob_outlier(t))*(S(t)+beta)+Sqr(prob_outlier(t))*(S(t)+beta+beta_outlier);
+	//float vr=Sqr(1-prob_outlier(t))*(S(t)+beta)+Sqr(prob_outlier(t))*(S(t)+beta_outlier);
+	double vr=Sqr(1-prob_outlier(t))*(S(t)+beta)+Sqr(prob_outlier(t))*(beta_outlier);
+// 	double vr2=(S(t)+beta);
+
+// 	if(vr!=vr2)
+// 	  {
+// 	    OUT(t);
+// 	    OUT(vr);
+// 	    OUT(vr2);
+// 	    OUT(vr-vr2);
+// 	  }
+
 	if(vr <= 0) return 1e32;
 	iU(t) = 1.0/vr;
+
+	if(prob_outlier(t)>0.999)
+	  iU(t)=0;
+
       }
-    
+
     Matrix tmp = z.t()*iU;
     SymmetricMatrix ziUz;
     ziUz << tmp*z;
-    ColumnVector gam=ziUz.i()*tmp*y;  
+    ColumnVector gam=pinv(ziUz)*tmp*y;  
 
 //     float logprior = -log_beta-log_beta_outlier;
 //     float logdfxbydx = log_beta+log_beta_outlier;
@@ -614,12 +633,15 @@ namespace Gs {
     beta_b.resize(design.getngs());
     beta_c.resize(design.getngs());
     beta_mean.resize(design.getngs());
+    
+    weights.resize(design.getngs());
 
     if(opts.infer_outliers.value())
       {
 	beta_outlier_mean.resize(design.getngs());
 	global_prob_outlier_mean.resize(design.getngs());
 	prob_outlier_mean.resize(design.getngs());
+
       }
 
     if(nevs>100)
@@ -649,6 +671,10 @@ namespace Gs {
 	beta_b[g] = 0;
 	beta_c[g].reinitialize(xsize,ysize,zsize);		
 	beta_c[g] = 0;
+	weights[g].reinitialize(xsize,ysize,zsize,design.getntptsingroup(g+1));
+	weights[g].copyproperties(design.getmask());
+	weights[g] = 0;
+
 	if(opts.infer_outliers.value())
 	  {
 	    beta_outlier_mean[g].reinitialize(xsize,ysize,zsize);
@@ -660,9 +686,10 @@ namespace Gs {
 	    prob_outlier_mean[g].reinitialize(xsize,ysize,zsize,design.getntptsingroup(g+1));
 	    prob_outlier_mean[g].copyproperties(design.getmask());
 	    prob_outlier_mean[g] = 0;
+
 	  }
-    }
-    
+    }    
+
     for(int e = 0; e < nevs; e++)
       {
 	pes[e].reinitialize(xsize,ysize,zsize);
@@ -806,6 +833,12 @@ namespace Gs {
 	  }
     
 
+    if ( opts.outputDof.value() ) {
+      ColumnVector dofVec(1);
+      dofVec = design.dof();
+      write_ascii_matrix( LogSingleton::getInstance().appendDir("dof"), dofVec);
+    }
+
     res.set_intent(NIFTI_INTENT_ESTIMATE, 0, 0, 0);
     res.setDisplayMaximumMinimum(res.max(),res.min());
     save_volume4D(res, LogSingleton::getInstance().appendDir("res4d"));      
@@ -892,6 +925,10 @@ namespace Gs {
 	beta_mean[g].setDisplayMaximumMinimum(beta_mean[g].max(),beta_mean[g].min());
 	save_volume(beta_mean[g],LogSingleton::getInstance().appendDir("mean_random_effects_var"+num2str(g+1)));
 
+	weights[g].set_intent(NIFTI_INTENT_ESTIMATE, 0, 0, 0);
+	weights[g].setDisplayMaximumMinimum(weights[g].max(),weights[g].min());
+	save_volume4D(weights[g],LogSingleton::getInstance().appendDir("weights"+num2str(g+1)));
+	      
 	if(opts.infer_outliers.value())
 	  {
 	    beta_outlier_mean[g].set_intent(NIFTI_INTENT_ESTIMATE, 0, 0, 0);
@@ -905,6 +942,7 @@ namespace Gs {
 	    prob_outlier_mean[g].set_intent(NIFTI_INTENT_ESTIMATE, 0, 0, 0);
 	    prob_outlier_mean[g].setDisplayMaximumMinimum(prob_outlier_mean[g].max(),prob_outlier_mean[g].min());
 	    save_volume4D(prob_outlier_mean[g],LogSingleton::getInstance().appendDir("prob_outlier"+num2str(g+1)));
+	   
 	  }
       }
 
@@ -1082,7 +1120,7 @@ namespace Gs {
     cout << endl;
   }	
 
-  void Gsmanager::flame_stage1_onvoxel(const vector<ColumnVector>& Yg, const ColumnVector& Y, const vector<Matrix>& zg, const Matrix& z, const vector<ColumnVector>& Sg, const ColumnVector& S, ColumnVector& beta, ColumnVector& gam, SymmetricMatrix& gamcovariance, float& loglik, int& nparams, int px, int py, int pz)
+  void Gsmanager::flame_stage1_onvoxel(const vector<ColumnVector>& Yg, const ColumnVector& Y, const vector<Matrix>& zg, const Matrix& z, const vector<ColumnVector>& Sg, const ColumnVector& S, ColumnVector& beta, ColumnVector& gam, SymmetricMatrix& gamcovariance, vector<float>& marg, vector<ColumnVector>& weights_g, int& nparams, int px, int py, int pz)
   {
  
     Tracer_Plus trace("Gsmanager::flame_stage1_onvoxel");
@@ -1090,12 +1128,20 @@ namespace Gs {
     ////////////////////////////////////////////////////////////
     // runs flame stage 1 on a voxel without outlier inference
 
-    // calc betas   
+    // calc betas and weights
     beta.ReSize(ngs);
     beta=0;
-    for(int g = 1; g <= ngs; g++)
+ 
+   for(int g = 1; g <= ngs; g++)
       {
 	beta(g) = solveforbeta(Yg[g-1],zg[g-1],Sg[g-1]);
+
+	weights_g[g-1].ReSize(design.getntptsingroup(g));
+	
+	for(int t=1;t<=design.getntptsingroup(g);t++)
+	  {		 		
+	    weights_g[g-1](t)=1.0/(Sg[g-1](t)+beta(g));	
+	  }
       }
       
     // calc gam
@@ -1104,9 +1150,13 @@ namespace Gs {
    
     for(int t=1;t<=ntpts;t++)
       {		    
-	iU(t) = 1.0/(S(t)+beta(design.getgroup(t)));
-      }
+	//	iU(t) = 1.0/(S(t)+beta(design.getgroup(t)));
+// 	OUT(t);
+// 	OUT(design.getgroup(t));
+// 	OUT(design.getglobalindex(design.getgroup(t),t));
 
+	iU(t)=weights_g[design.getgroup(t)-1](design.getindexingroup(design.getgroup(t),t));
+      }
 
     // calc gam covariance
     gamcovariance << (z.t()*iU*z).i();
@@ -1120,7 +1170,7 @@ namespace Gs {
     gam=gamcovariance*z.t()*iU*Y;    	
 
     // calc log marg posterior
-    loglik=0;
+//     loglik=0;
 //     float loglik2=0;
     
     ColumnVector gamtmp=gam;
@@ -1138,8 +1188,10 @@ namespace Gs {
 	      gamg(ind++)=gamtmp(e);
 	  }
 
-	loglik+=log_likelihood(beta(g), gamg, Yg[g-1], zg[g-1], Sg[g-1]);
+// 	loglik+=log_likelihood(beta(g), gamg, Yg[g-1], zg[g-1], Sg[g-    
 
+	marg[g-1]=marg_posterior_energy(log(beta(g)),Yg[g-1],zg[g-1],Sg[g-1]);       
+   
 // 	loglik2+=log_likelihood_outlier(beta(g), 0, gam, Yg[g-1], zg[g-1], Sg[g-1],0.3);
       }
 
@@ -1242,369 +1294,370 @@ namespace Gs {
 	  }
   }
 
-  void Gsmanager::flame_stage1_inferoutliers()
-  {
-    Tracer_Plus trace("Gsmanager::flame_stage1_inferoutliers");
+//   void Gsmanager::flame_stage1_inferoutliers()
+//   {
+//     Tracer_Plus trace("Gsmanager::flame_stage1_inferoutliers");
     
-    ////////////////////////////////////////////////////////////
-    // runs flame stage 1  with outlier inference 
-    init_flame_stage1_inferoutliers();
+//     ////////////////////////////////////////////////////////////
+//     // runs flame stage 1  with outlier inference 
+//     init_flame_stage1_inferoutliers();
 
-    int niters=opts.io_niters.value();
-    ColumnVector loglik_io(niters);
-    loglik_io=0;
+//     int niters=opts.io_niters.value();
+//     ColumnVector loglik_io(niters);
+//     loglik_io=0;
 
-    // store no outlier results in case we want to revert to them later		    
-    vector<volume<float> > pes_nooutliers(nevs);
-    vector<volume<float> > beta_mean_nooutliers(ngs);
-    volume4D<float> cov_pes_nooutliers=cov_pes;    
-    for(int e = 0; e < nevs; e++)
-      {
-	pes_nooutliers[e] = pes[e];
-      }
-    for(int g = 0; g < ngs; g++)
-      {
-	beta_mean_nooutliers[g]=beta_mean[g];
-      }	  
+//     // store no outlier results in case we want to revert to them later		    
+//     vector<volume<float> > pes_nooutliers(nevs);
+//     vector<volume<float> > beta_mean_nooutliers(ngs);
+//     volume4D<float> cov_pes_nooutliers=cov_pes;    
+//     for(int e = 0; e < nevs; e++)
+//       {
+// 	pes_nooutliers[e] = pes[e];
+//       }
+//     for(int g = 0; g < ngs; g++)
+//       {
+// 	beta_mean_nooutliers[g]=beta_mean[g];
+//       }	  
     
-    ColumnVector num_bins_log_beta_col(niters);
-    ColumnVector num_bins_log_beta_outlier_col(niters);
-    for(int it = 1; it <= niters; it++)
-      {
-	num_bins_log_beta_col(it)=12+2*(it-1);
-	num_bins_log_beta_outlier_col(it)=floor(5+1*(it-1));
-      }
+//     ColumnVector num_bins_log_beta_col(niters);
+//     ColumnVector num_bins_log_beta_outlier_col(niters);
+//     for(int it = 1; it <= niters; it++)
+//       {
+// 	num_bins_log_beta_col(it)=12+2*(it-1);
+// 	num_bins_log_beta_outlier_col(it)=floor(5+1*(it-1));
+//       }
 
-//     num_bins_log_beta_col(niters)=100;
-//     num_bins_log_beta_outlier_col(niters)=30;
+// //     num_bins_log_beta_col(niters)=100;
+// //     num_bins_log_beta_outlier_col(niters)=30;
 
-    // iterate
-    for(int it = 1; it <= niters; it++)
-      {
+//     // iterate
+//     for(int it = 1; it <= niters; it++)
+//       {
 
-	// smooth global prob outlier
-	if(opts.sigma_smooth_globalproboutlier.value() > 0)
-	  {
-	    // smooth global prob(outlier)
-	    for(int g = 0; g < ngs; g++)
-	      {
-		float sig=opts.sigma_smooth_globalproboutlier.value();
-		volume<float> kern=gaussian_kernel3D(sig, int(4*sig/design.getmask().xdim()));
-		global_prob_outlier_mean[g]=convolve(global_prob_outlier_mean[g], kern, design.getmask());
-		//	    global_prob_outlier_mean[g]=smooth2D(global_prob_outlier_mean[g],4);
-	      }
-	  }
+// 	// smooth global prob outlier
+// 	if(opts.sigma_smooth_globalproboutlier.value() > 0)
+// 	  {
+// 	    // smooth global prob(outlier)
+// 	    for(int g = 0; g < ngs; g++)
+// 	      {
+// 		float sig=opts.sigma_smooth_globalproboutlier.value();
+// 		volume<float> kern=gaussian_kernel3D(sig, int(4*sig/design.getmask().xdim()));
+// 		global_prob_outlier_mean[g]=convolve(global_prob_outlier_mean[g], kern, design.getmask());
+// 		//	    global_prob_outlier_mean[g]=smooth2D(global_prob_outlier_mean[g],4);
+// 	      }
+// 	  }
 
-	for(int x = 0; x < xsize; x++)
-	  for(int y = 0; y < ysize; y++)
-	    for(int z = 0; z < zsize; z++)
-	      {
-		if(design.getmask()(x,y,z))
-		  {
-		    /////////// extract params for this voxel
-		    // extract gam
-		    ColumnVector gam(nevs);
-		    for(int e = 0; e < nevs; e++)
-		      {
-			gam(e+1)=pes[e](x,y,z);	
-		      }
-		    // remove any zero EV PEs
-		    gam = design.remove_zeroev_pes(x,y,z,gam);
+// 	for(int x = 0; x < xsize; x++)
+// 	  for(int y = 0; y < ysize; y++)
+// 	    for(int z = 0; z < zsize; z++)
+// 	      {
+// 		if(design.getmask()(x,y,z))
+// 		  {
+// 		    /////////// extract params for this voxel
+// 		    // extract gam
+// 		    ColumnVector gam(nevs);
+// 		    for(int e = 0; e < nevs; e++)
+// 		      {
+// 			gam(e+1)=pes[e](x,y,z);	
+// 		      }
+// 		    // remove any zero EV PEs
+// 		    gam = design.remove_zeroev_pes(x,y,z,gam);
 
-		    ColumnVector global_prob_outlier(ngs); // one for each group
-		    vector<ColumnVector> prob_outlier_g(ngs); // one for each "subject" within each group
-		    ColumnVector prob_outlier(ntpts); // one for each "subject" (just a restructuring of prob_outlier_g)
-		    ColumnVector beta_outlier(ngs); // one for each group
-		    ColumnVector beta(ngs); // one for each group
+// 		    ColumnVector global_prob_outlier(ngs); // one for each group
+// 		    vector<ColumnVector> prob_outlier_g(ngs); // one for each "subject" within each group
+// 		    ColumnVector prob_outlier(ntpts); // one for each "subject" (just a restructuring of prob_outlier_g)
+// 		    ColumnVector beta_outlier(ngs); // one for each group
+// 		    ColumnVector beta(ngs); // one for each group
 
-		    for(int g = 0; g < ngs; g++)
-		      {
-			beta(g+1)=beta_mean[g](x,y,z);
-			beta_outlier(g+1)=beta_outlier_mean[g](x,y,z);
-			global_prob_outlier(g+1)=global_prob_outlier_mean[g](x,y,z);
-			prob_outlier_g[g]=prob_outlier_mean[g].voxelts(x,y,z);
-		      }
-		    ///////////
+// 		    for(int g = 0; g < ngs; g++)
+// 		      {
+// 			beta(g+1)=beta_mean[g](x,y,z);
+// 			beta_outlier(g+1)=beta_outlier_mean[g](x,y,z);
+// 			global_prob_outlier(g+1)=global_prob_outlier_mean[g](x,y,z);
+// 			prob_outlier_g[g]=prob_outlier_mean[g].voxelts(x,y,z);
+// 		      }
+// 		    ///////////
 
-		    /////////// 
-		    // setup data
-		    ColumnVector Y = design.getcopedata().voxelts(x,y,z);
-		    ColumnVector S = design.getvarcopedata().voxelts(x,y,z);
-		    Matrix dm=design.getdm(x,y,z);
+// 		    /////////// 
+// 		    // setup data
+// 		    ColumnVector Y = design.getcopedata().voxelts(x,y,z);
+// 		    ColumnVector S = design.getvarcopedata().voxelts(x,y,z);
+// 		    Matrix dm=design.getdm(x,y,z);
 
-		    // setup data for groups		
-		    vector<Matrix> zg(ngs);
-		    vector<ColumnVector> Yg(ngs);
-		    vector<ColumnVector> Sg(ngs);
-		    for(int g = 1; g <= ngs; g++)
-		      {
-			zg[g-1]=design.getdm(x,y,z,g);
-			Yg[g-1]=design.getcopedata(x,y,z,g);
-			Sg[g-1]=design.getvarcopedata(x,y,z,g);
-		      }
+// 		    // setup data for groups		
+// 		    vector<Matrix> zg(ngs);
+// 		    vector<ColumnVector> Yg(ngs);
+// 		    vector<ColumnVector> Sg(ngs);
+// 		    for(int g = 1; g <= ngs; g++)
+// 		      {
+// 			zg[g-1]=design.getdm(x,y,z,g);
+// 			Yg[g-1]=design.getcopedata(x,y,z,g);
+// 			Sg[g-1]=design.getvarcopedata(x,y,z,g);
+// 		      }
 		    
-		    /////////////
-		    // setup grid for marg
-		    ColumnVector min_log_beta(ngs);
-		    min_log_beta=log(1e-6);
-		    ColumnVector max_log_beta(ngs);
-		    max_log_beta=log(beta*1e3);
+// 		    /////////////
+// 		    // setup grid for marg
+// 		    ColumnVector min_log_beta(ngs);
+// 		    min_log_beta=log(1e-9);
+// 		    ColumnVector max_log_beta(ngs);
+// 		    max_log_beta=log(beta*1e2);
 		    
-		    ColumnVector min_log_beta_outlier(ngs);
-		    min_log_beta_outlier=log((mean(S)+Minimum(beta))/100.0).AsScalar();
-		    ColumnVector max_log_beta_outlier(ngs);
-		    max_log_beta_outlier=log((mean(S)+Minimum(beta))*1e9).AsScalar();
+// 		    ColumnVector min_log_beta_outlier(ngs);
+// 		    min_log_beta_outlier=log((mean(S)+Minimum(beta))/100.0).AsScalar();
+// 		    ColumnVector max_log_beta_outlier(ngs);
+// 		    max_log_beta_outlier=log((mean(S)+Minimum(beta))*1e9).AsScalar();
 		    
-		    vector<ColumnVector> log_beta(ngs);
-		    vector<ColumnVector> log_beta_outlier(ngs);
+// 		    vector<ColumnVector> log_beta(ngs);
+// 		    vector<ColumnVector> log_beta_outlier(ngs);
 		    
-		    // need to extract gamg from gam
-		    ColumnVector gamtmp=gam;
-		    gamtmp = design.insert_zeroev_pes(x,y,z,gamtmp);
- 		    vector<ColumnVector> gamg(ngs);
-		    for(int g = 1; g <= ngs; g++)
-		      {
-			gamg[g-1].ReSize(zg[g-1].Ncols());
-			int ind=1;
-			for(int e = 1; e <= nevs; e++)
-			  {
-			    if(design.get_evs_group(e,x,y,z)==g)
-			      gamg[g-1](ind++)=gamtmp(e);
-			  }
-		      }
+// 		    // need to extract gamg from gam
+// 		    ColumnVector gamtmp=gam;
+// 		    gamtmp = design.insert_zeroev_pes(x,y,z,gamtmp);
+//  		    vector<ColumnVector> gamg(ngs);
+// 		    for(int g = 1; g <= ngs; g++)
+// 		      {
+// 			gamg[g-1].ReSize(zg[g-1].Ncols());
+// 			int ind=1;
+// 			for(int e = 1; e <= nevs; e++)
+// 			  {
+// 			    if(design.get_evs_group(e,x,y,z)==g)
+// 			      gamg[g-1](ind++)=gamtmp(e);
+// 			  }
+// 		      }
 		    
-		    // calc betas for each group
-		    for(int g = 1; g <= ngs; g++)
-		      {
+// 		    // calc betas for each group
+// 		    for(int g = 1; g <= ngs; g++)
+// 		      {
 			
-			// setup values for doing 2D grid integration later
-			int num_bins_log_beta=int(num_bins_log_beta_col(it));
+// 			// setup values for doing 2D grid integration later
+// 			int num_bins_log_beta=int(num_bins_log_beta_col(it));
 
-			float res_log_beta=(max_log_beta(g)-min_log_beta(g))/(num_bins_log_beta-1);
+// 			float res_log_beta=(max_log_beta(g)-min_log_beta(g))/(num_bins_log_beta-1);
 			
-			log_beta[g-1].ReSize(num_bins_log_beta);
-			for(int i=1;i<=log_beta[g-1].Nrows();i++){
-			  log_beta[g-1](i)=min_log_beta(g)+(i-1)*res_log_beta;
-			} 
+// 			log_beta[g-1].ReSize(num_bins_log_beta);
+// 			for(int i=1;i<=log_beta[g-1].Nrows();i++){
+// 			  log_beta[g-1](i)=min_log_beta(g)+(i-1)*res_log_beta;
+// 			} 
 			
-			// setup values for doing 2D grid integration later		
-			int num_bins_log_beta_outlier=int(num_bins_log_beta_outlier_col(it));
+// 			// setup values for doing 2D grid integration later		
+// 			int num_bins_log_beta_outlier=int(num_bins_log_beta_outlier_col(it));
 
-			float res_log_beta_outlier=(max_log_beta_outlier(g)-min_log_beta_outlier(g))/(num_bins_log_beta_outlier-1);
-			log_beta_outlier[g-1].ReSize(num_bins_log_beta_outlier);
-			for(int i=1;i<=log_beta_outlier[g-1].Nrows();i++){
-			  log_beta_outlier[g-1](i)=min_log_beta_outlier(g)+(i)*res_log_beta_outlier;
-			} 
-			log_beta_outlier[g-1](log_beta_outlier[g-1].Nrows())=std::log(1e9);
+// 			float res_log_beta_outlier=(max_log_beta_outlier(g)-min_log_beta_outlier(g))/(num_bins_log_beta_outlier-1);
+// 			log_beta_outlier[g-1].ReSize(num_bins_log_beta_outlier);
+// 			for(int i=1;i<=log_beta_outlier[g-1].Nrows();i++){
+// 			  log_beta_outlier[g-1](i)=min_log_beta_outlier(g)+(i)*res_log_beta_outlier;
+// 			} 
+// 			log_beta_outlier[g-1](log_beta_outlier[g-1].Nrows())=std::log(1e9);
 
-			// compute membership given gam, beta, beta_outlier and global_prob_outlier
-			ColumnVector Uin=Sg[g-1]+beta(g); //variances
-			ColumnVector Uout=Sg[g-1]+beta(g)+beta_outlier(g); //variances
+// 			// compute membership given gam, beta, beta_outlier and global_prob_outlier
+// 			ColumnVector Uin=Sg[g-1]+beta(g); //variances
+// 			ColumnVector Uout=Sg[g-1]+beta(g)+beta_outlier(g); //variances
 
-			ColumnVector mu=zg[g-1]*gamg[g-1];
+// 			ColumnVector mu=zg[g-1]*gamg[g-1];
 
-			for(int i = 1; i <= mu.Nrows(); i++)
-			  {
-			    double pin=(1-global_prob_outlier(g))*normpdf(Yg[g-1](i),mu(i),Uin(i));
-			    double pout=global_prob_outlier(g)*normpdf(Yg[g-1](i),mu(i),Uout(i));
+// 			for(int i = 1; i <= mu.Nrows(); i++)
+// 			  {
+// 			    double pin=(1-global_prob_outlier(g))*normpdf(Yg[g-1](i),mu(i),Uin(i));
+// 			    double pout=global_prob_outlier(g)*normpdf(Yg[g-1](i),mu(i),Uout(i));
 
-			    if(pin+pout==0)
-			      {
-				pin=0.5;
-				pout=0.5;
-			      }
+// 			    if(pin+pout==0)
+// 			      {
+// 				pin=0.5;
+// 				pout=0.5;
+// 			      }
 			    
-			    prob_outlier_g[g-1](i)=pout/(pin+pout);
+// 			    prob_outlier_g[g-1](i)=pout/(pin+pout);
 
-			    prob_outlier(design.getglobalindex(g,i))=prob_outlier_g[g-1](i);
-			  }
+// 			    prob_outlier(design.getglobalindex(g,i))=prob_outlier_g[g-1](i);
+// 			  }
 			
-			float tmp=mean(prob_outlier_g[g-1]).AsScalar();
+// 			float tmp=mean(prob_outlier_g[g-1]).AsScalar();
 
-			if(isnan(tmp))
-			  {
-			    OUT(x); OUT(y); OUT(z);
-			    OUT(g);
-			    OUT(gam);
-			    OUT(gamg[g-1]);
-			    OUT(zg[g-1]);
-			    OUT(global_prob_outlier(g));
-			    OUT(prob_outlier_g[g-1].t());
-			    OUT(Uin.t());
-			    OUT(Uout.t());
-			    OUT(Sg[g-1].t());
-			    OUT(beta(g));
-			    OUT(beta_outlier(g));
-			    OUT(gamg[g-1]);
-			    OUT(mu.t());
-			    OUT(Yg[g-1].t());
-			    for(int i = 1; i <= mu.Nrows(); i++)
-			      {
-				OUT(normpdf(Yg[g-1](i),mu(i),Uin(i)));
-				OUT(normpdf(Yg[g-1](i),mu(i),Uout(i)));
-			      }
-			    OUT("Error in Gsmanager::flame_stage1_onvoxel");
-			    exit(0);
-			  }
+// 			if(isnan(tmp))
+// 			  {
+// 			    OUT(x); OUT(y); OUT(z);
+// 			    OUT(g);
+// 			    OUT(gam);
+// 			    OUT(gamg[g-1]);
+// 			    OUT(zg[g-1]);
+// 			    OUT(global_prob_outlier(g));
+// 			    OUT(prob_outlier_g[g-1].t());
+// 			    OUT(Uin.t());
+// 			    OUT(Uout.t());
+// 			    OUT(Sg[g-1].t());
+// 			    OUT(beta(g));
+// 			    OUT(beta_outlier(g));
+// 			    OUT(gamg[g-1]);
+// 			    OUT(mu.t());
+// 			    OUT(Yg[g-1].t());
+// 			    for(int i = 1; i <= mu.Nrows(); i++)
+// 			      {
+// 				OUT(normpdf(Yg[g-1](i),mu(i),Uin(i)));
+// 				OUT(normpdf(Yg[g-1](i),mu(i),Uout(i)));
+// 			      }
+// 			    OUT("Error in Gsmanager::flame_stage1_onvoxel");
+// 			    exit(0);
+// 			  }
  
-			// update g with membership
-			global_prob_outlier(g)=tmp;
+// 			// update g with membership
+// 			global_prob_outlier(g)=tmp;
 			
-			if(global_prob_outlier(g)>0.25) global_prob_outlier(g)=0.25; 
+// 			if(global_prob_outlier(g)>0.25) global_prob_outlier(g)=0.25; 
 			
-			// marg out gam and estimate beta and beta_outlier from numerical integration on a 2D grid
-			Matrix margpost(log_beta[g-1].Nrows(),log_beta_outlier[g-1].Nrows());
-			margpost=0;
+// 			// marg out gam and estimate beta and beta_outlier from numerical integration on a 2D grid
+// 			Matrix margpost(log_beta[g-1].Nrows(),log_beta_outlier[g-1].Nrows());
+// 			margpost=0;
 			
-			ColumnVector marg_beta(log_beta[g-1].Nrows());
-			marg_beta=0;
-			ColumnVector marg_beta_outlier(log_beta_outlier[g-1].Nrows());
-			marg_beta_outlier=0;
-			for(int j=1;j<=log_beta_outlier[g-1].Nrows();j++){
-			  for(int i=1;i<=log_beta[g-1].Nrows();i++){
+// 			ColumnVector marg_beta(log_beta[g-1].Nrows());
+// 			marg_beta=0;
+// 			ColumnVector marg_beta_outlier(log_beta_outlier[g-1].Nrows());
+// 			marg_beta_outlier=0;
+// 			for(int j=1;j<=log_beta_outlier[g-1].Nrows();j++){
+// 			  for(int i=1;i<=log_beta[g-1].Nrows();i++){
 			    
-			    margpost(i,j) = marg_posterior_energy_outlier(log_beta[g-1](i),log_beta_outlier[g-1](j),Yg[g-1],zg[g-1],Sg[g-1],prob_outlier_g[g-1]);
-			    marg_beta_outlier(j)+=margpost(i,j);
-			    marg_beta(i)+=margpost(i,j);
-			  }	
-			}     
+// 			    margpost(i,j) = marg_posterior_energy_outlier(log_beta[g-1](i),log_beta_outlier[g-1](j),Yg[g-1],zg[g-1],Sg[g-1],prob_outlier_g[g-1]);
+// 			    marg_beta_outlier(j)+=margpost(i,j);
+// 			    marg_beta(i)+=margpost(i,j);
+// 			  }	
+// 			}     
 			
-			int ind;
+// 			int ind;
 			
-			marg_beta.Minimum1(ind);
-			beta(g)=std::exp(log_beta[g-1](ind));
+// 			marg_beta.Minimum1(ind);
+// 			beta(g)=std::exp(log_beta[g-1](ind));
 			
-			marg_beta_outlier.Minimum1(ind);
-			beta_outlier(g)=std::exp(log_beta_outlier[g-1](ind));
+// 			marg_beta_outlier.Minimum1(ind);
+// 			OUT(ind);
+// 			beta_outlier(g)=std::exp(log_beta_outlier[g-1](ind));
 			
-		      }  
+// 		      }  
 		    
-		    // calc gam
-		    DiagonalMatrix iU(ntpts);
-		    iU = 0;
+// 		    // calc gam
+// 		    DiagonalMatrix iU(ntpts);
+// 		    iU = 0;
 		    
-		    for(int t=1;t<=ntpts;t++)
-		      {		   
-			float vr=Sqr(1-prob_outlier(t))*(S(t)+beta(design.getgroup(t)))+Sqr(prob_outlier(t))*(S(t)+beta(design.getgroup(t))+beta_outlier(design.getgroup(t)));
-			iU(t) = 1.0/vr;
-		      }
+// 		    for(int t=1;t<=ntpts;t++)
+// 		      {		   
+// 			float vr=Sqr(1-prob_outlier(t))*(S(t)+beta(design.getgroup(t)))+Sqr(prob_outlier(t))*(S(t)+beta(design.getgroup(t))+beta_outlier(design.getgroup(t)));
+// 			iU(t) = 1.0/vr;
+// 		      }
 		    
-		    // calc gam covariance
-		    SymmetricMatrix gamcovariance;
-		    gamcovariance << (dm.t()*iU*dm).i();		    
-		    gam=gamcovariance*dm.t()*iU*Y;		   
+// 		    // calc gam covariance
+// 		    SymmetricMatrix gamcovariance;
+// 		    gamcovariance << (dm.t()*iU*dm).i();		    
+// 		    gam=gamcovariance*dm.t()*iU*Y;		   
 		    
-		    // calc likelihood
-		    // first need to extract gamg from gam
-		    gamtmp=gam;
-		    gamtmp = design.insert_zeroev_pes(x,y,z,gamtmp);
- 		    for(int g = 1; g <= ngs; g++)
-		      {
-			gamg[g-1].ReSize(zg[g-1].Ncols());
-			int ind=1;
-			for(int e = 1; e <= nevs; e++)
-			  {
-			    if(design.get_evs_group(e,x,y,z)==g)
-			      gamg[g-1](ind++)=gamtmp(e);
-			  }
-		      }
-		    for(int g = 1; g <= ngs; g++)
-		      {
-			loglik_io(it)+=log_likelihood_outlier(beta(g),beta_outlier(g),gamg[g-1],Yg[g-1],zg[g-1],Sg[g-1],global_prob_outlier(g));	
-		      }
+// 		    // calc likelihood
+// 		    // first need to extract gamg from gam
+// 		    gamtmp=gam;
+// 		    gamtmp = design.insert_zeroev_pes(x,y,z,gamtmp);
+//  		    for(int g = 1; g <= ngs; g++)
+// 		      {
+// 			gamg[g-1].ReSize(zg[g-1].Ncols());
+// 			int ind=1;
+// 			for(int e = 1; e <= nevs; e++)
+// 			  {
+// 			    if(design.get_evs_group(e,x,y,z)==g)
+// 			      gamg[g-1](ind++)=gamtmp(e);
+// 			  }
+// 		      }
+// 		    for(int g = 1; g <= ngs; g++)
+// 		      {
+// 			loglik_io(it)+=log_likelihood_outlier(beta(g),beta_outlier(g),gamg[g-1],Yg[g-1],zg[g-1],Sg[g-1],global_prob_outlier(g));	
+// 		      }
 		    		    
-		    // insert any zero EV PEs back in
-		    gam = design.insert_zeroev_pes(x,y,z,gam);	      
+// 		    // insert any zero EV PEs back in
+// 		    gam = design.insert_zeroev_pes(x,y,z,gam);	      
 		
-		    // store latest results for this voxel
-		    for(int e = 0; e < nevs; e++)
-		      {
-			pes[e](x,y,z)=gam(e+1);	
-		      }
-		    for(int g = 0; g < ngs; g++)
-		      {
-			beta_mean[g](x,y,z) = beta(g+1);
-			beta_outlier_mean[g](x,y,z) = beta_outlier(g+1);
-			global_prob_outlier_mean[g](x,y,z) = global_prob_outlier(g+1);
-			prob_outlier_mean[g].setvoxelts(prob_outlier_g[g],x,y,z);
-		      }
+// 		    // store latest results for this voxel
+// 		    for(int e = 0; e < nevs; e++)
+// 		      {
+// 			pes[e](x,y,z)=gam(e+1);	
+// 		      }
+// 		    for(int g = 0; g < ngs; g++)
+// 		      {
+// 			beta_mean[g](x,y,z) = beta(g+1);
+// 			beta_outlier_mean[g](x,y,z) = beta_outlier(g+1);
+// 			global_prob_outlier_mean[g](x,y,z) = global_prob_outlier(g+1);
+// 			prob_outlier_mean[g].setvoxelts(prob_outlier_g[g],x,y,z);
+// 		      }
 
-		    // insert any zero EV PEs back in
-		    gamcovariance = design.insert_zeroev_covpes(x,y,z,gamcovariance);
+// 		    // insert any zero EV PEs back in
+// 		    gamcovariance = design.insert_zeroev_covpes(x,y,z,gamcovariance);
 	
-		    // store results for gam covariance
-		    ColumnVector gamcovariance2;
-		    reshape(gamcovariance2, gamcovariance, nevs*nevs, 1);		
-		    cov_pes.setvoxelts(gamcovariance2,x,y,z);		      
+// 		    // store results for gam covariance
+// 		    ColumnVector gamcovariance2;
+// 		    reshape(gamcovariance2, gamcovariance, nevs*nevs, 1);		
+// 		    cov_pes.setvoxelts(gamcovariance2,x,y,z);		      
 
-		  }
-	      }
-      } // end iterations
+// 		  }
+// 	      }
+//       } // end iterations
 
-    // write out likelihood history
-    write_ascii_matrix(LogSingleton::getInstance().appendDir("loglik_io"),loglik_io);
+//     // write out likelihood history
+//     write_ascii_matrix(LogSingleton::getInstance().appendDir("loglik_io"),loglik_io);
 
-    // Loop through seeing if there were any outliers and calc contrasts if there was
-    for(int x = 0; x < xsize; x++)
-      for(int y = 0; y < ysize; y++)
-	for(int z = 0; z < zsize; z++)
-	  {
-	    if(design.getmask()(x,y,z))
-	      {	
-		bool no_outliers=true;
-		for(int g = 0; g < ngs; g++)
-		  {		   	
-		    if(global_prob_outlier_mean[g](x,y,z)>(1.0/ntpts)/10.0)
-		      no_outliers=false;
-		  }
+//     // Loop through seeing if there were any outliers and calc contrasts if there was
+//     for(int x = 0; x < xsize; x++)
+//       for(int y = 0; y < ysize; y++)
+// 	for(int z = 0; z < zsize; z++)
+// 	  {
+// 	    if(design.getmask()(x,y,z))
+// 	      {	
+// 		bool no_outliers=true;
+// 		for(int g = 0; g < ngs; g++)
+// 		  {		   	
+// 		    if(global_prob_outlier_mean[g](x,y,z)>(1.0/ntpts)/10.0)
+// 		      no_outliers=false;
+// 		  }
 
-		if(!no_outliers)
-		  {
-		    /////////// extract params for this voxel
-		    // extract gam
-		    ColumnVector gam(nevs);
-		    for(int e = 0; e < nevs; e++)
-		      {
-			gam(e+1)=pes[e](x,y,z);	
-		      }
+// 		if(!no_outliers)
+// 		  {
+// 		    /////////// extract params for this voxel
+// 		    // extract gam
+// 		    ColumnVector gam(nevs);
+// 		    for(int e = 0; e < nevs; e++)
+// 		      {
+// 			gam(e+1)=pes[e](x,y,z);	
+// 		      }
 
-		    // extract gamcovariance
-		    SymmetricMatrix gamcovariance;
-		    Matrix tmp_mat;
-		    ColumnVector tmp=cov_pes.voxelts(x,y,z);
-		    reshape(tmp_mat, tmp, nevs, nevs);		
-		    gamcovariance << tmp_mat;
+// 		    // extract gamcovariance
+// 		    SymmetricMatrix gamcovariance;
+// 		    Matrix tmp_mat;
+// 		    ColumnVector tmp=cov_pes.voxelts(x,y,z);
+// 		    reshape(tmp_mat, tmp, nevs, nevs);		
+// 		    gamcovariance << tmp_mat;
 
-		    //////////
-		    // calc contrasts
-		    flame1_contrasts_with_outliers(gam,gamcovariance,x,y,z);
+// 		    //////////
+// 		    // calc contrasts
+// 		    flame1_contrasts_with_outliers(gam,gamcovariance,x,y,z);
 
-		  }
-		else
-		  {
-		    // restore no outlier results
-		    for(int e = 0; e < nevs; e++)
-		      {
-			pes[e](x,y,z) = pes_nooutliers[e](x,y,z);
-		      }
-		    cov_pes.setvoxelts(cov_pes_nooutliers.voxelts(x,y,z),x,y,z);
+// 		  }
+// 		else
+// 		  {
+// 		    // restore no outlier results
+// 		    for(int e = 0; e < nevs; e++)
+// 		      {
+// 			pes[e](x,y,z) = pes_nooutliers[e](x,y,z);
+// 		      }
+// 		    cov_pes.setvoxelts(cov_pes_nooutliers.voxelts(x,y,z),x,y,z);
 		    
-		    for(int g = 0; g < ngs; g++)
-		      {
-			beta_mean[g](x,y,z) = beta_mean_nooutliers[g](x,y,z);
-		      }	      
-		  }
+// 		    for(int g = 0; g < ngs; g++)
+// 		      {
+// 			beta_mean[g](x,y,z) = beta_mean_nooutliers[g](x,y,z);
+// 		      }	      
+// 		  }
 
-		for(int g = 1; g <= ngs; g++)
-		  for(int i = 1; i <= prob_outlier_mean[g-1].tsize(); i++)
-		    {
-		      if(prob_outlier_mean[g-1](x,y,z,i-1) < 1e-4) prob_outlier_mean[g-1](x,y,z,i-1)=0;		    
-		    }
-	      }
-	  }			    
-  }
+// 		for(int g = 1; g <= ngs; g++)
+// 		  for(int i = 1; i <= prob_outlier_mean[g-1].tsize(); i++)
+// 		    {
+// 		      if(prob_outlier_mean[g-1](x,y,z,i-1) < 1e-4) prob_outlier_mean[g-1](x,y,z,i-1)=0;		    
+// 		    }
+// 	      }
+// 	  }			    
+//   }
 
-  void Gsmanager::flame_stage1_onvoxel_inferoutliers(const vector<ColumnVector>& Yg, const ColumnVector& Y, const vector<Matrix>& zg, const Matrix& z, const vector<ColumnVector>& Sg, const ColumnVector& S, ColumnVector& beta, ColumnVector& gam, SymmetricMatrix& gamcovariance, ColumnVector& global_prob_outlier, vector<ColumnVector>& prob_outlier_g,  ColumnVector& prob_outlier, ColumnVector& beta_outlier, float& loglik, int& nparams, bool& no_outliers, int px, int py, int pz)
+  void Gsmanager::flame_stage1_onvoxel_inferoutliers(const vector<ColumnVector>& Yg, const ColumnVector& Y, const vector<Matrix>& zg, const Matrix& z, const vector<ColumnVector>& Sg, const ColumnVector& S, ColumnVector& beta, ColumnVector& gam, SymmetricMatrix& gamcovariance, ColumnVector& global_prob_outlier, vector<ColumnVector>& prob_outlier_g,  ColumnVector& prob_outlier, ColumnVector& beta_outlier, vector<float>& marg, vector<ColumnVector>& weights_g, int& nparams, vector<bool>& no_outliers, int px, int py, int pz)
   {
     Tracer_Plus trace("Gsmanager::flame_stage1_onvoxel_inferoutliers");
 
@@ -1620,16 +1673,18 @@ namespace Gs {
     beta_outlier.ReSize(ngs);
     beta_outlier=Sqr(100);       
 
-    LOGOUT(beta);
+//     OUT("===================");
+//     OUT(beta);
+//     OUT(prob_outlier);
 
     // setup grid for marg
     ColumnVector min_log_beta(ngs);
-    min_log_beta=log(1e-6);
+    min_log_beta=log(beta*1e-6);
     ColumnVector max_log_beta(ngs);
-    max_log_beta=log(beta*1e3);
+    max_log_beta=log(beta*1e2);
 
     ColumnVector min_log_rho_outlier(ngs); // beta_outlier=rho*beta
-    min_log_rho_outlier=log(10);
+    min_log_rho_outlier=log(100);
     ColumnVector max_log_rho_outlier(ngs);
     max_log_rho_outlier=log(1e9);
 
@@ -1640,11 +1695,15 @@ namespace Gs {
     ColumnVector maxsg(ngs);
 
     gamtmp = design.insert_zeroev_pes(px,py,pz,gamtmp);
+
+ //    OUT(gamtmp);
+
     for(int g = 1; g <= ngs; g++)
       {
 	// calc max gs:
-	//	maxsg(g)=Maximum(Sg[g-1]);
-	maxsg(g)=Maximum(Sg[g-1]);
+	maxsg(g)=100*Maximum(Sg[g-1]);
+
+	// 	OUT(maxsg);
 
 	// need to extact gamg from gam
 	ColumnVector gamg(zg[g-1].Ncols());
@@ -1686,7 +1745,7 @@ namespace Gs {
 	//	global_prob_outlier(g)=(1.0/design.getntptsingroup(g))/2.0;
 	float gpo=count_outliers/float(zc.size());
 
-// 	OUT(gpo);
+	// 	OUT(gpo);
 	
 	if(gpo>0.25) gpo=0.25;
 
@@ -1697,8 +1756,9 @@ namespace Gs {
       }
     
     int niters=opts.io_niters.value();
-    bool converged=false;
-    float loglik_io_old=0;
+    vector<bool> converged(ngs,false);
+    vector<float> marg_io_old(ngs,0);
+
     float tol=1e-3;
 
     ColumnVector num_bins_log_beta_col(niters);
@@ -1734,7 +1794,8 @@ namespace Gs {
 	// calc betas for each group
 	for(int g = 1; g <= ngs; g++)
 	  {
-
+	    if(!converged[g-1])
+	      {
 	    // setup values for doing 2D grid integration later
 	    //	    int num_bins_log_beta=30;
 	    int num_bins_log_beta=int(num_bins_log_beta_col(it));
@@ -1761,8 +1822,9 @@ namespace Gs {
 // 	    OUT(exp(log_rho_outlier[g-1]));
 
 	    // compute membership given gam, beta, beta_outlier and global_prob_outlier
-	    ColumnVector Uin=Sg[g-1]+beta(g); //variances
-	    ColumnVector Uout=Sg[g-1]+beta(g)+beta_outlier(g); //variances
+ 	    ColumnVector Uin=Sg[g-1]+beta(g); //variances
+	    // 	    ColumnVector Uout=Sg[g-1]+beta_outlier(g); //variances
+ 	    ColumnVector Uout(Uin.Nrows()); Uout=beta_outlier(g); //variances
 
 // 	    OUT(g)
 //  	    OUT(gam);
@@ -1789,11 +1851,22 @@ namespace Gs {
 		    pout=0.5;
 		  }
 
- 		prob_outlier_g[g-1](i)=pout/(pin+pout);
-	
- 		prob_outlier(design.getglobalindex(g,i))=prob_outlier_g[g-1](i);
+ 		prob_outlier_g[g-1](i)=pout/(pin+pout);	
+
+		// this will encourage a sparse solution
+		if(prob_outlier_g[g-1](i)<0.1)
+		  prob_outlier_g[g-1](i)=0;
+
+		prob_outlier(design.getglobalindex(g,i))=prob_outlier_g[g-1](i);
+ 
 	      }
 	
+// 	    prob_outlier_g[g-1]=0;
+// 	    prob_outlier_g[g-1](1)=1;
+// 	    prob_outlier=0;
+// 	    prob_outlier(1)=1;
+// 	    global_prob_outlier(g)=0.05;
+
 	    float tmp=mean(prob_outlier_g[g-1]).AsScalar();
    	    if(isnan(tmp))
 	      {
@@ -1837,176 +1910,272 @@ namespace Gs {
 	    for(int j=1;j<=log_rho_outlier[g-1].Nrows();j++){
 	      for(int i=1;i<=log_beta[g-1].Nrows();i++){
 		
-		float log_beta_outlier_tmp=std::log(std::exp(log_rho_outlier[g-1](j))*(std::exp(log_beta[g-1](i))+maxsg(g)));
+ 		float log_beta_outlier_tmp=std::log(std::exp(log_rho_outlier[g-1](j))*(std::exp(log_beta[g-1](i))+maxsg(g)));
+		//float log_beta_outlier_tmp=std::log(std::exp(log_rho_outlier[g-1](j))*(std::exp(log_beta[g-1](i))));
 		margpost(i,j) = marg_posterior_energy_outlier(log_beta[g-1](i),log_beta_outlier_tmp,Yg[g-1],zg[g-1],Sg[g-1],prob_outlier_g[g-1]);
 		marg_beta_outlier(j)+=margpost(i,j);
 		marg_beta(i)+=margpost(i,j);
 	      }	
 	    }     
 
-// 	    write_ascii_matrix(rho_outlier[g-1],"rho_outlier");
-// 	    write_ascii_matrix(log_beta[g-1],"log_beta");
-// 	    write_ascii_matrix(Sg[g-1],"Sg");
-// 	    write_ascii_matrix(Yg[g-1],"Yg");
-// 	    write_ascii_matrix(zg[g-1],"zg");
-// 	    write_ascii_matrix(prob_outlier_g[g-1],"prob_outlier_g");
+// 	    if(it==1)
+// 	      {
+// 		OUT(prob_outlier_g[g-1]);
+// 	      }
 
-// 	    write_ascii_matrix(margpost,"margpost");
-// 	    write_ascii_matrix(marg_beta,"marg_beta");
-// 	    write_ascii_matrix(marg_beta_outlier,"marg_beta_outlier");
+// 	    if(it==niters)
+// 	      {
+// 		OUT(it);
+// 		write_ascii_matrix(log_rho_outlier[0],LogSingleton::getInstance().appendDir("log_rho_outlier"));
+// 		write_ascii_matrix(log_beta[0],LogSingleton::getInstance().appendDir("log_beta"));
+// 		write_ascii_matrix(Sg[0],LogSingleton::getInstance().appendDir("Sg"));
+// 		write_ascii_matrix(Yg[0],LogSingleton::getInstance().appendDir("Yg"));
+// 		write_ascii_matrix(zg[0],LogSingleton::getInstance().appendDir("zg"));
+// 		write_ascii_matrix(prob_outlier_g[0],LogSingleton::getInstance().appendDir("prob_outlier_g"));
+// 		write_ascii_matrix(margpost,LogSingleton::getInstance().appendDir("margpost"));
+// 		write_ascii_matrix(marg_beta,LogSingleton::getInstance().appendDir("marg_beta"));
+// 		write_ascii_matrix(marg_beta_outlier,LogSingleton::getInstance().appendDir("marg_beta_outlier"));
+		
+	
+// 		//cd ..;X=load('zg'); y=load('Yg'); s=load('Sg'); x2=X(2:end); y2=y(2:end); s2=s(2:end); res=ols(y2,x2); [gam, beta, covgam] = flame1(y2,x2,s2); gam, covgam, beta, gam/sqrt(covgam)
+// 		// p=load('prob_outlier_g');
+// 		//mp=load('margpost');mb=load('marg_beta');mbo=load('marg_beta_outlier');lb=load('log_beta');[i,j]=min(mb);exp(lb(j))
+// 	      }
 	    
-	    int ind;
-	    
+	    int ind;	    
 	    marg_beta.Minimum1(ind);
 	    beta(g)=std::exp(log_beta[g-1](ind));
-	    
-	    marg_beta_outlier.Minimum1(ind);
-	    beta_outlier(g)=std::exp(log_rho_outlier[g-1](ind))*(std::exp(log_beta[g-1](ind))+maxsg(g));
 
+	    int ind2;
+	    marg_beta_outlier.Minimum1(ind2);
+	    beta_outlier(g)=std::exp(log_rho_outlier[g-1](ind2))*(std::exp(log_beta[g-1](ind))+maxsg(g));
+	    //beta_outlier(g)=std::exp(log_rho_outlier[g-1](ind2))*(std::exp(log_beta[g-1](ind)));
+
+// 	    if(it==niters)
+// 	      {
+// 		OUT(ind);
+// 		OUT(ind2);
+// 		OUT(log_rho_outlier[0].Nrows());
+// 		OUT(std::exp(log_rho_outlier[0](ind2)));
+// 		OUT(beta_outlier(g));
+// 		OUT(std::exp(log_beta[0](ind)));
+// 		OUT(log_beta[0](ind));
+// 		OUT(marg_posterior_energy_outlier(log(beta(g)),log(beta_outlier(g)),Yg[0],zg[0],Sg[0],prob_outlier_g[0]));
+// 		OUT(marg_posterior_energy(log(beta(g)),Yg[0],zg[0],Sg[0]));
+
+// 	      }
+
+	    weights_g[g-1].ReSize(design.getntptsingroup(g));
+
+	    for(int t=1;t<=design.getntptsingroup(g);t++)
+	      {		 		
+		weights_g[g-1](t)=1.0/(Sqr(1-prob_outlier_g[g-1](t))*(Sg[g-1](t)+beta(g))+Sqr(prob_outlier_g[g-1](t))*(beta_outlier(g)));		
+	      
+		if(prob_outlier_g[g-1](t)>0.999)
+		  weights_g[g-1](t)=0;	
+
+	      }
+
+	      }
 	  }
-      	
+   	
 	// calc gam
 	DiagonalMatrix iU(ntpts);
-	iU = 0;
+// 	DiagonalMatrix iU2(ntpts);
 	
-	for(int t=1;t<=ntpts;t++)
-	  {		   
-	    float vr=Sqr(1-prob_outlier(t))*(S(t)+beta(design.getgroup(t)))+Sqr(prob_outlier(t))*(S(t)+beta(design.getgroup(t))+beta_outlier(design.getgroup(t)));
-	    iU(t) = 1.0/vr;
-	  }
+ 	for(int t=1;t<=ntpts;t++)
+ 	  {		 
+
+// 	    OUT(design.getgroup(t));
+// 	    OUT(design.getglobalindex(design.getgroup(t),t));
+
+	    iU(t)=weights_g[design.getgroup(t)-1](design.getindexingroup(design.getgroup(t),t));
+
+// 	    // 	    float vr=Sqr(1-prob_outlier(t))*(S(t)+beta(design.getgroup(t)))+Sqr(prob_outlier(t))*(S(t)+beta_outlier(design.getgroup(t)));
+// 	    float vr=Sqr(1-prob_outlier(t))*(S(t)+beta(design.getgroup(t)))+Sqr(prob_outlier(t))*(beta_outlier(design.getgroup(t)));
+	    
+// 	    iU(t) = 1.0/vr;
+	      
+// 	      if(prob_outlier(t)>0.999)
+// 		iU(t)=0;
+
+ 	  }
 
 	// calc gam covariance
-	gamcovariance << (z.t()*iU*z).i();
+	gamcovariance << pinv(z.t()*iU*z);
 	
 	gam=gamcovariance*z.t()*iU*Y;          	
 	      	
-// 	OUT(Y.t());
-// 	OUT(z.t());
-// 	OUT(iU);
-// 	OUT(gam);
-// 	OUT(prob_outlier_g[0].t());
-// 	OUT(global_prob_outlier(1));
-// 	OUT(beta);
-// 	OUT(beta_outlier);
-//  	OUT(max_log_beta);
-//  	OUT(min_log_beta);
+// 	if(it==niters)	      	
+// 	  {
+//  	    OUT(Y.t());
+//  	    OUT(z.t());
+//  	    OUT(S.t());
+// // 	    OUT(iU);
+//  	    OUT(gam);
+// 	    OUT(prob_outlier_g[0].t());
+// 	    OUT(prob_outlier.t());
+// 	    OUT(global_prob_outlier(1));
+// 	    OUT(beta);
+// 	    OUT(beta_outlier);
+// 	    OUT(max_log_beta);
+// 	    OUT(min_log_beta);
+// // 	    OUT(gamcovariance);
+// 	    OUT(gam(1)/sqrt(gamcovariance(1,1)));	  	
+// 	  }
 
-	// calc log marg posterior
-	float loglik_io=0;
-	gamtmp=gam;
-	gamtmp = design.insert_zeroev_pes(px,py,pz,gamtmp);
- 	for(int g = 1; g <= ngs; g++)
-	  {
-	    // need to extract gamg from gam
-	    ColumnVector gamg(zg[g-1].Ncols());
-	    int ind=1;
-	    for(int e = 1; e <= nevs; e++)
+
+// 	gamtmp=gam;
+// 	gamtmp = design.insert_zeroev_pes(px,py,pz,gamtmp);
+
+  	for(int g = 1; g <= ngs; g++)
+ 	  {
+
+// 	    // need to extract gamg from gam
+// 	    ColumnVector gamg(zg[g-1].Ncols());
+// 	    int ind=1;
+// 	    for(int e = 1; e <= nevs; e++)
+// 	      {
+// 		if(design.get_evs_group(e,px,py,pz)==g)
+// 		  gamg(ind++)=gamtmp(e);
+// 	      }
+	    
+// 	    loglik_io+=log_likelihood_outlier(beta(g),beta_outlier(g),gamg,Yg[g-1],zg[g-1],Sg[g-1],global_prob_outlier(g),prob_outlier_g[g-1]);	
+	
+	    // calc log marg posterior to monitor convergence
+	   
+ 	float marg_io=marg_posterior_energy_outlier(log(beta(g)),log(beta_outlier(g)),Yg[g-1],zg[g-1],Sg[g-1],prob_outlier_g[g-1]);	
+
+
+	if(abs((marg_io - marg_io_old[g-1])/marg_io_old[g-1]) < tol && it>6)
 	      {
-		if(design.get_evs_group(e,px,py,pz)==g)
-		  gamg(ind++)=gamtmp(e);
+		converged[g-1]=true;
+	       
 	      }
 	    
-	    loglik_io+=log_likelihood_outlier(beta(g),beta_outlier(g),gamg,Yg[g-1],zg[g-1],Sg[g-1],global_prob_outlier(g));	
+	    marg_io_old[g-1]=marg_io;
+
 	  }
-
-// 	OUT(abs((loglik_io - loglik_io_old)/loglik_io_old));
-
-// 	OUT(loglik_io);
-// 	OUT(loglik_io_old);
-
-	if(abs((loglik_io - loglik_io_old)/loglik_io_old) < tol)
-	  {
-	    converged=true;
-	    //	    OUT(it);	    
-	    if(it<niters)
-	      it=niters-1;
-	  }
-	
-	loglik_io_old=loglik_io;
+    
 
       } // end iterations
 
-    // due to finite variance for outlier class, set prob_outlier to zero if less than 1e-4:
-    for(int g = 1; g <= ngs; g++)
-      for(int i = 1; i <= prob_outlier_g[g-1].Nrows(); i++)
-	{
-	  if(prob_outlier_g[g-1](i) < 1e-4) prob_outlier_g[g-1](i)=0;
-	  
-	  prob_outlier(design.getglobalindex(g,i))=prob_outlier_g[g-1](i);
-	}
-
-    // calc log marg posterior
-    float loglik_io=0;
-    gamtmp=gam;
-    gamtmp = design.insert_zeroev_pes(px,py,pz,gamtmp);
-    for(int g = 1; g <= ngs; g++)
-      {
-	// need to extact gamg from gam
-	ColumnVector gamg(zg[g-1].Ncols());
-	int ind=1;
-	for(int e = 1; e <= nevs; e++)
-	  {
-	    if(design.get_evs_group(e,px,py,pz)==g)
-	      gamg(ind++)=gamtmp(e);
-	  }
-
-	loglik_io+=log_likelihood_outlier(beta(g),beta_outlier(g),gamg,Yg[g-1],zg[g-1],Sg[g-1],global_prob_outlier(g));
-      }
-    int nparams_io=ngs+gam.Nrows();
-
-    nparams=gam.Nrows();
-
- //    OUT(loglik_io);
-//     OUT(loglik);  
-//     OUT(nparams_io);
-//     OUT(nparams);
-
-    no_outliers=true;
+    // check to see if there are any outliers
+    no_outliers.resize(ngs);
     for(int g = 0; g < ngs; g++)
       {		   	
+	no_outliers[g]=true;
 	if(global_prob_outlier(g+1)>(1.0/ntpts)/10.0)
-	  no_outliers=false;
+	  no_outliers[g]=false;
       }
+ 
+//    // due to finite variance for outlier class, set prob_outlier to zero if less than 1e-4:
+//     for(int g = 1; g <= ngs; g++)
+//       for(int i = 1; i <= prob_outlier_g[g-1].Nrows(); i++)
+// 	{
+// 	  if(prob_outlier_g[g-1](i) < 1e-4) prob_outlier_g[g-1](i)=0;
+	  
+// 	  prob_outlier(design.getglobalindex(g,i))=prob_outlier_g[g-1](i);
+// 	}
     
-    float complexity_term=0.0;
-    float complexity_term_io=0.0;
+
+//     float loglik_io=0;
+//     gamtmp=gam;
+//     gamtmp = design.insert_zeroev_pes(px,py,pz,gamtmp);
+//     for(int g = 1; g <= ngs; g++)
+//       {
+// 	// need to extact gamg from gam
+// 	ColumnVector gamg(zg[g-1].Ncols());
+// 	int ind=1;
+// 	for(int e = 1; e <= nevs; e++)
+// 	  {
+// 	    if(design.get_evs_group(e,px,py,pz)==g)
+// 	      gamg(ind++)=gamtmp(e);
+// 	  }
+
+// 	loglik_io+=log_likelihood_outlier(beta(g),beta_outlier(g),gamg,Yg[g-1],zg[g-1],Sg[g-1],global_prob_outlier(g),prob_outlier_g[g-1]);
+//       }
+//     int nparams_io=ngs+gam.Nrows();
+
+//     nparams=gam.Nrows();
+
+//  //    OUT(loglik_io);
+// //     OUT(loglik);  
+// //     OUT(nparams_io);
+// //     OUT(nparams);
+
+//     no_outliers=true;
+//     for(int g = 0; g < ngs; g++)
+//       {		   	
+// 	if(global_prob_outlier(g+1)>(1.0/ntpts)/10.0)
+// 	  no_outliers=false;
+//       }
     
-    if(opts.model_select_mode.value()==string("aic"))
-      {
-	complexity_term=nparams*2;
-	complexity_term_io=nparams_io*2;	
-      } 
-    else if(opts.model_select_mode.value()==string("loglik"))
-      {
-	complexity_term=0;
-	complexity_term_io=0;	
-      }
-    else
-      {
-	cout<< "Invalid model select mode. Using bic."<< endl;
-	complexity_term=nparams*std::log(ntpts);
-	complexity_term_io=nparams_io*std::log(ntpts);
-      }
+//     float complexity_term=0.0;
+//     float complexity_term_io=0.0;
+    
+//     if(opts.model_select_mode.value()==string("aic"))
+//       {
+// 	complexity_term=nparams*2;
+// 	complexity_term_io=nparams_io*2;	
+//       } 
+//     else if(opts.model_select_mode.value()==string("loglik"))
+//       {
+// 	complexity_term=0;
+// 	complexity_term_io=0;	
+//       }
+//     else
+//       {
+// 	cout<< "Invalid model select mode. Using bic."<< endl;
+// 	complexity_term=nparams*std::log(ntpts);
+// 	complexity_term_io=nparams_io*std::log(ntpts);
+//       }
 
-    float bic=-2*loglik+complexity_term;
-    float bic_io=-2*loglik_io+complexity_term_io;
+//     float bic=-2*loglik+complexity_term;
+//     float bic_io=-2*loglik_io+complexity_term_io;
 
-     // check best BIC between with and without outliers
-     if(!no_outliers)
-       {
-	 //	OUT("Oh no");
-	 //if(loglik>=loglik_io)
-	   if(bic<=bic_io)
-	   {
-// 	     OUT(loglik);
-// 	     OUT(loglik_io);
+//     // check best BIC between with and without outliers
+//     if(!no_outliers)
+//        {
+// 	 //	OUT("Oh no");
+// 	 //if(loglik>=loglik_io)
+// 	 if(bic<=bic_io)
+// 	   {
+// 	     // 	     OUT(loglik);
+// 	     // 	     OUT(loglik_io);
 // 	     OUT("Oh yes");
-	     no_outliers=true;
-	   }
-       }
+// 	     no_outliers=true;
+// 	   }
+//        }
+    
+    ///////////////////////////
 
+    // double check best energy between with and without outliers
+    // calc log marg posterior
+    
+    for(int g = 1; g <= ngs; g++)
+      {	
+	// calc log marg posterior 
+	float marg_io=marg_posterior_energy_outlier(log(beta(g)),log(beta_outlier(g)),Yg[g-1],zg[g-1],Sg[g-1],prob_outlier_g[g-1]); 
+	
+	if(!no_outliers[g-1])
+	  {	
+	    if(marg[g-1]<marg_io)
+	      {
+		// 	    OUT(marg_io);
+		// 	    OUT(marg);
+
+		//		OUT("No outliers");
+		// 		OUT(beta(g));
+		// 		OUT(beta_outlier(g));
+		// 		OUT(g);
+		
+		no_outliers[g-1]=true;
+	      }
+	  }
+      }
   }
-
+  
   void Gsmanager::flame_stage1()
   {
     Tracer_Plus trace("Gsmanager::flame_stage1");
@@ -2056,14 +2225,15 @@ namespace Gs {
 		ColumnVector gam;
 		SymmetricMatrix gamcovariance;
 
-		float loglik;
+		vector<float> marg(ngs);
 		int nparams;
+		vector<ColumnVector> weights_g(ngs);
 
-		flame_stage1_onvoxel(Yg, Y, zg, dm, Sg, S, beta, gam, gamcovariance,loglik,nparams,x,y,z);
+		flame_stage1_onvoxel(Yg, Y, zg, dm, Sg, S, beta, gam, gamcovariance,marg,weights_g,nparams,x,y,z);
 
 		if(opts.infer_outliers.value() && opts.sigma_smooth_globalproboutlier.value()<=0)
 		  {
-		    bool no_outliers=true;
+		    vector<bool> no_outliers(ngs);
 
 		    ColumnVector global_prob_outlier; // one for each group
 		    vector<ColumnVector> prob_outlier_g; // one for each "subject" within each group
@@ -2073,25 +2243,43 @@ namespace Gs {
 		    ColumnVector beta_io=beta;
 		    ColumnVector gam_io=gam;
 		    SymmetricMatrix gamcovariance_io=gamcovariance;
+		    vector<ColumnVector> weights_g_io(ngs);
 
-		    flame_stage1_onvoxel_inferoutliers(Yg, Y, zg, dm, Sg, S, beta_io, gam_io, gamcovariance_io, global_prob_outlier, prob_outlier_g, prob_outlier, beta_outlier,loglik,nparams,no_outliers,x,y,z);
+		    flame_stage1_onvoxel_inferoutliers(Yg, Y, zg, dm, Sg, S, beta_io, gam_io, gamcovariance_io, global_prob_outlier, prob_outlier_g, prob_outlier, beta_outlier,marg, weights_g_io,nparams,no_outliers,x,y,z);
 		    
-		    // if outliers then replace flame1 results from without outliers
-		    if(!no_outliers)
-		      {
-			beta=beta_io;
-			gam=gam_io;
-			gamcovariance=gamcovariance_io;
+		    // if outliers then replace flame1 results with outlier results		    					
 
-			// store outlier results		    
-			for(int g = 0; g < ngs; g++)
+		    // OUT(no_outliers[0]);
+
+		    for(int g = 0; g < ngs; g++)
+		      {
+			if(!no_outliers[g])
+			  {
+			    beta(g+1)=beta_io(g+1);
+			    weights_g[g] = weights_g_io[g];
+			  }
+		      }
+
+		    // recalc gam and gamcovariance with blend of outlier and no outlier betas
+		    DiagonalMatrix iU(ntpts);		    
+		    for(int t=1;t<=ntpts;t++)
+		      {		 
+			iU(t)=weights_g[design.getgroup(t)-1](design.getindexingroup(design.getgroup(t),t));
+		      }
+		    gamcovariance << pinv(dm.t()*iU*dm);		    
+		    gam=gamcovariance*dm.t()*iU*Y;     
+
+		    // store outlier results		    
+		    for(int g = 0; g < ngs; g++)
+		      {
+			if(!no_outliers[g])
 			  {
 			    beta_outlier_mean[g](x,y,z) = beta_outlier(g+1);
 			    global_prob_outlier_mean[g](x,y,z) = global_prob_outlier(g+1);
 			    prob_outlier_mean[g].setvoxelts(prob_outlier_g[g],x,y,z);
 			  }
-		      }
-		    
+		      }		    		 
+		
 		  }
 
 		for(int g = 0; g < ngs; g++)
@@ -2100,6 +2288,7 @@ namespace Gs {
 		    float betavar = 1;
 		    beta_b[g](x,y,z) = Sqr(betamean)/betavar;
 		    beta_c[g](x,y,z) = betamean/betavar;
+		    weights[g].setvoxelts(weights_g[g],x,y,z);
 		  }
 
 		// insert any zero EV PEs back in
@@ -2116,7 +2305,7 @@ namespace Gs {
 		  {
 		    beta_mean[g](x,y,z) = beta(g+1);
 		  }	      
-		
+	
 		// insert any zero EV PEs back in
 		gamcovariance = design.insert_zeroev_covpes(x,y,z,gamcovariance);
 
@@ -2134,7 +2323,10 @@ namespace Gs {
     cout << endl;
 
     if(opts.infer_outliers.value() && opts.sigma_smooth_globalproboutlier.value()>0)
-      flame_stage1_inferoutliers();	              
+      {
+	throw Exception("flame_stage1_inferoutliers() unsupported");
+	// flame_stage1_inferoutliers();	              
+      }
 
     ////////////////////////////////////////////////////////////////
     // if doing flame stage 2 then find which voxels need processing
@@ -2597,7 +2789,7 @@ namespace Gs {
 
 	for(int g=0; g<ngs; g++)
 	  {
-	    float tmpdof = design.getntptsingroup(g+1) - nevs/float(ngs);
+	    float tmpdof = design.getntptsingroup(g+1) - design.getnevsingroup(g+1);
 	    if(design.is_group_in_tcontrast(g+1, design.gettcontrast(t+1)) && tmpdof>0 && tmpdof<tdoflower)
 	      tdoflower=tmpdof;
 	  }       
@@ -2624,7 +2816,7 @@ namespace Gs {
 	float fdof2lower = INT_MAX/10.0;
 	for(int g=0; g<ngs; g++)
 	  {
-	    float tmpdof = design.getntptsingroup(g+1) - nevs/float(ngs);
+	    float tmpdof = design.getntptsingroup(g+1) - design.getnevsingroup(g+1);
 	    if(design.is_group_in_fcontrast(g+1, design.getfcontrast(f+1)) && tmpdof>0 && tmpdof<fdof2lower)
 	      fdof2lower=tmpdof;
 	  }
@@ -2654,14 +2846,17 @@ namespace Gs {
 	float tdoflower = 1000;
 	for(int g=0; g<ngs; g++)
 	  {
-	    float tmpdof = (1-global_prob_outlier_mean[g](px,py,pz))*design.getntptsingroup(g+1) - nevs/float(ngs);
+	    float tmpdof = (1-global_prob_outlier_mean[g](px,py,pz))*design.getntptsingroup(g+1) - design.getnevsingroup(g+1);
 	    if(design.is_group_in_tcontrast(g+1, design.gettcontrast(t+1)) && tmpdof>0 && tmpdof<tdoflower)
 	      tdoflower=tmpdof;
 	  }
 
-// 	OUT(global_prob_outlier_mean[0](px,py,pz));
-// 	OUT(design.getntptsingroup(1));
-// 	OUT(tdoflower);
+//  	OUT(global_prob_outlier_mean[0](px,py,pz));
+//  	OUT(design.getntptsingroup(1));
+//  	OUT(design.getnevsingroup(1));
+// 	OUT(nevs);
+// 	OUT(ngs);
+//  	OUT(tdoflower);
 // 	OUT(beta_mean[0](px,py,pz));
 // 	OUT(beta_outlier_mean[0](px,py,pz));
 
@@ -2675,6 +2870,10 @@ namespace Gs {
 	// set z-score to lower z bound	
 	tdofs[t](px,py,pz) = tdoflower;
 	zts[t](px,py,pz) = zflame1lowerts[t](px,py,pz);
+
+// 	OUT(zts[t](px,py,pz));
+// 	OUT(tdoflower);
+// 	exit(1);
       }	        
 
     for(int f = 0; f < design.getnumfcontrasts(); f++)
@@ -2688,7 +2887,7 @@ namespace Gs {
 
 	for(int g=0; g<ngs; g++)
 	  {
-	    float tmpdof = (1-global_prob_outlier_mean[g](px,py,pz))*design.getntptsingroup(g+1) - nevs/float(ngs);
+	    float tmpdof = (1-global_prob_outlier_mean[g](px,py,pz))*design.getntptsingroup(g+1) - design.getnevsingroup(g+1);
 	    if(design.is_group_in_fcontrast(g+1, design.getfcontrast(f+1)) && tmpdof>0 && tmpdof<fdof2lower)
 	      fdof2lower=tmpdof;
 

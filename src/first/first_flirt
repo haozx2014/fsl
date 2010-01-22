@@ -127,7 +127,7 @@ ${FSLDIR}/bin/flirt -in ${B}_tmp_stage1 -out ${B}_tmp_cort_stage2 -ref ${FSLDIR}
 
 ${FSLDIR}/bin/convert_xfm -omat ${B}_cort.mat -concat ${B}_tmp_cort_stage2.mat ${B}_tmp_stage1.mat 
 
-${FSLDIR}/bin/flirt -in ${A} -out ${B} -ref ${FSLDIR}/data/standard/${refim} -applyxfm -init ${B}_cort.mat
+${FSLDIR}/bin/flirt -in ${A} -out ${B}_cort -ref ${FSLDIR}/data/standard/${refim} -applyxfm -init ${B}_cort.mat
 
 fi
 

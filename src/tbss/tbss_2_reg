@@ -128,5 +128,5 @@ else
     do_reg target
 fi
 
-${FSLDIR}/bin/fsl_sub -T 60 -N tbss_2_reg -t .commands
+${FSLDIR}/bin/fsl_sub -l tbss_logs -T 60 -N tbss_2_reg -t .commands
 

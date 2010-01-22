@@ -152,6 +152,16 @@ double basisfield::Peek(unsigned int vi, FieldIndex fi)
 
   return(UnsafePeek(vi,fi));
 }
+
+double basisfield::PeekWide(int i, int j, int k, FieldIndex fi)
+{
+  if (!(i<0 || j<0 || k<0 || static_cast<unsigned int>(i)>=FieldSz_x() || static_cast<unsigned int>(j)>=FieldSz_y() || static_cast<unsigned int>(k)>=FieldSz_z())) {  // Inside "valid" FOV
+    return(Peek(static_cast<unsigned int>(i),static_cast<unsigned int>(j),static_cast<unsigned int>(k),fi));
+  }
+  else {
+    return(peek_outside_fov(i,j,k,fi));
+  }
+}
   
 void basisfield::SetCoef(const ColumnVector& pcoef) 
 {
@@ -175,7 +185,7 @@ void basisfield::Set(const volume<float>& pfield)
     throw BasisfieldException("basisfield::Set:: Matrix size mismatch beween basisfield class and supplied field");
   }
   if (Vxs_x() != pfield.xdim() || Vxs_y() != pfield.ydim() || Vxs_z() != pfield.zdim()) {
-    throw BasisfieldException("basisfield::Set:: Voxel size mismatch beween basisfield cass and supplied field");
+    throw BasisfieldException("basisfield::Set:: Voxel size mismatch beween basisfield class and supplied field");
   }
 
   volume<float>   volume_of_ones(pfield.xsize(),pfield.ysize(),pfield.zsize());
