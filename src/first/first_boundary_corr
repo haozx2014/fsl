@@ -146,7 +146,19 @@ fastbcorr() {
     $FSLDIR/bin/fslmaths ${imout}_lb_roi -thr 100 -mas ${imout}_t1_roi_grey -bin -mul $lb ${imout}_lb_bound
     $FSLDIR/bin/fslmaths ${imout}_lb_roi -uthr 100 -add  ${imout}_lb_bound ${imout}_roi
     
-    printf "1 0 0 %f\n0 1 0 %f\n0 0 1 %f\n0 0 0 1\n" `echo $xmin \* $xvox | bc -l` `echo $ymin \* $yvox | bc -l` `echo $zmin \* $zvox | bc -l`  > ${imout}_trans_roi.mat
+    # having processed the rois, now put them back into the larger images
+    transx=`echo $xmin \* $xvox | bc -l`;
+    transy=`echo $ymin \* $yvox | bc -l`;
+    transz=`echo $zmin \* $zvox | bc -l`;
+    # deal with annoying flip of x coordinates for FLIRT conventions in neuro
+    if [ `$FSLDIR/bin/fslorient $imlb ` = NEUROLOGICAL ] ; then
+	dim1=`$FSLDIR/bin/fslval $imlb dim1`
+	transx=`echo " ( $dim1 - 1 - ( $xmin + $xsize - 1 ) ) * $xvox" | bc -l`;
+    fi
+    echo "1 0 0 $transx" > ${imout}_trans_roi.mat
+    echo "0 1 0 $transy" >> ${imout}_trans_roi.mat
+    echo "0 0 1 $transz" >> ${imout}_trans_roi.mat
+    echo "0 0 0 1" >> ${imout}_trans_roi.mat
     flirt -in ${imout}_roi -ref ${imlb} -out ${imout} -interp nearestneighbour -applyxfm -init ${imout}_trans_roi.mat
     
     

@@ -1,8 +1,8 @@
 /*  design.h
 
-    Mark Woolrich, Tim Behrens - FMRIB Image Analysis Group
+    Mark Woolrich, Tim Behrens and Matthew Webster - FMRIB Image Analysis Group
 
-    Copyright (C) 2002 University of Oxford  */
+    Copyright (C) 2009 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -66,7 +66,6 @@
     University, to negotiate a licence. Contact details are:
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
-
 #if !defined(design_h)
 #define design_h
   
@@ -104,8 +103,8 @@ namespace Gs{
       const int getnevs() const { return nevs; }
       const int getntpts() const { return ntpts; }
       const int getngs() const { return ngs; }
-
-       void setvarcopedata(float val){varcopedata=val;}
+      const int dof() const { return int(ols_dof(dm)); }
+      void setvarcopedata(float val){varcopedata=val;}
 
      // returns full, global design matrix
       const Matrix& getdm() const { return dm; }
@@ -123,9 +122,11 @@ namespace Gs{
       const Matrix& getfcontrast(const int p_num) const { return fc[p_num-1]; }
 
       int getgroup(int t) const { return int(group_index(t)); } 
-      int getglobalindex(int g, int tg) const { return global_index[g-1][tg-1]; } 
+      int getglobalindex(int g, int within_t) const { return global_index[g-1][within_t-1]; } 
+      int getindexingroup(int g, int global_t) const { return index_in_group[g-1][global_t-1]; } 
 
       int getntptsingroup(int g) const { return int(ntptsing(g)); }
+      int getnevsingroup(int g) const { return int(nevsing(g)); }
  
       bool tcontrast_has_zeroevs(int x, int y, int z,const RowVector& tcontrast)
       {
@@ -138,7 +139,6 @@ namespace Gs{
 	  }
 	return in;
       }
-
 
       bool is_group_in_tcontrast(int g, const RowVector& tcontrast)
       {
@@ -233,6 +233,8 @@ namespace Gs{
       vector<vector<int> > global_index; // stores global index for given group and within-group index
 
       ColumnVector ntptsing;
+      ColumnVector nevsing;
+      vector<vector<int> > index_in_group; // stores within-group index for given group and global index
 
       int numFcontrasts;
       int numTcontrasts;

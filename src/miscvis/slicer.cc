@@ -1,10 +1,8 @@
-/* {{{ Copyright etc. */
+/*  slicer
 
-/*  fsl_tsplot - 
+    Christian Beckmann and Matthew Webster, FMRIB Image Analysis Group
 
-    Christian Beckmann, FMRIB Image Analysis Group
-
-    Copyright (C) 2006-2007 University of Oxford  */
+    Copyright (C) 2006-2009 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -67,28 +65,22 @@
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
-
-/* }}} */
-/* {{{ defines, includes and typedefs */
  
 #include "libvis/miscpic.h"
-//#include "fmribmain.h"
- 
 
 using namespace NEWIMAGE;
 using namespace MISCPIC;
-
-/* }}} */
-/* {{{ usage */
-
 
 void usage(void)
 {
   printf("\nUsage: slicer <input> [input2] [main options] [output options - any number of these]\n\n");
 
-  printf("Main options: [-l <lut>] [-s <scale>] [-u] [-i <intensitymin> <intensitymax>] [-t] [-n]\n");
-  printf("These must be before output options and must be in the above order.\n");
+  printf("Main options: [-L] [-l <lut>] [-s <scale>] [-i <intensitymin> <intensitymax>] [-e <thr>] [-t] [-n] [-u]\n");
+  printf("These must be before output options.\n");
+  printf("-L       : Label slices with slice number.\n");
   printf("-l <lut> : use a different colour map from that specified in the header.\n");
+  printf("-i <min> <max> : specify intensity min and max for display range.\n");
+  printf("-e <thr> : use the specified threshold for edges (if >0 use this proportion of max-min, if <0, use the absolute value) \n");
   printf("-t       : produce semi-transparent (dithered) edges.\n");
   printf("-n       : use nearest-neighbour interpolation for output.\n");
   printf("-u       : do not put left-right labels in output.\n\n");
@@ -102,48 +94,84 @@ void usage(void)
   exit(1);
 }
 
-/* }}} */
-/* {{{ main */
-
-//template <class T>
 int fmrib_main(int argc, char* argv[])
 {
-  volumeinfo vol1info;
-  //volume<T> vol1, vol2(1,1,1);
+  //Option parsing
+  string allCommands("");
+  for(int token=1;token<argc;token++)
+    allCommands+=string(argv[token])+" ";
+  char* remainingChars = new char[allCommands.size()+1];
+  strcpy(remainingChars,allCommands.c_str());
 
-  volume<float> vol1, vol2(1,1,1);
+  char* tokenised;
+  vector<string> tokens, miscpicOptions, nonOptionInputs;
+  tokenised=strtok(remainingChars," ");
+  do {
+    tokens.push_back(string(tokenised));   
+  } while ( (tokenised=strtok(NULL," ")) != NULL );
 
-  read_volume(vol1,string(argv[1]),vol1info);
-
-  int i = 2;
-  if ( (argc>i) && (argv[i][0]!='-') ){
-    read_volume(vol2,string(argv[i])); i++;
+  for (unsigned int currentToken=0;currentToken<tokens.size();)
+  {
+    string currentOption;
+    if ( tokens[currentToken].compare(0,1,"-")==0 ) { //Start of an option
+      string optionLetter=tokens[currentToken].substr(1,1);
+      unsigned int requiredArgs(0);
+      switch (optionLetter.c_str()[0]) {
+        case 'a' :
+        case 'l' :
+        case 's' :
+        case 'e' :
+	  requiredArgs=1;
+	  break;
+        case 'A' :
+        case 'i' :
+        case 'x' :
+        case 'y' :
+        case 'z' :
+	  requiredArgs=2;
+	  break;
+        case 'S' :
+	  requiredArgs=3;
+	  break;
+      }
+      for (unsigned int requestedToken=0; requestedToken <= requiredArgs && currentToken<tokens.size(); requestedToken++) 
+	currentOption+=tokens[currentToken++]+" ";
+      miscpicOptions.push_back(currentOption);
+    }
+    else nonOptionInputs.push_back(tokens[currentToken++]);
   }
-  
-  bool dbgflag = FALSE;
-  if ( (argc>i) && (string(argv[i]) == string("-d")) ){
-    dbgflag = TRUE; i++;
+  //End of parsing
+
+  volume<float> inputVolume, secondaryVolume(1,1,1); 
+  read_volume(inputVolume,nonOptionInputs[0]);
+  if ( nonOptionInputs.size()>1 && FslFileExists(nonOptionInputs[1].c_str()) ) 
+    read_volume(secondaryVolume,nonOptionInputs[1]);
+
+  bool printDebug(false),labelSlices(false);
+  allCommands="";
+  for (unsigned int option=0;option<miscpicOptions.size();option++)
+  {
+    if ( miscpicOptions[option]=="-d " )
+      printDebug=true;
+    else if ( miscpicOptions[option]=="-L " )
+      labelSlices=true;
+    else allCommands+=miscpicOptions[option]+" ";
   }
 
-  char tmp[10000];
-  sprintf(tmp," ");
-  for(;i<argc;i++){
-    strcat(strcat(tmp,argv[i])," ");}
-  
-  //miscpic<T> newpic;
+  if ( printDebug ) {
+    for (unsigned int option=0;option<miscpicOptions.size();option++)
+      cerr << "Option " << option << ": " << miscpicOptions[option] << endl;
+    cerr << allCommands.c_str() << endl;
+  }
+
+  delete [] remainingChars;
   miscpic newpic;
-
-  return newpic.slicer(vol1, vol2, tmp, &vol1info, dbgflag);
+  return newpic.slicer(inputVolume, secondaryVolume, miscpicOptions, labelSlices, printDebug);
 }
 
 int main(int argc,char *argv[])
 {
-  if (argc<2) usage();
-  
-  //  return call_fmrib_main(dtype(std::string(argv[1])),argc,argv);  
-  //return call_fmrib_main(DT_FLOAT,argc,argv);  
+  if (argc<2) 
+    usage();
   return fmrib_main(argc,argv); 
-
 }
-
-/* }}} */

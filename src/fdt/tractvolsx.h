@@ -95,7 +95,7 @@ namespace TRACTVOLSX{
       
     public:
       //constructors::
-      Tractvolsx(const bool& usefin=false):opts(probtrackxOptions::getInstance()),init_sample(true),fibst(1),usef(usefin){}
+      Tractvolsx(const bool& usefin=false):opts(probtrackxOptions::getInstance()),init_sample(true),fibst(0),usef(usefin){}
       Tractvolsx():opts(probtrackxOptions::getInstance()){}
       ~Tractvolsx(){
 	for(unsigned int m=0;m<thsamples.size();m++)
@@ -103,7 +103,7 @@ namespace TRACTVOLSX{
 	for(unsigned int m=0;m<phsamples.size();m++)
 	  delete phsamples[m];
 	for(unsigned int m=0;m<fsamples.size();m++)
-	  delete fsamples[m];
+	    delete fsamples[m];
       }
       inline int nfibres()const{return (int)thsamples.size();}
       
@@ -128,10 +128,8 @@ namespace TRACTVOLSX{
 	  cout<<"4"<<endl;
 	  phsamples.push_back(tmpphptr);
 	  cout<<"5"<<endl;
-	  if(usef){
-	    read_volume4D(*tmpfptr,basename+"_fsamples");
-	    fsamples.push_back(tmpfptr);
-	  }
+	  read_volume4D(*tmpfptr,basename+"_fsamples");
+	  fsamples.push_back(tmpfptr);
 	  cout<<"6"<<endl;
 	}
 	else{
@@ -190,32 +188,80 @@ namespace TRACTVOLSX{
 	
 	///////new xyz values from probabilistic interpolation
 	int newx,newy,newz; 
-	float tmp=rand(); tmp/=RAND_MAX;
+	float tmp=rand(); tmp/=float(RAND_MAX);
 	if(tmp>pcx)
 	  newx=fx;
 	else
 	  newx=cx;
 	
-	tmp=rand(); tmp/=RAND_MAX;
+	tmp=rand(); tmp/=float(RAND_MAX);
 	if(tmp>pcy)
 	  newy=fy;
 	else
 	  newy=cy;
 	
-	tmp=rand(); tmp/=RAND_MAX;
+	tmp=rand(); tmp/=float(RAND_MAX);
 	if(tmp>pcz)
 	  newz=fz;
 	else
 	  newz=cz;
  
 	ColumnVector th_ph_f(3);	
-	float samp=rand(); samp/=RAND_MAX;
+	float samp=rand(); samp/=float(RAND_MAX);
 	samp=round(samp*((*thsamples[0]).tsize()-1));
 	float theta=0,phi=0;
 	float dotmax=0,dottmp=0;
 	int fibind=0;
 	if(thsamples.size()>1){//more than 1 fibre
-	  if(init_sample){//go for the specified option on the first jump
+	  if(init_sample){//go for the specified fibre on the first jump or generate at random
+	    if(opts.randfib.value()==1){//this generates startfib at random (except for fibres where f<fibthresh)
+	      vector<int> fibvec;
+	      for(unsigned int fib=0;fib<thsamples.size();fib++){	    
+		float ft=(*fsamples[fib])(int(newx),int(newy),int(newz),int(samp));
+		if(ft>opts.fibthresh.value()){
+		  fibvec.push_back(fib);
+		}
+	      }
+	      
+	      if(fibvec.size()==0){
+		fibst=0;
+	      }
+	      else{
+		float rtmp=rand()/float(RAND_MAX) * float(fibvec.size()-1);
+		fibst = fibvec[ (int)round(rtmp) ];	      
+	      }
+	      
+	    }
+	    else if(opts.randfib.value()==2){ //this generates startfib with probability proportional to f (except for fibres where f<fibthresh). 
+	      //this chooses at random but in proportion to fsamples. 
+	      float fsumtmp=0;
+	      for(unsigned int fib=0;fib<thsamples.size();fib++){	    
+		float ft=(*fsamples[fib])(int(newx),int(newy),int(newz),int(samp));
+		if(ft>opts.fibthresh.value()){
+		  fsumtmp+=ft;  //count total weight of f in this voxel. 
+		}
+	      }
+	      
+	      if(fsumtmp==0){
+		fibst=0;
+	      }
+	      else{
+		float fsumtmp2=0;
+		int fib=0;
+		float rtmp=rand()/float(RAND_MAX);
+		
+		while( fsumtmp2<rtmp){
+		  float ft=(*fsamples[fib])(int(newx),int(newy),int(newz),int(samp));
+		  if(ft>opts.fibthresh.value()){
+		    fsumtmp2+=(ft/fsumtmp); 
+		  }
+		  fibst=fib;
+		  fib++;
+		}
+		
+	      }
+	    }  
+
 	    theta=(*thsamples[fibst])(int(newx),int(newy),int(newz),int(samp));
 	    phi=(*phsamples[fibst])(int(newx),int(newy),int(newz),int(samp));
 	    init_sample=false;

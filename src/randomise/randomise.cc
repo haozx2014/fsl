@@ -465,8 +465,8 @@ Matrix currentStat(1,nVoxels);
  SortAscending(distribution);
  currentStat=0;
  for(int i=1; i<=nVoxels; i++)
-   for(int j=nPerms; j>=1; j--)
-     if (input.originalStatistic(1,i)>distribution(j))
+   for(int j=nPerms; j>=1; j--) //N.B. it's probably safe to start at nPerms-1, which would also help the '1's bug
+     if ((float)input.originalStatistic(1,i)>(float)distribution(j))
      {
        currentStat(1,i) = float(j)/nPerms;
        j=0;

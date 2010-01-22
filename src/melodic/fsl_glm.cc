@@ -82,11 +82,11 @@ using namespace std;
 // The two strings below specify the title and example usage that is
 // printed out as the help or usage message
 
-  string title=string("fsl_glm (Version 1.05)")+
-		string("\nCopyright(c) 2004-2008, University of Oxford (Christian F. Beckmann)\n")+
-		string(" \n Simple GLM usign ordinary least-squares regression on\n")+
+  string title=string("fsl_glm (Version 1.1)")+
+		string("\nCopyright(c) 2004-2009, University of Oxford (Christian F. Beckmann)\n")+
+		string(" \n Simple GLM usign ordinary least-squares (OLS) regression on\n")+
 		string(" time courses and/or 3D/4D imges against time courses \n")+
-		string(" or 3D/4D images\n\n");
+		string(" or 3D/4D images");
   string examples="fsl_glm -i <input> -d <design> -o <output> [options]";
 
 //Command line Options {
@@ -95,10 +95,10 @@ using namespace std;
 		true, requires_argument);
   Option<string> fnout(string("-o,--out"), string(""),
 		string("output file name for GLM parameter estimates (GLM betas)"),
-		true, requires_argument);
+		false, requires_argument);
   Option<string> fndesign(string("-d,--design"), string(""),
 		string("file name of the GLM design matrix (time courses or spatial maps)"),
-		true, requires_argument);
+		false, requires_argument);
   Option<string> fnmask(string("-m,--mask"), string(""),
 		string("mask image file name if input is image"),
 		false, requires_argument);
@@ -111,12 +111,24 @@ using namespace std;
 	Option<int> dofset(string("--dof"),0,
 		string("        set degrees-of-freedom explicitly"),
 		false, requires_argument);
+	Option<bool> normdes(string("--des_norm"),FALSE,
+		string("switch on normalisation of the design matrix columns to unit std. deviation"),
+		false, no_argument);
+	Option<bool> normdat(string("--dat_norm"),FALSE,
+		string("switch on normalisation of the data time series to unit std. deviation"),
+		false, no_argument);
 	Option<bool> perfvn(string("--vn"),FALSE,
-		string("        perfrom MELODIC variance-normalisation on data"),
+		string("        perform MELODIC variance-normalisation on data"),
+		false, no_argument);
+	Option<bool> perf_demean(string("--demean"),FALSE,
+		string("switch on de-meaning of design and data"),
 		false, no_argument);
 	Option<int> help(string("-h,--help"), 0,
 		string("display this help text"),
 		false,no_argument);
+	Option<bool> debug(string("--debug"), FALSE,
+		string("display debug information"),
+		false,no_argument,false);
 	// Output options	
 	Option<string> outcope(string("--out_cope"),string(""),
 		string("output file name for COPEs (either as text file or image)"),
@@ -154,7 +166,7 @@ using namespace std;
 		/*
 }
 */
-//Globals {
+//Globals 
 	Melodic::basicGLM glm;
 	int voxels = 0;
 	Matrix data;
@@ -163,10 +175,8 @@ using namespace std;
 	Matrix fcontrasts;
 	Matrix meanR;
 	RowVector vnscales;
-	volume<float> mask;
-	volumeinfo volinf;  /*
-}
-*/
+	volume<float> mask;  
+
 ////////////////////////////////////////////////////////////////////////////
 
 // Local functions
@@ -177,7 +187,7 @@ void save4D(Matrix what, string fname){
 				tempVol.setmatrix(what.t(),mask);
 			else
 				tempVol.setmatrix(what,mask);
-			save_volume4D(tempVol,fname,volinf);
+			save_volume4D(tempVol,fname);
 		}
 }
 
@@ -201,45 +211,76 @@ int setup(){
 	if(fsl_imageexists(fnin.value())){//read data
 		//input is 3D/4D vol
 		volume4D<float> tmpdata;
-		read_volume4D(tmpdata,fnin.value(),volinf);
+		read_volume4D(tmpdata,fnin.value());
 		
 		// create mask
 		if(fnmask.value()>""){
+			if(debug.value())
+				cout << "Reading mask file " << fnmask.value() << endl;
 			read_volume(mask,fnmask.value());
 			if(!samesize(tmpdata[0],mask)){
 				cerr << "ERROR: Mask image does not match input image" << endl;
 				return 1;
 			};
 		}else{
-			mask = tmpdata[0]*0.0+1.0;	
-		}
-		
+			if(debug.value())
+				cout << "Creating mask image" << endl;
+			mask=tmpdata[0]*0.0+1.0;
+			data=tmpdata.matrix(mask);
+			Melodic::update_mask(mask,data);
+		}	
 		data = tmpdata.matrix(mask);
 		voxels = data.Ncols();
-		data = remmean(data,1);
-		if(perfvn.value())
-			vnscales = Melodic::varnorm(data);
+			
+		if(perfvn.value()){
+			if(debug.value())
+				cout << "Perform MELODIC variance normalisation (and demeaning)" << endl;			
+			data = remmean(data,1);
+			vnscales = Melodic::varnorm(data);		
+		}
 	}
 	else
 		data = read_ascii_matrix(fnin.value());	
 
 	if(fsl_imageexists(fndesign.value())){//read design
+		if(debug.value())
+			cout << "Reading design file "<< fndesign.value()<< endl;
 		volume4D<float> tmpdata;
 		read_volume4D(tmpdata,fndesign.value());
 		if(!samesize(tmpdata[0],mask)){
 			cerr << "ERROR: GLM design does not match input image in size" << endl;
 			return 1;
 		}
+		if(debug.value())
+			cout << "Transposing data" << endl;
 		design = tmpdata.matrix(mask).t();
 		data = data.t();
 	}else{
 		design = read_ascii_matrix(fndesign.value());
 	}
 
-	meanR=mean(data,1);
-	data = remmean(data,1);
-	design = remmean(design,1);
+	if(perf_demean.value()){
+		if(debug.value())
+			cout << "De-meaning the data matrix" << endl;
+		data = remmean(data,1);
+	}
+	if(normdat.value()){
+		if(debug.value())
+			cout << "Normalising data matrix to unit std-deviation" << endl;
+		data =  SP(data,ones(data.Nrows(),1)*pow(stdev(data,1),-1));
+	}
 
+	meanR=mean(data,1);
+	if(perf_demean.value()){
+		if(debug.value())
+			cout << "De-meaning design matrix" << endl;	
+		design = remmean(design,1);
+	}
+	if(normdes.value()){
+		if(debug.value())
+			cout << "Normalising design matrix to unit std-deviation" << endl;
+		design =  SP(design,ones(design.Nrows(),1)*pow(stdev(design,1),-1));
+	}
 	if(fncontrasts.value()>""){//read contrast		
 		contrasts = read_ascii_matrix(fncontrasts.value());
 		if(!(contrasts.Ncols()==design.Ncols())){
@@ -304,8 +345,12 @@ int main(int argc,char *argv[]){
 			options.add(fnmask);
 			options.add(fnftest);
 			options.add(dofset);
+			options.add(normdes);
+			options.add(normdat);
 			options.add(perfvn);
+			options.add(perf_demean);
 			options.add(help);
+			options.add(debug);
 			options.add(outcope);
 			options.add(outz);
 			options.add(outt);

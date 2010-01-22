@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.43 2008/03/26 10:09:36 mark Exp $
+# $Id: Makefile,v 1.46 2010/01/04 11:35:56 mwebster Exp $
 include ${FSLCONFDIR}/default.mk
 
 PROJNAME = fugue
@@ -17,8 +17,8 @@ I2OBJS=interpwarp.o unwarpfns.o
 SOBJS=sigloss.o
 FNIRTFILEUTILSOBJS=fnirtfileutils.o
 
-XFILES=prelude fugue applywarp convertwarp sigloss invwarp fnirtfileutils
-SCRIPTS=extractfidparams dof2warp
+XFILES=prelude fugue applywarp convertwarp sigloss invwarp_exe fnirtfileutils
+SCRIPTS=extractfidparams dof2warp invwarp
 FSCRIPTS=fmrib_prepare_fieldmap fix_OCMR_fieldmaps
 TESTXFILES=interpwarp
 
@@ -36,7 +36,7 @@ applywarp:  ${APPLYOBJS}
 convertwarp:  ${CONVERTOBJS}
 	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${CONVERTOBJS} ${LIBS} 
 
-invwarp: ${IOBJS}
+invwarp_exe: ${IOBJS}
 	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${IOBJS} ${LIBS} 
 
 interpwarp: ${I2OBJS}

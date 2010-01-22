@@ -554,6 +554,17 @@ void grad_calc(volume4D<float>& gradvols, const volume4D<float>& warp)
 				wy100,wy101,wy110,wy111);
 	  warp[2].getneighbours(x,y,z,wz000,wz001,wz010,wz011,
 				wz100,wz101,wz110,wz111);
+	  /*
+	  gradvols[0](x,y,z) = (wx100-wx000)/dx;
+	  gradvols[1](x,y,z) = (wx010-wx000)/dy;
+	  gradvols[2](x,y,z) = (wx001-wx000)/dz;
+	  gradvols[3](x,y,z) = (wy100-wy000)/dx;
+	  gradvols[4](x,y,z) = (wy010-wy000)/dy;
+	  gradvols[5](x,y,z) = (wy001-wy000)/dz;
+	  gradvols[6](x,y,z) = (wz100-wz000)/dx;
+	  gradvols[7](x,y,z) = (wz010-wz000)/dy;
+	  gradvols[8](x,y,z) = (wz001-wz000)/dz;
+	  */
 	  gradvols[0](x,y,z) = (wx100-wx000)/dx;
 	  gradvols[1](x,y,z) = (wx010-wx000)/dx;
 	  gradvols[2](x,y,z) = (wx001-wx000)/dx;
@@ -568,6 +579,17 @@ void grad_calc(volume4D<float>& gradvols, const volume4D<float>& warp)
 	  if (x2>warp.maxx()) { x2 -= warp.maxx() + 1 - warp.minx(); }
 	  if (y2>warp.maxy()) { y2 -= warp.maxy() + 1 - warp.miny(); }
 	  if (z2>warp.maxz()) { z2 -= warp.maxz() + 1 - warp.minz(); }
+	  /*
+ 	  gradvols[0](x,y,z) = (warp[0](x2,y,z) - warp[0](x,y,z))/dx;
+	  gradvols[1](x,y,z) = (warp[0](x,y2,z) - warp[0](x,y,z))/dy;
+	  gradvols[2](x,y,z) = (warp[0](x,y,z2) - warp[0](x,y,z))/dz;
+	  gradvols[3](x,y,z) = (warp[1](x2,y,z) - warp[1](x,y,z))/dx;
+	  gradvols[4](x,y,z) = (warp[1](x,y2,z) - warp[1](x,y,z))/dy;
+	  gradvols[5](x,y,z) = (warp[1](x,y,z2) - warp[1](x,y,z))/dz;
+	  gradvols[6](x,y,z) = (warp[2](x2,y,z) - warp[2](x,y,z))/dx;
+	  gradvols[7](x,y,z) = (warp[2](x,y2,z) - warp[2](x,y,z))/dy;
+	  gradvols[8](x,y,z) = (warp[2](x,y,z2) - warp[2](x,y,z))/dz;
+	  */
 	  gradvols[0](x,y,z) = (warp[0](x2,y,z) - warp[0](x,y,z))/dx;
 	  gradvols[1](x,y,z) = (warp[0](x,y2,z) - warp[0](x,y,z))/dx;
 	  gradvols[2](x,y,z) = (warp[0](x,y,z2) - warp[0](x,y,z))/dx;
@@ -583,6 +605,154 @@ void grad_calc(volume4D<float>& gradvols, const volume4D<float>& warp)
   }
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////
+//
+// I am using warpfns_ifft3 and warpfns_fft3 in lieu of the more general ifft3 and fft3 that
+// are a part of the NEWIMAGE namespace. This is because by sacrificing "generality" I can
+// make them ~30% faster, which I considered worth it since they are potentially called many
+// times as part of projecting a deformation field onto a "Jacobian-limited surface".
+//
+// Note also that I have already tried _lots_ of ways to speed them up further by e.g. 
+// using pointers into NEWMAT and NEWIMAGE data and by using NEWMAT::RealFFT and
+// NEWMAT::RealFFTI for the first and last dimension transforms respectively. In neither
+// case was the speed up sufficient to motivate the increased complexity of the code.
+//
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+void warpfns_ifft3(const NEWIMAGE::volume<float>&    rein,
+                   const NEWIMAGE::volume<float>&    imin,
+                   NEWIMAGE::volume<float>&          out)
+{
+  if (!samesize(rein,out)) out = rein;
+
+  NEWIMAGE::volume<float>  retmp(rein.xsize(),rein.ysize(),rein.zsize());
+  NEWIMAGE::volume<float>  imtmp(rein.xsize(),rein.ysize(),rein.zsize());
+  out = 0.0; retmp = 0.0; imtmp = 0.0;
+  // In x-direction
+  NEWMAT::ColumnVector reinv(rein.xsize());
+  NEWMAT::ColumnVector iminv(rein.xsize());
+  NEWMAT::ColumnVector reoutv(rein.xsize());
+  NEWMAT::ColumnVector imoutv(rein.xsize());
+  for (int k=0; k<rein.zsize(); k++) {
+    for (int j=0; j<rein.ysize(); j++) {
+      for (int i=0; i<rein.xsize(); i++) {
+        reinv(i+1) = rein(i,j,k);
+        iminv(i+1) = imin(i,j,k);
+      }
+      FFTI(reinv,iminv,reoutv,imoutv);
+      for (int i=0; i<rein.xsize(); i++) {
+        retmp(i,j,k) = reoutv(i+1);
+        imtmp(i,j,k) = imoutv(i+1);
+      }
+    }
+  }
+  // Y-direction
+  reinv.ReSize(rein.ysize());
+  iminv.ReSize(rein.ysize());
+  reoutv.ReSize(rein.ysize());
+  imoutv.ReSize(rein.ysize());
+  for (int k=0; k<rein.zsize(); k++) {
+    for (int i=0; i<rein.xsize(); i++) {
+      for (int j=0; j<rein.ysize(); j++) {
+        reinv(j+1) = retmp(i,j,k);
+        iminv(j+1) = imtmp(i,j,k);
+      }
+      FFTI(reinv,iminv,reoutv,imoutv);
+      for (int j=0; j<rein.ysize(); j++) {
+        retmp(i,j,k) = reoutv(j+1);
+        imtmp(i,j,k) = imoutv(j+1);
+      }
+    }
+  }
+  // And z-direction
+  reinv.ReSize(rein.zsize());
+  iminv.ReSize(rein.zsize());
+  reoutv.ReSize(rein.zsize());
+  imoutv.ReSize(rein.zsize());
+  for (int j=0; j<rein.ysize(); j++) {
+    for (int i=0; i<rein.xsize(); i++) {
+      for (int k=0; k<rein.zsize(); k++) {
+        reinv(k+1) = retmp(i,j,k);
+        iminv(k+1) = imtmp(i,j,k);
+      }
+      FFTI(reinv,iminv,reoutv,imoutv);
+      for (int k=0; k<rein.zsize(); k++) {
+        out(i,j,k) = reoutv(k+1);
+      }
+    }
+  }
+  return;
+}
+
+void warpfns_fft3(const NEWIMAGE::volume<float>&    in,
+                  NEWIMAGE::volume<float>&          reout,
+                  NEWIMAGE::volume<float>&          imout)
+{
+  if (!samesize(in,reout)) reout = in;
+  if (!samesize(in,imout)) imout = in;
+  reout = 0.0;
+  imout = 0.0;
+  // cout << "x-direction" << endl;
+  // In x-direction
+  NEWMAT::ColumnVector reinv(in.xsize());
+  NEWMAT::ColumnVector iminv(in.xsize());
+  NEWMAT::ColumnVector reoutv(in.xsize());
+  NEWMAT::ColumnVector imoutv(in.xsize());
+  reinv = 0.0; iminv = 0.0;
+  for (int k=0; k<in.zsize(); k++) {
+    for (int j=0; j<in.ysize(); j++) {
+      for (int i=0; i<in.xsize(); i++) {
+        reinv(i+1) = in(i,j,k);
+      }
+      FFT(reinv,iminv,reoutv,imoutv);
+      for (int i=0; i<in.xsize(); i++) {
+        reout(i,j,k) = reoutv(i+1);
+        imout(i,j,k) = imoutv(i+1);
+      }
+    }
+  }
+  // In y-direction
+  // cout << "y-direction" << endl;
+  reinv.ReSize(in.ysize());
+  iminv.ReSize(in.ysize());
+  reoutv.ReSize(in.ysize());
+  imoutv.ReSize(in.ysize());
+  reinv = 0.0; iminv = 0.0;
+  for (int k=0; k<in.zsize(); k++) {
+    for (int i=0; i<in.xsize(); i++) {
+      for (int j=0; j<in.ysize(); j++) {
+        reinv(j+1) = reout(i,j,k);
+        iminv(j+1) = imout(i,j,k);
+      }
+      FFT(reinv,iminv,reoutv,imoutv);
+      for (int j=0; j<in.ysize(); j++) {
+        reout(i,j,k) = reoutv(j+1);
+        imout(i,j,k) = imoutv(j+1);
+      }
+    }
+  }
+  // And z-direction
+  // cout << "z-direction" << endl;
+  reinv.ReSize(in.zsize());
+  iminv.ReSize(in.zsize());
+  reoutv.ReSize(in.zsize());
+  imoutv.ReSize(in.zsize());
+  reinv = 0.0; iminv = 0.0;
+  for (int j=0; j<in.ysize(); j++) {
+    for (int i=0; i<in.xsize(); i++) {
+      for (int k=0; k<in.zsize(); k++) {
+        reinv(k+1) = reout(i,j,k);
+        iminv(k+1) = imout(i,j,k);
+      }
+      FFT(reinv,iminv,reoutv,imoutv);
+      for (int k=0; k<in.zsize(); k++) {
+        reout(i,j,k) = reoutv(k+1);
+        imout(i,j,k) = imoutv(k+1);
+      }
+    }
+  }
+  return;
+}
 
 void integrate_gradient_field(volume4D<float>& newwarp, 
 			      const volume4D<float>& grad,
@@ -602,38 +772,35 @@ void integrate_gradient_field(volume4D<float>& newwarp,
     newwarp = 0.0f;
   }
   volume4D<float> gradkre(newwarp), gradkim(newwarp);
-  float dotprodre, dotprodim, norm, argx, argy, argz;
   float gradkrealx, gradkimagx, gradkrealy, gradkimagy, gradkrealz, gradkimagz;
-  //print_volume_info(grad,"grad");
   // enforce things separately for gradients of warp[0], warp[1] and warp[2]
   for (int n=0; n<3; n++) {
     // take FFT of the x,y,z gradient fields (of warp[n])
-    fft3(grad[n*3+0],grad[n*3+0]*0.0f,gradkre[0],gradkim[0]);
-    fft3(grad[n*3+1],grad[n*3+1]*0.0f,gradkre[1],gradkim[1]);
-    fft3(grad[n*3+2],grad[n*3+2]*0.0f,gradkre[2],gradkim[2]);
-    //save_volume4D(gradkre,"TEST_ksp_re");
-    //save_volume4D(gradkim,"TEST_ksp_im");
-    //print_volume_info(gradkre[0],"gradkre[0]");
-    //print_volume_info(gradkim[0],"gradkim[0]");
-    // take normalised dot product of gradient vector and "A" vector
+    warpfns_fft3(grad[n*3+0],gradkre[0],gradkim[0]);
+    warpfns_fft3(grad[n*3+1],gradkre[1],gradkim[1]);
+    warpfns_fft3(grad[n*3+2],gradkre[2],gradkim[2]);
     for (int z=grad.minz(); z<=grad.maxz(); z++) {
+      float argz=2.0*M_PI*z/Nz;
+      float cosz=cos(argz), sinz=sin(argz);
       for (int y=grad.miny(); y<=grad.maxy(); y++) {
+        float argy=2.0*M_PI*y/Ny;
+        float cosy=cos(argy), siny=sin(argy);
 	for (int x=grad.minx(); x<=grad.maxx(); x++) {
-	  argx=2.0*M_PI*x/Nx;  argy=2.0*M_PI*y/Ny;  argz=2.0*M_PI*z/Nz;  
-	  norm = 6.0 - 2.0*cos(argx) - 2.0*cos(argy) - 2.0*cos(argz);
+	  float argx=2.0*M_PI*x/Nx;
+          float cosx=cos(argx), sinx=sin(argx);
+	  float norm = 6.0 - 2.0*cosz - 2.0*cosy - 2.0*cosx;
 	  gradkrealx = gradkre[0](x,y,z);
 	  gradkimagx = gradkim[0](x,y,z);
 	  gradkrealy = gradkre[1](x,y,z);
 	  gradkimagy = gradkim[1](x,y,z);
 	  gradkrealz = gradkre[2](x,y,z);
 	  gradkimagz = gradkim[2](x,y,z);
-	  dotprodre = 0.0;  dotprodim = 0.0;
-	  dotprodre += gradkrealx * (cos(argx)-1) + gradkimagx * sin(argx);
-	  dotprodim += gradkimagx * (cos(argx)-1) - gradkrealx * sin(argx);
-	  dotprodre += gradkrealy * (cos(argy)-1) + gradkimagy * sin(argy);
-	  dotprodim += gradkimagy * (cos(argy)-1) - gradkrealy * sin(argy);
-	  dotprodre += gradkrealz * (cos(argz)-1) + gradkimagz * sin(argz);
-	  dotprodim += gradkimagz * (cos(argz)-1) - gradkrealz * sin(argz);
+	  float dotprodre = gradkrealx * (cosx-1) + gradkimagx * sinx;
+	  float dotprodim = gradkimagx * (cosx-1) - gradkrealx * sinx;
+	  dotprodre += gradkrealy * (cosy-1) + gradkimagy * siny;
+	  dotprodim += gradkimagy * (cosy-1) - gradkrealy * siny;
+	  dotprodre += gradkrealz * (cosz-1) + gradkimagz * sinz;
+	  dotprodim += gradkimagz * (cosz-1) - gradkrealz * sinz;
 	  // write back values into gradkre[0] and gradkim[0]
 	  if (fabs(norm)>1e-12) {
 	    gradkre[0](x,y,z) = dotprodre / norm;
@@ -647,12 +814,7 @@ void integrate_gradient_field(volume4D<float>& newwarp,
     }
     // take IFFT to get the integrated gradient field
     volume<float> dummy1, dummy2;
-    ifft3(gradkre[0],gradkim[0]);
-    //print_volume_info(gradkre[0],"gradkre[0]");
-    //print_volume_info(gradkim[0],"gradkim[0]");
-    newwarp[n] = gradkre[0];
-    //save_volume(gradkre[0],"TEST_imsp");
-    //save_volume(gradkim[0],"TEST_imsp2");
+    warpfns_ifft3(gradkre[0],gradkim[0],newwarp[n]);
   }
   // rescale newwarp by the voxel dimensions
   newwarp[0] *= grad.xdim();
@@ -663,6 +825,7 @@ void integrate_gradient_field(volume4D<float>& newwarp,
   newwarp[1] += warpmeany;
   newwarp[2] += warpmeanz;
 }
+
 
 void get_jac_offset(int jacnum, int* xoff, int* yoff, int* zoff)
 {
@@ -786,9 +949,9 @@ void constrain_topology(volume4D<float>& warp, float minJ, float maxJ)
     jacobian_check(jvol,jstats,warp,minJ,maxJ);
     // cout << "Jacobian stats of (min,max,#<min,#>max): "<<jstats.t()<<endl;
     limit_grad(grad,jvol,minJ,maxJ);
-    integrate_gradient_field(warp, grad, warp[0].mean(), warp[1].mean(), 
-			     warp[2].mean());
+    integrate_gradient_field(warp,grad,warp[0].mean(),warp[1].mean(),warp[2].mean());
     jstats=jacobian_quick_check(warp,minJ,maxJ);
+    // cout << "Jacobian quick stats of (min,max,#<min,#>max): "<<jstats.t()<<endl;
   }
 }
 
