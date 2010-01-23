@@ -21,6 +21,7 @@ fsl (4.1.5-1) unstable; urgency=low
   * New config variable FSLPARALLEL. If set, FSL will submit jobs to a running
     Sun Gridengine. By default, this setting is disabled in /etc/fsl/fsl.sh.
     (Closes: #546238). Added suggested package 'gridengine-client'.
+    See README.Debian for more information.
   * Remove all menu items of GUI-apps that are directly accessible from the
     central FSL GUI. The menu got too crowded with all the different FSL
     items.
