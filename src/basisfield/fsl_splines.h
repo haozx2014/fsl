@@ -875,7 +875,9 @@ inline void Spline1D<T>::RangeOfSplines(// Input
                                         unsigned int&  last) const   // Index of last spline with support for vox
 {
   first = std::max(0,static_cast<int>(ceil((vox - static_cast<double>(OffsetIntoField(0)) - (static_cast<double>(KernelSize())+1.0)/2.0) / _ksp)));
-  last = std::min(static_cast<int>(csz),static_cast<int>(ceil((vox - static_cast<double>(OffsetIntoField(0)) + (static_cast<double>(KernelSize())+1.0)/2.0) / _ksp)));
+  int tmp = std::min(static_cast<int>(csz),static_cast<int>(ceil((vox - static_cast<double>(OffsetIntoField(0)) + (static_cast<double>(KernelSize())+1.0)/2.0) / _ksp)));
+  if (tmp < 0) last = 0;
+  else last = static_cast<unsigned int>(tmp);
 }
 
 /////////////////////////////////////////////////////////////////////

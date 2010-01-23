@@ -146,8 +146,8 @@ proc fdt:dialog { w tclstartupfile } {
     FileEntry   $w.registration.struct.tf.file -textvariable registration(struct_image) -filetypes IMAGE -width 45
     pack $w.registration.struct.tf.file -side top -in [ $w.registration.struct.tf getframe ]
     pack $w.registration.struct.tf.search $w.registration.struct.tf.dof $w.registration.struct.tf.costfn -side left  -in [ $w.registration.struct.tf getframe ]
-    set registration(struct_costfn) mutualinfo
-    set registration(struct_dof) 12
+    set registration(struct_costfn) corratio
+    set registration(struct_dof) 6
     set registration(struct_search) 90
     set registration(struct_yn) 0
 
@@ -297,7 +297,9 @@ proc fdt:dialog { w tclstartupfile } {
     frame  $w.data.seed.ssf
     set probtrack(mode) simple
     checkbutton $w.data.seed.ssf.ssd -text "Seed space is not diffusion" -variable probtrack(usereference_yn)  -command " fdt:probtrack_mode $w "
+    checkbutton $w.data.seed.ssf.nonlinear -text "nonlinear" -variable probtrack(useNonlinear)  -command " fdt:probtrack_mode $w "
     FileEntry $w.data.seed.ssf.xfm -textvariable probtrack(xfm)  -label "Select Seed to diff transform" -title "Select seed-space to DTI-space transformation matrix" -filetypes *
+    FileEntry $w.data.seed.ssf.invxfm -textvariable probtrack(invxfm)  -label "Select diff to Seed transform" -title "Select seed-space to DTI-space transformation matrix" -filetypes *
     FileEntry $w.data.seed.ssf.reference -textvariable probtrack(reference) -label "Seed reference image:" -title "Choose reference image" -filetypes IMAGE 
     pack $w.data.seed.ssf.ssd -side top -anchor nw
     if { [ file exists ${FSLDIR}/bin/reord_OM ] } {
@@ -520,17 +522,18 @@ proc fdt:dialog { w tclstartupfile } {
 proc fdt:probtrack_mode { w } {
     global probtrack FSLDIR
 
-    pack forget $w.data.seed.voxel $w.data.seed.ssf  $w.data.seed.ssf.xfm $w.data.seed.ssf.reference $w.data.seed.bcf $w.data.seed.target $w.data.targets.cf
+    pack forget $w.data.seed.voxel $w.data.seed.ssf  $w.data.seed.ssf.xfm $w.data.seed.ssf.reference $w.data.seed.bcf $w.data.seed.target $w.data.targets.cf $w.data.seed.ssf.invxfm $w.data.seed.ssf.nonlinear
     $w.data.dir configure -label  "Output directory:" -title  "Name the output directory" -filetypes *
+    pack $w.data.seed.ssf -in $w.data.seed.f -side bottom -anchor w -pady 2
+    if { $probtrack(useNonlinear) && $probtrack(usereference_yn) } { pack $w.data.seed.ssf.invxfm -side bottom -anchor w -pady 2 }
     switch -- $probtrack(mode) {
   	simple {
-                     pack $w.data.seed.ssf $w.data.seed.voxel -in $w.data.seed.f -side bottom -anchor w -pady 2
+                     pack $w.data.seed.voxel -in $w.data.seed.f -side bottom -anchor w -pady 2
 	             if { $probtrack(usereference_yn) } { pack $w.data.seed.ssf.reference -side bottom -anchor w -pady 2 }
                      $w.data.seed.ssf.reference configure -label "Seed reference image:" -title "Choose reference image" 
                      $w.data.dir configure -label  "Output file:" -title  "Name the output file" -filetypes IMAGE
     	}
 	seedmask {
-	    pack $w.data.seed.ssf -in $w.data.seed.f -side bottom -anchor w -pady 2
             pack forget $w.data.seed.ssf.ssd
 	    if { [ file exists ${FSLDIR}/bin/reord_OM ] } {
 		pack $w.data.seed.bcf -in $w.data.seed.f -side bottom -anchor w -pady 2
@@ -541,12 +544,12 @@ proc fdt:probtrack_mode { w } {
 
   	}
 	network {
-                     pack  $w.data.seed.target $w.data.seed.ssf -in $w.data.seed.f -side bottom -anchor w -pady 2
+                     pack  $w.data.seed.target -in $w.data.seed.f -side bottom -anchor w -pady 2
 	}
     }
     if { $probtrack(waypoint_yn) } { pack $w.data.targets.wf.tf } 
     if { $probtrack(classify_yn) } { pack $w.data.targets.cf.tf }
-    if { $probtrack(usereference_yn) } { pack $w.data.seed.ssf.xfm   -side bottom -anchor w -pady 2 }
+    if { $probtrack(usereference_yn) } { pack $w.data.seed.ssf.nonlinear $w.data.seed.ssf.xfm -side top -anchor w -pady 2 }
     $w.probtrack compute_size
 }
 
@@ -735,6 +738,7 @@ proc fdt:apply { w dialog } {
 	    if { $probtrack(mode) == "simple" && $probtrack(usereference_yn) && $probtrack(reference) == "" } { set errorStr "$errorStr You must specify a reference image" } 
 	    if { $probtrack(mode) == "seedmask" && $probtrack(reference) == "" } { set errorStr "$errorStr You must specify a mask image" } 
 	    if { $probtrack(exclude_yn) && $probtrack(exclude) == "" } { set errorStr "$errorStr You must specify the exclusion mask!" }
+	    if { $probtrack(useNonlinear) && $probtrack(usereference_yn) && $probtrack(invxfm) == "" } { set errorStr "$errorStr You must specify the inverse transform!" }
             if { $probtrack(terminate_yn) && $probtrack(stop) == ""} { set errorStr "$errorStr You must specify the termination mask!" }
 	    if { $probtrack(output) == ""  } { set errorStr "$errorStr You must specify the output basename!" }
 	    set flags ""
@@ -781,6 +785,12 @@ proc fdt:apply { w dialog } {
       		puts $log "set probtrack(xfm) $probtrack(xfm)"
 	    }
 
+	    if { $probtrack(useNonlinear) } { 
+ 	                     set flags "$flags --invxfm=$probtrack(invxfm)" 
+ 	                     puts $log "set $probtrack(useNonlinear) $probtrack(useNonlinear)"
+ 	                     puts $log "set probtrack(invxfm) $probtrack(invxfm)"
+	    }
+
 	    if { $probtrack(exclude_yn) == 1 } {
 		set flags "$flags --avoid=$probtrack(exclude)"
 		puts $log "set probtrack(exclude_yn) $probtrack(exclude_yn)"
@@ -797,6 +807,7 @@ proc fdt:apply { w dialog } {
     	    foreach entry {bedpost_dir xfm mode exclude_yn usereference_yn verbose_yn loopcheck_yn modeuler_yn curvature nsteps steplength nparticles} {
 		puts $log "set probtrack($entry) $probtrack($entry)"
 	    }
+	    set singleFileName $probtrack(output)
             switch $probtrack(mode) {
 	       simple { 
 		    set singleFileName [ file tail $probtrack(output) ]
@@ -823,7 +834,7 @@ proc fdt:apply { w dialog } {
 		    puts $log "set probtrack(y) $probtrack(y)"
 		    puts $log "set probtrack(z) $probtrack(z)"
 		    puts $log "set probtrack(units) $probtrack(units)"
-		   set flags "--mode=simple --seedref=$probtrack(reference) -o ${probtrack(output)}/${singleFileName} -x ${filebase}_coordinates.txt $flags"
+		   set flags "--mode=simple --seedref=$probtrack(reference) -o ${singleFileName} -x ${filebase}_coordinates.txt $flags"
 	       } 
                seedmask {
 		   if { [ file exists ${FSLDIR}/bin/reord_OM ] } {

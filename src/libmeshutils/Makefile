@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.12 2009/03/24 11:55:17 mwebster Exp $
+# $Id: Makefile,v 1.17 2009/10/23 16:49:08 mark Exp $
 include ${FSLCONFDIR}/default.mk
 
 PROJNAME = meshUtils
@@ -6,17 +6,15 @@ PROJNAME = meshUtils
 LD_LIBRARY_PATH=${FSLDIR}/lib
 
 USRINCFLAGS = -I${INC_NEWMAT} -I${INC_ZLIB} -I${INC_PROB} -I${INC_BOOST} 
-USRLDFLAGS =  -L${LIB_PROB} 
+USRLDFLAGS =  -L${LIB_PROB} -L${LIB_NEWMAT} -L${LIB_ZLIB}
 
 ifneq ($(strip $(VTKDIR_INC)),)
 	USRINCFLAGS+=-I${VTKDIR_INC}
 endif
 
 ifneq ($(strip $(VTKDIR_LIB)),)
-        LIBS+=-L${VTKDIR_LIB}
+        USRLDFLAGS+=-L${VTKDIR_LIB}
 endif
-
-LIBS+=--L${LIB_NEWMAT} -L${LIB_ZLIB} -L${FSLDIR}/lib 
 
 LIBS+=-lwarpfns -lbasisfield -lfslvtkio -lMVdisc
 
@@ -26,23 +24,17 @@ endif
 
 LIBS+=-lfirst_lib -lmeshclass -lnewimage -lmiscmaths -lprob -lfslio -lniftiio -lznz -lutils -lnewmat  -lz
 
-LIBrun=-lmeshUtils ${LIBS}
-
-ARCHFLAGS =
-ARCHLDFLAGS =
-
 SWOBJS=meshUtils.o
-XFILES= run_mesh_utils
-
-
-SCRIPTS = 
+RMUOBJS=meshUtils.o run_mesh_utils.o
+XFILES=run_mesh_utils
 
 all: meshUtils.a ${XFILES}
 
 meshUtils.a: ${SWOBJS} 
-	${AR} -r libmeshUtils.a  ${SWOBJS} 
+	${AR} -r libmeshUtils.a  ${SWOBJS}
+	@${MAKE} libinstall
 
-run_mesh_utils: run_mesh_utils.o
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@  run_mesh_utils.o ${LIBrun}
+run_mesh_utils: ${RMUOBJS}
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${RMUOBJS} ${LIBS}
 
 

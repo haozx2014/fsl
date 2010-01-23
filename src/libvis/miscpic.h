@@ -1,9 +1,8 @@
-
 /*  libpic - collection of image display and rendering routines
 
-    Stephen Smith & Christian Beckmann, FMRIB Image Analysis Group
+    Stephen Smith, Christian Beckmann and Matthew Webster, FMRIB Image Analysis Group
 
-    Copyright (C) 1999-2002 University of Oxford  */
+    Copyright (C) 1999-2009 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -72,20 +71,8 @@
 #define __MISCPIC_h
 
 #include "newimage/newimageall.h"
-#include "miscmaths/miscmaths.h"
 #include <stdarg.h>
 #include "gd.h"
-#include <vector>
-
-#ifndef FALSE
-#define FALSE false
-#endif
-#ifndef TRUE
-#define TRUE true
-#endif
-
-
-using namespace NEWIMAGE;
 
 namespace MISCPIC{
   
@@ -98,8 +85,10 @@ namespace MISCPIC{
       miscpic(){
 	nlut = 0;      
 	compare= 0;
+	writeText=false;
 	LR_label_flag = true;
 	trans= -10;
+	edgethresh = 0.0;
 	if(getenv("FSLDIR")!=0){
 	  lutbase = string(getenv("FSLDIR")) + "/etc/luts/";
 	}
@@ -123,30 +112,12 @@ namespace MISCPIC{
 	if(outim) gdImageDestroy(outim);
       }
 
-      //  int slicer(volume<T> vol1, volume<T> vol2, char *opts, 
-      //		 volumeinfo *volinf, bool debug = FALSE);
-      int slicer(volume<float> vol1, volume<float> vol2, char *opts, 
-      		 volumeinfo *volinf, bool debug = FALSE);
+      int slicer(const NEWIMAGE::volume<float>& vol1,const NEWIMAGE::volume<float>& vol2,const char *opts, bool labelSlices=false, bool debug = false);
+      int slicer(const NEWIMAGE::volume<float>& vol1,const NEWIMAGE::volume<float>& vol2,vector<string> inputOptions, bool labelSlices=false, bool debug = false);
 
-      //inline int slicer(volume<T> vol1, char *opts, volumeinfo *volinf, 
-      //		bool debug = FALSE)
-
-      inline int slicer(volume<float> vol1, char *opts, volumeinfo *volinf, 
-			bool debug = FALSE)
-	{volume<float> tmp(1,1,1); //volume<float> tmp(1,1,1);
-	return this->slicer(vol1, tmp, opts, volinf, debug);}
- 
-
-      //inline int slicer(volume<T> vol1, char *opts, bool debug = FALSE)
-      inline int slicer(volume<float> vol1, char *opts, bool debug = FALSE)
-	{volume<float> tmp(1,1,1);//volume<float> tmp(1,1,1);
-	return this->slicer(vol1, tmp, opts, NULL, debug);}
-   
-      //inline int slicer(volume<T> vol1, volume<T> vol2,char *opts, 
-      inline int slicer(volume<float> vol1, volume<float> vol2,char *opts, 
-			bool debug = FALSE)
-	{return this->slicer(vol1, vol2, opts, NULL, debug);}
-
+      inline int slicer(const NEWIMAGE::volume<float>& vol1, char *opts, bool labelSlices=false, bool debug = false)
+      { NEWIMAGE::volume<float> tmp(1,1,1); 
+	return this->slicer(vol1, tmp, opts, debug);}
       
       int write_png ( char *filename, int x_size, int y_size,	 
  		      unsigned char *r, unsigned char *g, unsigned char *b); 
@@ -173,23 +144,21 @@ namespace MISCPIC{
       void set_minmax(float bgmin, float bgmax, float s1min,
 		  float s1max, float s2min, float s2max);
       
-      //inline int overlay(volume<T>& newvol,
-      inline int overlay(volume<float>& newvol, volume<float>& bg, volume<float>& s1,
-			 volume<float>& s2, float bgmin, float bgmax, float s1min,
+      inline int overlay(NEWIMAGE::volume<float>& newvol, NEWIMAGE::volume<float>& bg, NEWIMAGE::volume<float>& s1,
+			 NEWIMAGE::volume<float>& s2, float bgmin, float bgmax, float s1min,
 			 float s1max, float s2min, float s2max, int colour_type,
-			 int checker, volumeinfo *volinf, 
+			 int checker, 
 			 bool out_int = false, bool debug = false){
 	return this->overlay(newvol, bg, s1, s2, bgmin, bgmax, s1min, 
 			     s1max, s2min, s2max,
-			     colour_type, checker, volinf, 
+			     colour_type, checker, 
 			     string(""), string(""), out_int, debug);
       }
 
-      //inline int overlay(volume<T>& newvol,
-      int overlay(volume<float>& newvol, volume<float>& bg, volume<float>& s1,
-		  volume<float>& s2, float bgmin, float bgmax, float s1min,
+      int overlay(NEWIMAGE::volume<float>& newvol, NEWIMAGE::volume<float>& bg, NEWIMAGE::volume<float>& s1,
+		  NEWIMAGE::volume<float>& s2, float bgmin, float bgmax, float s1min,
 		  float s1max, float s2min, float s2max, int colour_type,
-		  int checker, volumeinfo *volinf, 
+		  int checker, 
 		  string cbarfname, string cbartype, bool out_int = false, 
 		  bool debug = false);
 
@@ -198,7 +167,9 @@ namespace MISCPIC{
       int x_size, y_size, z_size, size, x_size_pic, y_size_pic, 
 	  z_size_pic, nlut, compare, trans;
 
-      bool debug, LR_label_flag;
+      bool debug, LR_label_flag, writeText;
+
+      float edgethresh;
 
       string lut, lutbase, title, cbartype;
 
@@ -208,7 +179,7 @@ namespace MISCPIC{
       unsigned char *picr, *picg, *picb;
 
       //volume<T>  inp1, inp2, imr, img, imb;	  
-      volume<float>  inp1, inp2, imr, img, imb;
+      NEWIMAGE::volume<float>  inp1, inp2, imr, img, imb;
       vector<float> minmax; //will store min and max values for bg and stats images
       //needed for colorbar
 

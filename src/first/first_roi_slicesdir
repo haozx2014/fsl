@@ -132,7 +132,7 @@ while [ $i -le ${num} ] ; do
 done
 
 echo "run slicesdir"
-${FSLDIR}/bin/slicesdir -o ${pairlist}
+${FSLDIR}/bin/slicesdir -o -e -1 ${pairlist}
 
 #remove tmeporrary images
 

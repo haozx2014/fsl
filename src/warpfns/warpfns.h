@@ -70,6 +70,7 @@
 #define __warpfns_h
 
 #include <cstdlib>
+#include <ctime>
 #include <string>
 #include <iostream>
 #include <vector>
@@ -493,7 +494,7 @@ int raw_newimagecoord2newimagecoord(const NEWMAT::Matrix         *M1,
     else {
       NEWMAT::ColumnVector  vd_coord = warps->sampling_mat().i() * coord;
       extrapolation oldex = warps->getextrapolationmethod();
-      if (oldex==boundsassert || oldex==boundsexception) warps->setextrapolationmethod(constpad);
+      if (oldex!=periodic) warps->setextrapolationmethod(extraslice);
       NEWMAT::ColumnVector  dvec(4);
       dvec = 0.0;
       dvec(1) = (*warps)[0].interpolate(vd_coord(1),vd_coord(2),vd_coord(3));
@@ -740,6 +741,13 @@ NEWMAT::ColumnVector inv_coord(const volume4D<float>&      warp,
                      const NEWMAT::Matrix&   postmat);
 
   template <class T>
+  void affine_transform(// Input
+                        const volume<T>&         vin,
+                        const NEWMAT::Matrix&    aff,
+                        // Output
+                        volume<T>&               vout);
+
+  template <class T>
   void affine_transform_3partial(// Input
                                  const volume<T>&       vin,
                                  const NEWMAT::Matrix&  aff,
@@ -906,7 +914,7 @@ NEWMAT::ColumnVector inv_coord(const volume4D<float>&      warp,
                              volume<T>&               out,        // Output volume
                              volume4D<T>&             deriv,      // Partial derivatives. Note that the derivatives are in units
                                                                   // "per voxel".
-                             volume<char>             *infov)     // Mask indicating what voxels fell inside original fov
+                             volume<char>             *valid)     // Mask indicating what voxels fell inside original fov OR that extrapolation is valid
   {
     if (int(defdir.size()) != d.tsize()) {imthrow("NEWIMAGE::raw_general_transform: Mismatch in input. defdir.size() must equal d.tsize()",11);}
     for (int i=0; i<int(defdir.size()); i++) {
@@ -918,7 +926,7 @@ NEWMAT::ColumnVector inv_coord(const volume4D<float>&      warp,
     }
     if (out.nvoxels() <= 0) {imthrow("NEWIMAGE::raw_general_transform: Size of vout must be set",8);}
     if (derivdir.size() && !samesize(out,deriv[0]))  {imthrow("NEWIMAGE::raw_general_transform: vout and deriv must have same dimensions",11);}
-    if (infov && !samesize(out,*infov)) {imthrow("NEWIMAGE::raw_general_transform: vout and infov must have same dimensions",11);}
+    if (valid && !samesize(out,*valid)) {imthrow("NEWIMAGE::raw_general_transform: vout and valid must have same dimensions",11);}
     if (A.Nrows() != 4 || A.Ncols() != 4) {imthrow("NEWIMAGE::raw_general_transform: A must be 4x4 matrix",11);}
     if (TT) {
       if (TT->Nrows() != 4 || TT->Ncols() != 4) {imthrow("NEWIMAGE::raw_general_transform: T must be 4x4 matrix",11);}
@@ -928,9 +936,17 @@ NEWMAT::ColumnVector inv_coord(const volume4D<float>&      warp,
     }
   
     extrapolation oldex = f.getextrapolationmethod();
+    extrapolation d_oldex = extraslice;  // Assign arbitrary value to silence compiler
+    vector<bool>  d_old_epvalidity;
     if ((oldex==boundsassert) || (oldex==boundsexception)) {f.setextrapolationmethod(constpad);}
-    extrapolation d_oldex = d.getextrapolationmethod();
-    d.setextrapolationmethod(extraslice);
+    if (d.tsize()) {
+      d_oldex = d.getextrapolationmethod();
+      if (oldex==periodic) d.setextrapolationmethod(periodic);
+      else d.setextrapolationmethod(extraslice);
+      d_old_epvalidity = d.getextrapolationvalidity();
+      vector<bool> epvalidity = f.getextrapolationvalidity();
+      d.setextrapolationvalidity(epvalidity[0],epvalidity[1],epvalidity[2]);
+    }
 
     // Repackage info about displacement directions in more convenient form
     int xd, yd, zd;
@@ -1024,7 +1040,7 @@ NEWMAT::ColumnVector inv_coord(const volume4D<float>&      warp,
 	    o3=x*A31 + z*A33 + A34;  // y=0
  	    for (int y=0; y<out.ysize(); y++) {
 	      out(x,y,z) = ((T) f.interpolate(o1,o2,o3));
-              if (infov) {infov->operator()(x,y,z) = (f.in_bounds(o1,o2,o3)) ? 1 : 0;}
+              if (valid) {valid->operator()(x,y,z) = (f.valid(o1,o2,o3)) ? 1 : 0;}
 	      o1 += A12;
 	      o2 += A22;
 	      o3 += A32;
@@ -1051,7 +1067,7 @@ NEWMAT::ColumnVector inv_coord(const volume4D<float>&      warp,
                 if (!(yp<0)) {deriv(x,y,z,yp)=((T) tmp2);}
                 if (!(zp<0)) {deriv(x,y,z,zp)=((T) tmp3);}
 	      }
-              if (infov) {infov->operator()(x,y,z) = (f.in_bounds(o1,o2,o3)) ? 1 : 0;}
+              if (valid) {valid->operator()(x,y,z) = (f.valid(o1,o2,o3)) ? 1 : 0;}
 	      o1 += A12;
 	      o2 += A22;
 	      o3 += A32;
@@ -1076,7 +1092,7 @@ NEWMAT::ColumnVector inv_coord(const volume4D<float>&      warp,
                 else oo2 = A21*o1 + A22*o2 + A23*o3 + A24 + d[yd].interpolate(o1,o2,o3); 
                 if (zd<0) oo3 = A31*o1 + A32*o2 + A33*o3 + A34;
                 else oo3 = A31*o1 + A32*o2 + A33*o3 + A34 + d[zd].interpolate(o1,o2,o3);
-                if (infov) infov->operator()(x,y,z) = (d.in_bounds(o1,o2,o3)) ? 1 : 0;   // Label as outside FOV if no info on warp
+                if (valid) valid->operator()(x,y,z) = (d.valid(o1,o2,o3)) ? 1 : 0;   // Label as outside FOV if no info on warp
 	      }
 	      else {
 		o1 = A11*x + A12*y + A13*z + A14;
@@ -1085,7 +1101,7 @@ NEWMAT::ColumnVector inv_coord(const volume4D<float>&      warp,
                 if (xd<0) {oo1=o1;} else {oo1=o1+d(x,y,z,xd);}
                 if (yd<0) {oo2=o2;} else {oo2=o2+d(x,y,z,yd);}
                 if (zd<0) {oo3=o3;} else {oo3=o3+d(x,y,z,zd);}
-                if (infov) infov->operator()(x,y,z) = 1;  // So far, so good
+                if (valid) valid->operator()(x,y,z) = 1;  // So far, so good
 	      }
               o1 = M11*oo1 + M12*oo2 + M13*oo3 + M14;
               o2 = M21*oo1 + M22*oo2 + M23*oo3 + M24;
@@ -1102,7 +1118,7 @@ NEWMAT::ColumnVector inv_coord(const volume4D<float>&      warp,
                 if (!(yp<0)) {deriv(x,y,z,yp)=((T) tmp2);}
                 if (!(zp<0)) {deriv(x,y,z,zp)=((T) tmp3);}
 	      }
-              if (infov) infov->operator()(x,y,z) &= (f.in_bounds(o1,o2,o3)) ? 1 : 0; // Kosher only if in both d and s
+              if (valid) valid->operator()(x,y,z) &= (f.valid(o1,o2,o3)) ? 1 : 0; // Kosher only if valid in both d and s
 	    }
           }
         }
@@ -1121,7 +1137,7 @@ NEWMAT::ColumnVector inv_coord(const volume4D<float>&      warp,
                 else oo2 = A21*o1 + A22*o2 + A23*o3 + A24 + d[yd].interpolate(o1,o2,o3); 
                 if (zd<0) oo3 = A31*o1 + A32*o2 + A33*o3 + A34;
                 else oo3 = A31*o1 + A32*o2 + A33*o3 + A34 + d[zd].interpolate(o1,o2,o3);
-                if (infov) infov->operator()(x,y,z) = (d.in_bounds(o1,o2,o3)) ? 1 : 0;   // Label as outside FOV if no info on warp
+                if (valid) valid->operator()(x,y,z) = (d.valid(o1,o2,o3)) ? 1 : 0;   // Label as outside FOV if no info on warp
 	      }
 	      else {
 		o1 = A11*x + A12*y + A13*z + A14;
@@ -1130,13 +1146,13 @@ NEWMAT::ColumnVector inv_coord(const volume4D<float>&      warp,
                 if (xd<0) {oo1=o1;} else {oo1=o1+d(x,y,z,xd);}
                 if (yd<0) {oo2=o2;} else {oo2=o2+d(x,y,z,yd);}
                 if (zd<0) {oo3=o3;} else {oo3=o3+d(x,y,z,zd);}
-                if (infov) infov->operator()(x,y,z) = 1;  // So far, so good
+                if (valid) valid->operator()(x,y,z) = 1;  // So far, so good
 	      }
               o1 = M11*oo1 + M12*oo2 + M13*oo3 + M14;
               o2 = M21*oo1 + M22*oo2 + M23*oo3 + M24;
               o3 = M31*oo1 + M32*oo2 + M33*oo3 + M34;
 	      out(x,y,z) = ((T) f.interpolate(o1,o2,o3));
-              if (infov) infov->operator()(x,y,z) &= (f.in_bounds(o1,o2,o3)) ? 1 : 0; // Kosher only if in both d and s
+              if (valid) valid->operator()(x,y,z) &= (f.valid(o1,o2,o3)) ? 1 : 0; // Kosher only if valid in both d and s
 	    }
           }
         }
@@ -1195,8 +1211,10 @@ NEWMAT::ColumnVector inv_coord(const volume4D<float>&      warp,
     
     // restore settings and return
     f.setextrapolationmethod(oldex);
-    d.setextrapolationmethod(d_oldex);
- 
+    if (d.tsize()) {
+      d.setextrapolationmethod(d_oldex);
+      d.setextrapolationvalidity(d_old_epvalidity[0],d_old_epvalidity[1],d_old_epvalidity[2]); 
+    }
    // All done!  
   }
 
@@ -1335,6 +1353,20 @@ NEWMAT::ColumnVector inv_coord(const volume4D<float>&      warp,
   // raw_general_transform that may be convenient for certain
   // specific applications.
 
+  template <class T>
+  void affine_transform(// Input
+                        const volume<T>&         vin,
+                        const NEWMAT::Matrix&    aff,
+                        // Output
+                        volume<T>&               vout)
+  {
+    volume4D<float>  pdf;
+    vector<int>      pdefdir;
+    volume4D<float>  deriv;
+    vector<int>      pderivdir;
+
+    raw_general_transform(vin,aff,pdf,pdefdir,pderivdir,vout,deriv);
+  }
   template <class T>
   void affine_transform_3partial(// Input
                                  const volume<T>&             vin,

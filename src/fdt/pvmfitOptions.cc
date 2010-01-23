@@ -1,6 +1,6 @@
-/*  Log.cc
+/*  pvmfitOptions.cc
 
-    Mark Woolrich, FMRIB Image Analysis Group
+    Saad Jbabdi, FMRIB Image Analysis Group
 
     Copyright (C) 1999-2000 University of Oxford  */
 
@@ -66,45 +66,39 @@
     University, to negotiate a licence. Contact details are:
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
-#include "Log.h"
+#define WANT_STREAM
+#define WANT_MATH
 
-using namespace UTILS;
-namespace UTILS {
+#include <iostream>
+#include <fstream>
+#include <stdlib.h>
+#include <stdio.h>
+#include "pvmfitOptions.h"
+#include "utils/options.h"
+//#include "newmat.h"
+using namespace Utilities;
 
-  Log* Log::logger = NULL;
+namespace PVMFIT {
+
+pvmfitOptions* pvmfitOptions::gopt = NULL;
+
+bool pvmfitOptions::parse_command_line(int argc, char** argv)
+{
+
   
-  void Log::establishDir(const string& name) 
+  for(int a = options.parse_command_line(argc, argv); a < argc; a++)
+    ;
+  if(help.value() || ! options.check_compulsory_arguments())
     {
-      dir = name;
-      
-      // make directory to place results into:
-      // keep adding "+" until directory is made:
-      while(true)
-	{
-	  int ret = system(("mkdir "+ dir).c_str());
-	  if(ret == 0)
-	    {
-	      break;
-	    }
-	  dir = dir + "+";
-	}
-      
-      cerr << "Results are in directory " + dir << endl;
-
-      // setup logfile
-      logfileout.open((dir + "/" + logfilename).c_str(), ios::out);
-    }
-
-void Log::setDir(const string& name) 
-    {
-      dir = name;
-      
-      cerr << "Results are in directory " + dir << endl;
-
-      // setup logfile
-      logfileout.open((dir + "/" + logfilename).c_str(), ios::out);
-    }
+      options.usage();
+      //throw NEWMAT::Exception("Not all of the compulsory arguments have been provided");
+      return false;
+    }      
+  return true;
 }
+
+}
+
 
 
 

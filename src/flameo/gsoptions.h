@@ -108,13 +108,13 @@ namespace Gs {
     Option<bool> infer_outliers;
     Option<bool> no_pe_output;
     Option<string> runmode;
-    Option<string> model_select_mode;
     Option<int> seed;
     Option<vector<int> > voxelwise_ev_numbers;
     Option<vector<string> > voxelwise_ev_filenames;
     Option<float> sigma_smooth_flame2_dofs;
     Option<float> sigma_smooth_globalproboutlier;
     Option<int> io_niters;
+    Option<bool> outputDof;
   
     void parse_command_line(int argc, char** argv, Log& logger);
   
@@ -203,9 +203,6 @@ namespace Gs {
     runmode(string("--runmode"), string(""), 
 	    string("Inference to perform: runmode=fe (fixed effects), runmode=ols (mixed effects - OLS), runmode=flame1 (mixed effects - FLAME stage 1), runmode=flame12 (mixed effects - FLAME stage 1+2)"), 
 	    true, requires_argument),
-    model_select_mode(string("--msm"), string("aic"), 
-	    string("Model select mode. One of bic, aic, loglik. aic is default"), 
-	    false, requires_argument),
     seed(string("--seed"), 10, 
 	 string("seed for pseudo random number generator"), 
 	 false, requires_argument),
@@ -221,9 +218,12 @@ namespace Gs {
     sigma_smooth_globalproboutlier(string("--so"), -1,
 				   string(""),
 	 false, requires_argument),
-    io_niters(string("--ioni"), 10,
-				   string("Number of max iterations to use when inferring outliers. Default is 10."),
+    io_niters(string("--ioni"), 12,
+				   string("Number of max iterations to use when inferring outliers. Default is 12."),
 	 false, requires_argument),
+    outputDof(string("--outputdof"), false, 
+	    string("output dof for lower-level compatibility usage"), 
+	    false, no_argument),
     options("flameo"," flameo --cope=filtered_func_data --mask=mask --dm=design.mat --tc=design.con --cs=design.grp --runmode=ols\n flameo --cope=filtered_func_data --varcope=var_filtered_func_data --mask=mask --dm=design.mat --tc=design.con --cs=design.grp --runmode=flame1")
   {
     try {
@@ -249,13 +249,13 @@ namespace Gs {
       options.add(infer_outliers);
       options.add(no_pe_output);
       options.add(runmode);
-      options.add(model_select_mode);
       options.add(seed);
       options.add(voxelwise_ev_numbers);
       options.add(voxelwise_ev_filenames);
       options.add(sigma_smooth_flame2_dofs);
       options.add(sigma_smooth_globalproboutlier);
       options.add(io_niters);
+      options.add(outputDof);
     }
     catch(X_OptionError& e) {
       options.usage();
