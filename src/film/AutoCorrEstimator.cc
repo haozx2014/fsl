@@ -319,7 +319,7 @@ namespace FILM {
     {
       int usanthresh = 100;      
       int num = epivol.Nrows();
-      Histogram hist(epivol, num/200);
+      Histogram hist(epivol, max(num/200,1));
       hist.generate();
       float mode = hist.mode();
       cerr << "mode = " << mode << endl;

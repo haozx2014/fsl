@@ -98,6 +98,10 @@ if [ -f $output ] ; then
 fi
 
 listfile=`$FSLDIR/bin/tmpnam`_bvars
-ls -1 $@ > ${listfile}.txt
+if [ -f ${listfile}.txt ] ; then rm -f ${listfile}.txt ; fi
+touch ${listfile}.txt
+for fn in $@ ; do
+  echo $fn >> ${listfile}.txt
+done
 $FSLDIR/bin/first_utils --concatBvars -i ${listfile}.txt -o $output
 rm -f ${listfile}.txt

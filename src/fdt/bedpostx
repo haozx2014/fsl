@@ -116,6 +116,7 @@ fudge=1
 burnin=1000
 njumps=1250
 sampleevery=25
+model=1
 while [ ! -z "$2" ]
 do
   case "$2" in
@@ -124,6 +125,7 @@ do
       -b) burnin=$3;shift;;
       -j) njumps=$3;shift;;
       -s) sampleevery=$3;shift;;
+      -model) model=$3;shift;;
       *) break;;
   esac
   shift
@@ -178,6 +180,7 @@ nslices=`${FSLDIR}/bin/fslval ${subjdir}/data dim3`
 # Don't be SGE-specific -- rely on FSLPARALLEL
 #if [ "x$SGE_ROOT" = "x" ]; then
 if [ "x$FSLPARALLEL" = "x" ]; then
+
 # 
 # Need to set off a backgrounded monitoring task
 # 
@@ -185,24 +188,50 @@ if [ "x$FSLPARALLEL" = "x" ]; then
 #!/bin/sh
 finished=0
 logdir=${subjdir}.bedpostX/logs
-while [ \$finished -eq 0 ] ; do
-    nfin=0
-    slice=0
-    while [ "\$slice" -le $nslices ];do
-        slicezp=\`$FSLDIR/bin/zeropad \$slice 4\`
-        if [ -f ${subjdir}.bedpostX/diff_slices/data_slice_\$slicezp/dyads2.nii.gz ];then
-          nfin=\$((\$nfin + 1))
+
+check() {
+    if [ \$finished -eq 1 ];then
+        echo "\$nfin slices processed"
+    else
+        nfin=0
+        slice=0
+        while [ "\$slice" -le $nslices ];do
+            slicezp=\`\$FSLDIR/bin/zeropad \$slice 4\`
+            isimg=\`\$FSLDIR/bin/imtest ${subjdir}.bedpostX/diff_slices/data_slice_\$slicezp/dyads1\`
+            if [ \$isimg -eq 1 ];then
+                nfin=\$((\$nfin + 1))
+            fi
+                slice=\$((\$slice + 1))
+        done
+        if [ \$nfin -eq $nslices ] ; then
+            finished=1
         fi
-        slice=\$((\$slice + 1))
-    done
-
-    if [ \$nfin -eq $nslices -a -f ${subjdir}.bedpostX/xfms/eye.mat ] ; then
-        finished=1
+        echo "\$nfin slices processed"
     fi
+}
+exit_test() {
+    isimg=\`\$FSLDIR/bin/imtest ${subjdir}.bedpostX/dyads1\`
+    if [ \$isimg -eq 0 ] ; then
+	echo For some reason the bedpostX process DOES NOT appear
+	echo to have successfully completed. Please examine your
+	echo results carefully.
+    else
+	echo All slices processed
+    fi
+}
 
-    echo "\$nfin slices processed"
-    sleep 600;
+check
+n=0
+while [ \$finished -eq 0 ] ; do
+    sleep 10
+    if [ \$n -eq 60 ] ; then
+        check
+        n=0
+    else
+        n=\$((\$n + 1))
+    fi
 done
+exit_test
 EOM
     chmod +x ${subjdir}.bedpostX/monitor
     ${subjdir}.bedpostX/monitor&
@@ -212,10 +241,10 @@ slice=0
 while [ $slice -lt $nslices ]
 do
     slicezp=`$FSLDIR/bin/zeropad $slice 4`
-    if [ -f ${subjdir}.bedpostX/diff_slices/data_slice_$slicezp/dyads2.nii.gz ];then
+    if [ `$FSLDIR/bin/imtest ${subjdir}.bedpostX/diff_slices/data_slice_$slicezp/dyads1` -eq 1 ];then
 	echo "slice $slice has already been processed"
     else
-	echo "${FSLDIR}/bin/bedpostx_single_slice.sh $subjdir $nfibres $fudge $burnin $njumps $sampleevery $slice" \
+	echo "${FSLDIR}/bin/bedpostx_single_slice.sh $subjdir $nfibres $fudge $burnin $njumps $sampleevery $model $slice" \
 	    >> ${subjdir}.bedpostX/commands.txt
     fi
     slice=$(($slice + 1))
@@ -223,9 +252,6 @@ done
 # don't specify a mailto address, but rely on fsl_sub doing it
 #bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -l ${subjdir}.bedpostX/logs -M $mailto -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
 bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -l ${subjdir}.bedpostX/logs -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
-# Don't be SGE-specific -- rely on FSLPARALLEL
-#[ "x$SGE_ROOT" = "x" ] && kill $monitorpid
-[ "x$FSLPARALLEL" = "x" ] && kill $monitorpid
 
 echo Queuing post processing stage
 # don't setup email options, rely on fsl_sub's setting
@@ -233,7 +259,9 @@ echo Queuing post processing stage
 mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -T 60 -N bpx_postproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_postproc.sh $subjdir`
 
 # Don't be SGE-specific -- rely on FSLPARALLEL
+#[ "x$SGE_ROOT" = "x" ] && kill -USR1 $monitorpid
 #if [ "x$SGE_ROOT" != "x" ]; then
+[ "x$FSLPARALLEL" = "x" ] && kill -USR1 $monitorpid
 if [ "x$FSLPARALLEL" != "x" ]; then
     echo
     echo Type ${subjdir}.bedpostX/monitor to show progress.
@@ -245,18 +273,20 @@ while [ \$finished -eq 0 ] ; do
     nfin=0
     slice=0
     while [ "\$slice" -le $nslices ];do
-        slicezp=\`$FSLDIR/bin/zeropad \$slice 4\`
-        if [ -f ${subjdir}.bedpostX/diff_slices/data_slice_\$slicezp/dyads2.nii.gz ];then
+        slicezp=\`\$FSLDIR/bin/zeropad \$slice 4\`
+        isimg=\`\$FSLDIR/bin/imtest ${subjdir}.bedpostX/diff_slices/data_slice_\$slicezp/dyads1\`
+        if [ \$isimg -eq 1 ];then
           nfin=\$((\$nfin + 1))
         fi
         slice=\$((\$slice + 1))
     done
+    echo "\$nfin slices processed"
 
-    if [ \$nfin -eq $nslices -a -f ${subjdir}.bedpostX/xfms/eye.mat ] ; then
+    if [ -f ${subjdir}.bedpostX/xfms/eye.mat ] ; then
         finished=1
+        echo "All slices processed"
     fi
 
-    echo "\$nfin slices processed"
     sleep 600;
 done
 EOM

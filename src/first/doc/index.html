@@ -125,7 +125,9 @@ FSLView).
 <p>
 If another boundary correction method is specified, the
 name <b>fast</b> in this filename will change to reflect the boundary
-correction that is used.
+correction that is used.  Note that if only one structure is specified
+then this file will be called <b>output_name-struct_corr.nii.gz</b>
+instead (e.g. <code>sub001-L_Caud_corr.nii.gz</code>).
 
 <p><LI><b>output_name_all_fast_origsegs.nii.gz</b> : This is a 4D image
 containing the individual structure segmentations, converted directly
@@ -134,7 +136,9 @@ correction.  For each structure there is an individual 3D image where
 the interior is labeled according to
 the <a href="./cma_subcortical_label.html">CMA standard labels</a>
 while the boundary uses these label values plus
-100.
+100. Note that if only one structure is specified
+then this file will be called <b>output_name-struct_first.nii.gz</b>
+instead (e.g. <code>sub001-L_Caud_first.nii.gz</code>).
 
 <p><LI><b>output_name_first.vtk</b> : This is the mesh representation of the
 final segmentation.  It can be directly viewed in FSLView using 3D
@@ -657,7 +661,7 @@ the <code>Glm</code> GUI).
 norm.txt</b>. It allows for the scaling of each volume measure (as
 specified by norm.txt) prior to running the GLM.  The output volumes
 will be the scaled volumes. The typical used for this option would be
-to normalize for head size.<!--- Give example of how to get this and which way around it is used !--->
+to normalize for head size.
 <p><LI> The reconstruction and alignment options are the same as for the above.
 </UL>
 
@@ -669,6 +673,22 @@ using <code>fslstats</code> and perform the statistics externally
 </UL>
 
 !--->
+
+<hr>
+<p><a name="volumeana"><H2>Volumetric Analysis</H2></a>
+
+<UL>
+<p>Currently, to perform volumetric analysis 
+it is necessary to determine the label number of the structure of interest and use <code>fslstats</code> to measure the volume.  Other software
+(e.g. SPSS or MATLAB) needs to be used to analyse the volume measurements.
+
+<p>To find the label number, load the <code>output_name_*_firstseg.nii.gz</code> image into FSLView, click on a voxel in the structure of interest and the label number will be the number in the Intensity box.  Alternatively, you can find the number from the 
+<a href="./cma_subcortical_label.html">CMA standard labels</a>.
+
+<p>Once you have the label number you can measure the volume using <code>fslstats</code> with the threshold options to select out just the single label number (by using <code>-l</code> and <code>-u</code> with -/+0.5 from the desired label number).  For example, if the label number is 17 (Left Hippocampus) then you can use the following command:
+<br><code>fslstats output_name_all_fast_firstseg -l 16.5 -u 17.5 -V</code>
+<br>where the first number of the output is the number of voxels and the second is the volume in mm<sup>3</sup>.
+</UL>
 
 <a name="Models"></a><p><hr><H2>Models</H2>
 

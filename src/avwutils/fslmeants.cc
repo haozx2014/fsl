@@ -83,7 +83,7 @@ using namespace Utilities;
 // The two strings below specify the title and example usage that is
 //  printed out as the help or usage message
 
-string title="fslmeants (Version 1.1)\nCopyright(c) 2004, University of Oxford (Mark Jenkinson)\nPrints average timeseries (intensities) to the screen (or saves to a file).\nThe average is taken over all voxels in the mask (or all voxels in the image if no mask is specified).\n";
+string title="fslmeants (Version 1.2)\nCopyright(c) 2004-2009, University of Oxford (Mark Jenkinson, Christian F. Beckmann)\nPrints average timeseries (intensities) to the screen (or saves to a file).\nThe average is taken over all voxels in the mask (or all voxels in the image if no mask is specified).\n";
 string examples="fslmeants -i filtered_func_data -o meants.txt -m my_mask\nfslmeants -i filtered_func_data -m my_mask\nfslmeants -i filtered_func_data -c 24 19 10";
 
 // Each (global) object below specificies as option and can be accessed
@@ -115,8 +115,20 @@ Option<string> outmat(string("-o"), string(""),
 		  string("~<filename>\toutput text matrix"),
 		  false, requires_argument);
 Option<float> coordval(string("-c"), 0.0,
-		       string("~<x y z>\trequested spatial coordinate (instead of mask)"), 
-		       false, requires_3_arguments);
+		  string("~<x y z>\trequested spatial coordinate (instead of mask)"), 
+		  false, requires_3_arguments);
+Option<bool> eig(string("--eig"), false,
+		  string("        calculate Eigenvariate(s) instead of mean (output will have 0 mean)"),
+		  false, no_argument);
+Option<bool> bin_mask(string("--no_bin"), true,
+			  string("        do not binarise the mask for calculation of Eigenvariates"),
+			  false, no_argument);
+Option<int> order(string("--order"), 1,
+		  string("        select number of Eigenvariates (default 1)"),
+		  false, requires_argument);
+Option<bool> transpose(string("--transpose"), false,
+		  string("        output results in transpose format (one row per voxel/mean)"),
+		  false, no_argument);
 
 int nonoptarg;
 
@@ -134,6 +146,10 @@ int main(int argc,char *argv[])
   options.add(coordval);
   options.add(usemm);
   options.add(showall);
+  options.add(eig);
+  options.add(order);
+  options.add(bin_mask);
+  options.add(transpose);
   options.add(verbose);
   options.add(help);
   
@@ -154,6 +170,7 @@ int main(int argc,char *argv[])
   read_volume4D(vin,inname.value());
 
   volume<float> mask;
+  volume4D<float> mask_nonbin;
   if (maskname.set()) {
     read_volume(mask,maskname.value());
   } else {
@@ -189,55 +206,91 @@ int main(int argc,char *argv[])
     return -1;
   }
 
+  mask_nonbin.addvolume(mask);
   mask.binarise(1e-8);  // arbitrary "0" threshold
 
-  int nt = vin.tsize();
-  int nvox = 1;
-  if (showall.value()) {
-    nvox = MISCMATHS::round(mask.sum()+0.5);
-    nt += 3;
+  if(eig.value()){
+    Matrix dat, evecs, scales;
+    scales = mask_nonbin.matrix(mask);
+    dat = vin.matrix(mask);
+    if(!bin_mask.value())
+      dat = SP (dat, ones(dat.Nrows(),1) * scales);
+    dat = remmean(dat,1);
+    
+    if (verbose.value()) {
+      cout << "Number of voxels used = " << dat.Ncols() << endl;
+    }
+    
+    SymmetricMatrix Corr;
+    Corr << dat * dat.t() / dat.Ncols();
+    DiagonalMatrix tmpD;
+    EigenValues(Corr,tmpD,evecs);	
+    evecs = fliplr(evecs.Columns(evecs.Ncols()-order.value()+1 , evecs.Ncols())) * std::sqrt(dat.Nrows());
+    
+    Matrix res2 = mean(dat,2);
+    res2 = res2.Column(1).t() * evecs.Column(1);
+    
+    if((float)res2.AsScalar()<0)  
+      evecs = -1.0 * evecs;
+    
+    if (transpose.value()) { evecs=evecs.t(); }
+    if (outmat.set()) {
+      write_ascii_matrix(evecs,outmat.value());
+    } else {
+      cout << evecs << endl;
+    }
+    if (transpose.value()) { evecs=evecs.t(); }
   }
-  Matrix meants(nt,nvox);
-  meants = 0;
-  long int num=0;
-
-  for (int z=mask.minz(); z<=mask.maxz(); z++) {
-    for (int y=mask.miny(); y<=mask.maxy(); y++) {
-      for (int x=mask.minx(); x<=mask.maxx(); x++) {
-	if (mask(x,y,z)>0.5) {
-	  num++;
-	  if (showall.value()) {
-	    ColumnVector v(4);
-	    v << x << y << z << 1.0;
-	    v = (vin[0].niftivox2newimagevox_mat()).i() * v;
-	    meants(1,num) = v(1);
-	    meants(2,num) = v(2);
-	    meants(3,num) = v(3);
-	    meants.SubMatrix(4,nt,num,num) = vin.voxelts(x,y,z);
-	  } else {
-	    meants += vin.voxelts(x,y,z);
+  else{	
+    int nt = vin.tsize();
+    int nvox = 1;
+    if (showall.value()) {
+      nvox = MISCMATHS::round(mask.sum());
+      nt += 3;
+    }
+    Matrix meants(nt,nvox);
+    meants = 0;
+    long int num=0;
+    
+    for (int z=mask.minz(); z<=mask.maxz(); z++) {
+      for (int y=mask.miny(); y<=mask.maxy(); y++) {
+        for (int x=mask.minx(); x<=mask.maxx(); x++) {
+	  if (mask(x,y,z)>0.5) {
+	    num++;
+	    if (showall.value()) {
+	      ColumnVector v(4);
+	      v << x << y << z << 1.0;
+	      v = (vin[0].niftivox2newimagevox_mat()).i() * v;
+	      meants(1,num) = v(1);
+	      meants(2,num) = v(2);
+	      meants(3,num) = v(3);
+	      meants.SubMatrix(4,nt,num,num) = vin.voxelts(x,y,z);
+	    } else {
+	      meants += vin.voxelts(x,y,z);
+	    }
 	  }
-	}
+        }
       }
     }
+    
+    if (verbose.value()) {
+      cout << "Number of voxels used = " << num << endl;
+    }
+    
+    // normalise for number of valid entries if averaging
+    if (!showall.value()) {
+      if (num>0) meants /= (float) num;
+    }
+    
+    // save the result
+    if (transpose.value()) { meants=meants.t(); }
+    if (outmat.set()) {
+      write_ascii_matrix(meants,outmat.value());
+    } else {
+      cout << meants << endl;
+    }
+    if (transpose.value()) { meants=meants.t(); }
   }
-
-  if (verbose.value()) {
-    cout << "Number of voxels used = " << num << endl;
-  }
-
-  // normalise for number of valid entries if averaging
-  if (!showall.value()) {
-    if (num>0) meants /= (float) num;
-  }
-
-  // save the result
-  if (outmat.set()) {
-    write_ascii_matrix(meants,outmat.value());
-  } else {
-    cout << meants << endl;
-  }
-
   return 0;
 }
 

@@ -90,16 +90,14 @@ Usage() {
 
 
 # deal with options
-structs="L_Accu L_Amyg L_Caud L_Hipp L_Late L_Pall L_Puta L_Thal R_Accu R_Amyg R_Caud R_Hipp R_Late R_Pall R_Puta R_Thal BrStem";
+structs="L_Accu L_Amyg L_Caud L_Hipp L_Pall L_Puta L_Thal R_Accu R_Amyg R_Caud R_Hipp R_Pall R_Puta R_Thal BrStem";
 BETdone=no;
 verbose=no;
 doReg=yes;
 bmeth=auto;
 cleanUp=yes;
 
-GETOPT_COMPATIBLE=
-POSIXLY_CORRECT=
-export GETOPT_COMPATIBLE POSIXLY_CORRECT
+
 if [ $# -eq 0 ] ; then Usage; exit 0; fi
 # also accept old syntax for now (without -b option): <input_image> <threshold> <output_image>
 if [ $# -eq 3 ] ; then
@@ -249,13 +247,13 @@ for s in $structs; do
     imsfirst="${imsfirst} ${imfirst}"
     if [ $intref = 0 ] ; then 
 	if [ $bcorr -eq 1 ] ; then 
-	    printf "${FSLDIR}/bin/run_first -i $iname -t ${affmat} -n $nmodes -o ${imfirst} -m ${FSLDIR}/data/first/models_${modelN}_bin/${s}_bin.bmv" >> $COM
+	    ${FSLDIR}/bin/fslecho "${FSLDIR}/bin/run_first -i $iname -t ${affmat} -n $nmodes -o ${imfirst} -m ${FSLDIR}/data/first/models_${modelN}_bin/${s}_bin.bmv\c" >> $COM
 	else
-	    printf "${FSLDIR}/bin/run_first -i $iname -t ${affmat} -n $nmodes -o ${imfirst} -m ${FSLDIR}/data/first/models_${modelN}_bin/05mm/${s}_05mm.bmv" >> $COM
+	    ${FSLDIR}/bin/fslecho "${FSLDIR}/bin/run_first -i $iname -t ${affmat} -n $nmodes -o ${imfirst} -m ${FSLDIR}/data/first/models_${modelN}_bin/05mm/${s}_05mm.bmv\c" >> $COM
 	fi
     else
 	S_CUT=`awk 'BEGIN {print substr("'$s'",1,1)}'`
-	printf "${FSLDIR}/bin/run_first -i $iname -t ${affmat} -n $nmodes -o ${imfirst} -m ${FSLDIR}/data/first/models_${modelN}_bin/intref_thal/${s}.bmv -intref ${FSLDIR}/data/first/models_336_bin/05mm/${S_CUT}_Thal_05mm.bmv" >> $COM
+	${FSLDIR}/bin/fslecho "${FSLDIR}/bin/run_first -i $iname -t ${affmat} -n $nmodes -o ${imfirst} -m ${FSLDIR}/data/first/models_${modelN}_bin/intref_thal/${s}.bmv -intref ${FSLDIR}/data/first/models_336_bin/05mm/${S_CUT}_Thal_05mm.bmv\c" >> $COM
     fi
     
     imcorr="${oname}-${s}_corr"
@@ -269,7 +267,7 @@ for s in $structs; do
 	btype=$bmeth;
 	if [ $bmeth = thresh ] ; then btype="thresh -t $thresh"; fi
     fi
-    echo "; ${FSLDIR}/bin/first_boundary_corr -s ${imfirst} -o ${imcorr} -i $iname -b $btype" >> $COM
+   ${FSLDIR}/bin/fslecho "; ${FSLDIR}/bin/first_boundary_corr -s ${imfirst} -o ${imcorr} -i $iname -b $btype" >> $COM
 done
 
 if [ $verbose = yes ] ; then cat $COM ; fi
@@ -284,7 +282,7 @@ fi
 
 numstruct=`echo $structs | wc -w`;
 if [ $numstruct -gt 1 ] ; then 
-    echo "${FSLDIR}/bin/fslmerge -t ${oname}_all_${methname}_firstseg ${imscorr} ; ${FSLDIR}/bin/fslmerge -t ${oname}_all_${methname}_origsegs ${imsfirst} ; ${FSLDIR}/bin/first_mult_bcorr -i $iname -u ${oname}_all_${methname}_origsegs -c ${oname}_all_${methname}_firstseg -o ${oname}_all_${methname}_firstseg" > ${COM}2
+    ${FSLDIR}/bin/fslecho "${FSLDIR}/bin/fslmerge -t ${oname}_all_${methname}_firstseg ${imscorr} ; ${FSLDIR}/bin/fslmerge -t ${oname}_all_${methname}_origsegs ${imsfirst} ; ${FSLDIR}/bin/first_mult_bcorr -i $iname -u ${oname}_all_${methname}_origsegs -c ${oname}_all_${methname}_firstseg -o ${oname}_all_${methname}_firstseg" > ${COM}2
     if [ $verbose = yes ] ; then cat ${COM}2 ; fi
     MERGEID=`$FSLDIR/bin/fsl_sub -l $logdir -T 15 -N first_post -j $FIRSTID -t ${COM}2`
     MERGEHOLD="-j $MERGEID"

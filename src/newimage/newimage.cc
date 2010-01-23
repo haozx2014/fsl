@@ -133,6 +133,13 @@ namespace NEWIMAGE {
   template <class T>
   ColumnVector calc_histogram(const volume4D<T>& vol, const volume<T>& mask);
 
+  template<class T>
+  SPLINTERPOLATOR::Splinterpolator<T> calc_spline_coefs(const volume<T>& vol);
+
+  // Declaration of helper functions.
+
+  SPLINTERPOLATOR::ExtrapolationType translate_extrapolation_type(extrapolation ep);
+  
   // CONSTRUCTORS (not including copy constructor - see under copying)
 
   template <class T>
@@ -202,6 +209,7 @@ namespace NEWIMAGE {
       principleaxes.init(this,calc_principleaxes);
       percentiles.init(this,calc_percentiles);
       l_histogram.init(this,calc_histogram);
+      splint.init(this,calc_spline_coefs);
       HISTbins=256;
       HISTmin=(T) 0;
       HISTmax=(T) 0;
@@ -220,13 +228,17 @@ namespace NEWIMAGE {
 
       p_interpmethod = trilinear;
       p_extrapmethod = zeropad;
+      splineorder = 3;
       padvalue = (T) 0;
       extrapval = padvalue;
       p_userinterp = 0;
       p_userextrap = 0;
+      ep_valid.resize(3);
+      ep_valid[0] = false; ep_valid[1] = false; ep_valid[2] = false;
 
       displayMaximum=0;
       displayMinimum=0;
+      strncpy(auxFile,string("").c_str(),24);
 
       set_whole_cache_validity(false);
     }
@@ -581,6 +593,12 @@ namespace NEWIMAGE {
       }
     }
 
+  template<class T>
+  void volume<T>::setsplineorder(unsigned int order) const
+  {
+    if (order > 7) imthrow("setsplineorder: Only splines of order up to 7 allowed",10);
+    splineorder = order;
+  }
 
   template <class T>
   bool in_neigh_bounds(const volume<T>& vol, int x, int y, int z)
@@ -688,74 +706,79 @@ namespace NEWIMAGE {
                                   float  *pderiv)               // Derivative returned here
   const
   {
-    if (p_interpmethod != trilinear) {
-      imthrow("Derivatives only implemented for trilinear interpolation",10);
+    if (getinterpolationmethod() != trilinear && getinterpolationmethod() != spline) {
+      imthrow("Derivatives only implemented for tri-linear and spline interpolation",10);
     }
     if (dir < 0 || dir > 2) {
       imthrow("Ivalid derivative direction",11);
     }
-    int ix = ((int) floor(x));
-    int iy = ((int) floor(y));
-    int iz = ((int) floor(z));
-    float dx = x - ((float) ix);
-    float dy = y - ((float) iy);
-    float dz = z - ((float) iz);
-    float v000, v001, v010, v011, v100, v101, v110, v111;
-    if (!in_neigh_bounds(*this,ix,iy,iz)) {   // We'll have to do some extrapolation
-      v000 = (float) this->operator()(ix,iy,iz);
-      v001 = (float) this->operator()(ix,iy,iz+1);
-      v010 = (float) this->operator()(ix,iy+1,iz);
-      v011 = (float) this->operator()(ix,iy+1,iz+1);
-      v100 = (float) this->operator()(ix+1,iy,iz);
-      v101 = (float) this->operator()(ix+1,iy,iz+1);
-      v110 = (float) this->operator()(ix+1,iy+1,iz);
-      v111 = (float) this->operator()(ix+1,iy+1,iz+1);
+    if (getinterpolationmethod() == trilinear) {
+      int ix = ((int) floor(x));
+      int iy = ((int) floor(y));
+      int iz = ((int) floor(z));
+      float dx = x - ((float) ix);
+      float dy = y - ((float) iy);
+      float dz = z - ((float) iz);
+      float v000, v001, v010, v011, v100, v101, v110, v111;
+      if (!in_neigh_bounds(*this,ix,iy,iz)) {   // We'll have to do some extrapolation
+	v000 = (float) this->operator()(ix,iy,iz);
+	v001 = (float) this->operator()(ix,iy,iz+1);
+	v010 = (float) this->operator()(ix,iy+1,iz);
+	v011 = (float) this->operator()(ix,iy+1,iz+1);
+	v100 = (float) this->operator()(ix+1,iy,iz);
+	v101 = (float) this->operator()(ix+1,iy,iz+1);
+	v110 = (float) this->operator()(ix+1,iy+1,iz);
+	v111 = (float) this->operator()(ix+1,iy+1,iz+1);
+      }
+      else {
+	T t000, t001, t010, t011, t100, t101, t110, t111;
+	this->getneighbours(ix,iy,iz,t000,t001,t010,t011,t100,t101,t110,t111);
+	v000 = ((float) t000); v001 = ((float) t001); v010 = ((float) t010);  
+	v011 = ((float) t011); v100 = ((float) t100); v101 = ((float) t101);  
+	v110 = ((float) t110); v111 = ((float) t111); 
+      }
+      // The (seemingly silly) code multiplication below is to
+      // ensure that in no case does calculating one of the partials
+      // neccessitate any calculation over and above just calculating
+      // the interpolated value.
+      float tmp11, tmp12, tmp13, tmp14;
+      float tmp21, tmp22;
+      if (dir == 0) {            // df/dx
+	float onemdz = 1.0-dz;
+	tmp11 = onemdz*v000 + dz*v001;
+	tmp12 = onemdz*v010 + dz*v011;
+	tmp13 = onemdz*v100 + dz*v101;
+	tmp14 = onemdz*v110 + dz*v111;
+	tmp21 = (1.0-dy)*tmp11 + dy*tmp12;
+	tmp22 = (1.0-dy)*tmp13 + dy*tmp14;
+	*pderiv = tmp22 - tmp21;
+	return((1.0-dx)*tmp21 + dx*tmp22);
+      }
+      else if (dir == 1) {       // df/dy 
+	float onemdz = 1.0-dz;
+	tmp11 = onemdz*v000 + dz*v001;
+	tmp12 = onemdz*v010 + dz*v011;
+	tmp13 = onemdz*v100 + dz*v101;
+	tmp14 = onemdz*v110 + dz*v111;
+	tmp21 = (1.0-dx)*tmp11 + dx*tmp13;
+	tmp22 = (1.0-dx)*tmp12 + dx*tmp14;
+	*pderiv = tmp22 - tmp21;
+	return((1.0-dy)*tmp21 + dy*tmp22);
+      }
+      else if (dir == 2) {       // df/dz
+	float onemdy = 1.0-dy;
+	tmp11 = onemdy*v000 + dy*v010;
+	tmp12 = onemdy*v001 + dy*v011;
+	tmp13 = onemdy*v100 + dy*v110;
+	tmp14 = onemdy*v101 + dy*v111;
+	tmp21 = (1.0-dx)*tmp11 + dx*tmp13;
+	tmp22 = (1.0-dx)*tmp12 + dx*tmp14;
+	*pderiv = tmp22 - tmp21;
+	return((1.0-dz)*tmp21 + dz*tmp22);
+      }
     }
-    else {
-      T t000, t001, t010, t011, t100, t101, t110, t111;
-      this->getneighbours(ix,iy,iz,t000,t001,t010,t011,t100,t101,t110,t111);
-      v000 = ((float) t000); v001 = ((float) t001); v010 = ((float) t010);  
-      v011 = ((float) t011); v100 = ((float) t100); v101 = ((float) t101);  
-      v110 = ((float) t110); v111 = ((float) t111); 
-    }
-    // The (seemingly silly) code multiplication below is to
-    // ensure that in no case does calculating one of the partials
-    // neccessitate any calculation over and above just calculating
-    // the interpolated value.
-    float tmp11, tmp12, tmp13, tmp14;
-    float tmp21, tmp22;
-    if (dir == 0) {            // df/dx
-      float onemdz = 1.0-dz;
-      tmp11 = onemdz*v000 + dz*v001;
-      tmp12 = onemdz*v010 + dz*v011;
-      tmp13 = onemdz*v100 + dz*v101;
-      tmp14 = onemdz*v110 + dz*v111;
-      tmp21 = (1.0-dy)*tmp11 + dy*tmp12;
-      tmp22 = (1.0-dy)*tmp13 + dy*tmp14;
-      *pderiv = tmp22 - tmp21;
-      return((1.0-dx)*tmp21 + dx*tmp22);
-    }
-    else if (dir == 1) {       // df/dy 
-      float onemdz = 1.0-dz;
-      tmp11 = onemdz*v000 + dz*v001;
-      tmp12 = onemdz*v010 + dz*v011;
-      tmp13 = onemdz*v100 + dz*v101;
-      tmp14 = onemdz*v110 + dz*v111;
-      tmp21 = (1.0-dx)*tmp11 + dx*tmp13;
-      tmp22 = (1.0-dx)*tmp12 + dx*tmp14;
-      *pderiv = tmp22 - tmp21;
-      return((1.0-dy)*tmp21 + dy*tmp22);
-    }
-    else if (dir == 2) {       // df/dz
-      float onemdy = 1.0-dy;
-      tmp11 = onemdy*v000 + dy*v010;
-      tmp12 = onemdy*v001 + dy*v011;
-      tmp13 = onemdy*v100 + dy*v110;
-      tmp14 = onemdy*v101 + dy*v111;
-      tmp21 = (1.0-dx)*tmp11 + dx*tmp13;
-      tmp22 = (1.0-dx)*tmp12 + dx*tmp14;
-      *pderiv = tmp22 - tmp21;
-      return((1.0-dz)*tmp21 + dz*tmp22);
+    else if (getinterpolationmethod() == spline) {
+      return(spline_interp1partial(x,y,z,dir,pderiv));
     }
     return(-1.0); // Should not be reached. Just to stop compiler from complaining.
   }
@@ -767,52 +790,136 @@ namespace NEWIMAGE {
                                   float *dfdx, float *dfdy, float *dfdz)  // Partials
   const
   {
-    if (p_interpmethod != trilinear) {
-      imthrow("Derivatives only implemented for trilinear interpolation",10);
+    if (getinterpolationmethod() != trilinear && getinterpolationmethod() != spline) {
+      imthrow("interp3partial: Derivatives only implemented for tri-linear and spline interpolation",10);
     }
-    int ix = ((int) floor(x));
-    int iy = ((int) floor(y));
-    int iz = ((int) floor(z));
-    float dx = x - ((float) ix);
-    float dy = y - ((float) iy);
-    float dz = z - ((float) iz);
-    float v000, v001, v010, v011, v100, v101, v110, v111;
-    if (!in_neigh_bounds(*this,ix,iy,iz)) {   // We'll have to do some extrapolation
-      v000 = (float) this->operator()(ix,iy,iz);
-      v001 = (float) this->operator()(ix,iy,iz+1);
-      v010 = (float) this->operator()(ix,iy+1,iz);
-      v011 = (float) this->operator()(ix,iy+1,iz+1);
-      v100 = (float) this->operator()(ix+1,iy,iz);
-      v101 = (float) this->operator()(ix+1,iy,iz+1);
-      v110 = (float) this->operator()(ix+1,iy+1,iz);
-      v111 = (float) this->operator()(ix+1,iy+1,iz+1);
+    if (getinterpolationmethod() == trilinear) {
+      int ix = ((int) floor(x));
+      int iy = ((int) floor(y));
+      int iz = ((int) floor(z));
+      float dx = x - ((float) ix);
+      float dy = y - ((float) iy);
+      float dz = z - ((float) iz);
+      float v000, v001, v010, v011, v100, v101, v110, v111;
+      if (!in_neigh_bounds(*this,ix,iy,iz)) {   // We'll have to do some extrapolation
+	v000 = (float) this->operator()(ix,iy,iz);
+	v001 = (float) this->operator()(ix,iy,iz+1);
+	v010 = (float) this->operator()(ix,iy+1,iz);
+	v011 = (float) this->operator()(ix,iy+1,iz+1);
+	v100 = (float) this->operator()(ix+1,iy,iz);
+	v101 = (float) this->operator()(ix+1,iy,iz+1);
+	v110 = (float) this->operator()(ix+1,iy+1,iz);
+	v111 = (float) this->operator()(ix+1,iy+1,iz+1);
+      }
+      else {
+	T t000, t001, t010, t011, t100, t101, t110, t111;
+	this->getneighbours(ix,iy,iz,t000,t001,t010,t011,t100,t101,t110,t111);
+	v000 = ((float) t000); v001 = ((float) t001); v010 = ((float) t010);  
+	v011 = ((float) t011); v100 = ((float) t100); v101 = ((float) t101);  
+	v110 = ((float) t110); v111 = ((float) t111); 
+      }
+      //
+      // And do linear interpolation with calculation of all partials
+      //
+      float onemdz = 1.0-dz;
+      float onemdy = 1.0-dy;    
+      float tmp11 = onemdz*v000 + dz*v001;
+      float tmp12 = onemdz*v010 + dz*v011;
+      float tmp13 = onemdz*v100 + dz*v101;
+      float tmp14 = onemdz*v110 + dz*v111;
+      *dfdx = onemdy*(tmp13-tmp11) + dy*(tmp14-tmp12);
+      *dfdy = (1.0-dx)*(tmp12-tmp11) + dx*(tmp14-tmp13);
+      tmp11 = onemdy*v000 + dy*v010;
+      tmp12 = onemdy*v001 + dy*v011;
+      tmp13 = onemdy*v100 + dy*v110;
+      tmp14 = onemdy*v101 + dy*v111;
+      float tmp21 = (1.0-dx)*tmp11 + dx*tmp13;
+      float tmp22 = (1.0-dx)*tmp12 + dx*tmp14;
+      *dfdz = tmp22 - tmp21;
+      return(onemdz*tmp21 + dz*tmp22);
     }
-    else {
-      T t000, t001, t010, t011, t100, t101, t110, t111;
-      this->getneighbours(ix,iy,iz,t000,t001,t010,t011,t100,t101,t110,t111);
-      v000 = ((float) t000); v001 = ((float) t001); v010 = ((float) t010);  
-      v011 = ((float) t011); v100 = ((float) t100); v101 = ((float) t101);  
-      v110 = ((float) t110); v111 = ((float) t111); 
+    else if (getinterpolationmethod() == spline) {
+      return(spline_interp3partial(x,y,z,dfdx,dfdy,dfdz));
     }
-    //
-    // And do linear interpolation with calculation of all partials
-    //
-    float onemdz = 1.0-dz;
-    float onemdy = 1.0-dy;    
-    float tmp11 = onemdz*v000 + dz*v001;
-    float tmp12 = onemdz*v010 + dz*v011;
-    float tmp13 = onemdz*v100 + dz*v101;
-    float tmp14 = onemdz*v110 + dz*v111;
-    *dfdx = onemdy*(tmp13-tmp11) + dy*(tmp14-tmp12);
-    *dfdy = (1.0-dx)*(tmp12-tmp11) + dx*(tmp14-tmp13);
-    tmp11 = onemdy*v000 + dy*v010;
-    tmp12 = onemdy*v001 + dy*v011;
-    tmp13 = onemdy*v100 + dy*v110;
-    tmp14 = onemdy*v101 + dy*v111;
-    float tmp21 = (1.0-dx)*tmp11 + dx*tmp13;
-    float tmp22 = (1.0-dx)*tmp12 + dx*tmp14;
-    *dfdz = tmp22 - tmp21;
-    return(onemdz*tmp21 + dz*tmp22);
+    return(0.0);  // To silence compiler.
+  }
+
+  template <class T>
+  float volume<T>::spline_interp1partial(// Input
+                                         float x, float y, float z,    // Co-ordinates to get value for
+                                         int     dir,                  // Direction for partial, 0->x, 1->y, 2->z
+                                         // Output
+                                         float  *deriv)               // Derivative returned here
+  const
+  {
+    if (!in_bounds(x,y,z)) {
+      extrapolation ep = getextrapolationmethod();
+      if (ep == boundsassert) { *deriv=0.0; assert(false); extrapval = padvalue; return(extrapval); }
+      else if (ep == boundsexception) imthrow("splineinterpolate: Out of bounds",1);
+      else if (ep == zeropad) { *deriv=0.0; extrapval = static_cast<T>(0.0); return(extrapval); }
+      else if (ep == constpad) { *deriv=0.0; extrapval = padvalue; return(extrapval); } 
+    }
+
+    T         partial = static_cast<T>(0.0);
+    float     rval = 0.0;
+    const SPLINTERPOLATOR::Splinterpolator<T>&  sp = splint();
+    if (getsplineorder() != sp.Order() || translate_extrapolation_type(getextrapolationmethod()) != sp.Extrapolation(0)) {
+      const SPLINTERPOLATOR::Splinterpolator<T>& spp = splint.force_recalculation();
+      rval = static_cast<float>(spp(x,y,z,dir,&partial));
+    }
+    else rval = static_cast<float>(sp(x,y,z,dir,&partial));
+    *deriv = static_cast<float>(partial); 
+    return(rval);
+  }  
+
+  template<class T>
+  float volume<T>::spline_interp3partial(// Input
+                                         float x, float y, float z,              // Co-ordinates to get value for
+                                         // Output
+                                         float *dfdx, float *dfdy, float *dfdz)  // Partials
+  const
+  {
+    if (!in_bounds(x,y,z)) {
+      extrapolation ep = getextrapolationmethod();
+      if (ep == boundsassert) { *dfdx=0.0; *dfdy=0.0; *dfdz=0.0; assert(false); extrapval = padvalue; return(extrapval); }
+      else if (ep == boundsexception) imthrow("splineinterpolate: Out of bounds",1);
+      else if (ep == zeropad) { *dfdx=0.0; *dfdy=0.0; *dfdz=0.0; extrapval = static_cast<T>(0.0); return(extrapval); }
+      else if (ep == constpad) { *dfdx=0.0; *dfdy=0.0; *dfdz=0.0; extrapval = padvalue; return(extrapval); } 
+    }
+
+    static std::vector<T>   partials(3,0);
+    float                   rval = 0.0;
+    const SPLINTERPOLATOR::Splinterpolator<T>&  sp = splint();
+    if (getsplineorder() != sp.Order() || translate_extrapolation_type(getextrapolationmethod()) != sp.Extrapolation(0)) {
+      const SPLINTERPOLATOR::Splinterpolator<T>& spp = splint.force_recalculation();
+      rval = static_cast<float>(spp.ValAndDerivs(x,y,z,partials));
+    }
+    else rval = static_cast<float>(sp.ValAndDerivs(x,y,z,partials));
+    *dfdx = static_cast<float>(partials[0]); 
+    *dfdy = static_cast<float>(partials[1]); 
+    *dfdz = static_cast<float>(partials[2]); 
+    return(rval);
+  }
+
+  template<class T>
+  float volume<T>::splineinterpolate(float x, float y, float z) const
+  {
+    extrapolation ep = getextrapolationmethod();
+
+    if (!in_bounds(x,y,z)) {
+      if (ep == boundsassert) { assert(false); extrapval = padvalue; return(extrapval); }
+      else if (ep == boundsexception) imthrow("splineinterpolate: Out of bounds",1);
+      else if (ep == zeropad) { extrapval = static_cast<T>(0.0); return(extrapval); }
+      else if (ep == constpad) { extrapval = padvalue; return(extrapval); } 
+    }
+    if (ep == extraslice) if (!in_extraslice_bounds(x,y,z)) { extrapval = padvalue; return(extrapval); }
+
+    const SPLINTERPOLATOR::Splinterpolator<T>&  sp = splint();
+    if (getsplineorder() != sp.Order() || translate_extrapolation_type(ep) != sp.Extrapolation(0)) {
+      const SPLINTERPOLATOR::Splinterpolator<T>& spp = splint.force_recalculation();
+      return(static_cast<float>(spp(x,y,z)));
+    }
+    return(static_cast<float>(sp(x,y,z)));
   }
 
   template <class T>
@@ -850,6 +957,10 @@ namespace NEWIMAGE {
       case userkernel:
 	{
 	  return kernelinterpolation(x,y,z);
+	}
+      case spline:
+        {
+          return(splineinterpolate(x,y,z));
 	}
       default:
 	imthrow("Invalid interpolation method",6);
@@ -890,6 +1001,10 @@ namespace NEWIMAGE {
 	{
 	  return kernelinterpolation(x,y,z);
 	}
+      case spline:
+        {
+          return(splineinterpolate(x,y,z));
+	}
       default:
 	imthrow("Invalid interpolation method",6);
       }
@@ -900,13 +1015,14 @@ namespace NEWIMAGE {
   template <class T>
   const T& volume<T>::extrapolate(int x, int y, int z) const
   {
-    switch (p_extrapmethod) {
+    
+    switch (getextrapolationmethod()) {
     case userextrapolation:
       if (p_userextrap == 0) {
-	imthrow("No user extrapolation method set",7);
+        imthrow("No user extrapolation method set",7);
       } else {
-	extrapval = (*p_userextrap)(*this,x,y,z);
-	return extrapval;
+        extrapval = (*p_userextrap)(*this,x,y,z);
+        return extrapval;
       }
     case zeropad:
       extrapval = (T) 0;
@@ -915,10 +1031,10 @@ namespace NEWIMAGE {
       extrapval = padvalue;
       return extrapval;
     default:
-       ; // do nothing
+      ; // do nothing
     }
     int nx=x, ny=y, nz=z;
-    switch (p_extrapmethod) {
+    switch (getextrapolationmethod()) {
     case periodic:
       nx = periodicclamp(x,Limits[0],Limits[3]);
       ny = periodicclamp(y,Limits[1],Limits[4]);
@@ -940,11 +1056,11 @@ namespace NEWIMAGE {
       else { extrapval = padvalue; return extrapval; }
     case boundsexception:
       if (!in_bounds(x,y,z)) {
-	ostringstream msg;
-	msg << "Out of Bounds at ("<<x<<","<<y<<","<<z<<")";
-  	imthrow(msg.str(),1);
+        ostringstream msg;
+        msg << "Out of Bounds at ("<<x<<","<<y<<","<<z<<")";
+        imthrow(msg.str(),1);
       } else {
-	return extrapval; 
+        return extrapval; 
       }
     case boundsassert:
       assert(in_bounds(x,y,z));
@@ -952,6 +1068,7 @@ namespace NEWIMAGE {
     default:
       imthrow("Invalid extrapolation method",6);
     }
+
     return extrapval;
   }
 
@@ -2324,6 +2441,49 @@ namespace NEWIMAGE {
     return hist;
   }
 
+  template<class T>
+  SPLINTERPOLATOR::Splinterpolator<T> calc_spline_coefs(const volume<T>& vol)
+  {
+    std::vector<unsigned int>                        dim(3,0);
+    dim[0] = vol.xsize(); dim[1] = vol.ysize(); dim[2] = vol.zsize();
+    std::vector<SPLINTERPOLATOR::ExtrapolationType>  ep(3,SPLINTERPOLATOR::Mirror);
+    for (unsigned int i=0; i<3; i++) ep[i] = translate_extrapolation_type(vol.getextrapolationmethod());
+    
+    SPLINTERPOLATOR::Splinterpolator<T>  rval(vol.fbegin(),dim,ep,vol.getsplineorder(),false);
+
+    return(rval);
+  }
+
+  SPLINTERPOLATOR::ExtrapolationType translate_extrapolation_type(extrapolation ep)
+  {
+    switch (ep) {
+    case zeropad:
+      return(SPLINTERPOLATOR::Zeros);
+      break;
+    case extraslice:
+      return(SPLINTERPOLATOR::Constant);  // It is constant for a given column, hence name.
+      break;
+    case mirror:
+      return(SPLINTERPOLATOR::Mirror);
+      break;
+    case periodic:
+      return(SPLINTERPOLATOR::Periodic);
+      break;
+    case boundsassert: case boundsexception: // We deal with this at the actual interpolation, and for now just return something
+      return(SPLINTERPOLATOR::Zeros);
+      break;
+    case constpad: // Not implemented in splinterpolator, so I'll deal with this too at the actual interpolation.
+      return(SPLINTERPOLATOR::Zeros); 
+      break;
+    case userextrapolation:
+      imthrow("translate_extrapolation_type: userextrapolation not implemented for spline interpolation",10);
+      break;
+    default:
+      imthrow("translate_extrapolation_type: I am lost",10);
+      break;
+    }
+    return(SPLINTERPOLATOR::Zeros);
+  }
 
   // GENERAL MANIPULATION
 
@@ -3400,6 +3560,32 @@ namespace NEWIMAGE {
     }
   }
 
+  template<class T>
+  unsigned int volume4D<T>::getsplineorder() const
+  {
+    if (!tsize()) imthrow("getsplineorder: No volumes defined yet",10);
+    return(vols[0].getsplineorder());
+  }
+
+  template<class T>
+  void volume4D<T>::setsplineorder(unsigned int order) const
+  {
+    for (int i=0; i<tsize(); i++) vols[i].setsplineorder(order);
+  }
+
+  template<class T>
+  void volume4D<T>::setextrapolationvalidity(bool xv, bool yv, bool zv) const
+  {
+    for (int i=0; i<tsize(); i++) vols[i].setextrapolationvalidity(xv,yv,zv);
+  }
+
+  template<class T>
+  std::vector<bool> volume4D<T>::getextrapolationvalidity() const
+  {
+    if (!tsize()) imthrow("getextrapolationvalidity: No volumes defined yet",10);
+    return(vols[0].getextrapolationvalidity());
+  }  
+
   template <class T>
   extrapolation volume4D<T>::getextrapolationmethod() const
   { 
@@ -3502,8 +3688,8 @@ namespace NEWIMAGE {
     nvox = no_mask_voxels(mask);
     matv.ReSize(this->maxt() - this->mint() + 1,nvox);
     int xoff = vols[0].minx() - mask.minx();
-    int yoff = vols[0].miny() - mask.minz();
-    int zoff = vols[0].miny() - mask.minz();
+    int yoff = vols[0].miny() - mask.miny();
+    int zoff = vols[0].minz() - mask.minz();
     int toff = 1 - this->mint();
     for (int z=mask.minz(); z<=mask.maxz(); z++) {
       for (int y=mask.miny(); y<=mask.maxy(); y++) {
@@ -3669,8 +3855,12 @@ namespace NEWIMAGE {
     { for (int t=0; t<tsize(); t++) vols[t].setzdim(z); }
 
   template <class T>
-  void volume4D<T>::setDisplayMaximumMinimum(const float maximum, const float minimum)
+  void volume4D<T>::setDisplayMaximumMinimum(const float maximum, const float minimum) const
   { for (int t=0; t<tsize(); t++) vols[t].setDisplayMaximumMinimum(maximum,minimum); }
+
+  template <class T>
+  void volume4D<T>::setAuxFile(const string fileName)
+  { for (int t=0; t<tsize(); t++) vols[t].setAuxFile(fileName); }
 
   // SECONDARY PROPERTIES (using a 3D or 4D mask)
 

@@ -4,7 +4,7 @@
 TCLTKSHELL=wish ; export TCLTKSHELL
 
 # Check for display being set \
-if [ _`uname | grep CYGWIN` = _ -a _$DISPLAY = _ ] ; then echo "DISPLAY is not set. Please set your DISPLAY environment variable!" ; exit 1 ; fi
+if [ _$DISPLAY = _ ] ; then echo "DISPLAY is not set. Please set your DISPLAY environment variable!" ; exit 1 ; fi
 # Check for FSLDIR being set \
 if [ -z "$FSLDIR" ]; then echo "You need to set the FSLDIR environment variable to point to the FSL installation directory before you can run anything." ; exit 1; fi
 # Check for FSLDIR being valid \

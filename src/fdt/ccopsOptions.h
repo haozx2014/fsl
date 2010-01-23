@@ -92,6 +92,7 @@ class ccopsOptions {
   Option<string> excl_mask;
   Option<bool>  reord1;
   Option<bool>  reord2;
+  Option<bool>  reord3;
   Option<float> connexity;
   Option<int>   bin;
   Option<float> power;
@@ -132,13 +133,16 @@ class ccopsOptions {
 	       string("Tractography Results Directory"),
 	       false, requires_argument),
    excl_mask(string("-x"), string(""),
-	     string("exclusion mask (in tract space johannes)"),
+	     string("exclusion mask (in tract space)"),
 	     false, requires_argument),  
    reord1(string("--r1"), bool(false),
 	     string("do seedspace reordering (default no)"),
 	     false, no_argument), 
    reord2(string("--r2"), bool(false),
 	     string("do tractspace reordering (default no)"),
+	     false, no_argument), 
+   reord3(string("--tractreord"), bool(false),
+	     string("propagate seed reordering onto tract space"),
 	     false, no_argument), 
    connexity(string("--con"), 0.0,
 	     string("add connexity constraint - value between 0 and 1 (0 is no constraint). default=0"),
@@ -150,13 +154,13 @@ class ccopsOptions {
 	 string("power to raise the correlation matrix to (default 1)"), 
 	 false, requires_argument),
    mask(string("-m,--mask"), "", 
-	 string("brain mask used to output the clustered roi mask"), 
+	 string("brain mask used to output the clustered roi mask (not necessary if --dir set)"), 
 	 false, requires_argument),
    scheme(string("-s,--scheme"), "spectral", 
-	 string("Reordering algorithm. Can be either spectral (default) or kmeans"), 
+	 string("Reordering algorithm. Can be either spectral (default) or kmeans or fuzzy"), 
 	 false, requires_argument),
    nclusters(string("-k,--nclusters"), 2, 
-	  string("Number of clusters to be used in kmeans"), 
+	  string("Number of clusters to be used in kmeans or fuzzy"), 
 	  false, requires_argument),
    options("ccops","")
    {
@@ -170,6 +174,7 @@ class ccopsOptions {
        options.add(excl_mask);
        options.add(reord1);
        options.add(reord2);
+       options.add(reord3);
        options.add(connexity);
        options.add(bin);
        options.add(power);
