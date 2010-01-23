@@ -1,5 +1,18 @@
-fsl (4.1.4-3) unstable; urgency=low
+fsl (4.1.5-1) unstable; urgency=low
 
+  * New upstream release.
+    * An issue with Randomise "pausing" has been fixed.
+    * There are some improvements to the bedpostx monitor script.
+    * Large speedup for invwarp by automatically adjusting the useful FOV
+      internally (no cropping of the original images needed).
+    * Non-linear initialisation in bedpostx to allow better convergence of
+      the MCMC chains
+    * Some improvements and new options in Probtrackx:
+      - allows to input nonlinear (FNIRT) warpfield instead of FLIRT
+        matrices
+      - bug fix in initial fibre selection
+      - tracking from freesurfer cortical surface (into the brain)
+      - tracking from random locations within a seed voxel
   * No longer compile with '-ansi -pedantic', since a significant part of the
     sources is actually not ANSI compliant (Closes: #546003).
   * Don't use roundl() to round doubles in src/basisfield/splinefield.cpp to
@@ -8,8 +21,11 @@ fsl (4.1.4-3) unstable; urgency=low
   * New config variable FSLPARALLEL. If set, FSL will submit jobs to a running
     Sun Gridengine. By default, this setting is disabled in /etc/fsl/fsl.sh.
     (Closes: #546238). Added suggested package 'gridengine-client'.
+  * Remove all menu items of GUI-apps that are directly accessible from the
+    central FSL GUI. The menu got too crowded with all the different FSL
+    items.
 
- -- Michael Hanke <michael.hanke@gmail.com>  Tue, 03 Nov 2009 15:44:42 -0500
+ -- Michael Hanke <michael.hanke@gmail.com>  Fri, 22 Jan 2010 18:01:24 -0500
 
 fsl (4.1.4-2) unstable; urgency=low
 
