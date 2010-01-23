@@ -30,11 +30,25 @@ Integration with other Debian Packages
 --------------------------------------
 
 Octave
+
   Octave users can read and write 3d and 4d datasets by using the `read_avw*`
   and `save_avw*` functions. No further configuration is necessary, as the FSL
   package installs the necessary modules into the appropriate locations.
   Matlab users have to include /usr/share/fsl/etc/matlab into their search path
   (see the 'addpath' command).
 
+Sun Gridengine
 
- -- Michael Hanke <michael.hanke@gmail.com>, Thu, 14 Aug 2008 19:49:40 +0200
+  FSL is configured to submit jobs to a running Sun Gridengine if requested.
+  Appropriate queues are chosen by SGE based on the estimated processing time
+  reported by FSL. In contrast to upstream FSL, the Debian package does not
+  rely on a fixed set of queue names. By default no jobs are submitted and all
+  processing is done locally, even if a Gridengine is running.
+  Cluster computing is enabled by setting the environment variable
+  FSLPARALLEL=1. This can be done on a case-by-case basis, or system-wide in
+  /etc/fsl/fsl.h. Please see this file for more configuration options, including
+  the cluster email setup.
+  If FSL is used in conjunction with a Sun Gridengine installed by the
+  corresponding Debian package, no further configuration should be necessary.
+
+ -- Michael Hanke <michael.hanke@gmail.com>, Fri, 22 Jan Aug 2010 19:59:14 -0500
