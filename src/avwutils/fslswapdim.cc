@@ -95,9 +95,8 @@ int fmrib_main(int argc,char *argv[])
     showmat=true;
   }
 
-  volumeinfo volinfo;
   volume4D<T> invol;
-  read_orig_volume4D(invol,inname,volinfo);
+  read_orig_volume4D(invol,inname);
 
   Matrix affmat;
   affmat = invol.swapmat(newx,newy,newz);
@@ -114,7 +113,7 @@ int fmrib_main(int argc,char *argv[])
 
   int retval=0;
   if (outname!="") {
-    retval = save_orig_volume4D(invol,outname,volinfo);
+    retval = save_orig_volume4D(invol,outname);
   }
   return retval;
 }

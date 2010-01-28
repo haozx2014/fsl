@@ -128,7 +128,6 @@ Option<float> repeat(string("-r,--repeat"), 3.0,
 int do_slice_correction()
 {
   volume4D<float> timeseries;
-  volumeinfo in_info;
   Matrix timings;
   
   int no_volumes, no_slices;
@@ -136,7 +135,7 @@ int do_slice_correction()
 
   if (inputname.set()) {
     if (verbose.value()) { cout << "Reading input volume" << endl; }
-    read_volume4D(timeseries,inputname.value(),in_info);
+    read_volume4D(timeseries,inputname.value());
     if (!outputname.set())
       outputname.set_value(inputname.value() + "_st");
   } else if (outputname.set()) {

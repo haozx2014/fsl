@@ -1,8 +1,8 @@
 /*  glimGls.h
 
-    Mark Woolrich, FMRIB Image Analysis Group
+    Mark Woolrich and Matthew Webster, FMRIB Image Analysis Group
 
-    Copyright (C) 1999-2000 University of Oxford  */
+    Copyright (C) 1999-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -88,7 +88,7 @@ namespace FILM {
       GlimGls(const int pnumTS, const int psizeTS, const int pnumParams);
      
       void setData(const ColumnVector& p_y, const Matrix& p_x, const int ind);       
-      void Save(NEWIMAGE::volumeinfo  vinfo, const NEWIMAGE::volume<float>& mask,const float reftdim);
+      void Save(const NEWIMAGE::volume<float>& mask,const float reftdim);
       ColumnVector& getResiduals() { return r; }
       void CleanUp();
 

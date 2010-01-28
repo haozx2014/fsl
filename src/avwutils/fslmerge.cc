@@ -1,6 +1,6 @@
 //     fslmerge.cc concatenate AVW files into a single output
 //     Steve Smith, David Flitney, Stuart Clare and Matthew Webster, FMRIB Image Analysis Group
-//     Copyright (C) 2000-2005 University of Oxford  
+//     Copyright (C) 2000-2008 University of Oxford  
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
     fsl@fmrib.ox.ac.uk
@@ -83,8 +83,7 @@ template <class T>
 int fmrib_main(int argc, char *argv[])
 {
   volume4D<T> input_volume;
-  volumeinfo vinfo;
-  int i,j,k,t,vol,direction,dimerror=0,xdimtot=0,ydimtot=0,zdimtot=0,tdimtot=0,xoffset=0,yoffset=0,zoffset=0,toffset=0;
+  int direction,dimerror=0,xoffset=0,yoffset=0,zoffset=0,toffset=0;
  
   if (!strcmp(argv[1], "-t"))       direction=0;
   else if (!strcmp(argv[1], "-x"))  direction=1;
@@ -96,11 +95,13 @@ int fmrib_main(int argc, char *argv[])
     print_usage(string(argv[0]));
     return(1);
   }
-  read_volume4D_hdr_only(input_volume,string(argv[3]),vinfo);
-  xdimtot=input_volume.xsize(); 
-  ydimtot=input_volume.ysize(); 
-  zdimtot=input_volume.zsize();
-  tdimtot=input_volume.tsize();
+  read_volume4D_hdr_only(input_volume,string(argv[3]));
+
+  int xdimtot(input_volume.xsize()); 
+  int ydimtot(input_volume.ysize()); 
+  int zdimtot(input_volume.zsize());
+  int tdimtot(input_volume.tsize());
+
   if(direction==4)
   {
     if( (zdimtot<2) && (tdimtot<2) ) direction=3;
@@ -108,7 +109,7 @@ int fmrib_main(int argc, char *argv[])
   }
   input_volume.destroy();    //Remove when new newimage comes out
 
-  for(vol = 4; vol < argc; vol++)
+  for(int vol = 4; vol < argc; vol++)
   {        
     read_volume4D_hdr_only(input_volume,string(argv[vol]));
     if (direction==0) tdimtot+=input_volume.tsize(); 
@@ -122,7 +123,7 @@ int fmrib_main(int argc, char *argv[])
   read_volume4D(input_volume,string(argv[3]));  
   output_volume.copyproperties(input_volume);
 
-  for(vol = 3; vol < argc; vol++)
+  for(int vol = 3; vol < argc; vol++)
   {   
     if (vol>3) read_volume4D(input_volume,string(argv[vol]));  
     if (direction == 0 && (input_volume.xsize() != xdimtot || input_volume.ysize() != ydimtot || input_volume.zsize() != zdimtot)) dimerror=1;
@@ -136,10 +137,10 @@ int fmrib_main(int argc, char *argv[])
     }
 
              
-    for(t=0;t<input_volume.tsize();t++)           
-      for(k=0;k<input_volume.zsize();k++)
-        for(j=0;j<input_volume.ysize();j++)	    
-          for(i=0;i<input_volume.xsize();i++)
+    for(int t=0;t<input_volume.tsize();t++)           
+      for(int k=0;k<input_volume.zsize();k++)
+        for(int j=0;j<input_volume.ysize();j++)	    
+          for(int i=0;i<input_volume.xsize();i++)
             output_volume.value(i+xoffset,j+yoffset,k+zoffset,t+toffset)=input_volume.value(i,j,k,t);
     if (direction==0)  toffset+=input_volume.tsize();  
     if (direction==1)  xoffset+=input_volume.xsize();  
@@ -148,7 +149,7 @@ int fmrib_main(int argc, char *argv[])
     input_volume.destroy();   //Remove when new newimage comes out      
   }
 
-  save_volume4D(output_volume,string(argv[2]),vinfo);
+  save_volume4D(output_volume,string(argv[2]));
   return 0;
 }
 

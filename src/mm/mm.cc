@@ -84,8 +84,7 @@ int main(int argc, char *argv[])
     cout << "epibt =" << epibt << endl;
 
     cout << "spatialdatafile =" << opts.spatialdatafile.value() << endl;    
-    volumeinfo volinfo;
-    read_volume(spatial_data, opts.spatialdatafile.value(), volinfo);
+    read_volume(spatial_data, opts.spatialdatafile.value());
 
     bool overlay = MmOptions::getInstance().epiexampledatafile.value()!="";
 
@@ -146,14 +145,14 @@ int main(int argc, char *argv[])
 	fgamma_deactdist.setminmode(setminmode);
 	OUT(setminmode);
 
-	Mixture_Model mm(spatial_data, mask, epi_example_data, epibt, dists, w_means, Y, volinfo, MmOptions::getInstance());
+	Mixture_Model mm(spatial_data, mask, epi_example_data, epibt, dists, w_means, Y, MmOptions::getInstance());
 	
 	mm.setup();
 	mm.run();
-	mm.save(volinfo);
+	mm.save();
 	
 	plot_ggm(w_means,dists,mask,Y);
-	make_ggmreport(w_means,dists,mask,spatial_data,zfstatmode,volinfo,overlay,epi_example_data,opts.threshold.value(),opts.nonspatial.value(), opts.updatetheta.value(),opts.spatialdatafile.value());
+	make_ggmreport(w_means,dists,mask,spatial_data,zfstatmode,overlay,epi_example_data,opts.threshold.value(),opts.nonspatial.value(), opts.updatetheta.value(),opts.spatialdatafile.value());
       }
 
     else
@@ -181,14 +180,14 @@ int main(int argc, char *argv[])
 	OUT(nonactmean);
 	OUT(Max(nonactmean+std::sqrt(dists[0]->getvar())*1.5,minmode));
 
-	Mixture_Model mm(spatial_data, mask, epi_example_data, epibt, dists, w_means, Y, volinfo, MmOptions::getInstance());
+	Mixture_Model mm(spatial_data, mask, epi_example_data, epibt, dists, w_means, Y, MmOptions::getInstance());
 	    
 	mm.setup();	
 	mm.run();
-	mm.save(volinfo);    
+	mm.save();    
 	    
 	plot_ggm(w_means,dists,mask,Y);
-	make_ggmreport(w_means,dists,mask,spatial_data,zfstatmode,volinfo,overlay,epi_example_data,opts.threshold.value(),opts.nonspatial.value(), opts.updatetheta.value(), opts.spatialdatafile.value());
+	make_ggmreport(w_means,dists,mask,spatial_data,zfstatmode,overlay,epi_example_data,opts.threshold.value(),opts.nonspatial.value(), opts.updatetheta.value(), opts.spatialdatafile.value());
 	 
       }
     

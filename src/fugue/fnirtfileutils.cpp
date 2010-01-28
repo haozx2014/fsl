@@ -66,6 +66,10 @@
     University, to negotiate a licence. Contact details are:
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
+#ifndef EXPOSE_TREACHEROUS
+#define EXPOSE_TREACHEROUS           // To allow us to use .sampling_mat()
+#endif
+
 #include <boost/shared_ptr.hpp>
 #include "newmat.h"
 #include "utils/options.h"
@@ -103,7 +107,7 @@ Option<string> inname(string("-i,--in"), string(""),
 		      true, requires_argument);
 Option<string> refname(string("-r,--ref"), string(""),
 		       string("filename for reference volume"),
-		       true, requires_argument);
+		       false, requires_argument);
 Option<string> outname(string("-o,--out"), string(""),
 		       string("filename for output (field/coef) volume"),
 		       false, requires_argument);
@@ -218,12 +222,20 @@ int main(int argc, char *argv[])
     exit(EXIT_FAILURE);
   }
   volume<float>     refvol;
-  try {
-    read_volume(refvol,refname.value());
+  if (refname.set()) { // If a reference volume was explicitly specified
+    try {
+      read_volume(refvol,refname.value());
+    }
+    catch(...) {
+      cerr << "fnirtfileutils: Problem reading reference-file " << refname.value() << endl;
+      exit(EXIT_FAILURE);
+    }
   }
-  catch(...) {
-    cerr << "fnirtfileutils: Problem reading reference-file " << refname.value() << endl;
-    exit(EXIT_FAILURE);
+  else {
+    std::vector<unsigned int> imsz = infile.FieldSize();
+    std::vector<double> vxs = infile.VoxelSize();
+    refvol.reinitialize(imsz[0],imsz[1],imsz[2]);
+    refvol.setdims(vxs[0],vxs[1],vxs[2]);
   }
 
   if (outname.set()) {   // If we are to return some representation of a displacement-field
@@ -335,9 +347,27 @@ int main(int argc, char *argv[])
     }
     else {
       try {
-        volume<float>  jac = infile.Jacobian();
-        jac.copyproperties(refvol);
-        save_volume(jac,jacname.value()); 
+        volume<float>  ojac(refvol.xsize(),refvol.ysize(),refvol.zsize());
+        volume<float>  jac = infile.Jacobian(withaff.value());
+        if (samesize(ojac,jac)) {
+	  ojac = jac;
+          ojac.copyproperties(refvol);
+	}
+        else {
+          ojac.copyproperties(refvol);
+          jac.setextrapolationmethod(extraslice);
+          Matrix O2I = jac.sampling_mat().i() * ojac.sampling_mat();
+          ColumnVector xo(4), xi(4);
+          int zs = ojac.zsize(), ys = ojac.ysize(), xs = ojac.xsize();
+          xo(4) = 1.0;
+          for (int z=0; z<zs; z++) { xo(3)=double(z); for (int y=0; y<ys; y++) { xo(2)=double(y); for (int x=0; x<xs; x++) {
+		xo(1)=double(x);
+                xi = O2I*xo;
+                ojac(x,y,z) = jac.interpolate(xi(1),xi(2),xi(3));
+	  } } }
+	}
+        ojac.setDisplayMaximum(0.0); ojac.setDisplayMinimum(0.0);
+        save_volume(ojac,jacname.value());
       }
       catch(...) {
         cerr << "fnirtfileutils: Problem creating/writing Jacobian file " << jacname.value() << endl;

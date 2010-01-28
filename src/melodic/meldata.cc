@@ -116,15 +116,21 @@ namespace Melodic{
       message(" done" << endl);
     } 
 	else{
-      message(string("  Removing mean image ..."));
-      meanR = mean(tmpData);
-      tmpData = remmean(tmpData);
-      message(" done" << endl);
+		if(opts.remove_meanvol.value())
+		{	      
+			message(string("  Removing mean image ..."));
+      		meanR = mean(tmpData);
+      		tmpData = remmean(tmpData);
+      		message(" done" << endl);
+		}
+		else meanR=ones(1,tmpData.Ncols());
     }
 
-   // meanC = mean(tmpData,2);
-	//	tmpData = remmean(tmpData,2);
-
+	if(opts.remove_meantc.value()){
+    	meanC = mean(tmpData,2);
+		tmpData = remmean(tmpData,2);
+	}
+	
     //convert to power spectra
     if(opts.pspec.value()){
       message("  Converting data to powerspectra ...");
@@ -222,21 +228,21 @@ namespace Melodic{
       add_Smodes(tmpS2);
     }
 
-		//add GLM OLS fit
-		if(Tdes.Storage()){
-			Matrix alltcs = Tmodes.at(0).Column(1);
-			for(int ctr=1; ctr < (int)Tmodes.size();ctr++)
-				alltcs|=Tmodes.at(ctr).Column(1);
-			if((alltcs.Nrows()==Tdes.Nrows())&&(Tdes.Nrows()>Tdes.Ncols()))
-				glmT.olsfit(alltcs,Tdes,Tcon);
-		}
-		if(Sdes.Storage()){
-			Matrix alltcs = Smodes.at(0);
-			for(int ctr=1; ctr < (int)Smodes.size();ctr++)
-				alltcs|=Smodes.at(ctr);
-			if((alltcs.Nrows()==Sdes.Nrows())&&(Sdes.Nrows()>Sdes.Ncols()&&alltcs.Nrows()>2))
-				glmS.olsfit(alltcs,Sdes,Scon);
-		}
+	//add GLM OLS fit
+	if(Tdes.Storage()){
+		Matrix alltcs = Tmodes.at(0).Column(1);
+		for(int ctr=1; ctr < (int)Tmodes.size();ctr++)
+			alltcs|=Tmodes.at(ctr).Column(1);
+		if((alltcs.Nrows()==Tdes.Nrows())&&(Tdes.Nrows()>Tdes.Ncols()))
+			glmT.olsfit(alltcs,Tdes,Tcon);
+	}
+	if(Sdes.Storage()){
+		Matrix alltcs = Smodes.at(0);
+		for(int ctr=1; ctr < (int)Smodes.size();ctr++)
+			alltcs|=Smodes.at(ctr);
+		if((alltcs.Nrows()==Sdes.Nrows())&&(Sdes.Nrows()>Sdes.Ncols()&&alltcs.Nrows()>2))
+			glmS.olsfit(alltcs,Sdes,Scon);
+	}
   }
 
   void MelodicData::setup()
@@ -304,15 +310,25 @@ namespace Melodic{
     	int order;
 
     	order = ppca_dim(remmean(alldat,2), RXweight, tmpPPCA, AdjEV, PercEV, Corr, pcaE, pcaD, Resels, opts.pca_est.value());	  
-
+		if (opts.paradigmfname.value().length()>0)
+			order += param.Ncols();
+			
 	  	if(opts.pca_dim.value() == 0){
       		opts.pca_dim.set_T(order);
 			PPCA=tmpPPCA;
   		}
     	order = opts.pca_dim.value();
-    	calc_white(pcaE, pcaD, order, whiteMatrix, dewhiteMatrix);
 
-    	if(opts.debug.value()){
+		if (opts.paradigmfname.value().length()>0){
+			Matrix tmpPscales;
+			tmpPscales = param.t() * alldat;
+			paramS = stdev(tmpPscales.t());
+		    
+    		calc_white(pcaE, pcaD, order, param, paramS, whiteMatrix, dewhiteMatrix);
+		}else
+    		calc_white(pcaE, pcaD, order, whiteMatrix, dewhiteMatrix);
+
+		if(opts.debug.value()){
 			outMsize("pcaE",pcaE); saveascii(pcaE,"pcaE");
 			outMsize("pcaD",pcaD); saveascii(pcaD,"pcaD");
 			outMsize("AdjEV",AdjEV); saveascii(AdjEV,"AdjEV");
@@ -347,10 +363,24 @@ namespace Melodic{
       	  			std_pca(tmpData, RXweight, Corr, pcaE, pcaD);
 	  				calc_white(pcaE, pcaD, order, newWM, newDWM);
 				}else{
-					std_pca(whiteMatrix*tmpData, RXweight, Corr, pcaE, pcaD);
-					calc_white(pcaE, pcaD, order, newWM, newDWM);		
-					newDWM=(dewhiteMatrix*newDWM);
-					newWM=(newWM*whiteMatrix);
+					if(!opts.dr_pca.value()){
+						std_pca(whiteMatrix*tmpData, RXweight, Corr, pcaE, pcaD);
+						calc_white(pcaE, pcaD, order, newWM, newDWM);		
+						newDWM=(dewhiteMatrix*newDWM);
+						newWM=(newWM*whiteMatrix);
+					}
+					else{
+					  if(opts.debug.value())
+					    message(" --mod_pca ");
+						Matrix tmp1, tmp2;
+						tmp1 = whiteMatrix * alldat;
+						tmp1 = remmean(tmp1,2) * tmpData.t();
+						tmp2 = pinv(tmp1.t()).t();  
+						std_pca(tmp1 * tmpData, RXweight, Corr, pcaE, pcaD);
+						calc_white(pcaE, pcaD, order, newWM, newDWM);		
+						newDWM=(tmp2*newDWM);
+						newWM=(newWM * tmp1);
+					}
 				}
 				DWM.push_back(newDWM);
 				WM.push_back(newWM);
@@ -381,21 +411,21 @@ namespace Melodic{
   {
 
     //initialize Mean
-    read_volume(Mean,opts.inputfname.value().at(0),tempInfo);
+    read_volume(Mean,opts.inputfname.value().at(0));
 
     //create mask
     create_mask(Mask);
 
-		//setup background image
-		if(opts.bgimage.value()>""){
-			read_volume(background,opts.bgimage.value());
-      if(!samesize(Mean,background)){
-        cerr << "ERROR:: background image and data have different dimensions  \n\n";
-        exit(2);
-      }
-		}else{
-			background = Mean;
-		}
+	//setup background image
+	if(opts.bgimage.value()>""){
+		read_volume(background,opts.bgimage.value());
+    	if(!samesize(Mean,background)){
+        	cerr << "ERROR:: background image and data have different dimensions  \n\n";
+        	exit(2);
+    	}
+	}else{
+		background = Mean;
+	}
 		
     if(!samesize(Mean,Mask)){
       cerr << "ERROR:: mask and data have different dimensions  \n\n";
@@ -414,28 +444,45 @@ namespace Melodic{
     double tmptime = time(NULL);
     srand((unsigned int) tmptime);
 
-		//read in post-proc design matrices etc
-		if(opts.fn_Tdesign.value().length()>0)
-			Tdes = read_ascii_matrix(opts.fn_Tdesign.value());
-		if(opts.fn_Sdesign.value().length()>0)
-			Sdes = read_ascii_matrix(opts.fn_Sdesign.value());
-		if(opts.fn_Tcon.value().length()>0)
-			Tcon = read_ascii_matrix(opts.fn_Tcon.value());
-		if(opts.fn_Scon.value().length()>0)
-			Scon = read_ascii_matrix(opts.fn_Scon.value());
-		if(opts.fn_TconF.value().length()>0)
-			TconF = read_ascii_matrix(opts.fn_TconF.value());
-		if(opts.fn_SconF.value().length()>0)
-			SconF = read_ascii_matrix(opts.fn_SconF.value());
+	if(opts.paradigmfname.value().length()>0){
+		message("  Use columns in " << opts.paradigmfname.value() 
+	      << " for PCA initialisation" <<endl);
+		param = read_ascii_matrix(opts.paradigmfname.value());
 		
-		if(numfiles>1 && Sdes.Storage() == 0){
-			Sdes = ones(numfiles,1);
-			if(Scon.Storage() == 0){
-				Scon = ones(1,1);
-				Scon &= -1*Scon;
-			}
+	    Matrix tmpPU, tmpPV;
+		DiagonalMatrix tmpPD;
+		SVD(param, tmpPD, tmpPU, tmpPV);
+		param = tmpPU;
+		
+		opts.pca_dim.set_T(std::max(opts.pca_dim.value(), param.Ncols()+3));		
+		if(opts.debug.value()){
+			outMsize("Paradigm",param); saveascii(param,"param");
 		}
-		Tdes = remmean(Tdes,1);
+		//opts.guessfname.set_T(opts.paradigmfname.value());
+	}
+
+	//read in post-proc design matrices etc
+	if(opts.fn_Tdesign.value().length()>0)
+		Tdes = read_ascii_matrix(opts.fn_Tdesign.value());
+	if(opts.fn_Sdesign.value().length()>0)
+		Sdes = read_ascii_matrix(opts.fn_Sdesign.value());
+	if(opts.fn_Tcon.value().length()>0)
+		Tcon = read_ascii_matrix(opts.fn_Tcon.value());
+	if(opts.fn_Scon.value().length()>0)
+		Scon = read_ascii_matrix(opts.fn_Scon.value());
+	if(opts.fn_TconF.value().length()>0)
+		TconF = read_ascii_matrix(opts.fn_TconF.value());
+	if(opts.fn_SconF.value().length()>0)
+		SconF = read_ascii_matrix(opts.fn_SconF.value());
+		
+	if(numfiles>1 && Sdes.Storage() == 0){
+ 		Sdes = ones(numfiles,1);
+		if(Scon.Storage() == 0){
+			Scon = ones(1,1);
+			Scon &= -1*Scon;
+		}
+	}
+	Tdes = remmean(Tdes,1);
   }
 
   void MelodicData::save()
@@ -639,7 +686,8 @@ namespace Melodic{
     RXweight = tmpRX.matrix(Mask);
   } 
 
-  void MelodicData::est_smoothness(){
+  void MelodicData::est_smoothness()
+  {
     if(Resels == 0){
       string SM_path = opts.binpath + "smoothest";
       string Mask_fname = logger.appendDir("mask");
@@ -674,7 +722,8 @@ namespace Melodic{
     }
   }
 
-  unsigned long MelodicData::standardise(volume<float>& mask, volume4D<float>& R){
+  unsigned long MelodicData::standardise(volume<float>& mask, volume4D<float>& R)
+  {
     	unsigned long count = 0;
     	int M=R.tsize();
     
@@ -863,7 +912,8 @@ namespace Melodic{
     }
   } //void create_mask()
 
-  void MelodicData::sort(){
+  void MelodicData::sort()
+  {
     int numComp = mixMatrix.Ncols(), numVox = IC.Ncols(), 
         numTime = mixMatrix.Nrows(), i,j;
 
@@ -945,6 +995,13 @@ namespace Melodic{
     unmixMatrix = pinv(mixMatrix);
   }
 
+  void MelodicData::reregress()
+  {
+	if((numfiles > 1)){
+	   
+	}
+  }
+  
   void MelodicData::status(const string &txt)
   {
     cout << "MelodicData Object " << txt << endl;

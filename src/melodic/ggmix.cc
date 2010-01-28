@@ -94,13 +94,12 @@ string float2str(float f,int width, int prec, bool scientif)
  
 namespace GGMIX{
   
-  void ggmix::setup(const RowVector& dat, volumeinfo inf, 
+  void ggmix::setup(const RowVector& dat, 
 		      const string dirname,
 		      int cnum, volume<float> themask, 
 		      volume<float> themean, 
 		      int num_mix, float eps, bool fixit)
   {
-    bginfo = inf;
     cnumber = cnum;
     Mask = themask;
     Mean = themean;

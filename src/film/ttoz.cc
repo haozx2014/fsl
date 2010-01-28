@@ -1,8 +1,8 @@
 /*  ttoz.cc
 
-    Mark Woolrich, FMRIB Image Analysis Group
+    Mark Woolrich and Matthew Webster, FMRIB Image Analysis Group
 
-    Copyright (C) 1999-2000 University of Oxford  */
+    Copyright (C) 1999-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -180,12 +180,11 @@ int main(int argc,char *argv[])
     parse_command_line(argc, argv);
     
     volume4D<float> input;
-    volumeinfo vinfo;
     ColumnVector varsm,cbsm,dofsm;
 
     read_volume4D(input,globalopts.cbsfname);
     cbsm=input.matrix().AsColumn();
-    read_volume4D(input,globalopts.varsfname,vinfo);
+    read_volume4D(input,globalopts.varsfname);
     varsm=input.matrix().AsColumn();
 
     int numTS = varsm.Nrows();
@@ -198,9 +197,9 @@ int main(int argc,char *argv[])
     T2z::ComputeZStats(varsm, cbsm, dofsm, zs);
 
     input.setmatrix(zs.AsRow());
-    FslSetCalMinMax(&vinfo,input.min(),input.max());
+    input.setDisplayMaximumMinimum(input.max(),input.min());
     input.set_intent(NIFTI_INTENT_ZSCORE,0,0,0);
-    save_volume4D(input,globalopts.zscoresfname,vinfo);
+    save_volume4D(input,globalopts.zscoresfname);
   }
   catch(Exception p_excp) 
     {

@@ -115,7 +115,8 @@ class MelodicOptions {
   	Option<string> pca_est;
   	Option<bool>   joined_whiten;
   	Option<bool>   joined_vn;
-		Option<float>	 vn_level;
+	Option<bool>   dr_pca;
+	Option<float>	 vn_level;
   	Option<int>    numICs;
   	Option<string> approach;
   	Option<string> nonlinearity;
@@ -171,6 +172,7 @@ class MelodicOptions {
 
   	Option<string> guessfname;
   	Option<string> paradigmfname;
+  	Option<string> axials_str;
 
   	Option<int>   dummy;
   	Option<int>   repeats;
@@ -179,7 +181,8 @@ class MelodicOptions {
   	Option<float> smooth_probmap;
 
   	Option<bool> remove_meanvol;
-  	Option<bool> remove_endslices;
+  	Option<bool> remove_meantc;
+ 	Option<bool> remove_endslices;
   	Option<bool> rescale_nht;
 
   	Option<bool> guess_remderiv;
@@ -214,11 +217,11 @@ class MelodicOptions {
 
  inline MelodicOptions::MelodicOptions() :
    logdir(string("-o,--outdir"), string("log.txt"),
-	  string("output directory name\n"), 
-	  false, requires_argument),
+	   string("output directory name\n"), 
+	   false, requires_argument),
    inputfname(string("-i,--in"), std::vector<string>(),
-	      string("input file names (either single file name or comma-separated list or text file)"), 
-	      true, requires_argument),
+	   string("input file names (either single file name or comma-separated list or text file)"), 
+	   true, requires_argument),
    outputfname(string("-O,--out"), string("melodic"),
 	   string("output file name"), 
 	   false, requires_argument,false),
@@ -246,12 +249,15 @@ class MelodicOptions {
    joined_whiten(string("--sep_whiten"), true,
 	   string("switch on separate whitening"), 
 	   false, no_argument),
-	 joined_vn(string("--sep_vn"), true,
-		 string("switch off joined variance nomalisation"), 
-		 false, no_argument),
-	 vn_level(string("--vn_level"), float(2.3),
-		 string("variance nomalisation threshold level (Z> value is ignored)"), 
-		 false, requires_argument, false),
+   joined_vn(string("--sep_vn"), true,
+   	   string("switch off joined variance nomalisation"), 
+       false, no_argument),
+   dr_pca(string("--mod_pca"), true,
+	   string("switch off modified PCA for concat ICA"),
+	   false, no_argument, false),
+   vn_level(string("--vn_level"), float(2.3),
+	   string("variance nomalisation threshold level (Z> value is ignored)"), 
+	   false, requires_argument, false),
    numICs(string("-n,--numICs"), -1,
 	   string("numer of IC's to extract (for deflation approach)"), 
 	   false, requires_argument),
@@ -276,12 +282,12 @@ class MelodicOptions {
    tsmooth(string("--spca"),  false,
 	   string("smooth the eigenvectors prior to IC decomposition"), 
 	    false, no_argument, false),
-   epsilon(string("--eps,--epsilon"), 0.0005,
+   epsilon(string("--eps,--epsilon"), 0.00005,
 	   string("minimum error change"), 
 	   false, requires_argument),
- 	 epsilonS(string("--epsS,--epsilonS"), 0.03,
-		   string("minimum error change for rank-1 approximation in TICA"), 
-		   false, requires_argument),
+   epsilonS(string("--epsS,--epsilonS"), 0.03,
+	   string("minimum error change for rank-1 approximation in TICA"), 
+	   false, requires_argument),
    maxNumItt(string("--maxit"),  500,
 	   string("\tmaximum number of iterations before restart"), 
 	   false, requires_argument),
@@ -306,54 +312,54 @@ class MelodicOptions {
    smodename(string("--smode"),  string(""),
 	   string("\tmatrix of session modes for report generation"), 
 	   false, requires_argument),
-	 filter(string("-f,--filter"),  string(""),
-		 string("component numbers to remove\n "), 
-		 false, requires_argument),
+   filter(string("-f,--filter"),  string(""),
+	   string("component numbers to remove\n "), 
+	   false, requires_argument),
    genreport(string("--report"), false,
 	   string("generate Melodic web report"), 
 	   false, no_argument),
-	 guireport(string("--guireport"), string(""),
-		   string("modify report for GUI use"), 
-		   false, requires_argument, false),
-	 bgimage(string("--bgimage"),  string(""),
-		 string("specify background image for report (default: mean image)\n "), 
-		 false, requires_argument),
+   guireport(string("--guireport"), string(""),
+	   string("modify report for GUI use"), 
+	   false, requires_argument, false),
+   bgimage(string("--bgimage"),  string(""),
+	   string("specify background image for report (default: mean image)\n "), 
+	   false, requires_argument),
    tr(string("--tr"),  0.0,
 	   string("\tTR in seconds"), 
 	   false, requires_argument),
-	 logPower(string("--logPower"),  false,
-		 string("calculate log of power for frequency spectrum\n"), 
-		 false, no_argument),
-	 addsigchng(string("--sigchng"),  false,
-		 string("add signal change estimates to report pages\n"), 
-		 false, no_argument, false),
-	 allPPCA(string("--allPPCA"),  false,
-			 string("add all PPCA plots\n"), 
-			 false, no_argument, false),
-	 varplots(string("--varplots"),  false,
-		 string("add std error envelopes to time course plots\n"), 
-		 false, no_argument, false),
-	 varvals(string("--varvals"),  false,
-		 string("add rank1 values after plots\n"), 
-		 false, no_argument, false),
-	 fn_Tdesign(string("--Tdes"), string(""),
+   logPower(string("--logPower"),  false,
+	   string("calculate log of power for frequency spectrum\n"), 
+	   false, no_argument),
+   addsigchng(string("--sigchng"),  false,
+	   string("add signal change estimates to report pages\n"), 
+       false, no_argument, false),
+   allPPCA(string("--allPPCA"),  false,
+	   string("add all PPCA plots\n"), 
+	   false, no_argument, false),
+   varplots(string("--varplots"),  false,
+	   string("add std error envelopes to time course plots\n"), 
+	   false, no_argument, false),
+   varvals(string("--varvals"),  false,
+	   string("add rank1 values after plots\n"), 
+	   false, no_argument, false),
+   fn_Tdesign(string("--Tdes"), string(""),
 	   string("        design matrix across time-domain"),
-		 false, requires_argument),
-	 fn_Tcon(string("--Tcon"), string(""),
-		 string("        t-contrast matrix across time-domain"),
-		 false, requires_argument),
+	   false, requires_argument),
+   fn_Tcon(string("--Tcon"), string(""),
+       string("        t-contrast matrix across time-domain"),
+	   false, requires_argument),
    fn_TconF(string("--Tconf"), string(""),
-		 string("        F-contrast matrix across time-domain"),
-		 false, requires_argument, false),
+	   string("        F-contrast matrix across time-domain"),
+	   false, requires_argument, false),
    fn_Sdesign(string("--Sdes"), string(""),
-		 string("        design matrix across subject-domain"),
-		 false, requires_argument),
-	 fn_Scon(string("--Scon"), string(""),
-		 string("        t-contrast matrix across subject-domain"),
-		 false, requires_argument),	
-	 fn_SconF(string("--Sconf"), string(""),
-		 string("        F-contrast matrix across subject-domain"),
-		 false, requires_argument,false),	
+	   string("        design matrix across subject-domain"),
+	   false, requires_argument),
+   fn_Scon(string("--Scon"), string(""),
+	   string("        t-contrast matrix across subject-domain"),
+	   false, requires_argument),	
+   fn_SconF(string("--Sconf"), string(""),
+	   string("        F-contrast matrix across subject-domain"),
+	   false, requires_argument,false),	
    output_all(string("--Oall"),  false,
 	   string("        output everything"), 
 	   false, no_argument),
@@ -390,12 +396,15 @@ class MelodicOptions {
    debug(string("--debug"),  false,
 	   string("        switch on debug messages"), 
 	   false, no_argument),
-   guessfname(string("-g,--guess"), string(""),
-	   string("file name of guess of mixing matrix"), 
+   guessfname(string("--init_ica"), string(""),
+	   string("file name of FEAT paradigm file (design.mat) for ICA initialisation"), 
 	   false, requires_argument, false),
-   paradigmfname(string("-p,--paradigm"),  string(""),
-	   string("file name of FEAT paradigm file"), 
+   paradigmfname(string("--init_pca"),  string(""),
+	   string("file name of FEAT paradigm file (design.mat) for PCA initialisation"), 
 	   false, requires_argument, false),
+   axials_str(string("--report_maps"),  string(" -s 2 -A 950 "),
+		   string("control string for spatial map images (see slicer)"), 
+		   false, requires_argument),
    dummy(string("--dummy"),  0,
 	   string("number of dummy volumes"), 
 	   false, requires_argument,false),
@@ -411,8 +420,11 @@ class MelodicOptions {
    smooth_probmap(string("--smooth_pm"),  0.0,
 	   string("width of smoothing kernel for probability maps"), 
 	   false, requires_argument, false),
-   remove_meanvol(string("--keepmeanvol"), true,
+   remove_meanvol(string("--keep_meanvol"), true,
 	   string("do not subtract mean volume"), 
+	   false, no_argument, false),
+   remove_meantc(string("--remove_meantc"), false,
+	   string("remove mean time course"), 
 	   false, no_argument, false),
    remove_endslices(string("--remEndslices"),  false,
 	   string("delete end slices (motion correction artefacts)"), 
@@ -420,12 +432,12 @@ class MelodicOptions {
    rescale_nht(string("--rescale_nht"),  true,
 	   string("switch off map rescaling after mixture-modelling"), 
 	   false, no_argument,false),
-   guess_remderiv(string("--remderiv"),  false,
+   guess_remderiv(string("--remove_deriv"),  false,
 	   string("removes every second entry in paradigm file (EV derivatives)"), 
-	   false, no_argument, false),
+	   false, no_argument),
    temporal(string("--temporal"),  false,
 	   string("perform temporal ICA"), 
-	    false, no_argument, false),
+	   false, no_argument, false),
    retrystep(3),
    options(title, usageexmpl)
    {
@@ -443,6 +455,7 @@ class MelodicOptions {
 	    options.add(pca_est);
 	    options.add(joined_whiten);
 	    options.add(joined_vn);
+		options.add(dr_pca);
 	    options.add(vn_level);
 	    options.add(numICs);
 	    options.add(approach);
@@ -465,19 +478,19 @@ class MelodicOptions {
 	    options.add(filter);
 	    options.add(genreport);
 	    options.add(guireport);
-			options.add(bgimage);
+		options.add(bgimage);
 	    options.add(tr);
 	    options.add(logPower);
 	    options.add(addsigchng);
 	    options.add(allPPCA);
 	    options.add(varplots);
 	    options.add(varvals);
-			options.add(fn_Tdesign);
-			options.add(fn_Tcon);
-			options.add(fn_TconF);
-			options.add(fn_Sdesign);
-			options.add(fn_Scon);
-			options.add(fn_SconF);
+		options.add(fn_Tdesign);
+		options.add(fn_Tcon);
+		options.add(fn_TconF);
+		options.add(fn_Sdesign);
+		options.add(fn_Scon);
+		options.add(fn_SconF);
 	    options.add(output_all);
 	    options.add(output_unmix);
 	    options.add(output_MMstats);
@@ -493,12 +506,14 @@ class MelodicOptions {
 	   
 	    options.add(guessfname);
 	    options.add(paradigmfname); 
+	    options.add(axials_str); 
 	    options.add(dummy);
 	    options.add(repeats);
 	    options.add(nlconst1);
 	    options.add(nlconst2);
 	    options.add(smooth_probmap);
 	    options.add(remove_meanvol);
+	    options.add(remove_meantc);
 	    options.add(remove_endslices);
 	    options.add(rescale_nht);
 	    options.add(guess_remderiv);

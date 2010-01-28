@@ -97,7 +97,7 @@ namespace Melodic{
 
       void save();
 
-      void setup(const RowVector& dat, volumeinfo inf, const string dirname,
+      void setup(const RowVector& dat, const string dirname,
 		 		int here, volume<float> themask, 
 		 		volume<float> themean, int num_mix = 3, 
 		 		float eps = 0.0, bool fixdim = false);
@@ -251,7 +251,6 @@ namespace Melodic{
       string mmtype;
       string dirname;
 
-      volumeinfo bginfo;
       vector<string> threshinfo;
 
   };

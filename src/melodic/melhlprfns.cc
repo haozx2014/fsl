@@ -229,13 +229,24 @@ namespace Melodic{
     return Res;
   }  //Matrix SP
 
-	Matrix corrcoef(const Matrix& in1, const Matrix& in2){
+  Matrix corrcoef(const Matrix& in1, const Matrix& in2){
 		Matrix tmp = in1;
 		tmp |= in2;
 		Matrix out;
 		out=MISCMATHS::corrcoef(tmp,0);
 		return out.SubMatrix(1,in1.Ncols(),in1.Ncols()+1,out.Ncols());
+  }
+
+  Matrix corrcoef(const Matrix& in1, const Matrix& in2, const Matrix& part){
+	Matrix tmp1 = in1, tmp2 = in2, out;	
+	if(part.Storage()){
+		tmp1 = tmp1 - part * pinv(part) * tmp1;
+		tmp2 = tmp2 - part * pinv(part) * tmp2;
 	}
+	
+	out = corrcoef(tmp1,tmp2);
+	return out;
+  }
 
   Matrix calc_corr(const Matrix& in, bool econ)
   {
@@ -279,6 +290,50 @@ namespace Melodic{
     return Res;
   }  //Matrix calc_corr
 
+  float calc_white(const Matrix& tmpE, const RowVector& tmpD, const RowVector& PercEV,  int dim, Matrix& param, Matrix& paramS, Matrix& white, Matrix& dewhite)
+  {
+
+//	tmpD2= tmpD | tmpPD.AsRow().Columns(tmpPE.Ncols()-param.Ncols()+1,tmpPE.Ncols());
+//  cerr << tmpPD.AsRow().Columns(tmpPE.Ncols()-param.Ncols()+1,tmpPE.Ncols()) << endl;
+
+//    
+
+//	Matrix tmpPE;
+//	tmpPE = SP(param,ones(param.Nrows(),1)*pow(stdev(param,1)*std::sqrt((float)param.Nrows()),-1));
+
+//	RE |= tmpPE;
+//	RowVector tmpD2;
+//	tmpD2 = tmpD | stdev(param,1).AsRow()*std::sqrt((float)param.Nrows());
+//	RD << abs(diag(tmpD2.t()));
+//    RD << RD.SymSubMatrix(N-dim+1,N);
+
+	Matrix RE;
+    DiagonalMatrix RD;
+    int N = tmpE.Ncols();
+    dim = std::min(dim,N);
+
+//	cerr << stdev(param) << endl;
+    RE = tmpE.Columns(std::min(N-dim+1+param.Ncols(),N-2),N);
+	RE |= param;
+
+//	cerr << paramS.Nrows() << " x " << paramS.Ncols() << endl;
+//	cerr << paramS << endl;
+	RowVector tmpD2;
+	tmpD2 = tmpD | pow(paramS,2).AsRow();
+    RD << abs(diag(tmpD2.t()));
+
+//	cerr << " " <<tmpD2.Ncols() << " " << N << " " << dim << endl;
+    RD << RD.SymSubMatrix(N-dim+1+param.Ncols(),N+param.Ncols());    
+
+    float res = 1.0;    
+    white = sqrt(abs(RD.i()))*RE.t();
+    dewhite = RE*sqrt(RD);
+
+    if(dim < N)
+      res = PercEV(dim);
+    return res;
+  }  //Matrix calc_white
+
   float calc_white(const Matrix& tmpE, const RowVector& tmpD, const RowVector& PercEV, int dim, Matrix& white, Matrix& dewhite)
   {
     Matrix RE;
@@ -305,6 +360,13 @@ namespace Melodic{
     tmp2 = calc_white(tmpE,tmpD, tmp, dim, white, dewhite); 
   }  //Matrix calc_white
 
+  void calc_white(const Matrix& tmpE, const RowVector& tmpD, int dim, Matrix& param, Matrix& paramS, Matrix& white, Matrix& dewhite)
+  {
+    RowVector tmp(tmpE.Ncols());
+    float tmp2;
+    tmp2 = calc_white(tmpE,tmpD, tmp, dim, param, paramS, white, dewhite); 
+  }  //Matrix calc_white
+
   void calc_white(const Matrix& Corr, int dim, Matrix& white, Matrix& dewhite)
   {
     Matrix RE;
@@ -317,6 +379,7 @@ namespace Melodic{
     calc_white(RE,tmp2, dim, white, dewhite); 
   }  //Matrix calc_white
   
+ 
   void std_pca(const Matrix& Mat, const Matrix& weights, Matrix& Corr, Matrix& evecs, RowVector& evals)
   {
     if(weights.Storage()>0)

@@ -545,7 +545,7 @@ namespace Mm {
     return derivative_tilde;
   }
 
-  Mixture_Model::Mixture_Model(const volume<float>& pspatial_data, const volume<int>& pmask, const volume<float>& pepi_example_data, float pepibt, vector<Distribution*>& pdists, vector<volume<float> >& pw_means, ColumnVector& pY, volumeinfo& pvolinfo, MmOptions& popts) :
+  Mixture_Model::Mixture_Model(const volume<float>& pspatial_data, const volume<int>& pmask, const volume<float>& pepi_example_data, float pepibt, vector<Distribution*>& pdists, vector<volume<float> >& pw_means, ColumnVector& pY, MmOptions& popts) :
     xsize(pmask.xsize()),
     ysize(pmask.ysize()),
     zsize(pmask.zsize()),
@@ -573,8 +573,7 @@ namespace Mm {
     w_means(pw_means),
     mrfprecmultiplier(popts.mrfprecmultiplier.value()),
     initmultiplier(popts.initmultiplier.value()),
-    fixmrfprec(popts.fixmrfprec.value()),
-    volinfo(pvolinfo)
+    fixmrfprec(popts.fixmrfprec.value())
   {
     if(nonspatial)
       {
@@ -593,7 +592,7 @@ namespace Mm {
     connected_offsets.push_back(Connected_Offset(0,0,1,5,4));
   }
 
-  Mixture_Model::Mixture_Model(const volume<float>& pspatial_data, const volume<int>& pmask, const volume<float>& pepi_example_data, float pepibt, vector<Distribution*>& pdists, vector<volume<float> >& pw_means, ColumnVector& pY, volumeinfo& pvolinfo, bool pnonspatial, int pniters, bool pupdatetheta, int pdebuglevel, float pphi, float pmrfprecstart, int pntracesamps, float pmrfprecmultiplier, float pinitmultiplier, bool pfixmrfprec) :
+  Mixture_Model::Mixture_Model(const volume<float>& pspatial_data, const volume<int>& pmask, const volume<float>& pepi_example_data, float pepibt, vector<Distribution*>& pdists, vector<volume<float> >& pw_means, ColumnVector& pY, bool pnonspatial, int pniters, bool pupdatetheta, int pdebuglevel, float pphi, float pmrfprecstart, int pntracesamps, float pmrfprecmultiplier, float pinitmultiplier, bool pfixmrfprec) :
     xsize(pmask.xsize()),
     ysize(pmask.ysize()),
     zsize(pmask.zsize()),
@@ -621,8 +620,7 @@ namespace Mm {
     w_means(pw_means),
     mrfprecmultiplier(pmrfprecmultiplier),
     initmultiplier(pinitmultiplier),
-    fixmrfprec(pfixmrfprec),
-    volinfo(pvolinfo)
+    fixmrfprec(pfixmrfprec)
   {
     connected_offsets.push_back(Connected_Offset(-1,0,0,0,1));
     connected_offsets.push_back(Connected_Offset(1,0,0,1,0));
@@ -639,7 +637,7 @@ namespace Mm {
 //  	float mrf_precision_saved = mrf_precision;
 	//	mrf_precision = 10;
 
-  	save_weights(volinfo,m_tildew,"_init",false);
+    save_weights(m_tildew,"_init",false);
 
 	for(it=1; it<=niters; it++)
 	  {
@@ -830,7 +828,7 @@ namespace Mm {
 	      index++;
 	    }
 
-    save_volume(maxcsmap, LogSingleton::getInstance().appendDir("maxcsmap"),volinfo);
+    save_volume(maxcsmap, LogSingleton::getInstance().appendDir("maxcsmap"));
 	
     volume<int> maxcsmapnew;
     maxcsmapnew=maxcsmap;
@@ -880,7 +878,7 @@ namespace Mm {
 
 	    }
  
-    save_volume(maxcsmapnew, LogSingleton::getInstance().appendDir("maxcsmapnew"),volinfo);
+    save_volume(maxcsmapnew, LogSingleton::getInstance().appendDir("maxcsmapnew"));
 
     // second erosion
     ColumnVector maxcs(num_superthreshold);
@@ -1736,7 +1734,7 @@ namespace Mm {
     return ret_wtilde; 
   }
 
-  void Mixture_Model::save_weights(volumeinfo& volinfo, const ColumnVector& pmtildew, const char* affix, bool usesamples) 
+  void Mixture_Model::save_weights(const ColumnVector& pmtildew, const char* affix, bool usesamples) 
   {
     Tracer_Plus trace("Mixture_Model::save_weights");
 
@@ -1790,26 +1788,29 @@ namespace Mm {
 		}
 	
 	copybasicproperties(spatial_data,logistic_w_means[c]);		
-	save_volume(logistic_w_means[c], LogSingleton::getInstance().appendDir("logistic_w"+num2str(c+1)+"_mean"+affix),volinfo);	
+	save_volume(logistic_w_means[c], LogSingleton::getInstance().appendDir("logistic_w"+num2str(c+1)+"_mean"+affix));	
 
 	copybasicproperties(spatial_data,w_means[c]);		
-	save_volume(w_means[c], LogSingleton::getInstance().appendDir("w"+num2str(c+1)+"_mean"+affix),volinfo);	
+	save_volume(w_means[c], LogSingleton::getInstance().appendDir("w"+num2str(c+1)+"_mean"+affix));	
 	
-	save_volume4D(w_samples[c], LogSingleton::getInstance().appendDir("w"+num2str(c+1)+"_samples"+affix),volinfo);
-	save_volume4D(tildew_samples[c], LogSingleton::getInstance().appendDir("logistic_w"+num2str(c+1)+"_samples"+affix),volinfo);
+	copybasicproperties(spatial_data,w_samples[c]);
+	save_volume4D(w_samples[c], LogSingleton::getInstance().appendDir("w"+num2str(c+1)+"_samples"+affix));
+
+	copybasicproperties(spatial_data,tildew_samples[c]);
+	save_volume4D(tildew_samples[c], LogSingleton::getInstance().appendDir("logistic_w"+num2str(c+1)+"_samples"+affix));
       }
 
   }
 
-  void Mixture_Model::save(volumeinfo& volinfo) 
+  void Mixture_Model::save() 
   {
     Tracer_Plus trace("Mixture_Model::save");
 
-    save_volume(spatial_data, LogSingleton::getInstance().appendDir("spatial_data"),volinfo);
-    save_volume(mask, LogSingleton::getInstance().appendDir("mask"),volinfo);
+    save_volume(spatial_data, LogSingleton::getInstance().appendDir("spatial_data"));
+    save_volume(mask, LogSingleton::getInstance().appendDir("mask"));
 
     // save weights
-    save_weights(volinfo, m_tildew, "", true);
+    save_weights(m_tildew, "", true);
 
 //     update_tildew_scg();
 //     save_weights(volinfo,m_tildew,"_scg",false);
@@ -2196,7 +2197,7 @@ namespace Mm {
     
   }
 
-  void make_ggmreport(const vector<volume<float> >& w_means, const vector<Distribution*>& dists, const volume<int>& mask, const volume<float>& spatial_data, bool zfstatmode, volumeinfo& volinfo, bool overlay, const volume<float>& epivol, float thresh, bool nonspatial, bool updatetheta, const string& data_name)
+  void make_ggmreport(const vector<volume<float> >& w_means, const vector<Distribution*>& dists, const volume<int>& mask, const volume<float>& spatial_data, bool zfstatmode, bool overlay, const volume<float>& epivol, float thresh, bool nonspatial, bool updatetheta, const string& data_name)
   {
     int nclasses = dists.size();
 
@@ -2254,7 +2255,7 @@ namespace Mm {
 
  	newpic.set_title(string("Raw spatial map"));
 	
- 	newpic.slicer(newvol, instr, &volinfo);
+ 	newpic.slicer(newvol, instr);
       
 
 	htmllog << "<img BORDER=0 SRC=\"spatial_data.png\"><p>" << endl;
@@ -2276,14 +2277,14 @@ namespace Mm {
 
 	  volume<float> epivoltmp = epivol;
 
-	  save_volume(map, LogSingleton::getInstance().appendDir("map"),volinfo);
-	  save_volume(epivoltmp, LogSingleton::getInstance().appendDir("epivol"),volinfo);
+	  save_volume(map, LogSingleton::getInstance().appendDir("map"));
+	  save_volume(epivoltmp, LogSingleton::getInstance().appendDir("epivol"));
 	 
 	  newpic.overlay(newvol, epivoltmp, map, map, 
 			 epivol.percentile(0.01),
 			 epivol.percentile(0.99),
 			 float(thresh), float(1.0), float(0.0), float(0.0),
-			 0, 0, &volinfo);
+			 0, 0);
 		
 	  char instr[10000];
 	
@@ -2298,7 +2299,7 @@ namespace Mm {
 	  newpic.set_title(tit);	    
 	
 	  newpic.set_cbar(string("y"));
-	  newpic.slicer(newvol, instr, &volinfo); 
+	  newpic.slicer(newvol, instr); 
 	
 	  htmllog << "<img BORDER=0 SRC=\"actprobmap.png\">" << endl;
 	  htmllog << "<p>" << endl;
@@ -2326,7 +2327,7 @@ namespace Mm {
 			     spatial_data.percentile(0.01),
 			     spatial_data.percentile(0.99),
 			     float(thresh), float(1.0), float(0.0), float(0.0),
-			     0, 0, &volinfo);
+			     0, 0);
 
 	  sprintf(instr," ");
 	  strcat(instr,"-s 2 ");
@@ -2340,7 +2341,7 @@ namespace Mm {
 	  newpic.set_title(tit);	    
 	  
 	  newpic.set_cbar(string("y"));
-	  newpic.slicer(newvol, instr, &volinfo); 
+	  newpic.slicer(newvol, instr); 
 		
 	  htmllog << "<img BORDER=0 SRC=\"actprobmap.png\">" << endl;
 	  htmllog << "<p>" << endl;
@@ -2369,7 +2370,7 @@ namespace Mm {
 			     epivol.percentile(0.01),
 			     epivol.percentile(0.99),
 			     float(thresh), float(1.0), float(0.0), float(0.0),
-			     0, 0, &volinfo);
+			     0, 0);
 		
 	      char instr[10000];
 	
@@ -2384,7 +2385,7 @@ namespace Mm {
 	      newpic.set_title(tit);
 	
 	      newpic.set_cbar(string("y"));
-	      newpic.slicer(newvol, instr, &volinfo); 
+	      newpic.slicer(newvol, instr); 
 	
 	      htmllog << "<img BORDER=0 SRC=\"deactprobmap.png\">" << endl;
 	      htmllog << "<p>" << endl;
@@ -2412,7 +2413,7 @@ namespace Mm {
 			     spatial_data.percentile(0.01),
 			     spatial_data.percentile(0.99),
 			     float(thresh), float(1.0), float(0.0), float(0.0),
-			     0, 0, &volinfo);
+			     0, 0);
 
 	      sprintf(instr," ");
 	      strcat(instr,"-s 2 ");
@@ -2425,7 +2426,7 @@ namespace Mm {
 	      newpic.set_title(tit);
 
 	      newpic.set_cbar(string("y"));
-	      newpic.slicer(newvol, instr, &volinfo); 
+	      newpic.slicer(newvol, instr); 
 	      htmllog << "<img BORDER=0 SRC=\"deactprobmap.png\">" << endl;
 	      htmllog << "<p>" << endl;
 	    }

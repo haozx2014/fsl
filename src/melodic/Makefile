@@ -12,11 +12,15 @@ USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_PROB} -L${LIB_GD} -L${LIB_GDC} -L${LIB_PNG}
 
 LIBS = -lutils -lnewimage -lmiscplot -lmiscpic -lmiscmaths -lfslio -lniftiio -lznz -lnewmat -lprob -lm  -lgdc -lgd -lpng -lz
 
-TEST_OBJS = test.o test2.o
+TEST_OBJS = test.o 
 
 GGMIX_OBJS = ggmix.o
 
 FSL_GLM_OBJS = melhlprfns.o fsl_glm.o
+
+FSL_SBCA_OBJS = melhlprfns.o fsl_sbca.o
+
+FSL_MVLM_OBJS = melhlprfns.o fsl_mvlm.o
 
 FSL_REGFILT_OBJS = melhlprfns.o fsl_regfilt.o
 
@@ -24,13 +28,13 @@ MELODIC_OBJS =  meloptions.o melhlprfns.o melgmix.o meldata.o melpca.o melica.o 
 
 TESTXFILES = test
 
-XFILES = fsl_glm fsl_regfilt melodic
+XFILES = fsl_glm fsl_sbca fsl_mvlm fsl_regfilt melodic
 
 RUNTCLS = Melodic
 
 SCRIPTS = melodicreport
 
-all: ggmix fsl_regfilt fsl_glm melodic
+all: ggmix fsl_regfilt fsl_glm fsl_mvlm fsl_sbca melodic
 
 ggmix: ${GGMIX_OBJS}
 	${AR} -r libggmix.a ${GGMIX_OBJS} 
@@ -43,6 +47,12 @@ test: ${TEST_OBJS}
 
 fsl_glm: ${FSL_GLM_OBJS}
 	$(CXX) ${CXXFLAGS} ${LDFLAGS} -o $@ ${FSL_GLM_OBJS} ${LIBS}
+
+fsl_sbca: ${FSL_SBCA_OBJS}
+		$(CXX) ${CXXFLAGS} ${LDFLAGS} -o $@ ${FSL_SBCA_OBJS} ${LIBS}
+
+fsl_mvlm: ${FSL_MVLM_OBJS}
+		$(CXX) ${CXXFLAGS} ${LDFLAGS} -o $@ ${FSL_MVLM_OBJS} ${LIBS}
 
 fsl_regfilt: ${FSL_REGFILT_OBJS}
 	$(CXX) ${CXXFLAGS} ${LDFLAGS} -o $@ ${FSL_REGFILT_OBJS} ${LIBS}
