@@ -166,11 +166,10 @@ int fmrib_main(int argc,char *argv[])
   int retval=0;
   string option=argv[1], filename;
 
-  volumeinfo volinfo;
   volume4D<T> invol;
 
   filename=argv[argc-1];
-  read_orig_volume4D(invol,filename,volinfo);
+  read_orig_volume4D(invol,filename);
 
   if (option=="-getorient") {
     getorient(invol);
@@ -245,9 +244,9 @@ int fmrib_main(int argc,char *argv[])
 
 
   if (modified) {
-    if (FslBaseFileType(FslGetFileType(&volinfo))!=FSL_TYPE_ANALYZE) {
-      FslSetOverrideOutputType(FslGetFileType(&volinfo));
-      save_orig_volume4D(invol,filename,volinfo);
+    if (FslBaseFileType(fslFileType(filename))!=FSL_TYPE_ANALYZE) {
+      FslSetOverrideOutputType(fslFileType(filename));
+      save_orig_volume4D(invol,filename);
       FslSetOverrideOutputType(-1);  // restore to default
     } else {
       cerr << "Cannot modify orientation for Analyze files" << endl;

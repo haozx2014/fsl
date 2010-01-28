@@ -756,7 +756,7 @@ namespace Filmbabe {
     
   }
   
-  void Filmbabe_Vb_Flobs::save(volumeinfo& volinfo) 
+  void Filmbabe_Vb_Flobs::save() 
     {
       Tracer_Plus trace("Filmbabe_Vb_Flobs::save");
 
@@ -774,7 +774,7 @@ namespace Filmbabe {
 		  }
 
 	  copybasicproperties(data[0],A_mean);
-	  save_volume(A_mean, LogSingleton::getInstance().appendDir("A_mean_"+num2str(p)),volinfo);
+	  save_volume(A_mean, LogSingleton::getInstance().appendDir("A_mean_"+num2str(p)));
 	}
 
       for(int e=1; e<=nrealevs; e++)
@@ -791,7 +791,7 @@ namespace Filmbabe {
 		  }
 
 	  copybasicproperties(data[0],Beta_mean);
-	  save_volume(Beta_mean, LogSingleton::getInstance().appendDir("pe"+num2str(e)),volinfo);
+	  save_volume(Beta_mean, LogSingleton::getInstance().appendDir("pe"+num2str(e)));
 	  
 	}
 
@@ -809,7 +809,7 @@ namespace Filmbabe {
 		  }
 
 	  copybasicproperties(data[0],R_mean);
-	  save_volume(R_mean, LogSingleton::getInstance().appendDir("R_mean_e"+num2str(e)),volinfo);
+	  save_volume(R_mean, LogSingleton::getInstance().appendDir("R_mean_e"+num2str(e)));
       
 	}
 
@@ -860,13 +860,13 @@ namespace Filmbabe {
 	      }
 
       copybasicproperties(data[0],all_Beta_cov[0]);
-      save_volume4D(all_Beta_cov, LogSingleton::getInstance().appendDir("all_Beta_cov"),volinfo);
+      save_volume4D(all_Beta_cov, LogSingleton::getInstance().appendDir("all_Beta_cov"));
       copybasicproperties(data[0],Beta_cov[0]);
-      save_volume4D(Beta_cov, LogSingleton::getInstance().appendDir("corrections"),volinfo);
+      save_volume4D(Beta_cov, LogSingleton::getInstance().appendDir("corrections"));
       copybasicproperties(data[0],R_cov[0]);
-      save_volume4D(R_cov, LogSingleton::getInstance().appendDir("R_cov"),volinfo);
+      save_volume4D(R_cov, LogSingleton::getInstance().appendDir("R_cov"));
       copybasicproperties(data[0],sigmasq);
-      save_volume(sigmasq, LogSingleton::getInstance().appendDir("sigmasquareds"),volinfo);
+      save_volume(sigmasq, LogSingleton::getInstance().appendDir("sigmasquareds"));
 
       Matrix a(1,1);
       a =1000;

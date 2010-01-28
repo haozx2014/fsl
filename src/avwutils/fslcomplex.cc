@@ -1,8 +1,8 @@
 /*  fslcomplex.cc
 
-    Mark Jenkinson, FMRIB Image Analysis Group
+    Mark Jenkinson and Matthew Webster, FMRIB Image Analysis Group
 
-    Copyright (C) 2000-2001 University of Oxford  */
+    Copyright (C) 2000-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -106,8 +106,7 @@ void realpolar(const string& fin, const string& fabs, const string& fphase,
 	       int start, int end) 
 {
   volume4D<float> vreal, vimag;
-  volumeinfo vinfo;
-  read_complexvolume4D(vreal, vimag, fin, vinfo);
+  read_complexvolume4D(vreal, vimag, fin);
   fix_start_and_end(start,end,vreal.mint(),vreal.maxt());
 
   if (fabs.size()>0) {
@@ -115,7 +114,8 @@ void realpolar(const string& fin, const string& fabs, const string& fphase,
     for (int n=start; n<=end; n++) {
       vabs.addvolume(abs(vreal[n],vimag[n]));
     }
-    save_volume4D(vabs,fabs,vinfo);
+    vabs.copyproperties(vreal);
+    save_volume4D(vabs,fabs);
   }
 
   if (fphase.size()>0) {
@@ -123,7 +123,8 @@ void realpolar(const string& fin, const string& fabs, const string& fphase,
     for (int n=start; n<=end; n++) {
       vphase.addvolume(phase(vreal[n],vimag[n]));
     }
-    save_volume4D(vphase,fphase,vinfo);
+    vphase.copyproperties(vreal);
+    save_volume4D(vphase,fphase);
   }
 }
 
@@ -131,8 +132,7 @@ void realcartesian(const string& fin, const string& freal, const string& fimag,
 		   int start, int end)
 {
   volume4D<float> vreal, vimag;
-  volumeinfo vinfo;
-  read_complexvolume4D(vreal, vimag, fin, vinfo);
+  read_complexvolume4D(vreal, vimag, fin);
   fix_start_and_end(start,end,vreal.mint(),vreal.maxt());
 
   if (freal.size()>0) {
@@ -140,7 +140,8 @@ void realcartesian(const string& fin, const string& freal, const string& fimag,
     for (int n=start; n<=end; n++) {
       vre.addvolume(vreal[n]);
     }
-    save_volume4D(vre,freal,vinfo);
+    vre.copyproperties(vreal);
+    save_volume4D(vre,freal);
   }
 
   if (fimag.size()>0) {
@@ -148,7 +149,8 @@ void realcartesian(const string& fin, const string& freal, const string& fimag,
     for (int n=start; n<=end; n++) {
       vim.addvolume(vimag[n]);
     }
-    save_volume4D(vim,fimag,vinfo);
+    vim.copyproperties(vimag);
+    save_volume4D(vim,fimag);
   }
 }
 
@@ -157,9 +159,8 @@ void complexsave(const string& freal, const string& fimag,
 		 const string& fcomplex, int start, int end)
 {
   volume4D<float> vreal, vimag;
-  volumeinfo vinfo;
-  read_volume4D(vreal, freal, vinfo);
-  read_volume4D(vimag, fimag, vinfo);
+  read_volume4D(vreal, freal);
+  read_volume4D(vimag, fimag);
   fix_start_and_end(start,end,Max(vreal.mint(),vimag.mint()),
 		    Min(vreal.maxt(),vimag.maxt()));
 
@@ -169,7 +170,9 @@ void complexsave(const string& freal, const string& fimag,
       vre.addvolume(vreal[n]);
       vim.addvolume(vimag[n]);
     }
-    save_complexvolume4D(vre,vim,fcomplex,vinfo);
+    vre.copyproperties(vreal);
+    vim.copyproperties(vimag);
+    save_complexvolume4D(vre,vim,fcomplex);
   }
 }
 
@@ -178,9 +181,8 @@ void complexpolar(const string& fabsvol, const string& fphasevol,
 		  const string& fcomplex, int start, int end)
 {
   volume4D<float> vabs, vphase;
-  volumeinfo vinfo;
-  read_volume4D(vabs, fabsvol, vinfo);
-  read_volume4D(vphase, fphasevol, vinfo);
+  read_volume4D(vabs, fabsvol);
+  read_volume4D(vphase, fphasevol);
   fix_start_and_end(start,end,Max(vabs.mint(),vphase.mint()),
 		    Min(vabs.maxt(),vphase.maxt()));
 
@@ -190,7 +192,9 @@ void complexpolar(const string& fabsvol, const string& fphasevol,
       vre.addvolume(real(vabs[n],vphase[n]));
       vim.addvolume(imag(vabs[n],vphase[n]));
     }
-    save_complexvolume4D(vre,vim,fcomplex,vinfo);
+    vre.copyproperties(vabs);
+    vim.copyproperties(vphase);
+    save_complexvolume4D(vre,vim,fcomplex);
   }
 }
 
@@ -198,8 +202,7 @@ void complexsplit(const string& fsource, const string& fdest,
 		  int start, int end)
 {
   volume4D<float> vreal, vimag;
-  volumeinfo vinfo;
-  read_complexvolume4D(vreal, vimag, fsource, vinfo);
+  read_complexvolume4D(vreal, vimag, fsource);
   fix_start_and_end(start,end,Max(vreal.mint(),vimag.mint()),
 		    Min(vreal.maxt(),vimag.maxt()));
 
@@ -209,7 +212,9 @@ void complexsplit(const string& fsource, const string& fdest,
       vre.addvolume(vreal[n]);
       vim.addvolume(vimag[n]);
     }
-    save_complexvolume4D(vre,vim,fdest,vinfo);
+    vre.copyproperties(vreal);
+    vim.copyproperties(vimag);
+    save_complexvolume4D(vre,vim,fdest);
   }
 }
 
@@ -217,9 +222,8 @@ void complexmerge(const string& fsource1, const string& fsource2,
 		  const string& fdest)
 {
   volume4D<float> vr1, vi1, vr2, vi2;
-  volumeinfo vinfo;
-  read_complexvolume4D(vr1, vi1, fsource1, vinfo);
-  read_complexvolume4D(vr2, vi2, fsource2, vinfo);
+  read_complexvolume4D(vr1, vi1, fsource1);
+  read_complexvolume4D(vr2, vi2, fsource2);
 
   if (!samesize(vr1,vi1)) {
     cerr << "Could not process image " << fsource1 << " correctly." << endl;
@@ -239,7 +243,9 @@ void complexmerge(const string& fsource1, const string& fsource2,
       vdr.addvolume(vr2[n]);
       vdr.addvolume(vi2[n]);
     }
-    save_complexvolume4D(vdr,vdi,fdest,vinfo);
+    vdr.copyproperties(vr1);
+    vdi.copyproperties(vr2);
+    save_complexvolume4D(vdr,vdi,fdest);
   }
 }
 
@@ -247,9 +253,8 @@ void complexmerge(const string& fsource1, const string& fsource2,
 void copyonly(const string& fsource, const string& fdest)
 {
   volume4D<float> vreal, vimag;
-  volumeinfo vinfo;
-  read_complexvolume4D(vreal, vimag, fsource, vinfo);
-  save_complexvolume4D(vreal, vimag, fdest, vinfo);
+  read_complexvolume4D(vreal, vimag, fsource);
+  save_complexvolume4D(vreal, vimag, fdest);
 }
 
 

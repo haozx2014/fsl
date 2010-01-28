@@ -89,7 +89,7 @@ namespace Melodic{
   Matrix convert_to_pbsc(Matrix& Mat);
 
   RowVector varnorm(Matrix& in, int dim = 30, float level = 1.6);
-	void varnorm(Matrix& in, const RowVector& vars);
+       void varnorm(Matrix& in, const RowVector& vars);
   RowVector varnorm(Matrix& in, Matrix& Corr, int dim = 30, float level = 1.6);
 
   Matrix SP2(const Matrix& in, const Matrix& weights, bool econ = 0);
@@ -97,11 +97,14 @@ namespace Melodic{
   RowVector Feta(int n1,int n2);
   RowVector cumsum(const RowVector& Inp);
 
-	Matrix corrcoef(const Matrix& in1, const Matrix& in2);
+  Matrix corrcoef(const Matrix& in1, const Matrix& in2);
+  Matrix corrcoef(const Matrix& in1, const Matrix& in2, const Matrix& part);
   Matrix calc_corr(const Matrix& in, bool econ = 0);
   Matrix calc_corr(const Matrix& in, const Matrix& weights, bool econ = 0);
 
+  float calc_white(const Matrix& tmpE, const RowVector& tmpD, const RowVector& PercEV, int dim, Matrix& param, Matrix& paramS, Matrix& white, Matrix& dewhite);
   float calc_white(const Matrix& tmpE, const RowVector& tmpD, const RowVector& PercEV, int dim, Matrix& white, Matrix& dewhite);
+  void calc_white(const Matrix& tmpE, const RowVector& tmpD, int dim, Matrix& param, Matrix& paramS, Matrix& white, Matrix& dewhite);
   void calc_white(const Matrix& tmpE, const RowVector& tmpD, int dim, Matrix& white, Matrix& dewhite);
   void calc_white(const Matrix& Corr, int dim, Matrix& white, Matrix& dewhite);
   

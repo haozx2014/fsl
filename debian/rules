@@ -17,7 +17,7 @@ PROJECTS = \
   misc_tcl basisfield warpfns bint shapeModel MVdisc libmeshutils \
   avwutils bet2 cluster fast4 feat5 film filmbabe flirt fabber fslpres fslvbm \
   mcflirt melodic misc_c miscvis mm randomise siena slicetimer susan tbss \
-  fnirt fugue fdt first possum sgeutils flameo
+  fnirt fugue misc_scripts fdt first possum sgeutils flameo
 
 # specify FSL extras to be built
 EXTRAS = libprob libcprob cprob

@@ -161,6 +161,12 @@ void FilmGlsOptions::parse_command_line(int argc, char** argv, Log& logger)
     if ( arg == "-ms") {
       gopt->ms = atoi(argv[n+1]);
       n+=2;
+    } else if ( arg == "-mf") {
+      gopt->meanInputFile = string(argv[n+1]);
+      n+=2;
+    } else if ( arg == "-mft") {
+      gopt->minimumTimepointFile = string(argv[n+1]);
+      n+=2;
     } else if ( arg == "-ven" ) {
       n++;
       int size=1;
@@ -232,6 +238,8 @@ void FilmGlsOptions::print_usage(int argc, char *argv[])
        << "        -pava                              (estimates autocorr using PAVA - default " 
        << "is to use tukey with M=sqrt(numvols))\n"
        << "        -noest                             (do not estimate auto corrs)\n"
+       << "        -mf <file>                         (re-estimate mean_func baseline - for use with perfusion subtraction)\n"
+       << "        -mft <file>                        (minimum timepoint file)\n"
        << "        -output_pwdata                     (output prewhitened data and average design matrix)\n" 
        << "        -rn <dir>                          (directory name to store results in, default is "
        << gopt->datadir << ")\n"

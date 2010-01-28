@@ -777,11 +777,10 @@ int do_unwarping()
   volume4D<float> invol, resvol;
   volume<float> mask1, mask2;
   volume<float> pixshift, fmap;
-  volumeinfo in_info;
 
   if (inputname.set()) {
     if (verbose.value()) { cout << "Reading input volume" << endl; }
-    read_volume4D(invol,inputname.value(),in_info);
+    read_volume4D(invol,inputname.value());
   } else if (unwarpfname.set() || warpfname.set()) {
     cerr << "Must specify an input volume (-i or --in) to use (un)warping." 
 	 << endl;
@@ -937,7 +936,7 @@ int do_unwarping()
       }      
     }
     // save_volume(derivshift,unwarpfname.value()+"_deriv");
-    save_volume4D(resvol,unwarpfname.value(),in_info);
+    save_volume4D(resvol,unwarpfname.value());
   }
 
 
@@ -958,7 +957,7 @@ int do_unwarping()
 	swapdirections(fmap,unwarpdir_value);       
       }      
     }    
-    save_volume4D(resvol,warpfname.value(),in_info);
+    save_volume4D(resvol,warpfname.value());
   }
     
   return 0;

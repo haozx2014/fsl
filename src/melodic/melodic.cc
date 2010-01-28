@@ -156,8 +156,8 @@ int main(int argc, char *argv[]){
 				no_conv = icaobj.no_convergence;
 
 				opts.maxNumItt.set_T(500);
-				if((opts.approach.value()=="symm")&&
-	   		(retry > std::min(opts.retrystep,3))){
+	  if((opts.approach.value()=="symm")&&(retry > std::min(opts.retrystep,3)))
+	  {
 	  			if(no_conv){
 	    			retry++;
 	    			opts.approach.set_T("defl");
@@ -182,6 +182,8 @@ int main(int argc, char *argv[]){
 	      			}
 	    			}
 	    			if(!leaveloop){
+					if(opts.paradigmfname.value().length()>0)
+						opts.pca_dim.set_T(std::max(opts.pca_dim.value(),melodat.get_param().Ncols()+3*opts.retrystep-1));
 	      			message(endl << "Restarting MELODIC using -d " 
 		      			<< opts.pca_dim.value() 
 		      			<< endl << endl);
@@ -226,7 +228,7 @@ int main(int argc, char *argv[]){
 
 				message("finished!" << endl << endl);
       } 
-			else { 
+	  else { 
 				message(endl <<"No convergence -- giving up " << endl << endl);
       }	     
     }
@@ -247,14 +249,13 @@ void mmonly(Log& logger, MelodicOptions& opts,
   Matrix ICs;
   Matrix mixMatrix;
   Matrix fmixMatrix;
-  volumeinfo ICvolInfo;
   volume<float> Mask;
   volume<float> Mean;
   
   {
     volume4D<float> RawData;
     message("Reading data file " << opts.inputfname.value().at(0) << "  ... ");
-    read_volume4D(RawData,opts.inputfname.value().at(0),ICvolInfo);
+    read_volume4D(RawData,opts.inputfname.value().at(0));
     message(" done" << endl);
     Mean = meanvol(RawData);
   }
@@ -319,7 +320,6 @@ void mmonly(Log& logger, MelodicOptions& opts,
     }
   }
 
-  melodat.tempInfo = ICvolInfo;
   melodat.set_mask(Mask);
   melodat.set_mean(Mean);
   melodat.set_IC(ICs);
@@ -337,8 +337,7 @@ void mmonly(Log& logger, MelodicOptions& opts,
     mmres = mmall(logger,opts,melodat,report,pmaps);
 	}
 
-Matrix mmall(Log& logger, MelodicOptions& opts,
-	MelodicData& melodat, MelodicReport& report, Matrix& pmaps){
+Matrix mmall(Log& logger, MelodicOptions& opts,MelodicData& melodat, MelodicReport& report, Matrix& pmaps){
   
   Matrix mmpars(5*melodat.get_IC().Nrows(),5);
   mmpars = 0;
@@ -367,7 +366,7 @@ Matrix mmall(Log& logger, MelodicOptions& opts,
       ICmap = SP(melodat.get_IC().Row(ctr),diagvals(ctr)*melodat.get_stdNoisei());
     }else{
     	ICmap = melodat.get_IC().Row(ctr);
-		}
+	}
     string wherelog;
     if(opts.genreport.value())
       wherelog = report.getDir();
@@ -375,7 +374,7 @@ Matrix mmall(Log& logger, MelodicOptions& opts,
       wherelog = logger.getDir();
 
 		dbgmsg(" ICmap max : "<< mean(ICmap,2).AsScalar() << endl);
-    mixmod.setup( ICmap, melodat.tempInfo,
+    mixmod.setup( ICmap,
 		  wherelog,ctr,
 		  melodat.get_mask(), 
 		  melodat.get_mean(),3);

@@ -151,18 +151,18 @@ int do_unwrapping()
 {
 
   volume4D<float> phasemaps, absmaps, masks;
-  volumeinfo vinfo;
 
   if (complexvol.set()) {
     volume4D<float> rvol, ivol;
-    read_complexvolume4D(rvol,ivol,complexvol.value(),vinfo);
+    read_complexvolume4D(rvol,ivol,complexvol.value());
     for (int n=0; n<rvol.tsize(); n++) {
       phasemaps.addvolume(phase(rvol[n],ivol[n]));
       absmaps.addvolume(abs(rvol[n],ivol[n]));
     }
+    phasemaps.setTR(rvol.TR());
   } else {
     if (verbose.value()) cout << "Loading volumes" << endl;
-    read_volume4D(phasemaps,phasevol.value(),vinfo);
+    read_volume4D(phasemaps,phasevol.value());
     if (verbose.value()) cout << "Phase loaded" << endl;
     read_volume4D(absmaps,absvol.value());
     if (verbose.value()) cout << "Magnitude loaded" << endl;
@@ -278,7 +278,8 @@ int do_unwrapping()
   }
 
   // Save outputs
-  save_volume4D(uphase,uphasevol.value(),vinfo);
+  uphase.setTR(phasemaps.TR());
+  save_volume4D(uphase,uphasevol.value());
 
   if (rawphasevol.set()) {
     save_volume4D(phasemaps,rawphasevol.value());

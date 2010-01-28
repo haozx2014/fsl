@@ -69,6 +69,7 @@
 #include "miscmaths/miscprob.h"
 #include "utils/options.h"
 #include <vector>
+#include <time.h>
 #include "newimage/newimageall.h"
 #include "melhlprfns.h"
 
@@ -80,11 +81,11 @@ using namespace std;
 // The two strings below specify the title and example usage that is
 // printed out as the help or usage message
 
-  string title=string("fsl_glm (Version 1.0)")+
-		string("\nCopyright(c) 2007, University of Oxford (Christian F. Beckmann)\n")+
-		string(" \n Simple GLM usign ordinary least-squares regression on\n")+
-		string(" time courses and/or 3D/4D volumes\n\n");
-  string examples="fsl_glm <input> -d <design> [options]";
+  string title=string("fsl_BLAH")+
+		string("\nCopyright(c) 2008, University of Oxford (Christian F. Beckmann)\n")+
+		string(" \n \n")+
+		string(" \n");
+  string examples="fsl_BLAH [options]";
 
 //Command line Options {
   Option<string> fnin(string("-i,--in"), string(""),
@@ -96,53 +97,12 @@ using namespace std;
 		/*
 }
 */
-//Globals {
-	
-	volumeinfo volinf;  /*
-}
-*/
 ////////////////////////////////////////////////////////////////////////////
 
 // Local functions
 
 int do_work(int argc, char* argv[]) {
-	Matrix design;
-	design=read_ascii_matrix(fnin.value());
-		Matrix joined;
-		Matrix weights;
-		
-		
-	cerr << " Design : "  << design.Nrows() << " x " << design.Ncols() << endl <<endl;
-	for(int i=1; i <10; i++){
-		weights = normrnd(10,design.Ncols());
-		
-	
-		joined=SP(design,ones(design.Nrows(),1)*weights.Row(1));
-		
-		for(int j=2;j<=weights.Nrows();j++){
-			Matrix tmp;
-			tmp=SP(design,ones(design.Nrows(),1)*weights.Row(j));
-			joined &= tmp;
-		}
-			
-		
-	}
-	
-	cerr << " joined : " << joined.Nrows() << " x " << joined.Ncols() << endl << endl;
-	
-	Matrix Cols,Rows;
-	
-	Melodic::krfact(joined,design.Nrows(),Cols,Rows);
-	
-	cerr << " Cols : " << Cols.Nrows() << " x " << Cols.Ncols() << endl << endl;
-	
-	cerr << " Rows : " << Rows.Nrows() << " x " << Rows.Ncols() << endl << endl;
 
-	cerr << weights << endl <<endl << Rows << endl;
-
-	cerr << remmean(SP(weights,pow(Rows,-1))) << endl;
-	
-	
 	return 0;
 }
 
@@ -154,8 +114,16 @@ int do_work(int argc, char* argv[]) {
 	  try{
 	    // must include all wanted options here (the order determines how
 	    //  the help message is printed)
-			options.add(fnin);
-		
+	
+		  double tmptime = time(NULL);
+		  srand((unsigned int) tmptime);
+
+		cerr << (unsigned int) tmptime << endl << endl;
+
+		cerr << unifrnd(2,2) << endl;
+		exit(1);
+	/*
+			options.add(fnin);		
 			options.add(help);
 		
 	    options.parse_command_line(argc, argv);
@@ -168,7 +136,7 @@ int do_work(int argc, char* argv[]) {
 	    }else{
 	  		// Call the local functions
 	  		return do_work(argc,argv);
-			}
+			}*/
 		}catch(X_OptionError& e) {
 			options.usage();
 	  	cerr << endl << e.what() << endl;
