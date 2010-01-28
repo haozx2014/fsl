@@ -98,8 +98,7 @@ int main(int argc, char *argv[])
 
     // load data
     volume4D<float> input_data;
-    volumeinfo vinfo;
-    read_volume4D(input_data,globalopts.inputfname,vinfo);
+    read_volume4D(input_data,globalopts.inputfname);
     int sizeTS(input_data.tsize());
 
     volume4D<float> reference;
@@ -167,8 +166,8 @@ int main(int argc, char *argv[])
 	    volume4D<float> beta;
 	    beta.setmatrix(acEst.fitAutoRegressiveModel(),mask);
 	    copybasicproperties(reference,beta);
-	    FslSetCalMinMax(&vinfo,beta.min(),beta.max());
-	    save_volume4D(beta,LogSingleton::getInstance().getDir() + "/betas",vinfo);
+	    beta.setDisplayMaximumMinimum(beta.max(),beta.min());
+	    save_volume4D(beta,LogSingleton::getInstance().getDir() + "/betas");
 	  }
 	else if(globalopts.tukey)
 	  {    
@@ -231,15 +230,15 @@ int main(int argc, char *argv[])
     cerr << "Completed" << endl << "Saving results... " << endl;
 
     input_data.setmatrix(residuals,mask);
-    FslSetCalMinMax(&vinfo,input_data.min(),input_data.max());
-    save_volume4D(input_data,logger.getDir() + "/res4d",vinfo);
+    input_data.setDisplayMaximumMinimum(input_data.max(),input_data.min());
+    save_volume4D(input_data,logger.getDir() + "/res4d");
 
     if(globalopts.output_pwdata || globalopts.verbose)
       {
 	// Write out whitened data
         input_data.setmatrix(datam,mask);
-	FslSetCalMinMax(&vinfo,input_data.min(),input_data.max());
-        save_volume4D(input_data,logger.getDir() + "/prewhitened_data",vinfo);
+	input_data.setDisplayMaximumMinimum(input_data.max(),input_data.min());
+        save_volume4D(input_data,logger.getDir() + "/prewhitened_data");
 	// Write out whitened design matrix
 	write_vest(logger.appendDir("mean_prewhitened_dm.mat"), mean_prewhitened_dm);
 		
@@ -254,13 +253,13 @@ int main(int argc, char *argv[])
     input_data.setmatrix(threshacm,mask);
     input_data.settdim(reference.tdim()); //Possibly just set to a constant 1?
     input_data.set_intent(NIFTI_INTENT_ESTIMATE,0,0,0);
-    FslSetCalMinMax(&vinfo,input_data.min(),input_data.max());
-    save_volume4D(input_data,logger.getDir() + "/threshac1",vinfo);
+    input_data.setDisplayMaximumMinimum(input_data.max(),input_data.min());
+    save_volume4D(input_data,logger.getDir() + "/threshac1");
 
     threshacm.CleanUp();
 
     // save gls results:
-    glimGls.Save(vinfo,mask,reference.tdim());
+    glimGls.Save(mask,reference.tdim());
     glimGls.CleanUp();
 
     cerr << "Completed" << endl;

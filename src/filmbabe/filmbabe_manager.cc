@@ -95,9 +95,10 @@ namespace Filmbabe {
       }
 
     cout << "datafile =" << opts.datafile.value() << endl;    
-    read_volume4D(data, opts.datafile.value(), volinfo);
+    read_volume4D(data, opts.datafile.value());
     
     cout << "maskfile =" << opts.maskfile.value() << endl;
+    copybasicproperties(data[0],mask);
     read_volume(mask, opts.maskfile.value());
 
     cout << "designfile =" << opts.designfile.value() << endl;
@@ -162,12 +163,12 @@ namespace Filmbabe {
   {
     Tracer_Plus trace("Filmbabe_Manager::save");
 
-    filmbabe_vb_flobs->save(volinfo);
+    filmbabe_vb_flobs->save();
 
     // save other stuff
-    save_volume(mask, LogSingleton::getInstance().appendDir("mask"),volinfo);
+    save_volume(mask, LogSingleton::getInstance().appendDir("mask"));
 
-    save_volume4D(data, LogSingleton::getInstance().appendDir("data"),volinfo);
+    save_volume4D(data, LogSingleton::getInstance().appendDir("data"));
 
   }
 

@@ -146,14 +146,11 @@ namespace Melodic{
 		       		melodat.get_bg().percentile(0.02),
 		       		melodat.get_bg().percentile(0.98),
 		       		map1min, map1max, map2max, map2min, 
-		       		0, 0, &melodat.tempInfo);
+		       		0, 0);
 				char instr[10000];
 	
-	  		//save_volume(newvol,report.appendDir(mmodel.get_prefix()+"rendered"),
-	  		//      melodat.tempInfo);
 				sprintf(instr," ");
-				strcat(instr," -s 2");
-				strcat(instr," -A 950 ");
+				strcat(instr,axials_instr.c_str());
 				strcat(instr,string(report.appendDir(mmodel.get_prefix()+
 					     	"_thresh.png")).c_str());
 				newpic.set_title(string("Component No. "+num2str(cnum)+
@@ -161,9 +158,9 @@ namespace Melodic{
 				newpic.set_cbar(string("ysb"));
 	
 				if((std::abs(map1.max()-map1.min())>0.01) || (std::abs(map2.max()-map2.min())>0.01))
-	  			newpic.slicer(newvol, instr, &melodat.tempInfo); 
+	  			newpic.slicer(newvol, instr); 
 				else
-	  			newpic.slicer(newvol, instr, &melodat.tempInfo);
+	  			newpic.slicer(newvol, instr);
 	  		IChtml << "<a href=\""+mmodel.get_prefix()+"_MM.html\">";
 	    	IChtml << "<img BORDER=0 SRC=\""+mmodel.get_prefix()
 	    		+"_thresh.png\" ALT=\"MMfit\"></A><p>" << endl;
@@ -423,8 +420,7 @@ namespace Melodic{
 	    	volume<float> map2;
 	    	map1 = threshold(tempVol[0],float(0.0), tempVol[0].max());
 	    	map2 = threshold(tempVol[0],tempVol[0].min(), float(0.0));
-	    	// 	save_volume(map,report.appendDir(mmodel.get_prefix()+"_thresh")
-	    	//	    ,melodat.tempInfo);
+
 	    	volume<float> newvol; 
 	    	miscpic newpic;
 	    
@@ -443,15 +439,12 @@ namespace Melodic{
 			   	melodat.get_bg().percentile(0.02),
 			   	melodat.get_bg().percentile(0.98),
 			   	map1min, map1max, map2max, map2min, 
-			   	0, 0, &melodat.tempInfo);
+			   	0, 0);
 	    
 	    	char instr[10000];
 	    
-	    	//save_volume(newvol,report.appendDir(mmodel.get_prefix()+"rendered"),
-	    	//      melodat.tempInfo);
 	    	sprintf(instr," ");
-	    	strcat(instr," -s 2");
-	    	strcat(instr," -A 950 ");
+	    	strcat(instr,axials_instr.c_str());
 	    	strcat(instr,string(report.appendDir(mmodel.get_prefix()+"_thresh"+
 						 	num2str(tctr)+".png")).c_str());
 	    	newpic.set_title(string("Component No. "+num2str(cnum)+
@@ -460,7 +453,7 @@ namespace Melodic{
 			     		mmodel.get_infstr(tctr));
 	    	newpic.set_cbar(string("ysb"));
 	    	//cerr << instr << endl;
-	    	newpic.slicer(newvol, instr, &melodat.tempInfo); 
+	    	newpic.slicer(newvol, instr); 
 	    
 	    	IC_rep_det(mmodel, cnum, dim);
 	    	IChtml << "<a href=\""+mmodel.get_prefix()+"_MM.html\">";
@@ -540,22 +533,19 @@ namespace Melodic{
 			 		float(0.0),
 			 		float(0.0),
 			 		float(0.01), map1max, float(-0.01), map2min, 
-			 		0, 0, &melodat.tempInfo);
+			 		0, 0);
 
 	  		char instr[10000];
-	
-	  		//save_volume(newvol,report.appendDir(mmodel.get_prefix()+"rendered"),
-	  		//      melodat.tempInfo);
+       
 	  		sprintf(instr," ");
-	  		strcat(instr," -s 2");
-	  		strcat(instr," -A 950 ");
+	  		strcat(instr,axials_instr.c_str());
 	  		strcat(instr,string(report.appendDir(mmodel.get_prefix()+
 		 			".png")).c_str());
 	  		newpic.set_title(string("Component No. "+num2str(cnum)+
 				  " - raw Z transformed IC map (1 - 99 percentile)"));
 	  		newpic.set_cbar(string("ysb"));
 		
-	  		newpic.slicer(newvol, instr, &melodat.tempInfo);
+	  		newpic.slicer(newvol, instr);
 			}
       IChtml2 << "<a href=\""+mmodel.get_prefix()+".html\">";
       IChtml2 << "<img BORDER=0 SRC=\""+ mmodel.get_prefix()+
@@ -577,20 +567,20 @@ namespace Melodic{
 			 		melodat.get_bg().percentile(0.02),
 			 		melodat.get_bg().percentile(0.98),
 			 		float(0.1), float(1.0), float(0.0), float(0.0),
-			 		0, 0, &melodat.tempInfo);
+			 		0, 0);
 
 	  		char instr[10000];
 
 	  		sprintf(instr," ");
-	  		strcat(instr,"-l render1 -s 2");
-	  		strcat(instr," -A 950 ");
+	  		strcat(instr,"-l render1 ");
+	  		strcat(instr,axials_instr.c_str());
 	  		strcat(instr,string(report.appendDir(mmodel.get_prefix()+
 					"_prob.png")).c_str());      
 	  		newpic.set_title(string("Component No. "+num2str(cnum)+
 				  " - Mixture Model probability map"));
       
 	  		newpic.set_cbar(string("y"));
-	  		newpic.slicer(newvol, instr, &melodat.tempInfo); 
+	  		newpic.slicer(newvol, instr); 
 
 	  		IChtml2 << "<a href=\""+mmodel.get_prefix()+".html\">";
 	  		IChtml2 << "<img BORDER=0 SRC=\""+ mmodel.get_prefix()+
@@ -713,22 +703,19 @@ namespace Melodic{
 			 		float(0.0),
 			 		float(0.0),
 			 		float(0.01), map1max, float(-0.01), map2min, 
-			 		0, 0, &melodat.tempInfo);
+			 		0, 0);
 
 	  		char instr[10000];
 	
-	  		//save_volume(newvol,report.appendDir(prefix+"rendered"),
-	  		//      melodat.tempInfo);
 	  		sprintf(instr," ");
-	  		strcat(instr," -s 2");
-	  		strcat(instr," -A 950 ");
+	  		strcat(instr,axials_instr.c_str());
 	  		strcat(instr,string(report.appendDir(prefix+
 					".png")).c_str());
 	  		newpic.set_title(string("Component No. "+num2str(cnum)+
 				  " - raw Z transformed IC map (1 - 99 percentile)"));
 	  		newpic.set_cbar(string("ysb"));
 	
-	  		newpic.slicer(newvol, instr, &melodat.tempInfo);
+	  		newpic.slicer(newvol, instr);
 			}
      
       IChtml << "<img BORDER=0 SRC=\""+ prefix+

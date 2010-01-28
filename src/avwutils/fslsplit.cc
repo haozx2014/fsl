@@ -84,13 +84,11 @@ void print_usage(const string& progname)
 template <class T>
 int fmrib_main(int argc, char *argv[])
 {
-  volume4D<T> input_vol;
-  volumeinfo vinfo;
-  volume4D<T> output_vol;
+  volume4D<T> input_vol,output_vol;
   string input_name=string(argv[1]);
-  string output_name="vol";
-  int xoff=1,yoff=1,zoff=1,toff=1,nsize;
-  read_volume4D(input_vol,input_name,vinfo);
+  string output_name("vol");
+  int xoff(1),yoff(1),zoff(1),toff(1),nsize;
+  read_volume4D(input_vol,input_name);
   if ((argc>2) && (argv[2][0]!='-')) output_name=string(argv[2]);
   if (argv[argc-1][0] == '-')  
   { 
@@ -106,7 +104,7 @@ int fmrib_main(int argc, char *argv[])
     input_vol.setROIlimits(0+j*(xoff!=1),0+j*(yoff!=1),0+j*(zoff!=1),0+j*(toff!=1),input_vol.xsize()-1-(nsize-j-1)*(xoff!=1),input_vol.ysize()-1-(nsize-j-1)*(yoff!=1),input_vol.zsize()-1-(nsize-j-1)*(zoff!=1),input_vol.tsize()-1-(nsize-j-1)*(toff!=1));
   input_vol.activateROI(); 
   output_vol=input_vol.ROI();
-  save_volume4D(output_vol,(output_name+num2str(j,4)),vinfo);
+  save_volume4D(output_vol,(output_name+num2str(j,4)));
   }
   return 0;
 }

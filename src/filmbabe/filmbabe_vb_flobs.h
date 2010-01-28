@@ -119,7 +119,7 @@ namespace Filmbabe {
       void run();
 	
       // save data to logger dir
-      void save(volumeinfo& volinfo) ;
+      void save() ;
 	
       // Destructor
       virtual ~Filmbabe_Vb_Flobs(){}

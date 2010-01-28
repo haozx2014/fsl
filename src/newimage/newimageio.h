@@ -1,8 +1,8 @@
 /*  General IO functions (images and transformation files)
 
-    Mark Jenkinson, FMRIB Image Analysis Group
+    Mark Jenkinson and Matthew Webster, FMRIB Image Analysis Group
 
-    Copyright (C) 2000 University of Oxford  */
+    Copyright (C) 2000-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -85,10 +85,6 @@ using namespace NEWMAT;
 
 namespace NEWIMAGE {
 
-typedef FSLIO volumeinfo;
-
-volumeinfo blank_vinfo();
-
 string fslbasename(const string& filename);
 int make_basename(string& filename);
 int find_pathname(string& filename);
@@ -99,129 +95,64 @@ bool fsl_imageexists(const string& filename);
 template <class T>
 int read_volume(volume<T>& target, const string& filename);
 template <class T>
-int read_volume(volume<T>& target, const string& filename, volumeinfo& vinfo);
-template <class T>
 int read_volumeROI(volume<T>& target, const string& filename,
-		   int x0, int y0, int z0, int x1, int y1, int z1);
-template <class T>
-int read_volumeROI(volume<T>& target, const string& filename, 
-		   volumeinfo& vinfo,
 		   int x0, int y0, int z0, int x1, int y1, int z1);
 template <class T>
 int read_volumeROI(volume<T>& target, const string& filename,
 		   int x0, int y0, int z0, int x1, int y1, int z1, 
 		   int xskip, int yskip, int zskip);
 template <class T>
-int read_volumeROI(volume<T>& target, const string& filename, 
-		   volumeinfo& vinfo,
-		   int x0, int y0, int z0, int x1, int y1, int z1,
-		   int xskip, int yskip, int zskip);
-template <class T>
 int read_volume_hdr_only(volume<T>& target, const string& filename);
-template <class T>
-int read_volume_hdr_only(volume<T>& target, const string& filename, 
-			 volumeinfo& vinfo);
+
 int read_complexvolume(volume<float>& realvol, volume<float>& imagvol,
 		       const string& filename);
-int read_complexvolume(volume<float>& realvol, volume<float>& imagvol,
-		       const string& filename, volumeinfo& vinfo);
 int read_complexvolume(complexvolume& vol, const string& filename);
-int read_complexvolume(complexvolume& vol, const string& filename, 
-		       volumeinfo& vinfo);
+
 
 template <class T>
 int read_volume4D(volume4D<T>& target, const string& filename);
 template <class T>
-int read_volume4D(volume4D<T>& target, const string& filename, 
-		  volumeinfo& vinfo);
-template <class T>
 int read_volume4DROI(volume4D<T>& target, const string& filename, 
 		     int x0, int y0, int z0, int t0, 
 		     int x1, int y1, int z1, int t1);
 template <class T>
 int read_volume4DROI(volume4D<T>& target, const string& filename, 
-		     volumeinfo& vinfo,
-		     int x0, int y0, int z0, int t0, 
-		     int x1, int y1, int z1, int t1);
-template <class T>
-int read_volume4DROI(volume4D<T>& target, const string& filename, 
-		     int x0, int y0, int z0, int t0, 
-		     int x1, int y1, int z1, int t1,
-		     int xskip, int yskip, int zskip, int tskip);
-template <class T>
-int read_volume4DROI(volume4D<T>& target, const string& filename, 
-		     volumeinfo& vinfo,
 		     int x0, int y0, int z0, int t0, 
 		     int x1, int y1, int z1, int t1,
 		     int xskip, int yskip, int zskip, int tskip);
 template <class T>
 int read_volume4D_hdr_only(volume4D<T>& target, const string& filename);
-template <class T>
-int read_volume4D_hdr_only(volume4D<T>& target, const string& filename,
-			   volumeinfo& vinfo);
 int read_complexvolume4D(volume4D<float>& realvol, volume4D<float>& imagvol,
 			 const string& filename);
-int read_complexvolume4D(volume4D<float>& realvol, volume4D<float>& imagvol,
-			 const string& filename, volumeinfo& vinfo);
 int read_complexvolume4D(complexvolume& vol, const string& filename);
-int read_complexvolume4D(complexvolume &vol, const string& filename, 
-			 volumeinfo& vinfo);
 
 
   // save
 
 template <class T>
 int save_volume(const volume<T>& source, const string& filename);
-template <class T>
-int save_volume(const volume<T>& source, const string& filename,
-		const volumeinfo& vinfo);
 int save_complexvolume(const volume<float>& realvol, 
 		       const volume<float>& imagvol, const string& filename);
-int save_complexvolume(const volume<float>& realvol, 
-		       const volume<float>& imagvol, const string& filename,
-		       const volumeinfo& vinfo);
 int save_complexvolume(const complexvolume& vol, const string& filename);
-int save_complexvolume(const complexvolume& vol, const string& filename,
-		       const volumeinfo& vinfo);
+
 
 template <class T>
 int save_volume4D(const volume4D<T>& source, const string& filename);
-template <class T>
-int save_volume4D(const volume4D<T>& source, const string& filename,
-		  const volumeinfo& vinfo);
 int save_complexvolume4D(const volume4D<float>& realvol, 
 			 const volume4D<float>& imagvol, 
 			 const string& filename);
-int save_complexvolume4D(const volume4D<float>& realvol, 
-			 const volume4D<float>& imagvol, 
-			 const string& filename,
-			 const volumeinfo& vinfo);
 int save_complexvolume4D(const complexvolume& vol, const string& filename);
-int save_complexvolume4D(const complexvolume& vol, const string& filename,
-			 const volumeinfo& vinfo);
 
 template <class T>
 int save_volume_datatype(const volume<T>& source, const string& filename,
-			 short datatype, const volumeinfo& vinfo);
-template <class T>
-int save_volume_datatype(const volume<T>& source, const string& filename,
 			 short datatype);
-template <class T>
-int save_volume4D_datatype(const volume4D<T>& source, const string& filename,
-			   short datatype, const volumeinfo& vinfo);
 template <class T>
 int save_volume4D_datatype(const volume4D<T>& source, const string& filename,
 			   short datatype);
 
 template <class T>
 int save_volume_filetype(const volume<T>& source, const string& filename,
-			 int filetype, const volumeinfo& vinfo);
-template <class T>
-int save_volume_filetype(const volume<T>& source, const string& filename,
 			 int filetype);
-template <class T>
-int save_volume4D_filetype(const volume4D<T>& source, const string& filename,
-			   int filetype, const volumeinfo& vinfo);
 template <class T>
 int save_volume4D_filetype(const volume4D<T>& source, const string& filename,
 			   int filetype);
@@ -249,8 +180,7 @@ short dtype(const volume4D<double>& vol);
 
 short dtype(const string& filename);
 
-volumeinfo volinfo(const string& filename);
-
+short fslFileType(const string& filename);
 
 // Boring overloads to enable different names (load and write)
 
@@ -260,93 +190,41 @@ volumeinfo volinfo(const string& filename);
 template <class T>
 int load_volume(volume<T>& target, const string& filename);
 template <class T>
-int load_volume(volume<T>& target, const string& filename, volumeinfo& vinfo); 
-template <class T>
 int load_volume_hdr_only(volume<T>& target, const string& filename);
 template <class T>
-int load_volume_hdr_only(volume<T>& target, const string& filename, 
-			 volumeinfo& vinfo);
 int load_complexvolume(volume<float>& realvol, volume<float>& imagvol,
 		       const string& filename);
-int load_complexvolume(volume<float>& realvol, volume<float>& imagvol,
-		       const string& filename, volumeinfo& vinfo);
 int load_complexvolume(complexvolume& vol, const string& filename);
-int load_complexvolume(complexvolume& vol, const string& filename, 
-		       volumeinfo& vinfo);
 
 template <class T>
 int load_volume4D(volume4D<T>& target, const string& filename);
 template <class T>
-int load_volume4D(volume4D<T>& target, const string& filename, 
-		  volumeinfo& vinfo);
-template <class T>
 int load_volume4D_hdr_only(volume4D<T>& target, const string& filename);
-template <class T>
-int load_volume4D_hdr_only(volume4D<T>& target, const string& filename,
-			   volumeinfo& vinfo);
 int load_complexvolume4D(volume4D<float>& realvol, volume4D<float>& imagvol,
 			 const string& filename);
-int load_complexvolume4D(volume4D<float>& realvol, volume4D<float>& imagvol,
-			 const string& filename, volumeinfo& vinfo);
-// int load_complexvolume4D(complexvolume& vol, const string& filename);
-// int load_complexvolume4D(complexvolume &vol, const string& filename, 
-// 			 volumeinfo& vinfo);
-
-
-  // write
+// write
 
 template <class T>
 int write_volume(const volume<T>& source, const string& filename);
-template <class T>
-int write_volume(const volume<T>& source, const string& filename,
-		const volumeinfo& vinfo);
 int write_complexvolume(const volume<float>& realvol, 
 		       const volume<float>& imagvol, const string& filename);
-int write_complexvolume(const volume<float>& realvol, 
-		       const volume<float>& imagvol, const string& filename,
-		       const volumeinfo& vinfo);
 int write_complexvolume(const complexvolume& vol, const string& filename);
-int write_complexvolume(const complexvolume& vol, const string& filename,
-		       const volumeinfo& vinfo);
 
 template <class T>
 int write_volume4D(const volume4D<T>& source, const string& filename);
-template <class T>
-int write_volume4D(const volume4D<T>& source, const string& filename,
-		  const volumeinfo& vinfo);
 int write_complexvolume4D(const volume4D<float>& realvol, 
 			 const volume4D<float>& imagvol, 
 			 const string& filename);
-int write_complexvolume4D(const volume4D<float>& realvol, 
-			 const volume4D<float>& imagvol, 
-			 const string& filename,
-			 const volumeinfo& vinfo);
-// int write_complexvolume4D(const complexvolume& vol, const string& filename);
-// int write_complexvolume4D(const complexvolume& vol, const string& filename,
-// 			 const volumeinfo& vinfo);
 
-template <class T>
-int write_volume_datatype(const volume<T>& source, const string& filename,
-			 short datatype, const volumeinfo& vinfo);
 template <class T>
 int write_volume_datatype(const volume<T>& source, const string& filename,
 			 short datatype);
 template <class T>
 int write_volume4D_datatype(const volume4D<T>& source, const string& filename,
-			   short datatype, const volumeinfo& vinfo);
-template <class T>
-int write_volume4D_datatype(const volume4D<T>& source, const string& filename,
 			   short datatype);
-
-template <class T>
-int write_volume_filetype(const volume<T>& source, const string& filename,
-			 int filetype, const volumeinfo& vinfo);
 template <class T>
 int write_volume_filetype(const volume<T>& source, const string& filename,
 			 int filetype);
-template <class T>
-int write_volume4D_filetype(const volume4D<T>& source, const string& filename,
-			   int filetype, const volumeinfo& vinfo);
 template <class T>
 int write_volume4D_filetype(const volume4D<T>& source, const string& filename,
 			   int filetype);
@@ -519,10 +397,7 @@ void FslReadBuffer(FSLIO* IP, T* tbuffer)
 void check_filename(const string& basename);
 
 FSLIO* NewFslOpen(const string& filename, const string& permissions, 
-		  int filetype, const volumeinfo& vinfo, bool use_vinfo);
-
-FSLIO* NewFslOpen(const string& filename, const string& permissions, 
-		  const volumeinfo& vinfo, bool use_vinfo);
+		  int filetype);
 
 FSLIO* NewFslOpen(const string& filename, const string& permissions);
 
@@ -538,11 +413,10 @@ template <class T>
 
 template <class T>
 int read_volumeROI(volume<T>& target, const string& filename, 
-		   volumeinfo& vinfo,
 		   int x0, int y0, int z0, int x1, int y1, int z1,
 		   int xskip, int yskip, int zskip)
 {
-  int retval=read_volumeROI(target,filename,vinfo,x0,y0,z0,x1,y1,z1);
+  int retval=read_volumeROI(target,filename,x0,y0,z0,x1,y1,z1);
   if (retval==0) {
     if (xskip<1) xskip=1;    
     if (yskip<1) yskip=1;
@@ -567,79 +441,36 @@ int read_volumeROI(volume<T>& target, const string& filename,
 
 
 
-template <class T>
-int read_volumeROI(volume<T>& target, const string& filename, 
-		   int x0, int y0, int z0, int x1, int y1, int z1,
-		   int xskip, int yskip, int zskip)
-{
-  volumeinfo vinfo = blank_vinfo();
-  return read_volumeROI(target,filename,vinfo,x0,y0,z0,x1,y1,z1,
-			xskip,yskip,zskip);
-}
-
-
 
 template <class T>
 int read_volumeROI(volume<T>& target, const string& filename, 
-		   volumeinfo& vinfo, short& dtype, bool read_img_data,
+		   short& dtype, bool read_img_data,
 		   int x0, int y0, int z0, int x1, int y1, int z1,
 		   bool swap2radiological=true);
 
 
 template <class T>
 int read_volumeROI(volume<T>& target, const string& filename, 
-		     volumeinfo& vinfo,
 		     int x0, int y0, int z0, 
 		     int x1, int y1, int z1)
 {
   short dtype;
-  return read_volumeROI(target,filename,vinfo,dtype,true,
-			  x0,y0,z0,x1,y1,z1);
-}
-
-template <class T>
-int read_volumeROI(volume<T>& target, const string& filename, 
-		     int x0, int y0, int z0, 
-		     int x1, int y1, int z1)
-{
-  short dtype;
-  volumeinfo vinfo = blank_vinfo();
-  return read_volumeROI(target,filename,vinfo,dtype,true,
+  return read_volumeROI(target,filename,dtype,true,
 			  x0,y0,z0,x1,y1,z1);
 }
 
 
 template <class T>
-int read_volume(volume<T>& target, const string& filename, 
-		volumeinfo& vinfo, short& dtype, bool read_img_data)
+int read_volume(volume<T>& target, const string& filename,short& dtype, bool read_img_data)
 {
-  return read_volumeROI(target,filename,vinfo,dtype,read_img_data,
-			  0,0,0,-1,-1,-1);
-}
-
-template <class T>
-int read_volume(volume<T>& target, const string& filename, volumeinfo& vinfo)
-{
-  short dtype;
-  int retval = read_volume(target,filename,vinfo,dtype,true);
-  return retval;
+  return read_volumeROI(target,filename,dtype,read_img_data,0,0,0,-1,-1,-1);
 }
 
 template <class T>
 int read_volume(volume<T>& target, const string& filename)
 {
   short dtype;
-  volumeinfo vinfo = blank_vinfo();
-  int retval = read_volume(target,filename,vinfo,dtype,true);
-  return retval;
-}
-
-template <class T>
-int read_volume_hdr_only(volume<T>& target, const string& filename, 
-			 volumeinfo& vinfo)
-{
-  short dtype;
-  int retval = read_volume(target,filename,vinfo,dtype,false);
+  int retval = read_volume(target,filename,dtype,true);
   return retval;
 }
 
@@ -647,33 +478,17 @@ template <class T>
 int read_volume_hdr_only(volume<T>& target, const string& filename)
 {
   short dtype;
-  volumeinfo vinfo = blank_vinfo();
-  int retval = read_volume(target,filename,vinfo,dtype,false);
+  int retval = read_volume(target,filename,dtype,false);
   return retval;
 }
 
-
-
 template <class T>
 int read_volume4DROI(volume4D<T>& target, const string& filename, 
 		     int x0, int y0, int z0, int t0, 
 		     int x1, int y1, int z1, int t1,
 		     int xskip, int yskip, int zskip, int tskip)
 {
-  volumeinfo vinfo = blank_vinfo();
-  return read_volume4DROI(target,filename,vinfo,x0,y0,z0,t0,x1,y1,z1,t1,
-			  xskip,yskip,zskip,tskip);
-}
-
-
-template <class T>
-int read_volume4DROI(volume4D<T>& target, const string& filename, 
-		     volumeinfo& vinfo,
-		     int x0, int y0, int z0, int t0, 
-		     int x1, int y1, int z1, int t1,
-		     int xskip, int yskip, int zskip, int tskip)
-{
-  int retval=read_volume4DROI(target,filename,vinfo,x0,y0,z0,t0,x1,y1,z1,t1);
+  int retval=read_volume4DROI(target,filename,x0,y0,z0,t0,x1,y1,z1,t1);
   if (retval==0) {
     if (xskip<1) xskip=1;    
     if (yskip<1) yskip=1;
@@ -703,78 +518,46 @@ int read_volume4DROI(volume4D<T>& target, const string& filename,
 
 template <class T>
 int read_volume4DROI(volume4D<T>& target, const string& filename, 
-		     volumeinfo& vinfo, short& dtype, bool read_img_data,
+		     short& dtype, bool read_img_data,
 		     int x0, int y0, int z0, int t0, 
 		     int x1, int y1, int z1, int t1,
 		     bool swap2radiological=true);
 
 template <class T>
 int read_volume4DROI(volume4D<T>& target, const string& filename, 
-		     volumeinfo& vinfo,
 		     int x0, int y0, int z0, int t0, 
 		     int x1, int y1, int z1, int t1)
 {
   short dtype;
-  return read_volume4DROI(target,filename,vinfo,dtype,true,
-			  x0,y0,z0,t0,x1,y1,z1,t1);
-}
-
-template <class T>
-int read_volume4DROI(volume4D<T>& target, const string& filename, 
-		     int x0, int y0, int z0, int t0, 
-		     int x1, int y1, int z1, int t1)
-{
-  short dtype;
-  volumeinfo vinfo = blank_vinfo();
-  return read_volume4DROI(target,filename,vinfo,dtype,true,
+  return read_volume4DROI(target,filename,dtype,true,
 			  x0,y0,z0,t0,x1,y1,z1,t1);
 }
 
 template <class T>
 int read_volume4D(volume4D<T>& target, const string& filename, 
-		  volumeinfo& vinfo, short& dtype, bool read_img_data)
+		  short& dtype, bool read_img_data)
 {
-  return read_volume4DROI(target,filename,vinfo,dtype,read_img_data,
+  return read_volume4DROI(target,filename,dtype,read_img_data,
 			  0,0,0,0,-1,-1,-1,-1);
 }
 
 
 template <class T>
-int read_volume4D(volume4D<T>& target, const string& filename, 
-		  volumeinfo& vinfo)
-{
-  short dtype;
-  int retval = read_volume4D(target,filename,vinfo,dtype,true);
-  return retval;
-}
-
-template <class T>
 int read_volume4D(volume4D<T>& target, const string& filename)
 {
   short dtype;
-  volumeinfo vinfo = blank_vinfo();
-  int retval = read_volume4D(target,filename,vinfo,dtype,true);
+  int retval = read_volume4D(target,filename,dtype,true);
   return retval;
 }
 
-template <class T>
-int read_volume4D_hdr_only(volume4D<T>& target, const string& filename,
-			   volumeinfo& vinfo)
-{
-  short dtype;
-  int retval = read_volume4D(target,filename,vinfo,dtype,false);
-  return retval;
-}
 
 template <class T>
 int read_volume4D_hdr_only(volume4D<T>& target, const string& filename)
 {
   short dtype;
-  volumeinfo vinfo = blank_vinfo();
-  int retval = read_volume4D(target,filename,vinfo,dtype,false);
+  int retval = read_volume4D(target,filename,dtype,false);
   return retval;
 }
-
 
 // SAVE FUNCTIONS
 
@@ -783,7 +566,7 @@ mat44 newmat2mat44(const Matrix& nmat);
 
 
 template <class T>
-int set_fsl_hdr(const volume<T>& source, FSLIO *OP, int tsize, float tdim, bool useNEWCalMinMax=true) //temp bool while converting
+int set_fsl_hdr(const volume<T>& source, FSLIO *OP, int tsize, float tdim, float scalingSlope=1.0) //temp bool while converting
 {
   Tracer tr("set_fsl_hdr");
     
@@ -796,70 +579,38 @@ int set_fsl_hdr(const volume<T>& source, FSLIO *OP, int tsize, float tdim, bool 
   
   FslSetIntent(OP,source.intent_code(),source.intent_param(1),
 	       source.intent_param(2),source.intent_param(3));
-  if (useNEWCalMinMax) FslSetCalMinMax(OP,source.getDisplayMinimum(),source.getDisplayMaximum());
+  FslSetIntensityScaling(OP,scalingSlope,0.0);
+  FslSetCalMinMax(OP,source.getDisplayMinimum(),source.getDisplayMaximum());
+  FslSetAuxFile(OP,source.getAuxFile().c_str());
   return 0;
 }
 
 template <class T>
 int save_basic_volume(const volume<T>& source, const string& filename, 
-		      int filetype, const volumeinfo& vinfo, bool use_vinfo, bool save_orig=false);
+		      int filetype, bool save_orig=false);
 
 template <class T>
 int save_basic_volume4D(const volume4D<T>& source, const string& filename,
-			int filetype, const volumeinfo& vinfo, bool use_vinfo, bool save_orig=false);
-
-template <class T>
-int save_volume(const volume<T>& source, const string& filename, 
-		      const volumeinfo& vinfo, bool use_vinfo)
-{
-  return save_basic_volume(source,fslbasename(filename),-1,vinfo,use_vinfo);
-}
-
+			int filetype, bool save_orig=false);
 
 template <class T>
 int save_volume(const volume<T>& source, const string& filename)
 {
-  volumeinfo vinfo = blank_vinfo();
-  return save_volume(source,filename,vinfo,false);
+  return save_basic_volume(source,fslbasename(filename),-1);
 }
-
-template <class T>
-int save_volume(const volume<T>& source, const string& filename,
-		const volumeinfo& vinfo)
-{
-  return save_volume(source,filename,vinfo,true);
-}
-
-
-template <class T>
-int save_volume4D(const volume4D<T>& source, const string& filename,
-		  const volumeinfo& vinfo, bool use_vinfo)
-{
-  return save_basic_volume4D(source,fslbasename(filename),-1,vinfo,use_vinfo);
-}
-
 template <class T>
 int save_volume4D(const volume4D<T>& source, const string& filename)
 {
-  volumeinfo vinfo = blank_vinfo();
-  return save_volume4D(source,filename,vinfo,false);
-}
-
-template <class T>
-int save_volume4D(const volume4D<T>& source, const string& filename,
-		  const volumeinfo& vinfo)
-{
-  return save_volume4D(source,filename,vinfo,true);
+  return save_basic_volume4D(source,fslbasename(filename),-1);
 }
 
 
 template <class T>
-int save_volume_dtype(const volume<T>& source, const string& filename,
-		       short datatype, const volumeinfo& vinfo, bool use_vinfo)
+int save_volume_datatype(const volume<T>& source, const string& filename,short datatype)
 {
   datatype=closestTemplatedType(datatype);
   if (dtype(source) == datatype) {
-    return save_volume(source,filename,vinfo,use_vinfo);
+    return save_volume(source,filename);
   } else {
     switch(datatype)
       {
@@ -867,35 +618,35 @@ int save_volume_dtype(const volume<T>& source, const string& filename,
 	{
 	  volume<short> svol;
 	  copyconvert(source,svol);
-	  return save_volume(svol,filename,vinfo,use_vinfo);
+	  return save_volume(svol,filename);
 	}
 	break;
       case DT_UNSIGNED_CHAR:
 	{
 	  volume<char> svol;
 	  copyconvert(source,svol);
-	  return save_volume(svol,filename,vinfo,use_vinfo);
+	  return save_volume(svol,filename);
 	}
 	break;
       case DT_SIGNED_INT:
 	{
 	  volume<int> svol;
 	  copyconvert(source,svol);
-	  return save_volume(svol,filename,vinfo,use_vinfo);
+	  return save_volume(svol,filename);
 	}
 	break;
       case DT_FLOAT:
 	{
 	  volume<float> svol;
 	  copyconvert(source,svol);
-	  return save_volume(svol,filename,vinfo,use_vinfo);
+	  return save_volume(svol,filename);
 	}
 	break;
       case DT_DOUBLE:
 	{
 	  volume<double> svol;
 	  copyconvert(source,svol);
-	  return save_volume(svol,filename,vinfo,use_vinfo);
+	  return save_volume(svol,filename);
 	}
 	break;
       default:
@@ -909,12 +660,11 @@ int save_volume_dtype(const volume<T>& source, const string& filename,
   
 
 template <class T>
-int save_volume4D_dtype(const volume4D<T>& source, const string& filename,
-		       short datatype, const volumeinfo& vinfo, bool use_vinfo)
+int save_volume4D_datatype(const volume4D<T>& source, const string& filename,short datatype)
 {
   datatype=closestTemplatedType(datatype);
   if (dtype(source) == datatype) {
-    return save_volume4D(source,filename,vinfo,use_vinfo);
+    return save_volume4D(source,filename);
   } else {
     switch(datatype)
       {
@@ -922,35 +672,35 @@ int save_volume4D_dtype(const volume4D<T>& source, const string& filename,
 	{
 	  volume4D<short> svol;
 	  copyconvert(source,svol);
-	  return save_volume4D(svol,filename,vinfo,use_vinfo);
+	  return save_volume4D(svol,filename);
 	}
 	break;
       case DT_UNSIGNED_CHAR:
 	{
 	  volume4D<char> svol;
 	  copyconvert(source,svol);
-	  return save_volume4D(svol,filename,vinfo,use_vinfo);
+	  return save_volume4D(svol,filename);
 	}
 	break;
       case DT_SIGNED_INT:
 	{
 	  volume4D<int> svol;
 	  copyconvert(source,svol);
-	  return save_volume4D(svol,filename,vinfo,use_vinfo);
+	  return save_volume4D(svol,filename);
 	}
 	break;
       case DT_FLOAT:
 	{
 	  volume4D<float> svol;
 	  copyconvert(source,svol);
-	  return save_volume4D(svol,filename,vinfo,use_vinfo);
+	  return save_volume4D(svol,filename);
 	}
 	break;
       case DT_DOUBLE:
 	{
 	  volume4D<double> svol;
 	  copyconvert(source,svol);
-	  return save_volume4D(svol,filename,vinfo,use_vinfo);
+	  return save_volume4D(svol,filename);
 	}
 	break;
       default:
@@ -962,46 +712,7 @@ int save_volume4D_dtype(const volume4D<T>& source, const string& filename,
   return -1;  // should never get here
 }
 
-template <class T>
-int save_volume_datatype(const volume<T>& source, const string& filename,
-		      short datatype, const volumeinfo& vinfo)
-{  
-  return save_volume_dtype(source,filename,datatype,vinfo,true);
-}
-
-template <class T>
-int save_volume_datatype(const volume<T>& source, const string& filename,
-		      short datatype)
-{  
-  volumeinfo vinfo = blank_vinfo();
-  return save_volume_dtype(source,filename,datatype,vinfo,false);
-}
-
-
-template <class T>
-int save_volume4D_datatype(const volume4D<T>& source, const string& filename,
-			 short datatype, const volumeinfo& vinfo)
-{  
-  return save_volume4D_dtype(source,filename,datatype,vinfo,true);
-}
-
-template <class T>
-int save_volume4D_datatype(const volume4D<T>& source, const string& filename,
-			 short datatype)
-{  
-  volumeinfo vinfo = blank_vinfo();
-  return save_volume4D_dtype(source,filename,datatype,vinfo,false);
-}
-
 // old versions call _dtype - kept for compatability
-  
-template <class T>
-int save_volume_dtype(const volume<T>& source, const string& filename,
-			 short datatype, const volumeinfo& vinfo)
-{
-  return save_volume_datatype(source,filename,datatype,vinfo);
-}
-
 template <class T>
 int save_volume_dtype(const volume<T>& source, const string& filename,
 			 short datatype)
@@ -1011,94 +722,43 @@ int save_volume_dtype(const volume<T>& source, const string& filename,
 
 template <class T>
 int save_volume4D_dtype(const volume4D<T>& source, const string& filename,
-			   short datatype, const volumeinfo& vinfo)
-{
-  return save_volume4D_datatype(source,filename,datatype,vinfo);
-}
-
-template <class T>
-int save_volume4D_dtype(const volume4D<T>& source, const string& filename,
 			   short datatype)
 {
   return save_volume4D_datatype(source,filename,datatype);
 }
 
-
-
-template <class T>
-int save_volume_filetype(const volume<T>& source, const string& filename,
-			 int filetype, const volumeinfo& vinfo)
-{
-  return save_basic_volume(source,filename,filetype,vinfo,true);
-}
-
-
 template <class T>
 int save_volume_filetype(const volume<T>& source, const string& filename,
 			 int filetype)
 {
-  volumeinfo vinfo = blank_vinfo();
-  return save_basic_volume(source,filename,filetype,vinfo,false); 
+  return save_basic_volume(source,filename,filetype);
 }
-
-
-template <class T>
-int save_volume4D_filetype(const volume4D<T>& source, const string& filename,
-			   int filetype, const volumeinfo& vinfo)
-{
-  return save_basic_volume4D(source,filename,filetype,vinfo,true);
-}
-
 
 template <class T>
 int save_volume4D_filetype(const volume4D<T>& source, const string& filename,
 			   int filetype)
 {
-  volumeinfo vinfo = blank_vinfo();
-  return save_basic_volume4D(source,filename,filetype,vinfo,false); 
+  return save_basic_volume4D(source,filename,filetype);
 }
 
-  // functions to save without doing any swapping (i.e. just as passed in)
+// functions to save without doing any swapping (i.e. just as passed in)
 
 template <class T>
 int save_orig_volume(const volume<T>& source, const string& filename)
 {
-  volumeinfo vinfo = blank_vinfo();
-  return save_basic_volume(source,filename,-1,vinfo,false,true);
+  return save_basic_volume(source,filename,-1,true);
 }
-
-
-template <class T>
-int save_orig_volume(const volume<T>& source, const string& filename,
-		const volumeinfo& vinfo)
-{
-  return save_basic_volume(source,filename,-1,vinfo,true,true);
-}
-
 
 template <class T>
 int save_orig_volume4D(const volume4D<T>& source, const string& filename)
 {
-  volumeinfo vinfo = blank_vinfo();
-  return save_basic_volume4D(source,filename,-1,vinfo,false,true);
+  return save_basic_volume4D(source,filename,-1,true);
 }
-
-
-template <class T>
-int save_orig_volume4D(const volume4D<T>& source, const string& filename,
-		  const volumeinfo& vinfo)
-{
-  return save_basic_volume4D(source,filename,-1,vinfo,true,true);
-}
-
-
 
 
 ////////////////////////////////////////////////////////////////////////
 ///// Boring overloads to enable different names (load and write) //////
 ////////////////////////////////////////////////////////////////////////
-
-
 
 // load
 
@@ -1107,91 +767,37 @@ int load_volume(volume<T>& target, const string& filename)
   { return read_volume(target,filename); }
 
 template <class T>
-int load_volume(volume<T>& target, const string& filename, volumeinfo& vinfo)
-  { return read_volume(target,filename,vinfo); }
-
-template <class T>
 int load_volume_hdr_only(volume<T>& target, const string& filename)
   { return read_volume_hdr_only(target,filename); }
-
-template <class T>
-int load_volume_hdr_only(volume<T>& target, const string& filename, 
-			 volumeinfo& vinfo)
-  { return read_volume_hdr_only(target,filename,vinfo); }
 
 template <class T>
 int load_volume4D(volume4D<T>& target, const string& filename)
   { return read_volume4D(target,filename); }
 
 template <class T>
-int load_volume4D(volume4D<T>& target, const string& filename, 
-		  volumeinfo& vinfo)
-  { return read_volume4D(target,filename,vinfo); }
-
-template <class T>
 int load_volume4D_hdr_only(volume4D<T>& target, const string& filename)
   { return read_volume4D_hdr_only(target,filename); }
-
-template <class T>
-int load_volume4D_hdr_only(volume4D<T>& target, const string& filename,
-			   volumeinfo& vinfo)
-  { return read_volume4D_hdr_only(target,filename,vinfo); }
 
   // write
 
 template <class T>
 int write_volume(const volume<T>& source, const string& filename)
   { return save_volume(source,filename); }
-
-template <class T>
-int write_volume(const volume<T>& source, const string& filename,
-		const volumeinfo& vinfo)
-  { return save_volume(source,filename,vinfo); }
-
 template <class T>
 int write_volume4D(const volume4D<T>& source, const string& filename)
   { return save_volume4D(source,filename); }
-
-template <class T>
-int write_volume4D(const volume4D<T>& source, const string& filename,
-		  const volumeinfo& vinfo)
-  { return save_volume4D(source,filename,vinfo); }
-
-template <class T>
-int write_volume_datatype(const volume<T>& source, const string& filename,
-			 short datatype, const volumeinfo& vinfo)
-  { return save_volume_datatype(source,filename,datatype,vinfo); }
-
 template <class T>
 int write_volume_datatype(const volume<T>& source, const string& filename,
 			 short datatype)
   { return save_volume_datatype(source,filename,datatype); }
-
-template <class T>
-int write_volume4D_datatype(const volume4D<T>& source, const string& filename,
-			   short datatype, const volumeinfo& vinfo)
-  { return save_volume4D_datatype(source,filename,datatype,vinfo); }
-
 template <class T>
 int write_volume4D_datatype(const volume4D<T>& source, const string& filename,
 			   short datatype)
   { return save_volume4D_datatype(source,filename,datatype); }
-
-template <class T>
-int write_volume_filetype(const volume<T>& source, const string& filename,
-			 int filetype, const volumeinfo& vinfo)
-  { return save_volume_filetype(source,filename,filetype,vinfo); }
-
 template <class T>
 int write_volume_filetype(const volume<T>& source, const string& filename,
 			 int filetype)
   { return save_volume_filetype(source,filename,filetype); }
-
-template <class T>
-int write_volume4D_filetype(const volume4D<T>& source, const string& filename,
-			   int filetype, const volumeinfo& vinfo)
-  { return save_volume4D_filetype(source,filename,filetype,vinfo); }
-
 template <class T>
 int write_volume4D_filetype(const volume4D<T>& source, const string& filename,
 			   int filetype)
@@ -1204,69 +810,32 @@ int write_volume4D_filetype(const volume4D<T>& source, const string& filename,
 template <class T>
 int read_orig_volume(volume<T>& target, const string& filename);
 template <class T>
-int read_orig_volume(volume<T>& target, const string& filename, volumeinfo& vinfo);
-
-template <class T>
 int read_orig_volume4D(volume4D<T>& target, const string& filename);
-template <class T>
-int read_orig_volume4D(volume4D<T>& target, const string& filename, volumeinfo& vinfo);
-
 template <class T>
 int load_orig_volume(volume<T>& target, const string& filename)
 { return read_orig_volume(target,filename); }
  	 
 template <class T>
-int load_orig_volume(volume<T>& target, const string& filename, volumeinfo& vinfo)
-{ return read_orig_volume(target,filename,vinfo); }
-
-template <class T>
 int load_orig_volume(volume<T>& target, const string& filename);
-template <class T>
-int load_orig_volume(volume<T>& target, const string& filename, volumeinfo& vinfo);
 template <class T>
 int load_orig_volume4D(volume4D<T>& target, const string& filename)
 { return read_orig_volume4D(target,filename); }
- 	 
-template <class T>
-int load_orig_volume4D(volume4D<T>& target, const string& filename, 
-		      volumeinfo& vinfo)
-{ return read_orig_volume4D(target,filename,vinfo); }
  	 
  	 
 template <class T>
 int read_orig_volume(volume<T>& target, const string& filename)
 {
   short dtype;
-  volumeinfo vinfo = blank_vinfo();
-  return read_volumeROI(target,filename,vinfo,dtype,true,
+  return read_volumeROI(target,filename,dtype,true,
 			0,0,0,-1,-1,-1,false);
 }
- 	 
-template <class T>
-int read_orig_volume(volume<T>& target, const string& filename, volumeinfo& vinfo)
-{
-  short dtype;
-  return read_volumeROI(target,filename,vinfo,dtype,true,
-			0,0,0,-1,-1,-1,false);
-}
- 	 
-
 template <class T>
 int read_orig_volume4D(volume4D<T>& target, const string& filename)
 {
   short dtype;
-  volumeinfo vinfo = blank_vinfo();
-  return read_volume4DROI(target,filename,vinfo,dtype,true,
-			0,0,0,0,-1,-1,-1,-1,false);
+  return read_volume4DROI(target,filename,dtype,true,0,0,0,0,-1,-1,-1,-1,false);
 }
- 	 
-template <class T>
-int read_orig_volume4D(volume4D<T>& target, const string& filename, volumeinfo& vinfo)
-{
-  short dtype;
-  return read_volume4DROI(target,filename,vinfo,dtype,true,
-			0,0,0,0,-1,-1,-1,-1,false);
-}
+
  	 
 }
 

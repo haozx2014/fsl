@@ -103,7 +103,7 @@ namespace Melodic{
 	  			if( bool(opts.genreport.value()) ){
 	  				const time_t tmptime = time(NULL);
 		    		system(("mkdir "+ logger.appendDir("report") + " 2>/dev/null").c_str());
-	  				report.setDir(logger.appendDir("report"),"00index.html");
+				report.setDir(logger.appendDir("report"),"00index.html",true,false,ios::out);
 						report << "<HTML><HEAD><link REL=stylesheet TYPE=text/css href=file:" +
 							(string) getenv("FSLDIR") +"/doc/fsl.css>" 
 						  << "<TITLE>MELODIC report</TITLE></HEAD><BODY>"
@@ -150,6 +150,7 @@ namespace Melodic{
 							navigator << "<A HREF=\"log.html\" target=\"_top\">Log</A>&nbsp;-&nbsp;";
 						navigator	<<"Components: ";
 						navigator.flush();
+						axials_instr = opts.axials_str.value();
 	  			}
 				}
 
@@ -361,7 +362,8 @@ namespace Melodic{
 
       Log IChtml;
       Log IChtml2;
-
+      string axials_instr;
+	
       void IC_rep_det(MelGMix &mmodel, int cnum, int dim);
       
       string int2str(int n){

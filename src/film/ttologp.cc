@@ -1,8 +1,8 @@
 /*  ttologp.cc
 
-    Mark Woolrich, FMRIB Image Analysis Group
+    Mark Woolrich and Matthew Webster, FMRIB Image Analysis Group
 
-    Copyright (C) 1999-2000 University of Oxford  */
+    Copyright (C) 1999-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -179,12 +179,11 @@ int main(int argc,char *argv[])
     parse_command_line(argc, argv);
     
     volume4D<float> input;
-    volumeinfo vinfo;
     ColumnVector vars,cbs;
 
     read_volume4D(input,globalopts.cbsfname);
     cbs=input.matrix().AsColumn();
-    read_volume4D(input,globalopts.varsfname,vinfo);
+    read_volume4D(input,globalopts.varsfname);
     vars=input.matrix().AsColumn();
 
     int numTS = vars.Nrows();
@@ -193,9 +192,9 @@ int main(int argc,char *argv[])
     T2z::ComputePs(vars, cbs, globalopts.dof, ps);
 
     input.setmatrix(ps.AsRow());
-    FslSetCalMinMax(&vinfo,input.min(),input.max());
+    input.setDisplayMaximumMinimum(input.max(),input.min());
     input.set_intent(NIFTI_INTENT_LOGPVAL,0,0,0);
-    save_volume4D(input,globalopts.logpfname.c_str(),vinfo);
+    save_volume4D(input,globalopts.logpfname.c_str());
   }
 
   catch(Exception p_excp) 

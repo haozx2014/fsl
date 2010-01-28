@@ -1,3 +1,4 @@
+
 /*  applywarp.cc
 
     Mark Jenkinson, FMRIB Image Analysis Group
@@ -85,7 +86,7 @@ using namespace NEWIMAGE;
 // Does the job
 int applywarp();
 
-// Downsamples supersample output image.
+// Downsamples supersampled output image.
 void downsample(const volume<float>&           ivol,
                 const vector<unsigned int>&    ss,
 		bool                           nn,
@@ -117,7 +118,7 @@ Option<bool> relwarp(string("--rel"), false,
 		  string("\ttreat warp field as relative: x' = x + w(x)"),
 		  false, no_argument);
 Option<string> interp(string("--interp"), string(""),
-		   string("interpolation method {nn,trilinear,sinc}"),
+		   string("interpolation method {nn,trilinear,sinc,spline}"),
 		   false, requires_argument);
 Option<string> inname(string("-i,--in"), string(""),
 		       string("filename of input image (to be warped)"),
@@ -139,7 +140,7 @@ Option<string> datatype(string("-d,--datatype"), string(""),
                         false, requires_argument);
 Option<string> warpname(string("-w,--warp"), string(""),
 			string("filename for warp/coefficient (volume)"),
-			true, requires_argument);
+			false, requires_argument);
 Option<string> maskname(string("-m,--mask"), string(""),
 		       string("filename for mask image (in reference space)"),
 		       false, requires_argument);
@@ -187,19 +188,6 @@ int applywarp()
   volume4D<float> invol;
   read_volume4D(invol,inname.value());
   
-  // Read in/create warps from file
-  FnirtFileReader  fnirtfile;
-  AbsOrRelWarps    wt = UnknownWarps;
-  if (abswarp.value()) wt = AbsoluteWarps;
-  else if (relwarp.value()) wt = RelativeWarps;
-  try {
-    fnirtfile.Read(warpname.value(),wt,verbose.value());
-  }
-  catch (...) {
-    cerr << "An error occured while reading file: " << warpname.value() << endl;
-    exit(EXIT_FAILURE);
-  }
-
   //
   // Get size of output from --ref. 
   //
@@ -207,6 +195,31 @@ int applywarp()
   read_volume(refvol,refname.value());
   volume4D<float>  outvol;
   for (int i=0; i<invol.tsize(); i++) outvol.addvolume(refvol);
+
+  // Read in/create warps from file
+  FnirtFileReader  fnirtfile;
+  AbsOrRelWarps    wt = UnknownWarps;
+  volume4D<float>  defvol(refvol.xsize(),refvol.ysize(),refvol.zsize(),3);
+  Matrix           affmat(4,4);
+  if (warpname.set()) {
+    if (abswarp.value()) wt = AbsoluteWarps;
+    else if (relwarp.value()) wt = RelativeWarps;
+    try {
+      fnirtfile.Read(warpname.value(),wt,verbose.value());
+      defvol = fnirtfile.FieldAsNewimageVolume4D();
+      affmat = fnirtfile.AffineMat();
+    }
+    catch (...) {
+      cerr << "An error occured while reading file: " << warpname.value() << endl;
+      exit(EXIT_FAILURE);
+    }
+  }
+  else {  // This is intended to let one use applywarp to resample files using flirt-matrices only in a convenient way
+    wt = RelativeWarps;
+    defvol.setdims(refvol.xdim(),refvol.ydim(),refvol.zdim(),1.0);
+    defvol = 0.0;
+    affmat = IdentityMatrix(4);
+  }
 
   //
   // Assert and decode supersampling parameters
@@ -264,6 +277,10 @@ int applywarp()
   else if (interp.value() == "sinc") {
     invol.setinterpolationmethod(sinc);
   }
+  else if (interp.value() == "spline") {
+    invol.setinterpolationmethod(spline);
+    invol.setsplineorder(3);
+  }
   else {
     cerr << "Unknown interpolation type " << interp.value() << endl;
     exit(EXIT_FAILURE);
@@ -301,12 +318,12 @@ int applywarp()
     invol[t].setextrapolationmethod(extraslice);
     // do the deed
     if (superflag) {
-      apply_warp(invol[t],fnirtfile.AffineMat(),fnirtfile.FieldAsNewimageVolume4D(),postmat,premat,*ssout_ptr);
+      apply_warp(invol[t],affmat,defvol,postmat,premat,*ssout_ptr);
       if (interp.value() == "nn") downsample(*ssout_ptr,ssvec,true,outvol[t]);
       else downsample(*ssout_ptr,ssvec,false,outvol[t]);
     }
     else {
-      apply_warp(invol[t],fnirtfile.AffineMat(),fnirtfile.FieldAsNewimageVolume4D(),postmat,premat,outvol[t]);
+      apply_warp(invol[t],affmat,defvol,postmat,premat,outvol[t]);
     }
     if (maskname.set()) { outvol[t] *= mask; }
   }
