@@ -92,7 +92,17 @@ namespace Melodic{
     Matrix tmpE;
     RowVector tmpD, AdjEV, PercEV;
    
-    std_pca(in,weights,Corr,tmpE,tmpD); 
+	if(opts.paradigmfname.value().length()>0)
+	{
+		basicGLM tmpglm;
+		tmpglm.olsfit(in,melodat.get_param(),IdentityMatrix(melodat.get_param().Ncols()));
+		std_pca(tmpglm.get_residu(),weights,Corr,tmpE,tmpD);
+//		std_pca(in,weights,Corr,tmpE,tmpD,melodat.get_param());
+	}
+	else{
+ 		std_pca(in,weights,Corr,tmpE,tmpD); 
+	}	
+	
     if(opts.tsmooth.value()){
       message(endl << "  temporal smoothing of Eigenvectors " << endl);
       tmpE=smoothColumns(tmpE);
@@ -140,8 +150,13 @@ namespace Melodic{
     Matrix tmpDeWhite;
 
     float varp = 1.0;
-    varp = calc_white(melodat.get_pcaE(),melodat.get_pcaD(), 
-    	melodat.get_EVP() ,opts.pca_dim.value(),tmpWhite,tmpDeWhite);
+
+	if (opts.paradigmfname.value().length()>0)
+	    varp = calc_white(melodat.get_pcaE(),melodat.get_pcaD(), 
+    		melodat.get_EVP(),opts.pca_dim.value(),melodat.get_param(),melodat.get_paramS(),tmpWhite,tmpDeWhite);
+	else
+		varp = calc_white(melodat.get_pcaE(),melodat.get_pcaD(), 
+    		melodat.get_EVP(),opts.pca_dim.value(),tmpWhite,tmpDeWhite);
 
     melodat.set_white(tmpWhite);
     melodat.set_dewhite(tmpDeWhite);

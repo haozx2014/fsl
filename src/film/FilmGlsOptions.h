@@ -91,6 +91,8 @@ class FilmGlsOptions {
   string paradigmfname;
   string epifname;
   string datadir;
+  string meanInputFile;
+  string minimumTimepointFile;
 
   string neffsfname;
   
@@ -145,6 +147,8 @@ inline FilmGlsOptions::FilmGlsOptions()
   thresh = 0;
   inputfname = "";  
   paradigmfname = "";
+  meanInputFile="";
+  minimumTimepointFile="";
   epith = 0;
   
   ms = 4;

@@ -99,6 +99,9 @@ namespace Melodic{
     redUMM = melodat.get_white()*
        unifrnd(melodat.get_white().Ncols(),dim); // got to start somewhere
     
+	if(opts.debug.value())
+		cerr << "redUMM init submatrix : " << endl << redUMM.SubMatrix(1,2,1,2) << endl;
+		
     if(opts.guessfname.value().size()>1){
       message("  Use columns in " << opts.guessfname.value() 
 	      << " as initial values for the mixing matrix " <<endl);

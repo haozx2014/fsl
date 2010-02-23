@@ -1,8 +1,8 @@
 /*  ContrastMgr.cc
 
-    Mark Woolrich, FMRIB Image Analysis Group
+    Mark Woolrich and Matthew Webster, FMRIB Image Analysis Group
 
-    Copyright (C) 1999-2000 University of Oxford  */
+    Copyright (C) 1999-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -185,7 +185,7 @@ namespace FILM {
 	cerr << "F Contrasts:" << endl << parad.getFContrasts();
       }
     volume4D<float> input_data;
-    read_volume4D(input_data,logger.getDir() + "/sigmasquareds",vinfo);
+    read_volume4D(input_data,logger.getDir() + "/sigmasquareds");
 
     mask=input_data[0];
     mask.binarise(0.0,mask.max()+1,exclusive);
@@ -252,13 +252,13 @@ namespace FILM {
     osc << suffix << c_counter;
     volume4D<float> output;
     output.setmatrix(fstat.AsRow(),mask);
-    FslSetCalMinMax(&vinfo,output.min(),output.max());
+    output.setDisplayMaximumMinimum(output.max(),output.min());
     output.set_intent(NIFTI_INTENT_FTEST,0,0,0);
-    save_volume4D(output,logger.getDir() + "/fstat" + osc.str().c_str(),vinfo);
+    save_volume4D(output,logger.getDir() + "/fstat" + osc.str().c_str());
     output.setmatrix(zstat.AsRow(),mask);
-    FslSetCalMinMax(&vinfo,output.min(),output.max());
+    output.setDisplayMaximumMinimum(output.max(),output.min());
     output.set_intent(NIFTI_INTENT_ZSCORE,0,0,0);
-    save_volume4D(output,logger.getDir() + "/zfstat" + osc.str().c_str(),vinfo);
+    save_volume4D(output,logger.getDir() + "/zfstat" + osc.str().c_str());
   }
 
   void ContrastMgr::SaveTContrast(const string& suffix)
@@ -270,25 +270,25 @@ namespace FILM {
     osc << suffix << c_counter;
     volume4D<float> output;
     output.setmatrix(neff.AsRow(),mask);
-    FslSetCalMinMax(&vinfo,output.min(),output.max());
+    output.setDisplayMaximumMinimum(output.max(),output.min());
     output.set_intent(NIFTI_INTENT_NONE,0,0,0);
-    save_volume4D(output,logger.getDir() + "/neff" + osc.str().c_str(),vinfo);
+    save_volume4D(output,logger.getDir() + "/neff" + osc.str().c_str());
     output.setmatrix(cb.AsRow(),mask);
-    FslSetCalMinMax(&vinfo,output.min(),output.max());
+    output.setDisplayMaximumMinimum(output.max(),output.min());
     output.set_intent(NIFTI_INTENT_ESTIMATE,0,0,0);
-    save_volume4D(output,logger.getDir() + "/cope" + osc.str().c_str(),vinfo);
+    save_volume4D(output,logger.getDir() + "/cope" + osc.str().c_str());
     output.setmatrix(varcb.AsRow(),mask);
-    FslSetCalMinMax(&vinfo,output.min(),output.max());
+    output.setDisplayMaximumMinimum(output.max(),output.min());
     output.set_intent(NIFTI_INTENT_ESTIMATE,0,0,0);
-    save_volume4D(output,logger.getDir() + "/varcope" + osc.str().c_str(),vinfo);
+    save_volume4D(output,logger.getDir() + "/varcope" + osc.str().c_str());
     output.setmatrix(tstat.AsRow(),mask);
-    FslSetCalMinMax(&vinfo,output.min(),output.max());
+    output.setDisplayMaximumMinimum(output.max(),output.min());
     output.set_intent(NIFTI_INTENT_TTEST,0,0,0);
-    save_volume4D(output,logger.getDir() + "/tstat" + osc.str().c_str(),vinfo);
+    save_volume4D(output,logger.getDir() + "/tstat" + osc.str().c_str());
     output.setmatrix(zstat.AsRow(),mask);
-    FslSetCalMinMax(&vinfo,output.min(),output.max());
+    output.setDisplayMaximumMinimum(output.max(),output.min());
     output.set_intent(NIFTI_INTENT_ZSCORE,0,0,0);
-    save_volume4D(output,logger.getDir() + "/zstat" + osc.str().c_str(),vinfo);
+    save_volume4D(output,logger.getDir() + "/zstat" + osc.str().c_str());
   }
 
 

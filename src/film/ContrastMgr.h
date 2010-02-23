@@ -1,8 +1,8 @@
 /*  ContrastMgr.h
 
-    Mark Woolrich, FMRIB Image Analysis Group
+    Mark Woolrich and Matthew Webster, FMRIB Image Analysis Group
 
-    Copyright (C) 1999-2000 University of Oxford  */
+    Copyright (C) 1999-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -149,7 +149,6 @@ namespace FILM {
 
       // Other:
       int numTS;
-      NEWIMAGE::volumeinfo vinfo;
       NEWIMAGE::volume<float> mask;
       bool is_avw_corrections;
     };

@@ -100,7 +100,7 @@
 
 namespace Melodic{
 
-const string version = "3.09";  
+const string version = "3.10";  
 
 // The two strings below specify the title and example usage that is	
 // printed out as the help or usage message

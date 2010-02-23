@@ -101,7 +101,7 @@ namespace Melodic{
       inline void save4D(Matrix what, string fname){
 	 			volume4D<float> tempVol;
 	 			tempVol.setmatrix(what,Mask);
-	 			save_volume4D(tempVol,logger.appendDir(fname),tempInfo);
+	 			save_volume4D(tempVol,logger.appendDir(fname));
 	 			message("  " << logger.appendDir(fname) << endl);
       }
       
@@ -153,6 +153,12 @@ namespace Melodic{
       }
 
       void set_TSmode();
+
+      inline Matrix& get_param() {return param;} 
+      inline void set_param(Matrix& Arg) {param = Arg;}	
+
+      inline Matrix& get_paramS() {return paramS;} 
+      inline void set_paramS(Matrix& Arg) {paramS = Arg;}	
 
       inline Matrix& get_white() {return whiteMatrix;}
       inline void set_white(Matrix& Arg) {whiteMatrix = Arg;}
@@ -249,11 +255,11 @@ namespace Melodic{
       }
       
       void sort();
+	  void reregress();
 
-      volumeinfo tempInfo;
       vector<Matrix> DWM, WM;
 			basicGLM glmT, glmS;
-			Matrix Tdes, Tcon, TconF, Sdes, Scon, SconF;	
+			Matrix Tdes, Tcon, TconF, Sdes, Scon, SconF, param, paramS;	
 			RowVector explained_var;		
 
     private:

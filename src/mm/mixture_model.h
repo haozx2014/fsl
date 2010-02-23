@@ -427,9 +427,9 @@ namespace Mm{
     public:
 
       // Constructor
-      Mixture_Model(const volume<float>& pspatial_data, const volume<int>& pmask, const volume<float>& pepi_example_data, float pepibt, vector<Distribution*>& pdists, vector<volume<float> >& pw_means, ColumnVector& pY, volumeinfo& volinfo, MmOptions& popts);
+      Mixture_Model(const volume<float>& pspatial_data, const volume<int>& pmask, const volume<float>& pepi_example_data, float pepibt, vector<Distribution*>& pdists, vector<volume<float> >& pw_means, ColumnVector& pY, MmOptions& popts);
 
-      Mixture_Model(const volume<float>& pspatial_data, const volume<int>& pmask, const volume<float>& pepi_example_data, float pepibt, vector<Distribution*>& pdists, vector<volume<float> >& pw_means, ColumnVector& pY, volumeinfo& volinfo, bool pnonspatial=false, int pniters=10, bool pupdatetheta=true, int pdebuglevel=0, float pphi=0.015, float pmrfprecstart=10.0, int pntracesamps=10, float pmrfprecmultiplier=10.0, float pinitmultiplier=6.0, bool pfixmrfprec=false);
+      Mixture_Model(const volume<float>& pspatial_data, const volume<int>& pmask, const volume<float>& pepi_example_data, float pepibt, vector<Distribution*>& pdists, vector<volume<float> >& pw_means, ColumnVector& pY, bool pnonspatial=false, int pniters=10, bool pupdatetheta=true, int pdebuglevel=0, float pphi=0.015, float pmrfprecstart=10.0, int pntracesamps=10, float pmrfprecmultiplier=10.0, float pinitmultiplier=6.0, bool pfixmrfprec=false);
 
       // setup
       void setup();
@@ -438,7 +438,7 @@ namespace Mm{
       void run();
 
       // save data to logger dir
-      void save(volumeinfo& volinfo) ;
+      void save() ;
        
       // Destructor
       virtual ~Mixture_Model(){}
@@ -460,7 +460,7 @@ namespace Mm{
 
       void get_weights2(vector<ColumnVector>& weights, vector<vector<vector<float> > >& weights_samps, vector<vector<vector<float> > >& tildew_samps, int nsamps, const ColumnVector& pmtildew);
 
-      void save_weights(volumeinfo& volinfo, const ColumnVector& pmtildew, const char* affix, bool usesamples = true);
+      void save_weights(const ColumnVector& pmtildew, const char* affix, bool usesamples = true);
 
       int xsize; 
       int ysize;
@@ -519,8 +519,6 @@ namespace Mm{
 
       vector<float> meanhist;
       vector<float> mrf_precision_hist;
-
-      volumeinfo& volinfo;
     }; 
   
   ReturnMatrix sum_transform(const RowVector& wtilde, float log_bound);
@@ -530,7 +528,7 @@ namespace Mm{
   void ggmfit(const RowVector& data, vector<Distribution*>& pdists, bool useprops);
   void plot_ggm(const vector<volume<float> >& w_means, const vector<Distribution*>& dists, const volume<int>& mask, const ColumnVector& Y);
 
-  void make_ggmreport(const vector<volume<float> >& w_means, const vector<Distribution*>& dists, const volume<int>& mask, const volume<float>& spatial_data, bool zfstatmode, volumeinfo& volinfo, bool overlay, const volume<float>& epivol, float thresh, bool nonspatial, bool updatetheta, const string& data_name);
+  void make_ggmreport(const vector<volume<float> >& w_means, const vector<Distribution*>& dists, const volume<int>& mask, const volume<float>& spatial_data, bool zfstatmode, bool overlay, const volume<float>& epivol, float thresh, bool nonspatial, bool updatetheta, const string& data_name);
   void calculate_props(const vector<volume<float> >& w_means, vector<Distribution*>& dists, const volume<int>& mask);
 }
 #endif

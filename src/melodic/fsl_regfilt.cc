@@ -130,8 +130,7 @@ using namespace std;
 	Matrix meanR;
 	RowVector vnscales;
 	volume<float> mask;
-	volume<float> Mean;
-	volumeinfo volinf;  /*
+	volume<float> Mean;  /*
 }
 */
 ////////////////////////////////////////////////////////////////////////////
@@ -144,7 +143,7 @@ void save4D(Matrix what, string fname){
 				tempVol.setmatrix(what.t(),mask);
 			else
 				tempVol.setmatrix(what,mask);
-			save_volume4D(tempVol,fname,volinf);
+			save_volume4D(tempVol,fname);
 		}
 }
 
@@ -212,7 +211,7 @@ int setup(){
 	if(fsl_imageexists(fnin.value())){//read data
 		//input is 3D/4D vol
 		volume4D<float> tmpdata;
-		read_volume4D(tmpdata,fnin.value(),volinf);
+		read_volume4D(tmpdata,fnin.value());
 		
 		// create mask
 		if(fnmask.value()>""){

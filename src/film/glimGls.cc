@@ -1,8 +1,8 @@
 /*  glimGls.cc
 
-    Mark Woolrich, FMRIB Image Analysis Group
+    Mark Woolrich and Matthew Webster, FMRIB Image Analysis Group
 
-    Copyright (C) 1999-2000 University of Oxford  */
+    Copyright (C) 1999-2008 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -116,7 +116,7 @@ namespace FILM {
       SetCorrection(inv_xx, ind);
     }
 
-  void GlimGls::Save(volumeinfo vinfo, const volume<float>& mask, const float reftdim=1.0)
+  void GlimGls::Save(const volume<float>& mask, const float reftdim=1.0)
     {
       // Need to save b, sigmaSquareds, corrections and dof 
       Log& logger = LogSingleton::getInstance();
@@ -129,14 +129,14 @@ namespace FILM {
 	{
 	  peVol.setmatrix(b.Row(i),mask);
 	  peVol.set_intent(NIFTI_INTENT_ESTIMATE,0,0,0);
-	  FslSetCalMinMax(&vinfo,peVol.min(),peVol.max());
-	  save_volume(peVol[0],logger.getDir() + "/pe" + num2str(i),vinfo);
+          peVol.setDisplayMaximumMinimum(peVol.max(),peVol.min());
+	  save_volume(peVol[0],logger.getDir() + "/pe" + num2str(i));
 	}
 
       // sigmaSquareds:
       peVol.setmatrix(sigmaSquareds,mask);
-      FslSetCalMinMax(&vinfo,peVol.min(),peVol.max());
-      save_volume(peVol[0],logger.getDir() + "/sigmasquareds",vinfo);
+      peVol.setDisplayMaximumMinimum(peVol.max(),peVol.min());
+      save_volume(peVol[0],logger.getDir() + "/sigmasquareds");
       // dof:
       ColumnVector dofVec(1);
       dofVec = dof;
@@ -145,8 +145,8 @@ namespace FILM {
       peVol.setmatrix(corrections,mask);
       peVol.set_intent(NIFTI_INTENT_NONE,0,0,0);
       peVol.settdim(reftdim); //Possibly just set to a constant 1?
-      FslSetCalMinMax(&vinfo,peVol.min(),peVol.max());
-      save_volume4D(peVol,logger.getDir() + "/corrections",vinfo);
+      peVol.setDisplayMaximumMinimum(peVol.max(),peVol.min());
+      save_volume4D(peVol,logger.getDir() + "/corrections");
     }
 
 
