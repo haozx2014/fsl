@@ -1,8 +1,9 @@
 fsl (4.1.5.2-2) unstable; urgency=low
 
-  * Fix broken fslmaths option (-tfce). Thanks to Clark Johnson.
+  * Fix broken fslmaths option (-tfce). Thanks to Clark Johnson and Matthew
+    Webster.
 
- -- Michael Hanke <michael.hanke@gmail.com>  Tue, 23 Feb 2010 18:48:09 -0500
+ -- Michael Hanke <michael.hanke@gmail.com>  Thu, 04 Mar 2010 08:30:46 -0500
 
 fsl (4.1.5.2-1) unstable; urgency=low
 
