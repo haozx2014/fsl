@@ -2,8 +2,8 @@ Source: fsl
 Section: non-free/science
 Priority: optional
 Maintainer: Michael Hanke <michael.hanke@gmail.com>
-Build-Depends: debhelper (>= 5), zlib1g-dev (>= 1.2.2), libboost-dev (>= 1.32.0), libpng12-dev (>= 1.2.8rel), libgd2-noxpm-dev (>= 2.0.33) | libgd2-xpm-dev (>= 2.0.33), libnewmat10-dev, libgdchart-gd2-noxpm-dev | libgdchart-gd2-xpm-dev, octave3.0-headers | octave2.1-headers (>= 2.1.65) , tcl8.4 (>=8.4.7), imagemagick, libnifti1-dev (>> 1.1.0-1)
-Standards-Version: 3.8.3.0
+Build-Depends: debhelper (>= 5), zlib1g-dev (>= 1.2.2), libboost-dev (>= 1.32.0), libpng12-dev (>= 1.2.8rel), libgd2-noxpm-dev (>= 2.0.33) | libgd2-xpm-dev (>= 2.0.33), libnewmat10-dev, libgdchart-gd2-noxpm-dev | libgdchart-gd2-xpm-dev, octave3.2-headers | octave3.0-headers, tcl8.4 (>=8.4.7), imagemagick, libnifti1-dev (>> 1.1.0-1)
+Standards-Version: 3.8.4.0
 Homepage: http://www.fmrib.ox.ac.uk/fsl/
 Vcs-Browser: http://git.debian.org/?p=pkg-exppsy/fsl.git
 Vcs-Git: git://git.debian.org/git/pkg-exppsy/fsl.git
