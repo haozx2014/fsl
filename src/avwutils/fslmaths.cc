@@ -823,7 +823,7 @@ if (!separatenoise)
 	int connectivity = atoi(argv[++i]);
 
 	for(int t=0;t<input_volume.tsize();t++)
-	  tfce(input_volume[t], height_power, size_power, connectivity, 0, input_volume[t].max());
+	  tfce(input_volume[t], height_power, size_power, connectivity, 0, input_volume[t].max()/100.0);
       }
 
 // }}}
