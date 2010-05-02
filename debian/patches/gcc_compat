@@ -1,0 +1,135 @@
+--- a/src/basisfield/basisfield.h
++++ b/src/basisfield/basisfield.h
+@@ -275,7 +275,7 @@
+ 
+   virtual boost::shared_ptr<MISCMATHS::BFMatrix> JtJ(const NEWIMAGE::volume<float>&        ima1,
+                                                      const basisfield&                     bf2,
+-                                                     const NEWIMAGE::volume<float>&        ima1,
++                                                     const NEWIMAGE::volume<float>&        ima2,
+                                                      const NEWIMAGE::volume<char>          *mask=0,
+                                                      MISCMATHS::BFMatrixPrecisionType      prec=BFMatrixDoublePrecision) const = 0;
+ 
+--- a/src/basisfield/splinefield.cpp
++++ b/src/basisfield/splinefield.cpp
+@@ -1477,7 +1477,9 @@
+                                        unsigned int  nksp,
+                                        double        ovxs) const
+ {
+-  return(static_cast<unsigned int>(roundl((ovxs/nvxs)*double(nksp))));
++  // No need for long double rounding and also causes FTBFS on ARMEL
++  //return(static_cast<unsigned int>(roundl((ovxs/nvxs)*double(nksp))));
++  return(static_cast<unsigned int>(MISCMATHS::round((ovxs/nvxs)*double(nksp))));
+ }
+ 
+ bool splinefield::faking_works(const std::vector<double>&        nvxs,
+--- a/src/cluster/smoothest.cc
++++ b/src/cluster/smoothest.cc
+@@ -216,7 +216,7 @@
+ \tsmoothest -d <number> -r <filename> -m <filename>\n\
+ \tsmoothest -z <filename> -m <filename>";
+ 
+-int main(unsigned int argc, char **argv) {
++int main(int argc, char **argv) {
+ 
+   OptionParser options(title, examples);
+ 
+--- a/src/fabber/tools.cc
++++ b/src/fabber/tools.cc
+@@ -68,6 +68,7 @@
+ 
+ #include "tools.h"
+ #include "easylog.h"
++#include <limits>
+ 
+ double DescendingZeroFinder::FindZero() const
+ {
+--- a/src/fast4/fast_two.cc
++++ b/src/fast4/fast_two.cc
+@@ -289,6 +289,11 @@
+     cerr<<"Image cannot be found";
+     return 1;
+   }
++  // seems to be duplicate!
++  //string tempName=outname.value();
++  //make_basename(tempName);
++  //outname.set_value(tempName);
++
+ 
+   if(inputImage.min()<0.0)
+   {
+--- a/src/meshclass/profile.h
++++ b/src/meshclass/profile.h
+@@ -67,6 +67,7 @@
+ 
+ #include <iostream>
+ #include <vector>
++#include <cstdlib>
+ 
+ using namespace std;
+ 
+--- a/src/miscvis/pngappend.cc
++++ b/src/miscvis/pngappend.cc
+@@ -67,6 +67,7 @@
+     innovation@isis.ox.ac.uk quoting reference DE/1112. */
+ 
+ #include <string>
++#include <cstring>
+ #include <cstdlib>
+ #include <iostream>
+ #include "gd.h"
+--- a/src/newimage/costfns.cc
++++ b/src/newimage/costfns.cc
+@@ -3381,7 +3381,7 @@
+       fjointhist = new float[(no_bins+1)*(no_bins+1)];
+       fmarghist1 = new float[no_bins+1];
+       fmarghist2 = new float[no_bins+1];
+-      int N = this->refvol.nvoxels();
++      unsigned long int N = this->refvol.nvoxels();
+       float p=0.0;
+       try {
+         plnp.ReSize(Min((unsigned long int) 10000, (unsigned long int) (10*N/(no_bins+1))));
+--- a/src/newimage/lazy.h
++++ b/src/newimage/lazy.h
+@@ -71,6 +71,7 @@
+ 
+ #include <iostream>
+ #include <map>
++#include <cstdlib>
+ 
+ #ifndef NO_NAMESPACE
+ using namespace std;
+--- a/src/possum/possumfns.h
++++ b/src/possum/possumfns.h
+@@ -11,9 +11,9 @@
+ void voxel4(const double x,const double y,const double z, 
+             const RowVector& tissue,const Matrix& H,const int nreadp,const int v,
+             const double xdim,const double ydim,const double zdim,
+-            const double* b0, const double* b0gxx,const double* b0gyy,const double* b0gzz,
++            const double* b0time, const double* b0xtime,const double* b0ytime,const double* b0ztime,
+             const double* b0timecourse,const int Nb0,
+-            const double b0, const double b0gxx,const double b0gyy,const double b0gzz, 
++            const double b0, const double b0x,const double b0y,const double b0z,
+             const double* timecourse,const double* activation,const int Nact,
+ 	    const string outputname, const double* table_slcprof, const double dslcp, const double dslcp_first, const int Nslc,
+             const double den,const double RFtrans, const int opt_test,
+--- a/src/utils/opttst.cc
++++ b/src/utils/opttst.cc
+@@ -144,7 +144,7 @@
+ opttst -d <number> -m <filename> -r <filename>\n\
+ opttst --verbose\n";
+ 
+-int main(unsigned int argc, char **argv) {
++int main(int argc, char **argv) {
+ 
+   OptionParser options(title, examples);
+ 
+--- a/src/utils/time_tracer.h
++++ b/src/utils/time_tracer.h
+@@ -72,6 +72,7 @@
+ #include <iostream>
+ #include <fstream>
+ #include <string>
++#include <cstring>
+ #include <time.h>
+ #include <set>
+ #include <stack>

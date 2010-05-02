@@ -1,0 +1,10 @@
+--- a/src/libvis/miscplot.cc
++++ b/src/libvis/miscplot.cc
+@@ -79,6 +79,7 @@
+  #include "gd.h"
+  #include "gdc.h"
+  #include "gdchart.h"
++ #include "gdcpie.h"
+ }
+ 
+ namespace MISCPLOT{

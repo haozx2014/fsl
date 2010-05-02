@@ -1,0 +1,9 @@
+--- a/extras/build
++++ b/extras/build
+@@ -107,4 +107,4 @@
+ 
+ if [ "X${errorprojs}X" != XX -o "X${errorinstall}X" != XX ] ; then
+     exit 1
+-fi
+\ No newline at end of file
++fi

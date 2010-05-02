@@ -1,0 +1,312 @@
+--- a/src/fdt/bedpostx
++++ b/src/fdt/bedpostx
+@@ -64,13 +64,15 @@
+ #   University, to negotiate a licence. Contact details are:
+ #   innovation@isis.ox.ac.uk quoting reference DE/1112.
+ 
+-if [ "x$SGE_ROOT" = "x" ] ; then
+-    if [ -f /usr/local/share/sge/default/common/settings.sh ] ; then
+-	. /usr/local/share/sge/default/common/settings.sh
+-    elif [ -f /usr/local/sge/default/common/settings.sh ] ; then
+-	. /usr/local/sge/default/common/settings.sh
+-    fi
+-fi
++# No need to try detecting SGE, instead rely on FSLPARALLEL to indicate
++# a present cluster engine. All engine specific code go into fsl_sub
++#if [ "x$SGE_ROOT" = "x" ] ; then
++#    if [ -f /usr/local/share/sge/default/common/settings.sh ] ; then
++#	. /usr/local/share/sge/default/common/settings.sh
++#    elif [ -f /usr/local/sge/default/common/settings.sh ] ; then
++#	. /usr/local/sge/default/common/settings.sh
++#    fi
++#fi
+ 
+ Usage() {
+     echo ""
+@@ -164,14 +166,20 @@
+ mkdir -p ${subjdir}.bedpostX/logs/pid_${$}
+ mkdir -p ${subjdir}.bedpostX/xfms
+ 
+-mailto=`whoami`@fmrib.ox.ac.uk
++# This setting is already present in fsl_sub and allows for a more flexible,
++# centralized configuration
++#mailto=`whoami`@fmrib.ox.ac.uk
+ echo Queuing preprocessing stages
+-preprocid=`${FSLDIR}/bin/fsl_sub -T 60 -m as -N bpx_preproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_preproc.sh ${subjdir}`
++# don't setup email options, rely on fsl_sub's setting
++#preprocid=`${FSLDIR}/bin/fsl_sub -T 60 -m as -N bpx_preproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_preproc.sh ${subjdir}`
++preprocid=`${FSLDIR}/bin/fsl_sub -T 60 -N bpx_preproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_preproc.sh ${subjdir}`
+ 
+ echo Queuing parallel processing stage
+ nslices=`${FSLDIR}/bin/fslval ${subjdir}/data dim3`
+ [ -f ${subjdir}.bedpostX/commands.txt ] && rm ${subjdir}.bedpostX/commands.txt
+-if [ "x$SGE_ROOT" = "x" ]; then
++# Don't be SGE-specific -- rely on FSLPARALLEL
++#if [ "x$SGE_ROOT" = "x" ]; then
++if [ "x$FSLPARALLEL" = "x" ]; then
+ 
+ # 
+ # Need to set off a backgrounded monitoring task
+@@ -241,15 +249,20 @@
+     fi
+     slice=$(($slice + 1))
+ done
+-
+-bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -l ${subjdir}.bedpostX/logs -M $mailto -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
++# don't specify a mailto address, but rely on fsl_sub doing it
++#bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -l ${subjdir}.bedpostX/logs -M $mailto -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
++bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -l ${subjdir}.bedpostX/logs -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
+ 
+ echo Queuing post processing stage
+-mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -T 60 -m as -N bpx_postproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_postproc.sh $subjdir`
+-
+-[ "x$SGE_ROOT" = "x" ] && kill -USR1 $monitorpid
+-
+-if [ "x$SGE_ROOT" != "x" ]; then
++# don't setup email options, rely on fsl_sub's setting
++#mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -T 60 -m as -N bpx_postproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_postproc.sh $subjdir`
++mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -T 60 -N bpx_postproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_postproc.sh $subjdir`
++
++# Don't be SGE-specific -- rely on FSLPARALLEL
++#[ "x$SGE_ROOT" = "x" ] && kill -USR1 $monitorpid
++#if [ "x$SGE_ROOT" != "x" ]; then
++[ "x$FSLPARALLEL" = "x" ] && kill -USR1 $monitorpid
++if [ "x$FSLPARALLEL" != "x" ]; then
+     echo
+     echo Type ${subjdir}.bedpostX/monitor to show progress.
+     cat <<EOM > ${subjdir}.bedpostX/monitor
+--- a/src/fdt/fdt.tcl
++++ b/src/fdt/fdt.tcl
+@@ -729,8 +729,11 @@
+ 	probtrackx {
+ 	    global probtrack env
+ 	    set errorStr ""
+-            set FSLPARALLEL 0
+-            if { [ info exists env(SGE_ROOT) ] && $env(SGE_ROOT) != "" } { set FSLPARALLEL 1 }
++	    # there seems to be no need to reset FSLPARALLEL since the desired
++	    # configuration is already determined in fslstart.tcl (sourced at the
++	    #top of this file) in a way that is not SGE-specific.
++        #set FSLPARALLEL 0
++        #if { [ info exists env(SGE_ROOT) ] && $env(SGE_ROOT) != "" } { set FSLPARALLEL 1 }
+ 	    if { $probtrack(bedpost_dir) == ""  } { set errorStr "You must specify the bedpostX directory!" }
+ 	    if { $probtrack(mode) == "simple" && $probtrack(usereference_yn) && $probtrack(reference) == "" } { set errorStr "$errorStr You must specify a reference image" } 
+ 	    if { $probtrack(mode) == "seedmask" && $probtrack(reference) == "" } { set errorStr "$errorStr You must specify a mask image" } 
+@@ -891,7 +894,11 @@
+                     puts $script "mv $logfile $copylog"
+                     puts $script "rm ${filebase}_script.sh"
+ 		    close $script
+-		    exec $FSLDIR/bin/fsl_sub -q long.q ${filebase}_script.sh
++			# Don't specify specific queue name (to leave the logic within
++			# fsl_sub, but specify a long time (20 hours) to achieve the same
++			# goal)
++		    #exec $FSLDIR/bin/fsl_sub -q long.q ${filebase}_script.sh
++		    exec $FSLDIR/bin/fsl_sub -T 1200 ${filebase}_script.sh
+ 		} else {
+ 
+ 		    fdt_monitor_short $w "$FSLDIR/bin/probtrackx $flags"
+--- a/src/misc_tcl/fslstart.tcl
++++ b/src/misc_tcl/fslstart.tcl
+@@ -55,7 +55,12 @@
+ 
+ #Choose load_varian specific OR FSLPARALLEL
+ set FSLPARALLEL 0
+-if { [ info exists env(SGE_ROOT) ] && $env(SGE_ROOT) != "" } { set FSLPARALLEL 1 }
++# Instead of relying on SGE_ROOT let's use FSLPARALLEL itself to determine
++# whether using a cluster is desired. This allows for other cluster engines
++# to be used.
++#if { [ info exists env(SGE_ROOT) ] && $env(SGE_ROOT) != "" } { set FSLPARALLEL 1 }
++if { [ info exists env(FSLPARALLEL) ] && $env(FSLPARALLEL) != "" } { set FSLPARALLEL 1 }
++
+ 
+ # what type of OS?
+ set OSFLAVOUR unix
+--- a/src/possum/possumX
++++ b/src/possum/possumX
+@@ -231,7 +231,9 @@
+ mkdir -p ${subjdir}/diff_proc
+ mkdir -p ${subjdir}/logs
+ mkdir -p ${subjdir}/logs/pid_${$}
+-mailto=`whoami`@fmrib.ox.ac.uk
++# This setting is already present in fsl_sub and allows for a more flexible,
++# centralized configuration
++#mailto=`whoami`@fmrib.ox.ac.uk
+     
+ echo Processing stage 
+ date
+@@ -244,9 +246,12 @@
+     procnum=$(($procnum + 1))
+ done
+ 
+-echo "${FSLDIR}/bin/fsl_sub -T $ntime -l ${subjdir}/logs $arch -M $mailto -N possum -t ${subjdir}/possum.com"
++# don't specify a mailto address, but rely on fsl_sub doing it
++#echo "${FSLDIR}/bin/fsl_sub -T $ntime -l ${subjdir}/logs $arch -M $mailto -N possum -t ${subjdir}/possum.com"
++#possumid=`${FSLDIR}/bin/fsl_sub -T $ntime -l ${subjdir}/logs $arch -M $mailto -N possum -t ${subjdir}/possum.com `
++echo "${FSLDIR}/bin/fsl_sub -T $ntime -l ${subjdir}/logs $arch -N possum -t ${subjdir}/possum.com"
+ 
+-possumid=`${FSLDIR}/bin/fsl_sub -T $ntime -l ${subjdir}/logs $arch -M $mailto -N possum -t ${subjdir}/possum.com ` 
++possumid=`${FSLDIR}/bin/fsl_sub -T $ntime -l ${subjdir}/logs $arch -N possum -t ${subjdir}/possum.com `
+ 
+ echo Post processing stage
+ date
+--- a/src/sgeutils/fsl_sub
++++ b/src/sgeutils/fsl_sub
+@@ -75,6 +75,15 @@
+ # cluster.
+ ###########################################################################
+ 
++fslcluster_cell_settings=/usr/local/share/sge/default/common/settings.sh
++# Domain mail should be sent to if necessary. The complete address will be
++# `whoami`@${fslcluster_mailto_domain}
++fslcluster_mailto_domain=localhost
++# When should the cluster engine send status email (see qsub -m ... docs)
++# Don't send email by default; can be overidden by FSLCLUSTER_MAILOPTS
++# environment variable
++fslcluster_mailopts="n"
++
+ 
+ ###########################################################################
+ # The following section determines what to do when fsl_sub is called
+@@ -89,10 +98,11 @@
+ # cluster to be used.
+ ###########################################################################
+ 
++# try autodetecting SGE, but see ovveride switch FSLPARALLEL below
+ METHOD=SGE
+ if [ "x$SGE_ROOT" = "x" ] ; then
+-    if [ -f /usr/local/share/sge/default/common/settings.sh ] ; then
+-	. /usr/local/share/sge/default/common/settings.sh
++    if [ -f ${fslcluster_cell_settings} ] ; then
++	. ${fslcluster_cell_settings}
+     elif [ -f /usr/local/sge/default/common/settings.sh ] ; then
+ 	. /usr/local/sge/default/common/settings.sh
+     else
+@@ -100,30 +110,19 @@
+     fi
+ fi
+ 
++# Allow to override the above automatic detection result with FSLPARALLEL
++if [ "x$FSLPARALLEL" != "x" ] ; then
++    # Whenever FSLPARALLEL is set enfore using SGE even if no SGE_ROOT is set
++    # which, for example, is the case on Debian systems running SGE
++    METHOD=SGE
++    # TODO: move cluster engine detection here to be able to support more than
++    #       just SGE
++fi
+ 
+-###########################################################################
+-# The following auto-decides what cluster queue to use. The calling
+-# FSL program will probably use the -T option when calling fsl_sub,
+-# which tells fsl_sub how long (in minutes) the process is expected to
+-# take (in the case of the -t option, how long each line in the
+-# supplied file is expected to take). You need to setup the following
+-# list to map ranges of timings into your cluster queues - it doesn't
+-# matter how many you setup, that's up to you.
+-###########################################################################
+-
+-map_qname ()
+-{
+-    if [ $1 -le 20 ] ; then
+-	queue=veryshort.q
+-    elif [ $1 -le 120 ] ; then
+-	queue=short.q
+-    elif [ $1 -le 1440 ] ; then
+-	queue=long.q
+-    else
+-	queue=verylong.q
+-    fi
+-    #echo "Estimated time was $1 mins: queue name is $queue"
+-}
++# Allow overriding mail settings
++if [ "x$FSLCLUSTER_MAILOPTS" != "x" ] ; then
++    fslcluster_mailopts=${FSLCLUSTER_MAILOPTS}
++fi
+ 
+ 
+ ###########################################################################
+@@ -146,13 +145,13 @@
+ $command -q short.q gzip *.img *.hdr
+ $command -a darwin regscript rawdata outputdir ...
+ 
+-  -T <minutes>          Estimated job length in minutes, used to auto-set queue name
+-  -q <queuename>        Possible values for <queuename> are "verylong.q", "long.q" 
+-                        and "short.q". See below for details
+-                        Default is "long.q".
++  -T <minutes>          Estimated job length in minutes, used to let SGE select
++                        an appropriate queue
++  -q <queuename>        Possible values for <queuename> can be queried with
++                        'qconf -sql'
+   -a <arch-name>        Architecture [e.g., darwin or lx24-amd64]
+   -p <job-priority>     Lower priority [0:-1024] default = 0                 
+-  -M <email-address>    Who to email, default = `whoami`@fmrib.ox.ac.uk 
++  -M <email-address>    Who to email, default = `whoami`@localhost
+   -j <jid>              Place a hold on this task until job jid has completed
+   -t <filename>         Specify a task file of commands to execute in parallel
+   -N <jobname>          Specify jobname as it will appear on queue
+@@ -160,21 +159,6 @@
+   -m <mailoptions>      Change the SGE mail options, see qsub for details
+   -F                    Use flags embedded in scripts to set SGE queuing options
+   -v                    Verbose mode.
+-
+-Queues:
+-
+-There are several batch queues configured on the cluster, each with defined CPU
+-time limits. All queues, except bigmem.q, have a 8GB memory limit.
+-
+-veryshort.q:This queue is for jobs which last under 30mins.
+-short.q:    This queue is for jobs which last up to 4h. 
+-long.q:     This queue is for jobs which last less than 24h. Jobs run with a
+-            nice value of 10.
+-verylong.q: This queue is for jobs which will take longer than 24h CPU time.
+-            There is one slot per node, and jobs on this queue have a nice value
+-            of 15.
+-bigmem.q:   This queue is like the verylong.q but has no memory limits.
+-
+ EOF
+ 
+   exit 1
+@@ -201,9 +185,10 @@
+ # change. It also sets up the basic emailing control.
+ ###########################################################################
+ 
+-queue=long.q
+-mailto=`whoami`@fmrib.ox.ac.uk
+-MailOpts="n"
++# SGE should already have a default queue
++#queue=long.q
++mailto=`whoami`@${fslcluster_mailto_domain}
++MailOpts=${fslcluster_mailopts}
+ 
+ 
+ ###########################################################################
+@@ -243,10 +228,11 @@
+ while [ $1 != -- ] ; do
+   case $1 in
+     -T)
+-      map_qname $2
++      # qsub wants the time limit in seconds
++      job_timelimit="-l h_rt=$(echo "$2 * 60" | bc)"
+       shift;;
+     -q)
+-      queue=$2
++      queue="-q $2"
+       shift;;
+     -a)
+       acceptable_arch=no
+@@ -337,7 +323,7 @@
+     SGE)
+ 	if [ "x$tasks" = "x" ] ; then
+ 	    if [ $scriptmode -ne 1 ] ; then
+-		sge_command="qsub -V -cwd -shell n -b y -r y -q $queue -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold"
++		sge_command="qsub -V -cwd -shell n -b y -r y $job_timelimit $queue -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold"
+ 	    else
+ 		sge_command="qsub $LogOpts $sge_arch $sge_hold"
+ 	    fi
+@@ -347,7 +333,7 @@
+ 	    fi
+ 	    exec $sge_command $@ | awk '{print $3}'
+ 	else
+-	    sge_command="qsub -V -cwd -q $queue -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold $sge_tasks"
++	    sge_command="qsub -V -cwd $job_timelimit $queue -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold $sge_tasks"
+ 	    if [ $verbose -eq 1 ] ; then 
+ 		echo sge_command: $sge_command >&2
+ 		echo control file: $taskfile >&2
