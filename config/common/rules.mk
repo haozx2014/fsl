@@ -32,7 +32,7 @@ clean:
 	${RM} -f /tmp/fslgrot *.o *.a *.exe core depend.mk
 
 install:
-	@${MAKE} "DESTDIR=${DEB_DESTDIR}" master-install-script
+	@${MAKE} "DESTDIR=${FSLDEVDIR}" master-install-script
 
 install-fmrib: 
 	@numunst=`cvs status | grep "Sticky Tag" | grep -v -i stable | wc -l` ; export numunst ; \
@@ -317,4 +317,4 @@ depend.mk:
 		fi \
 	done
 
-#include depend.mk
+include depend.mk

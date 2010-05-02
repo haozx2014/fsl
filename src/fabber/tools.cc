@@ -68,7 +68,6 @@
 
 #include "tools.h"
 #include "easylog.h"
-#include <limits>
 
 double DescendingZeroFinder::FindZero() const
 {

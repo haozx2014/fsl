@@ -14,10 +14,10 @@ LIBS = -lutils -lfslio -lniftiio -lznz -lz -lnewmat -lprob -lm
 # The target "all" should ALWAYS be provided
 #   typically it will just be another target name
 
-all: libmiscmaths
+all: libmiscmaths.a
 
 quick:${OBJS} quick.o
 	${CXX}  ${CXXFLAGS} ${LDFLAGS} -o $@ ${OBJS} quick.o ${LIBS}
 
-libmiscmaths: ${OBJS}
-	${CXX} -shared -o libmiscmaths.so ${OBJS} -fPIC ${LDFLAGS} -lnewmat -lutils -lfslio -lniftiio -lprob
+libmiscmaths.a: ${OBJS}
+	${AR} -r libmiscmaths.a ${OBJS}

@@ -3381,7 +3381,7 @@ namespace NEWIMAGE {
       fjointhist = new float[(no_bins+1)*(no_bins+1)];
       fmarghist1 = new float[no_bins+1];
       fmarghist2 = new float[no_bins+1];
-      unsigned long int N = this->refvol.nvoxels();
+      int N = this->refvol.nvoxels();
       float p=0.0;
       try {
         plnp.ReSize(Min((unsigned long int) 10000, (unsigned long int) (10*N/(no_bins+1))));

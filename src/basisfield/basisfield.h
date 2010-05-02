@@ -275,7 +275,7 @@ public:
 
   virtual boost::shared_ptr<MISCMATHS::BFMatrix> JtJ(const NEWIMAGE::volume<float>&        ima1,
                                                      const basisfield&                     bf2,
-                                                     const NEWIMAGE::volume<float>&        ima2,
+                                                     const NEWIMAGE::volume<float>&        ima1,
                                                      const NEWIMAGE::volume<char>          *mask=0,
                                                      MISCMATHS::BFMatrixPrecisionType      prec=BFMatrixDoublePrecision) const = 0;
 

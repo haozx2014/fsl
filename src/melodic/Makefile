@@ -37,7 +37,7 @@ SCRIPTS = melodicreport
 all: ggmix fsl_regfilt fsl_glm fsl_mvlm fsl_sbca melodic
 
 ggmix: ${GGMIX_OBJS}
-	${CXX} -shared -o libggmix.so ${GGMIX_OBJS} ${LDFLAGS} -fPIC -lnewmat -lmiscmaths -lnewimage
+	${AR} -r libggmix.a ${GGMIX_OBJS} 
 
 melodic: ${MELODIC_OBJS}
 	$(CXX) ${CXXFLAGS} ${LDFLAGS} -o $@ ${MELODIC_OBJS} ${LIBS}

@@ -128,7 +128,7 @@ while [ $i -le ${num} ] ; do
     ${FSLDIR}/bin/fslroi $imlb ${imlbout}lbgrot${i} $roi
     pairlist=${pairlist}" "${pout2}_t1grot${i}" "${imlbout}lbgrot${i}
    
-    i=$((i+1));
+    let i=i+1; 
 done
 
 echo "run slicesdir"

@@ -11,7 +11,7 @@ OptionsTestTarget = opttst
 OptionsTestObjects = opttst.o
 OptionsTestLibrarys = -lutils
 
-LibraryTarget = libutils.so
+LibraryTarget = libutils.a
 LibraryObjects = matches.o functions.o usage.o check.o parse.o log.o time_tracer.o
 
 all: ${LibraryTarget}
@@ -21,7 +21,9 @@ ${OptionsTestTarget}: ${LibraryTarget} ${OptionsTestObjects}
 		${OptionsTestLibrarys}
 
 ${LibraryTarget}: ${LibraryObjects}
-	${CXX} -shared -o $@ ${LibraryObjects} ${LDFLAGS} -fPIC -lnewmat
+	${RM} -f ${LibraryTarget}
+	${AR} -r $@ ${LibraryObjects}
+	${RANLIB} ${LibraryTarget}
 
 XFILES = 
 AFILES = ${LibraryTarget}

@@ -8,10 +8,10 @@ USRINCFLAGS = -I${INC_NEWMAT} -I${INC_ZLIB}
 USRLDFLAGS = -L${LIB_NEWMAT}  -L${LIB_ZLIB}
  
 
-all: shapeModel
+all: shapeModel.a 
 
-shapeModel: ${SHAPEOBJS}
-	${CXX} -shared -o libshapeModel.so ${SHAPEOBJS} ${LDFLAGS} -fPIC -lmeshclass -lnewimage -lnewmat -lfirst_lib
+shapeModel.a: ${SHAPEOBJS}
+	${AR} -r libshapeModel.a ${SHAPEOBJS}
 
 
 

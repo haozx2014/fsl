@@ -1477,9 +1477,7 @@ unsigned int splinefield::fake_old_ksp(double        nvxs,
                                        unsigned int  nksp,
                                        double        ovxs) const
 {
-  // No need for long double rounding and also causes FTBFS on ARMEL
-  //return(static_cast<unsigned int>(roundl((ovxs/nvxs)*double(nksp))));
-  return(static_cast<unsigned int>(MISCMATHS::round((ovxs/nvxs)*double(nksp))));
+  return(static_cast<unsigned int>(roundl((ovxs/nvxs)*double(nksp))));
 }
 
 bool splinefield::faking_works(const std::vector<double>&        nvxs,

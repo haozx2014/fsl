@@ -64,15 +64,13 @@
 #   University, to negotiate a licence. Contact details are:
 #   innovation@isis.ox.ac.uk quoting reference DE/1112.
 
-# No need to try detecting SGE, instead rely on FSLPARALLEL to indicate
-# a present cluster engine. All engine specific code go into fsl_sub
-#if [ "x$SGE_ROOT" = "x" ] ; then
-#    if [ -f /usr/local/share/sge/default/common/settings.sh ] ; then
-#	. /usr/local/share/sge/default/common/settings.sh
-#    elif [ -f /usr/local/sge/default/common/settings.sh ] ; then
-#	. /usr/local/sge/default/common/settings.sh
-#    fi
-#fi
+if [ "x$SGE_ROOT" = "x" ] ; then
+    if [ -f /usr/local/share/sge/default/common/settings.sh ] ; then
+	. /usr/local/share/sge/default/common/settings.sh
+    elif [ -f /usr/local/sge/default/common/settings.sh ] ; then
+	. /usr/local/sge/default/common/settings.sh
+    fi
+fi
 
 Usage() {
     echo ""
@@ -166,20 +164,14 @@ mkdir -p ${subjdir}.bedpostX/logs
 mkdir -p ${subjdir}.bedpostX/logs/pid_${$}
 mkdir -p ${subjdir}.bedpostX/xfms
 
-# This setting is already present in fsl_sub and allows for a more flexible,
-# centralized configuration
-#mailto=`whoami`@fmrib.ox.ac.uk
+mailto=`whoami`@fmrib.ox.ac.uk
 echo Queuing preprocessing stages
-# don't setup email options, rely on fsl_sub's setting
-#preprocid=`${FSLDIR}/bin/fsl_sub -T 60 -m as -N bpx_preproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_preproc.sh ${subjdir}`
-preprocid=`${FSLDIR}/bin/fsl_sub -T 60 -N bpx_preproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_preproc.sh ${subjdir}`
+preprocid=`${FSLDIR}/bin/fsl_sub -T 60 -m as -N bpx_preproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_preproc.sh ${subjdir}`
 
 echo Queuing parallel processing stage
 nslices=`${FSLDIR}/bin/fslval ${subjdir}/data dim3`
 [ -f ${subjdir}.bedpostX/commands.txt ] && rm ${subjdir}.bedpostX/commands.txt
-# Don't be SGE-specific -- rely on FSLPARALLEL
-#if [ "x$SGE_ROOT" = "x" ]; then
-if [ "x$FSLPARALLEL" = "x" ]; then
+if [ "x$SGE_ROOT" = "x" ]; then
 
 # 
 # Need to set off a backgrounded monitoring task
@@ -249,20 +241,15 @@ do
     fi
     slice=$(($slice + 1))
 done
-# don't specify a mailto address, but rely on fsl_sub doing it
-#bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -l ${subjdir}.bedpostX/logs -M $mailto -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
-bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -l ${subjdir}.bedpostX/logs -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
+
+bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -l ${subjdir}.bedpostX/logs -M $mailto -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
 
 echo Queuing post processing stage
-# don't setup email options, rely on fsl_sub's setting
-#mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -T 60 -m as -N bpx_postproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_postproc.sh $subjdir`
-mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -T 60 -N bpx_postproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_postproc.sh $subjdir`
+mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -T 60 -m as -N bpx_postproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_postproc.sh $subjdir`
 
-# Don't be SGE-specific -- rely on FSLPARALLEL
-#[ "x$SGE_ROOT" = "x" ] && kill -USR1 $monitorpid
-#if [ "x$SGE_ROOT" != "x" ]; then
-[ "x$FSLPARALLEL" = "x" ] && kill -USR1 $monitorpid
-if [ "x$FSLPARALLEL" != "x" ]; then
+[ "x$SGE_ROOT" = "x" ] && kill -USR1 $monitorpid
+
+if [ "x$SGE_ROOT" != "x" ]; then
     echo
     echo Type ${subjdir}.bedpostX/monitor to show progress.
     cat <<EOM > ${subjdir}.bedpostX/monitor

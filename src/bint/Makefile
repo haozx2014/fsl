@@ -13,10 +13,10 @@ OBJS = model.o lsmcmcmanager.o lslaplacemanager.o bintoptions.o meanoptions.o
 
 #OPTFLAGS =
 
-all:	${XFILES} libbint
+all:	${XFILES} libbint.a
 
-libbint: ${OBJS}
-	${CXX} -shared -o libbint.so ${OBJS} ${LDFLAGS} -fPIC -lutils -lnewmat -lnewimage -lmiscmaths -lprob
+libbint.a: ${OBJS}
+	${AR} -r libbint.a ${OBJS}
 
 mean:${OBJS} mean.o
 	${CXX}  ${CXXFLAGS} ${LDFLAGS} -o $@ ${OBJS} mean.o ${LIBS}

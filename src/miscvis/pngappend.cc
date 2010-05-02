@@ -67,7 +67,6 @@
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
 #include <string>
-#include <cstring>
 #include <cstdlib>
 #include <iostream>
 #include "gd.h"

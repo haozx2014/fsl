@@ -80,7 +80,7 @@
 #include "positerators.h"
 #include "miscmaths/miscmaths.h"
 #include "miscmaths/kernel.h"
-#include <nifti1.h>
+#include "niftiio/nifti1.h"
 #include "miscmaths/splinterpolator.h"
  
 using namespace NEWMAT;

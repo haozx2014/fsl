@@ -18,7 +18,7 @@ if [ -f ${bvecs}_old ];then
     echo "If you want to force this program to run, please remove the file ${bvecs}_old"
     echo ""
     exit 1
-fi
+done
 /bin/cp ${bvecs} ${bvecs}_old
 #/bin/rm -f ${bvecs}
 
