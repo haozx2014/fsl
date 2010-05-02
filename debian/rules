@@ -44,7 +44,10 @@ CFLAGS = -Wall -g -DHAVE_LIBFREETYPE -fPIC \
 
 # default linker flags
 # apply to FSL as 'ARCHLDFLAGS'
-LDFLAGS = -Wl,--no-undefined -Wl,--as-needed -L/usr/lib/fsl/lib
+LDFLAGS = -Wl,--no-undefined -L/usr/lib/fsl/lib
+# 'as-needed' kills everything -- symbols of C libs get confused
+# and results change -- remember cprob:gamma()
+#LDFLAGS = -Wl,--no-undefined -Wl,--as-needed -L/usr/lib/fsl/lib
 
 # where are the internal libs
 FSL_LIBRARY_PATH=$(CURDIR)/lib
@@ -173,7 +176,6 @@ binary-common:
 	dh_installman
 	dh_installdocs
 	dh_installmenu
-	dh_desktop
 	dh_link
 	dh_strip
 	dh_compress
