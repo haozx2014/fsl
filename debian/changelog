@@ -1,3 +1,16 @@
+fsl (4.1.5.2-3) unstable; urgency=low
+
+  * Remove obsolete dh_desktop call from debian/rules.
+  * Add debhelper dependency variables to fsl-doc control stanza.
+  * No longer compile with '-Wl,--as-needed' to prevent symbols from
+    libcprob to be substituted by external replacements.
+  * Updated and extended the package description.
+  * Changed maintainer to NeuroDebian. Moved myself into uploaders and
+    added Yaroslav Halchenko.
+  * Fix syntax error in 'rotate_bvecs' script.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Sun, 02 May 2010 17:03:55 -0400
+
 fsl (4.1.5.2-2) unstable; urgency=low
 
   * Fix broken fslmaths option (-tfce). Thanks to Clark Johnson and Matthew

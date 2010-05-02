@@ -1,7 +1,8 @@
 Source: fsl
 Section: non-free/science
 Priority: optional
-Maintainer: Michael Hanke <michael.hanke@gmail.com>
+Maintainer: NeuroDebian Team <team@neuro.debian.net>
+Uploaders: Michael Hanke <michael.hanke@gmail.com>, Yaroslav Halchenko <debian@onerussian.com>
 Build-Depends: debhelper (>= 5), zlib1g-dev (>= 1.2.2), libboost-dev (>= 1.32.0), libpng12-dev (>= 1.2.8rel), libgd2-noxpm-dev (>= 2.0.33) | libgd2-xpm-dev (>= 2.0.33), libnewmat10-dev, libgdchart-gd2-noxpm-dev | libgdchart-gd2-xpm-dev, octave3.2-headers | octave3.0-headers, tcl8.4 (>=8.4.7), imagemagick, libnifti1-dev (>> 1.1.0-1)
 Standards-Version: 3.8.4.0
 Homepage: http://www.fmrib.ox.ac.uk/fsl/
@@ -17,18 +18,27 @@ Suggests: fsl-feeds, ${octave:Depends}, dicomnifti, fsl-possum-data, fsl-first-d
 Conflicts: fsl-fslview
 Description: analysis tools for FMRI, MRI and DTI brain imaging
  FSL is a comprehensive library of image analysis and statistical tools
- for FMRI, MRI and DTI brain imaging data.
- .
- FSL provides an easy to use GUI.
+ for fMRI, MRI and DTI brain imaging data. The suite consists of various
+ commandline tools, as well as simple GUIs for its core analysis pipelines.
+ Among others, FSL offers implementations of standard GLM analysis,
+ white matter tractography, tissue segmentation, affine and non-linear
+ co-registration, and independent component analysis.
  .
  FSL interoperates well with other brain imaging related software. This includes
- Caret, FreeSurfer (cortical flattening and modelling).
+ Caret, FreeSurfer (cortical flattening and modelling). All FSL tools support
+ the NIfTI format.
 
 Package: fsl-doc
 Section: non-free/doc
 Architecture: all
-Depends: fslview-doc, ${shlibs:Depends}, ${misc:Depends}
+Depends: fslview-doc, ${misc:Depends}
 Description: documentation for FSL
+ FSL is a comprehensive library of image analysis and statistical tools
+ for fMRI, MRI and DTI brain imaging data. The suite consists of various
+ commandline tools, as well as simple GUIs for its core analysis pipelines.
+ Among others, FSL offers implementations of standard GLM analysis,
+ white matter tractography, tissue segmentation, affine and non-linear
+ co-registration, and independent component analysis.
  FSL is a comprehensive library of image analysis and statistical tools
  for FMRI, MRI and DTI brain imaging data.
  .
