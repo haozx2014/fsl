@@ -27,7 +27,7 @@ Description: analysis tools for FMRI, MRI and DTI brain imaging
 Package: fsl-doc
 Section: non-free/doc
 Architecture: all
-Depends: fslview-doc
+Depends: fslview-doc, ${shlibs:Depends}, ${misc:Depends}
 Description: documentation for FSL
  FSL is a comprehensive library of image analysis and statistical tools
  for FMRI, MRI and DTI brain imaging data.
