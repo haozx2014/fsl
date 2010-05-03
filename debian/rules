@@ -90,7 +90,7 @@ biextras: $(EXTRAS:%=biextra-%)
 
 # clean all extras
 cextras: $(EXTRAS:%=cextra-%)
-	find extras/src -name '*.o' -exec rm {} \;
+	find extras/src -name '*.o' -delete
 
 
 instdir:
@@ -117,7 +117,7 @@ build: instdir biextras biprojs
 
 	# cleanup TCL stuff
 	rm -r debian/tmp/tcl/BWidget/BWMan/
-	find debian/tmp/tcl/BWidget/ -name '*.txt' -exec rm {} \;
+	find debian/tmp/tcl/BWidget/ -name '*.txt' -delete
 
 	# remove FSL internal binary and scripts
 	rm debian/tmp/bin/{fslpres,eqn2gif,makehtmeqns}
@@ -132,7 +132,7 @@ clean: cextras cprojs
 	dh_testroot
 
 	# remove leftovers
-	find $(CURDIR) -name '*.so' -exec rm {} \;
+	find $(CURDIR) -name '*.so' -delete
 	-rm src/fdt/{xfibres,fdt_matrix_ops,indexer,replacevols,probtrackx,reord_OM,sausages,probtrack_old}
 	-rm src/feat5/doc/feat.tcl
 	-rm -r etc/standard lib
@@ -219,10 +219,6 @@ binary-arch: install
 
 	# set execute permission for GUI application wrapper
 	chmod +x debian/fsl_gui_app_wrapper
-
-	# install the lintian override
-	if [ ! -d debian/tmp/lintian ]; then mkdir debian/tmp/lintian; fi
-	cp debian/lintian.overrides debian/tmp/lintian/fsl
 
 	$(MAKE) -f debian/rules DH_OPTIONS=-a binary-common
 

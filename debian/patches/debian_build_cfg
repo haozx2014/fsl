@@ -1,0 +1,312 @@
+Description: Debian build setup and shared libraries
+ This patch turns all private FSL libraries into shared libs.
+--- a/config/common/rules.mk
++++ b/config/common/rules.mk
+@@ -32,7 +32,7 @@
+ 	${RM} -f /tmp/fslgrot *.o *.a *.exe core depend.mk
+ 
+ install:
+-	@${MAKE} "DESTDIR=${FSLDEVDIR}" master-install-script
++	@${MAKE} "DESTDIR=${DEB_DESTDIR}" master-install-script
+ 
+ install-fmrib: 
+ 	@numunst=`cvs status | grep "Sticky Tag" | grep -v -i stable | wc -l` ; export numunst ; \
+@@ -317,4 +317,4 @@
+ 		fi \
+ 	done
+ 
+-include depend.mk
++#include depend.mk
+--- a/config/common/vars.mk
++++ b/config/common/vars.mk
+@@ -3,13 +3,15 @@
+ INCDIR = ${FSLDIR}/include
+ LIBDIR = ${FSLDIR}/lib
+ 
+-DEVINCDIR = ${FSLDEVDIR}/include
+-DEVLIBDIR = ${FSLDEVDIR}/lib
+-
+-DESTDIR = ${FSLDEVDIR}
+-
+-dest_INCDIR = ${DESTDIR}/include
+-dest_LIBDIR = ${DESTDIR}/lib
++# for the Debian build FSLDIR and FSLDEVDIR is the same
++DEVINCDIR = ${FSLDIR}/include
++DEVLIBDIR = ${FSLDIR}/lib
++
++DESTDIR = ${DEB_DESTDIR}
++
++# do not install the libs and headers with the binaries
++dest_INCDIR = ${FSLDIR}/include
++dest_LIBDIR = ${FSLDIR}/lib
+ dest_BINDIR = ${DESTDIR}/bin
+ dest_MANDIR = ${DESTDIR}/man
+ dest_TCLDIR = ${DESTDIR}/tcl
+@@ -35,7 +37,8 @@
+ 	${AccumulatedIncFlags}
+ 
+ HFILES = *.h
+-AFILES = *.a
++# install the shared libs as well
++AFILES = *.a *.so
+ XFILES = 
+ SCRIPTS =
+ TCLFILES = *.tcl
+--- a/config/default.mk
++++ b/config/default.mk
+@@ -1,6 +1,7 @@
+ # Assumes that ${FSLDIR} is set as an environment variable
+ 
+-include ${FSLCONFDIR}/${FSLMACHTYPE}/systemvars.mk
+-include ${FSLCONFDIR}/${FSLMACHTYPE}/externallibs.mk
++# use Debian specific build configuration
++include ${FSLDIR}/debian/systemvars.mk
++include ${FSLDIR}/debian/externallibs.mk
+ include ${FSLCONFDIR}/common/vars.mk
+ include ${FSLCONFDIR}/common/rules.mk
+--- a/extras/src/cprob/Makefile
++++ b/extras/src/cprob/Makefile
+@@ -8,13 +8,12 @@
+ 
+ USRCFLAGS = -std=gnu99
+ 
+-all: libprob.a
++all: libprob
+ 
+ dftest: all dftest.o
+ 	$(CC) $(CFLAGS) -L. -o dftest dftest.o -lprob
+ 
+-libprob.a: $(OBJS) $(INCS)
+-	ar rv libprob.a $(OBJS)
+-	ranlib libprob.a
+-	rm -f libcprob.a
+-	ln -s libprob.a libcprob.a
++libprob: $(OBJS) $(INCS)
++	${CXX} -shared -o libprob.so $(OBJS) -fPIC ${LDFLAGS}
++	rm -f libcprob.so
++	ln -s libprob.so libcprob.so
+--- a/src/bint/Makefile
++++ b/src/bint/Makefile
+@@ -13,10 +13,10 @@
+ 
+ #OPTFLAGS =
+ 
+-all:	${XFILES} libbint.a
++all:	${XFILES} libbint
+ 
+-libbint.a: ${OBJS}
+-	${AR} -r libbint.a ${OBJS}
++libbint: ${OBJS}
++	${CXX} -shared -o libbint.so ${OBJS} ${LDFLAGS} -fPIC -lutils -lnewmat -lnewimage -lmiscmaths -lprob
+ 
+ mean:${OBJS} mean.o
+ 	${CXX}  ${CXXFLAGS} ${LDFLAGS} -o $@ ${OBJS} mean.o ${LIBS}
+--- a/src/fdt/Makefile
++++ b/src/fdt/Makefile
+@@ -5,7 +5,7 @@
+ USRINCFLAGS = -I${INC_NEWMAT} -I${INC_NEWRAN} -I${INC_CPROB} -I${INC_PROB} -I${INC_BOOST} -I${INC_ZLIB}
+ USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_NEWRAN} -L${LIB_CPROB} -L${LIB_PROB} -L${LIB_ZLIB}
+ 
+-DLIBS = -lwarpfns -lbasisfield -lmeshclass -lnewimage -lutils -lmiscmaths -lnewmat -lnewran -lfslio -lniftiio -lznz -lcprob -lprob -lm -lz
++DLIBS = -lwarpfns -lbasisfield -lmeshclass -lbint -lnewimage -lutils -lmiscmaths -lnewmat -lfslio -lniftiio -lznz -lprob -lm -lz
+ 
+ DTIFIT=dtifit
+ CCOPS=ccops
+--- a/src/fslio/Makefile
++++ b/src/fslio/Makefile
+@@ -8,10 +8,10 @@
+ 
+ SCRIPTS = remove_ext fsloutputtype imtest imglob imcp imln imrm immv
+ 
+-all: libfslio.a
++all: libfslio
+ 
+-libfslio.a: ${OBJS}
+-	${AR} -r libfslio.a ${OBJS}
++libfslio: ${OBJS}
++	${CXX} -shared -o libfslio.so $(OBJS) -fPIC ${LDFLAGS} -lniftiio -lznz -lz
+ 
+ TESTOBJS = exttest.o
+ TESTLIBS = -lfslio -lniftiio -lznz -lz
+--- a/src/fslio/fslio.h
++++ b/src/fslio/fslio.h
+@@ -25,8 +25,8 @@
+ #define __FSLIO_H
+ 
+ #include <stdio.h>
+-#include "niftiio/nifti1_io.h"
+-#include "znzlib/znzlib.h"
++#include <nifti1_io.h>
++#include <znzlib.h>
+ #include "dbh.h"
+ 
+ #ifdef __cplusplus
+--- a/src/libhfunc/Makefile
++++ b/src/libhfunc/Makefile
+@@ -2,13 +2,13 @@
+ 
+ PROJNAME = libhfunc
+ 
+-AFILES = libhfunc.a
++AFILES = libhfunc.so
+ HFILES = libhfunc.h dbh.h
+ XFILES = 
+ 
+ OBJS = libhfunc.o
+ 
+-all: libhfunc.a
++all: libhfunc
+ 
+-libhfunc.a: ${OBJS}
+-	${AR} -r libhfunc.a ${OBJS}
++libhfunc: ${OBJS}
++	${CXX} -shared -o libhfunc.so ${OBJS} ${LDFLAGS} -fPIC
+--- a/src/libvis/Makefile
++++ b/src/libvis/Makefile
+@@ -6,7 +6,7 @@
+ 
+ PROJNAME = libvis
+ 
+-USRINCFLAGS = -I${INC_NEWMAT} -I${INC_PROB} -I${INC_GD} -I${INC_GDC} -I${INC_PNG} -I${INC_ZLIB} -I${INC_BOOST}
++USRINCFLAGS = -I${INC_NEWMAT} -I${INC_PROB} -I${INC_GD} -I${INC_GDC} -I${INC_PNG} -I${INC_ZLIB} -I${INC_BOOST} -fPIC
+ USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_PROB} -L${LIB_GD} -L${LIB_GDC} -L${LIB_PNG} -L${LIB_ZLIB}
+ 
+ LIBS = -lnewimage -lmiscplot -lmiscpic -lmiscmaths -lfslio -lniftiio -lznz -lnewmat -lprob -lm  -lgdc -lgd -lpng -lz
+@@ -22,10 +22,10 @@
+ all: miscplot miscpic
+ 
+ miscplot: ${PLOTOBJS}
+-	${AR} -r libmiscplot.a ${PLOTOBJS}
++	${CXX} -shared -o libmiscplot.so ${PLOTOBJS} ${LDFLAGS} -lnewmat -lgd -lgdc -lmiscmaths -lfslio -lprob -lniftiio
+ 
+ miscpic: ${PICOBJS}
+-	${AR} -r libmiscpic.a ${PICOBJS}
++	${CXX} -shared -o libmiscpic.so ${PICOBJS} ${LDFLAGS} -lnewimage -lgd -lfslio -lmiscmaths -lnewmat -lniftiio
+ 
+ test: ${TOBJS}
+-	$(CXX) ${CXXFLAGS} ${LDFLAGS} -o $@ ${TOBJS} ${LIBS}
++	$(CXX) ${CXXFLAGS} ${LDFLAGS} -o $@ ${TOBJS}
+--- a/src/melodic/Makefile
++++ b/src/melodic/Makefile
+@@ -37,7 +37,7 @@
+ all: ggmix fsl_regfilt fsl_glm fsl_mvlm fsl_sbca melodic
+ 
+ ggmix: ${GGMIX_OBJS}
+-	${AR} -r libggmix.a ${GGMIX_OBJS} 
++	${CXX} -shared -o libggmix.so ${GGMIX_OBJS} ${LDFLAGS} -fPIC -lnewmat -lmiscmaths -lnewimage
+ 
+ melodic: ${MELODIC_OBJS}
+ 	$(CXX) ${CXXFLAGS} ${LDFLAGS} -o $@ ${MELODIC_OBJS} ${LIBS}
+--- a/src/meshclass/Makefile
++++ b/src/meshclass/Makefile
+@@ -16,10 +16,10 @@
+ 
+ DBGFLAGS=-g
+ 
+-all: meshclass.a ${XFILES}
++all: meshclass ${XFILES}
+ 
+-meshclass.a: ${MESHOBJS}
+-	${AR} -r libmeshclass.a ${MESHOBJS}
++meshclass: ${MESHOBJS}
++	${CXX} -shared -o libmeshclass.so ${MESHOBJS} ${LDFLAGS} -fPIC
+ 
+ drawmesh:${DRAWOBJS} 
+ 	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${DRAWOBJS} ${LIBS} 
+--- a/src/miscmaths/Makefile
++++ b/src/miscmaths/Makefile
+@@ -14,10 +14,10 @@
+ # The target "all" should ALWAYS be provided
+ #   typically it will just be another target name
+ 
+-all: libmiscmaths.a
++all: libmiscmaths
+ 
+ quick:${OBJS} quick.o
+ 	${CXX}  ${CXXFLAGS} ${LDFLAGS} -o $@ ${OBJS} quick.o ${LIBS}
+ 
+-libmiscmaths.a: ${OBJS}
+-	${AR} -r libmiscmaths.a ${OBJS}
++libmiscmaths: ${OBJS}
++	${CXX} -shared -o libmiscmaths.so ${OBJS} -fPIC ${LDFLAGS} -lnewmat -lutils -lfslio -lniftiio -lprob
+--- a/src/mm/Makefile
++++ b/src/mm/Makefile
+@@ -13,10 +13,10 @@
+ 
+ #OPTFLAGS =
+ 
+-all:	${XFILES} libmm.a
++all:	${XFILES} libmm
+ 
+-libmm.a: ${OBJS}
+-	${AR} -r libmm.a ${OBJS}
++libmm: ${OBJS}
++	${CXX} -shared -o libmm.so ${OBJS} ${LDFLAGS} -fPIC -lmiscpic -lnewmat -lnewimage -lmiscmaths -lfslio -lutils -lprob -lmiscplot -lgd
+ 
+ mm:${OBJS} mm.o
+ 	${CXX}  ${CXXFLAGS} ${LDFLAGS} -o $@ ${OBJS} mm.o ${LIBS}
+--- a/src/newimage/Makefile
++++ b/src/newimage/Makefile
+@@ -18,10 +18,10 @@
+ TESTXFILES = testprog skeletonapp
+ XFILES = 
+ 
+-all: libnewimage.a
++all: libnewimage
+ 
+-libnewimage.a: ${NOBJS}
+-	${AR} -r libnewimage.a ${NOBJS}
++libnewimage: ${NOBJS}
++	${CXX} -shared -o libnewimage.so ${NOBJS} ${LDFLAGS} -fPIC -lnewmat -lfslio -lmiscmaths -lniftiio
+ 
+ skeletonapp: ${SOBJS}
+ 	$(CXX)  ${CXXFLAGS} ${LDFLAGS} -o $@ ${SOBJS} ${LIBS}
+--- a/src/newimage/newimage.h
++++ b/src/newimage/newimage.h
+@@ -80,7 +80,7 @@
+ #include "positerators.h"
+ #include "miscmaths/miscmaths.h"
+ #include "miscmaths/kernel.h"
+-#include "niftiio/nifti1.h"
++#include <nifti1.h>
+ #include "miscmaths/splinterpolator.h"
+  
+ using namespace NEWMAT;
+--- a/src/shapeModel/Makefile
++++ b/src/shapeModel/Makefile
+@@ -8,10 +8,10 @@
+ USRLDFLAGS = -L${LIB_NEWMAT}  -L${LIB_ZLIB}
+  
+ 
+-all: shapeModel.a 
++all: shapeModel
+ 
+-shapeModel.a: ${SHAPEOBJS}
+-	${AR} -r libshapeModel.a ${SHAPEOBJS}
++shapeModel: ${SHAPEOBJS}
++	${CXX} -shared -o libshapeModel.so ${SHAPEOBJS} ${LDFLAGS} -fPIC -lmeshclass -lnewimage -lnewmat -lfirst_lib
+ 
+ 
+ 
+--- a/src/utils/Makefile
++++ b/src/utils/Makefile
+@@ -11,7 +11,7 @@
+ OptionsTestObjects = opttst.o
+ OptionsTestLibrarys = -lutils
+ 
+-LibraryTarget = libutils.a
++LibraryTarget = libutils.so
+ LibraryObjects = matches.o functions.o usage.o check.o parse.o log.o time_tracer.o
+ 
+ all: ${LibraryTarget}
+@@ -21,9 +21,7 @@
+ 		${OptionsTestLibrarys}
+ 
+ ${LibraryTarget}: ${LibraryObjects}
+-	${RM} -f ${LibraryTarget}
+-	${AR} -r $@ ${LibraryObjects}
+-	${RANLIB} ${LibraryTarget}
++	${CXX} -shared -o $@ ${LibraryObjects} ${LDFLAGS} -fPIC -lnewmat
+ 
+ XFILES = 
+ AFILES = ${LibraryTarget}

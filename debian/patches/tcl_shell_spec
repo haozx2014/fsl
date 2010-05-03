@@ -1,0 +1,12 @@
+Description: Specific the TCL interpreter.
+--- a/src/misc_tcl/Runtcl
++++ b/src/misc_tcl/Runtcl
+@@ -1,5 +1,8 @@
+ #!/bin/sh
+ 
++# Set TCLTKSHELL \
++TCLTKSHELL=wish ; export TCLTKSHELL
++
+ # Check for display being set \
+ if [ _$DISPLAY = _ ] ; then echo "DISPLAY is not set. Please set your DISPLAY environment variable!" ; exit 1 ; fi
+ # Check for FSLDIR being set \
