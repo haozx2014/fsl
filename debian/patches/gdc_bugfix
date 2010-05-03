@@ -1,3 +1,4 @@
+Description: Compatibility with the Debian gdchart package code.
 --- a/src/libvis/miscplot.cc
 +++ b/src/libvis/miscplot.cc
 @@ -79,6 +79,7 @@

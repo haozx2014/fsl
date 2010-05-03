@@ -1,3 +1,5 @@
+Description: Debian browser config.
+ On Debian systems we don't have to guess the browser.
 --- a/src/misc_tcl/webhelp.tcl
 +++ b/src/misc_tcl/webhelp.tcl
 @@ -16,13 +16,10 @@

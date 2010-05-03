@@ -1,3 +1,4 @@
+Description: Fix critical syntax error.
 --- a/src/fdt/rotate_bvecs
 +++ b/src/fdt/rotate_bvecs
 @@ -18,7 +18,7 @@

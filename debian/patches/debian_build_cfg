@@ -1,3 +1,5 @@
+Description: Debian build setup and shared libraries
+ This patch turns all private FSL libraries into shared libs.
 --- a/config/common/rules.mk
 +++ b/config/common/rules.mk
 @@ -32,7 +32,7 @@

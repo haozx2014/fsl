@@ -1,3 +1,5 @@
+Description: Prevent fslmath from crashing with -tfce option set
+Origin: vendor
 --- a/src/avwutils/fslmaths.cc
 +++ b/src/avwutils/fslmaths.cc
 @@ -823,7 +823,7 @@

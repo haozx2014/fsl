@@ -1,3 +1,4 @@
+Description: Fix bashisms in the code.
 --- a/src/first/first_roi_slicesdir
 +++ b/src/first/first_roi_slicesdir
 @@ -128,7 +128,7 @@

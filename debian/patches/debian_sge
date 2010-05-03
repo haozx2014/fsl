@@ -1,3 +1,7 @@
+Description: out-of-the-box compatibility with Debian's SGE
+ Moreover, the patch established the env variable FSLPARALLEL as a uniform
+ trigger for cluster-based processing in FSL. If set, jobs are submitted to
+ SGE, if not, not.
 --- a/src/fdt/bedpostx
 +++ b/src/fdt/bedpostx
 @@ -64,13 +64,15 @@

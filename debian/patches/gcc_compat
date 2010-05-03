@@ -1,3 +1,4 @@
+Description: Patch to allow building with recent GCC versions
 --- a/src/basisfield/basisfield.h
 +++ b/src/basisfield/basisfield.h
 @@ -275,7 +275,7 @@
