@@ -4,9 +4,9 @@
 #   defined by a set of label images (e.g. output of FIRST). A set of 
 #   temporary roi images are created, slicesdir is then run on those.
 #
-#   Brian Patenaude, FMRIB Image Analysis Group
+#   Brian Patenaude and Matthew Webster, FMRIB Image Analysis Group
 #
-#   Copyright (C) 2006-2007 University of Oxford
+#   Copyright (C) 2006-2010 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -128,7 +128,7 @@ while [ $i -le ${num} ] ; do
     ${FSLDIR}/bin/fslroi $imlb ${imlbout}lbgrot${i} $roi
     pairlist=${pairlist}" "${pout2}_t1grot${i}" "${imlbout}lbgrot${i}
    
-    let i=i+1; 
+    i=$((i+1)); 
 done
 
 echo "run slicesdir"

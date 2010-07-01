@@ -11,12 +11,12 @@ LIBS = -lnewimage -lmiscmaths -lprob -lfslio -lnewmat -lutils -lniftiio -lznz -l
 IOLIBS = -lfslio -lniftiio -lznz -lm -lz
 
 XFILES = fslorient fslstats fslmerge \
-         fslpspec fslroi fslnvols fsl2ascii  \
+         fslpspec fslroi fslnvols fsl2ascii fslascii2img  \
          fslsplit fslcc fslinterleave \
          fslhd fslcpgeom fslcreatehd fslcorrecthd fslmaths \
          fslcomplex fslfft fslmeants fslslice fslswapdim_exe fslchfiletype_exe
 
-SCRIPTS = fslval fslchpixdim fslanimate fslsize sliceanimate fslinfo fsledithd avw2fsl fslswapdim fslchfiletype 
+SCRIPTS = fslval fslchpixdim fslanimate fslsize sliceanimate fslinfo fsledithd avw2fsl fslswapdim fslchfiletype fslreorient2std
 
 FSCRIPTS = fmriborient 
 
@@ -59,6 +59,9 @@ fslnvols: fslnvols.o
 
 fsl2ascii: fsl2ascii.o
 	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ fsl2ascii.o ${LIBS}
+
+fslascii2img: fslascii2img.o
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ fslascii2img.o ${LIBS}
 
 fslsplit: fslsplit.o
 	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ fslsplit.o ${LIBS}

@@ -1,3 +1,5 @@
+PROJECT(FSL)
+
 SET(LIBPROB_SOURCES
   bdtr.c btdtr.c chdtr.c drand.c fdtr.c gamma.c gdtr.c igam.c
   igami.c incbet.c incbi.c mtherr.c nbdtr.c ndtr.c ndtri.c pdtr.c

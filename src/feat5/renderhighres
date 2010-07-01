@@ -79,7 +79,7 @@ Usage() {
 }
 
 [ "$4" = "" ] && Usage
-[ "$4" = "0" -a "$6" = "" ] && Usage
+[ "$4" = "0" ] && [ "$6" = "" ] && Usage
 
 cd $1
 
@@ -119,7 +119,7 @@ fi
 for f in `cd .. ; ${FSLDIR}/bin/imglob thresh_*.*` ; do
     f=`${FSLDIR}/bin/remove_ext $f`
 
-    if [ $space = standard -a `${FSLDIR}/bin/imtest ../reg/highres2standard_warp` = 1 ] ; then
+    if [ $space = standard ] && [ `${FSLDIR}/bin/imtest ../reg/highres2standard_warp` = 1 ] ; then
 	${FSLDIR}/bin/applywarp --ref=../reg/standard --in=../$f --out=$f --warp=../reg/highres2standard_warp --premat=../reg/example_func2highres.mat --interp=sinc
     else
 	${FSLDIR}/bin/flirt -in ../$f -out $f -ref ../reg/$space -applyxfm -init ../reg/example_func2${space}.mat -interp sinc -sincwidth 7 -sincwindow hanning

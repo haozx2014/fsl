@@ -116,11 +116,14 @@ void track(){
     keeptot += seedmanager.run(xst,yst,zst,false,0);
     string add="_"+num2str(Seeds(SN,1))+(string)"_"+num2str(Seeds(SN,2))+(string)"_"+num2str(Seeds(SN,3));
     
-    counter.save_pathdist(add);
+    if(opts.simpleout.value())
+      counter.save_pathdist(add);
+
+
     counter.reset_prob();
   } //Close Seed number Loop
-  //counter.save_total(keeptot);
-  //counter.save();
+  
+  counter.save();
 
   cout<<"finished"<<endl;
 }

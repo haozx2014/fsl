@@ -105,8 +105,6 @@ int main(int argc, char *argv[])
 //   }
 
 //   volume<int> v1;
-//   volumeinfo vinfo;
-//   read_volume(v1,argv[1],vinfo);
 //   int dim1 = atoi(argv[3]), dim2 = atoi(argv[4]), dim3 = atoi(argv[5]);
 //   v1.swapdimensions(dim1,dim2,dim3);
 //   v1.defineuserinterpolation(dumbinterp);
@@ -114,8 +112,6 @@ int main(int argc, char *argv[])
 //   volume<int> vtr(2*v1.xsize(),2*v1.ysize(),2*v1.zsize());
 //   vtr.setdims(v1.xdim(),v1.ydim(),v1.zdim());
 //   affine_transform(v1,vtr,IdentityMatrix(4));
-
-//   save_volume(vtr,argv[2],vinfo);
 
 //   exit(0);
 

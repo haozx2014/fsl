@@ -78,7 +78,7 @@ usage() {
 }
 
 regupdate() {
-    if [ -f ${1}2${2}.mat -a -f ${2}2${3}.mat ] ; then
+    if [ -f ${1}2${2}.mat ] && [ -f ${2}2${3}.mat ] ; then
 	echo concatenating ${1}2${2}.mat and ${2}2${3}.mat
 	${FSLDIR}/bin/convert_xfm -omat ${1}2${3}.mat -concat ${2}2${3}.mat ${1}2${2}.mat
     fi
@@ -94,12 +94,12 @@ invupdate() {
 }
 
 picupdate() {
-    if [ `${FSLDIR}/bin/imtest $1` = 1 -a `${FSLDIR}/bin/imtest $2` = 1 -a -f ${1}2${2}.mat ] ; then
+    if [ `${FSLDIR}/bin/imtest $1` = 1 ] && [ `${FSLDIR}/bin/imtest $2` = 1 ] && [ -f ${1}2${2}.mat ] ; then
 	out=${1}2${2}
 	echo creating summary picture for ${out}
-	if [ $1 = "example_func" -a $2 = "standard" -a `${FSLDIR}/bin/imtest highres2standard_warp` = 1 ] ; then
+	if [ $1 = "example_func" ] && [ $2 = "standard" ] && [ `${FSLDIR}/bin/imtest highres2standard_warp` = 1 ] ; then
 	    ${FSLDIR}/bin/applywarp --ref=$2 --in=$1 --out=$out --warp=highres2standard_warp --premat=${1}2highres.mat
-	elif [ $1 = "highres" -a $2 = "standard" -a `${FSLDIR}/bin/imtest highres2standard_warp` = 1 ] ; then
+	elif [ $1 = "highres" ] && [ $2 = "standard" ] && [ `${FSLDIR}/bin/imtest highres2standard_warp` = 1 ] ; then
 	    ${FSLDIR}/bin/applywarp --ref=$2 --in=$1 --out=$out --warp=highres2standard_warp
 	else
 	    ${FSLDIR}/bin/flirt -ref $2 -in $1 -out $out -applyxfm -init ${out}.mat
@@ -130,13 +130,6 @@ if [ ! -d $dirnm ] ; then
   echo " "
   echo "$dirnm is not a valid directory"
   exit -1
-fi
-
-if [ "X"`echo $dirnm | grep feat`"X" = "XX" ] ; then
-  usage
-  echo " "
-  echo "Directory must be a feat directory"
-  exit -2
 fi
 
 cd ${dirnm}/reg

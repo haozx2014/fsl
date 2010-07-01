@@ -71,8 +71,8 @@
 #include <cmath>
 
 #include "infer.h"
-
 #include "libprob.h"
+#include "miscmaths/miscmaths.h"
 
 #define POSIX_SOURCE 1
 
@@ -81,8 +81,6 @@
 #endif
 
 using namespace std;
-
-template <class T> T sqr(const T& value) { return value * value; }
 
 Infer::Infer(float udLh, float ut, unsigned int uV) {
   // the following bounds are checked to ensure that the exponent
@@ -100,8 +98,8 @@ Infer::Infer(float udLh, float ut, unsigned int uV) {
 
   // NB: the (sqr(t) -1) is previous D=3 version (from where??)
   if (fabs(t)<13.0) {
-    Em_ = V * pow(double(2*M_PI),double(-(D+1)/2)) * dLh * pow((sqr(t) - 1), (D-1)/2) *
-      exp(-sqr(t)/2.0); 
+    Em_ = V * pow(double(2*M_PI),double(-(D+1)/2)) * dLh * pow((MISCMATHS::Sqr(t) - 1), (D-1)/2) *
+      exp(-MISCMATHS::Sqr(t)/2.0); 
   } else {
     Em_ = 0.0;  // underflowed exp()
   }

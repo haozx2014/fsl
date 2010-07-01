@@ -110,8 +110,7 @@ int do_dwifit()
 {
   volume4D<float> invol;
   volume<float> mask;
-  volumeinfo vinfo;
-  read_rad_volume4D(invol,involname.value(),vinfo);
+  read_rad_volume4D(invol,involname.value());
   read_rad_volume(mask,maskvolname.value());
 
   // make numbers better suited for calculations (only affects S0 term)

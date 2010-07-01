@@ -1,15 +1,4 @@
 Description: Fix bashisms in the code.
---- a/src/first/first_roi_slicesdir
-+++ b/src/first/first_roi_slicesdir
-@@ -128,7 +128,7 @@
-     ${FSLDIR}/bin/fslroi $imlb ${imlbout}lbgrot${i} $roi
-     pairlist=${pairlist}" "${pout2}_t1grot${i}" "${imlbout}lbgrot${i}
-    
--    let i=i+1; 
-+    i=$((i+1));
- done
- 
- echo "run slicesdir"
 --- a/src/possum/possumX
 +++ b/src/possum/possumX
 @@ -98,7 +98,7 @@

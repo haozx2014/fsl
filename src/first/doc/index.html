@@ -112,6 +112,8 @@ produce <code>output_name_all_fast_firstseg.nii.gz</code> and <code>output_name_
 The script is written such that if you have FSL setup to use local
 cluster computing it will automatically parallelise the fitting of
 each structure.
+Either way, it will create a log directory that contains the error outputs of each command, and you should check these.  To do that simply do: <code>cat *.logs/*.e*</code>
+<br>and if there are no errors then you will see no output, otherwise you will see what errors have occured.
 
 <LI><b>Output</b>
 
@@ -253,8 +255,12 @@ one big <code>for</code> loop, but it is usually simpler to separate them,
 especially if you have a different number of subjects in each group.
 
 <P><LI> You then need to verify that the registrations and subsequent
-segmentations were successful.  For a group of subjects this is most
-easily done using the relevant <code>slicesdir</code> tools.
+segmentations were successful.  To start with, check that there are no 
+errors in the log files by doing: 
+<br><code>cat *.logs/*.e*</code><br>
+which will show no output if there are no errors.  Once you've verified that 
+there are no errors, then you can most easily check the results from a group of subjects 
+using the relevant <code>slicesdir</code> tools.
 
 <p><LI>To check the registrations:
 
@@ -561,7 +567,7 @@ arrows shown on the surface) indicate the direction of change. Open
 the mesh properties window. Scale the vectors by a value of 2 to 5 for
 better visualization. These vectors point from the mean surface of
 whatever subjects corresponded to a value of 0 or less in the design
-matrix (demeaned EV) to the mean surface of others subjects.  In this
+matrix (demeaned EV1) to the mean surface of others subjects.  In this
 case controls were given a value of 0 and diseased a value of
 1. Therefore FIRST would have demeaned this design matrix so that
 controls had a value of -0.5 and diseased had a valued of +0.5. These
@@ -595,7 +601,8 @@ survived multiple comparison correction.
 <p><I>Correlation</i>
 
 <p>
-Create a design matrix where each row contains the value of the
+For correlation only (no group difference) you can create a design matrix 
+with one column (EV) where each row contains the value of the
 correlating measure for each subject in the same order as the
 subject's bvars (in the concatenated bvars file). For example, to
 correlate age with shape, the design matrix would contain one EV,
@@ -613,6 +620,13 @@ is the mean surface for all of the subjects older than the mean
 age. The vectors point from surface 0 to surface 1, which is from 
 the younger group to the older.
 
+<p>
+You can also do correlation with a covariate (see below).  This
+gives you statistics as explained above (but accounting for the
+other EVs) but the interpretation of the vectors will no longer be the
+same as that described above, but will instead depend only on
+the groupings defined by the first column of the design matrix (EV1).
+
 <p><i>Covariate</i>
 
 <p>
@@ -625,10 +639,15 @@ two vtk files, with one file called <code>output_name1.vtk</code>,
 showing the areas of group difference <i>after</i> accounting for the
 covariate. The file called <code>output_name2.vtk</code>, on the other
 hand, will show the areas that correlate with the covariate
-(e.g. age) <i>after</i> accounting for group difference.  Note that
-the mean surfaces will also be different in each case - for the first
-file it will relate to the two groups, whereas for the second file it
-will relate to the younger and older groupings as explained above.
+(e.g. age) <i>after</i> accounting for group difference.  
+
+<p>
+Note that the mean surfaces and vectors will be the same in each case (although
+vectors only show at vertices where the statistics were significant, and
+these statistics will vary) since the mean surfaces and vectors are always
+defined by the grouping in the first column of the design matrix (EV1), 
+with the first group being all values below the mean and the second
+group being all values above the mean.
 
 </UL>
 
