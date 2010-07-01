@@ -67,9 +67,11 @@
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
 #include <string>
+#include <cstring>
 #include <cstdlib>
 #include <iostream>
 #include "gd.h"
+#include "miscmaths/miscmaths.h"
 
 using namespace std;
 
@@ -88,24 +90,12 @@ void help()
   cerr<< endl << " pngappend  -  append PNG files horizontally and/or vertically into a new PNG (or GIF) file" << endl;
   usage();
 }
-
-
-bool isnum(const string& str)
-  {
-    // assumes that initial whitespace has been removed
-    bool out = true;
-    for(int ctr=0; ctr<(int)str.length(); ctr++){
-      if (!isdigit(str[ctr])){out = false;}
-    }
-    return out;
-  }
     
 int max (int a, int b)
 {
   if (a<b) return b;
   else return a;
 }
-
 
 int main(int argc, char *argv[])
 {
@@ -167,7 +157,7 @@ int main(int argc, char *argv[])
     argidx++;
 
     //read in new image
-    if(isnum(argv[argidx])){
+    if(MISCMATHS::isNumber(argv[argidx])){
       gap = atoi(argv[argidx]);
       argidx++;
     }

@@ -307,7 +307,7 @@ namespace MISCMATHS {
 
     // set up and read matrix (rows fast, cols slow)
     double val;
-    if ( (((unsigned int) mres.Ncols())!=ny) || (((unsigned int) mres.Nrows())<nx) ) {
+    if ( (((unsigned int) mres.Ncols())<ny) || (((unsigned int) mres.Nrows())<nx) ) {
       mres.ReSize(nx,ny);
     }
     for (unsigned int y=1; y<=ny; y++) {
@@ -1076,9 +1076,18 @@ float rms_deviation(const Matrix& affmat1, const Matrix& affmat2,
 		    const ColumnVector& centre, const float rmax) 
 {
   Tracer trcr("rms_deviation");
-  Matrix isodiff(4,4);
+  Matrix isodiff(4,4), a1(4,4), a2(4,4);
+
+  if ((affmat1.Nrows()==4) && (affmat1.Ncols()==4)) { a1=affmat1; }
+  else if ((affmat1.Nrows()==3) && (affmat1.Ncols()==3)) { a1=IdentityMatrix(4); a1.SubMatrix(1,3,1,3)=affmat1; }
+  else { cerr << "ERROR:: Can only calculate RMS deviation for 4x4 or 3x3 matrices" << endl; exit(-5); }
+
+  if ((affmat2.Nrows()==4) && (affmat2.Ncols()==4)) { a2=affmat2; }
+  else if ((affmat2.Nrows()==3) && (affmat2.Ncols()==3)) { a2=IdentityMatrix(4); a2.SubMatrix(1,3,1,3)=affmat2; }
+  else { cerr << "ERROR:: Can only calculate RMS deviation for 4x4 or 3x3 matrices" << endl; exit(-5); }
+
   try {
-    isodiff = affmat1*affmat2.i() - IdentityMatrix(4);
+    isodiff = a1*a2.i() - IdentityMatrix(4);
   } catch(...) {
     cerr << "RMS_DEVIATION ERROR:: Could not invert matrix" << endl;  
     exit(-5); 
@@ -1173,12 +1182,12 @@ mat44 newmat_to_mat44(const Matrix& inmat)
 // Matlab style functions for percentiles, quantiles and median
 // AUG 06 CB
 
-ColumnVector seq(const int num)
+ColumnVector seq(const int size)
 {
-  ColumnVector res(num);
-  for(int ctr =1; ctr<num; ctr++)
-    res(ctr) = ctr;
-  return res;
+  ColumnVector outputVector(size);
+  for(int i=1; i<=size; i++)
+    outputVector(i) = i;
+  return outputVector;
 }
 
 float interp1(const ColumnVector& x, const ColumnVector& y, float xi) 

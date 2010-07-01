@@ -98,6 +98,8 @@ namespace NEWIMAGE {
     mutable int p_count;
     costfns p_costtype;
     bool validweights;
+    float bin_a0;
+    float bin_a1;
   public: 
     float smoothsize;
     float fuzzyfrac;
@@ -124,6 +126,11 @@ namespace NEWIMAGE {
     float ref_entropy(const Matrix& aff) const;
     float test_entropy(const Matrix& aff) const;
     float joint_entropy(const Matrix& aff) const;
+
+    volume<float> image_mapper(const Matrix& affmat) const;    // affmat is voxel to voxel
+    Matrix mappingfn(const Matrix& affmat) const;    // affmat is voxel to voxel
+    float get_bin_intensity(int bin_number) const;
+    float get_bin_number(float intensity) const;
 
   private:
     // Prevent default behaviours
@@ -194,7 +201,15 @@ namespace NEWIMAGE {
 			const volume<float>& testweight,
 			bool nullbc=false) const;
 
-  };
+    int p_corr_ratio_image_mapper(volume<float>& vout,
+				  Matrix& mappingfn,
+				  const volume<float>& vref, 
+				  const volume<float>& vtest,
+				  const volume<float>& refweight, 
+				  const volume<float>& testweight,
+				  int *bindex, const Matrix& aff,
+				  const int no_bins, const float smoothsize) const;
+    };
 
 
    //////////////////////////////////////////////////////////////////////////

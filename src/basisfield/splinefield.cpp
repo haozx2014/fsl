@@ -73,6 +73,7 @@
 #include <string>
 #include <iostream>
 #include <vector>
+#include <cmath>
 #include <boost/shared_ptr.hpp>
 #include "newmat.h"
 #include "miscmaths/bfmatrix.h"
@@ -1477,7 +1478,7 @@ unsigned int splinefield::fake_old_ksp(double        nvxs,
                                        unsigned int  nksp,
                                        double        ovxs) const
 {
-  return(static_cast<unsigned int>(roundl((ovxs/nvxs)*double(nksp))));
+  return(static_cast<unsigned int>(MISCMATHS::round((ovxs/nvxs)*double(nksp))));
 }
 
 bool splinefield::faking_works(const std::vector<double>&        nvxs,

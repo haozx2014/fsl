@@ -2,7 +2,7 @@
 
 # A Simple script to install FSL and set up the environment
 
-VERSION="1.2"
+VERSION="1.3"
 POSIXLY_CORRECT=1
 
 cecho () {
@@ -210,7 +210,7 @@ add_fsldir () {
 
 remove_display () {
     # This function will remove the DISPLAY setup configured by our installer in the past
-    # Mac OS X 10.5 no longer requires this.
+    # Mac OS X 10.5 and upwards no longer require this.
     display_profile=$1
     if [ `is_sh ${display_profile}` ]; then
 	remove='if \[ -z \"\$DISPLAY\" -a \"X\$TERM_PROGRAM\" = \"XApple_Terminal\" \]; then'
@@ -222,7 +222,7 @@ remove_display () {
     fi
     if [ -n "`grep \"${remove}\" ${display_profile}`" ]; then
 	# Remove the section
-	echo "Attempting to remove the DISPLAY settings for Leopard compatability..."
+	echo "Attempting to remove the DISPLAY settings for (Snow)Leopard compatability..."
 	cat ${display_profile} | sed "/${remove}/{N;N;N;N;N;N;N;N;N;N;N;N;N;N;N;d;}" > ${display_profile}.bak
 	# Checking the removal succeeded without removing extra lines
 	test_file="${display_profile}.$$"
@@ -244,9 +244,8 @@ remove_display () {
 
 patch_for_terminal () {
     apple_profile=$1
-    skip_test=$2
     # This is only necessary on Mac OS X 10.4 and lower
-    if [ -n "`os | grep Darwin`" -a -n "`os_release | grep '^9.'`" -a "X$skip_test" != "X-YES-" ]; then
+    if [ -n "`os | grep 'Darwin'`" -a `darwin_release` -gt 8 ]; then
 	if [ -f ${apple_profile} ]; then
 	    if [ -n "`grep 'DISPLAY' ${apple_profile}`" ]; then
 		echo "You are running Mac OS X 10.5 and have DISPLAY configured in your ${apple_profile} file."
@@ -254,9 +253,8 @@ patch_for_terminal () {
 	    fi
 	fi
     else
-	if [ "X$skip_test" != "X-YES-" ]; then
-	    echo "Setting up Apple terminal..."
-	fi
+	echo "Setting up Apple terminal..."
+	
 	if [ -f ${apple_profile} ]; then
 	    if [ `grep DISPLAY ${apple_profile} | wc -l` -gt 0 ]; then
 		echo "DISPLAY is already being configured in your '${apple_profile}' - not changing"
@@ -446,6 +444,7 @@ set FSLDIR and modify the PATH environment variable yourself."
 	fi
 	if [ "Z${setup_terminal}" = 'Z-YES-' -a "Z${process_terminal}" = 'Z-YES-' ]; then
 	    # Setup the Apple Terminal.app
+	    echo "${my_home}"
 	    patch_for_terminal ${my_home}/${profile}
 	fi
     done
@@ -836,7 +835,7 @@ check_tarball_os () {
 	    if [ $darwin_release -lt 8 ]; then
 		echo "Sorry, we do not support Mac OS X 10.3. You could try building from the sources."
 		tarosok=1
-	    elif [ $darwin_release -gt 9 ]; then
+	    elif [ $darwin_release -gt 10 ]; then
 		echo "You are running an un-recognised version of Mac OS X. This may not work."
 		tarosok=2
 	    fi

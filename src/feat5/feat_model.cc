@@ -4,8 +4,7 @@
 
     Stephen Smith and Matthew Webster, FMRIB Analysis Group
 
-    Copyright (C) 1999-2008 University of Oxford  */
-
+    Copyright (C) 1999-2009 University of Oxford  */
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
     fsl@fmrib.ox.ac.uk
@@ -67,9 +66,6 @@
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
-
-// }}}
-// {{{ includes and defines 
 
 #define _GNU_SOURCE 1
 #define POSIX_SOURCE 1
@@ -732,19 +728,48 @@ if ((cofp=fopen(filename,"wb"))==NULL)
   exit(1);
 }
 
+// modified from find_line
+FILE *fd;
+char tmp_fl[10000], *curconname;
+fd=fopen(fn,"rb");
+while ( fgets(tmp_fl, 1000, fd) != NULL ) {
+  if (strncmp(tmp_fl,"set fmri(conname_real.",22)==0)
+    {
+      //tokenize tmp_vals...
+      con=atoi(strtok(tmp_fl+22,") "));
+      curconname=strtok(NULL,"\0\n\r");
+      //still has newline, so don't need another one
+      fprintf(cofp,"/ContrastName%d	%s",con,curconname);
+    }
+  if (strncmp(tmp_fl,"set fmri(con_real",17)==0)
+    {
+      //tokenize tmp_vals...
+      con=atoi(strtok(tmp_fl+17,"."));// before period is contrastnum
+      real_ev=atoi(strtok(NULL,") "));//between period and ") " is real_ev num
+      C(real_ev,con)=atof(strtok(NULL," \0\n\t")); // rest is value
+    }
+  if (nftests>0)
+    if (strncmp(tmp_fl,"set fmri(ftest_real",19)==0)
+      {
+	//tokenize tmp_vals...
+	f=atoi(strtok(tmp_fl+19,"."));// before period is f-testnum
+	con=atoi(strtok(NULL,") "));//between period and ") " is contrast num
+	F(f,con)=atof(strtok(NULL," \0\n\t")); // rest is value
+      }
+ }
+fclose(fd);
+
+//check for 0 contrasts
 for(con=1; con<=ncon; con++)
 {
-  sprintf(key,"fmri(conname_real.%d)",con);
-  strcpy(the_string,find_line(fn, key, fl));
-  fprintf(cofp,"/ContrastName%d	%s\n",con,the_string);
-
   int allzeros=1;
 
   for(real_ev=1; real_ev<=real_evs-motionparams.Ncols(); real_ev++)
     {
-      sprintf(key,"fmri(con_real%d.%d)",con,real_ev);
-      C(real_ev,con)=atof(find_line(fn, key, fl));
-      if (C(real_ev,con)!=0) allzeros=0;
+      if (C(real_ev,con)!=0) {
+	allzeros=0;
+	break;
+      }
     }
   
   if (allzeros)
@@ -955,7 +980,21 @@ break;
   //cout << orig_ev << " " << convolve_interaction[orig_ev] << endl;
 }
 break;
+   case 9:
+	// {{{ voxelwise input
 
+{
+  volume4D<float> ev_image;
+  sprintf(key,"fmri(evs_vox_%d)",orig_ev+1);
+  if ( read_volume4D(ev_image,find_line(fn, key, fl)) )
+    cout << "Warning: voxelwise EV " << orig_ev+1 << " isn't readable" << endl;
+  for(i=0,t=0; t<npts; t++)
+    {
+      float tmpf(ev_image[t].mean());
+      for(; i<trmult*(t+1); i++)
+	orig_X(i+1,orig_ev+1)=tmpf;
+    }
+ }
 // }}}
       }
 
@@ -996,7 +1035,21 @@ break;
 
 // }}}
   }
-
+//Find first minimum timepoint for perfusion subtraction
+ Matrix downsampledOriginalModel(npts,orig_evs);
+ for(orig_ev=0; orig_ev<orig_evs-(motionparams.Ncols()>0); orig_ev++)
+   do_resample(orig_X.Column(orig_ev+1),downsampledOriginalModel,orig_ev, trmult, negpts[orig_ev]);
+ int minimumTimepoint=1;
+ for (int row=1;row<=downsampledOriginalModel.Nrows();row++)
+ {
+   if ( downsampledOriginalModel.Row(row).Sum() < downsampledOriginalModel.Row(minimumTimepoint).Sum() )
+     minimumTimepoint=row;
+ }  
+ ofstream outputFile((string(argv[1])+".min").c_str());
+ if(outputFile.is_open()) {
+   outputFile << minimumTimepoint;
+   outputFile.close();
+ }
 // }}}
   // {{{ convolve and resample down in time 
 
@@ -1521,6 +1574,7 @@ for(con=1; con<=ncon; con++)
   Matrix X2 = real_X * Q * contrast * pinv(contrast.t() * Q * contrast);
 
   float h2 = X2.Maximum() - X2.Minimum();
+  if(fabs(h2)>1e6) h2=0; // try to catch dodgy heights, e.g. from empty EVs
   real_CON_heights(con)=h2;
 }
 
@@ -1610,14 +1664,8 @@ for(real_ev=0; real_ev<real_evs; real_ev++)
 	if ( read_volume4D(ev_image,find_line(fn, key, fl)) )
 	  cout << "Warning: voxelwise EV " << 1+real_ev-vox_evs << " isn't readable" << endl;
 	for(t=0;t<npts;t++)
-	  {
-	    float tmpsum=0;
-	    for (int z=0; z<ev_image.zsize(); z++)
-	      for (int y=0; y<ev_image.ysize(); y++)
-		for (int x=0; x<ev_image.xsize(); x++)
-		  tmpsum+=ev_image(x,y,z,t);
-	    real_X(t+1,real_ev+1)=tmpsum/(ev_image.xsize()*ev_image.ysize()*ev_image.zsize());
-	  }
+	  real_X(t+1,real_ev+1)=ev_image[t].mean();
+	  
       }
     orig_ev_nreal[real_ev]=1;
   }
@@ -1770,6 +1818,8 @@ fclose(cofp);
 
 if (nftests>0)
 {
+  // new way -- add f-tests above with contrasts,
+  // since that's loaded, come back and test here
   for(f=1; f<=nftests; f++)
     {
       Matrix Fmat(ncon,real_evs);
@@ -1777,8 +1827,8 @@ if (nftests>0)
 
       for(con=1; con<=ncon; con++)
 	{
-	  sprintf(key,"fmri(ftest_real%d.%d)",f,con);
-	  F(f,con)=atoi(find_line(fn, key, fl));
+	  //	  sprintf(key,"fmri(ftest_real%d.%d)",f,con);
+	  //F(f,con)=atoi(find_line(fn, key, fl));
 	  if (F(f,con))
 	    {
 	      Fmat_rows++;

@@ -1,8 +1,8 @@
 /*  Time_Tracer.h
 
-    Mark Woolrich, FMRIB Image Analysis Group
+    Mark Woolrich and Matthew Webster, FMRIB Image Analysis Group
 
-    Copyright (C) 1999-2000 University of Oxford  */
+    Copyright (C) 1999-2010 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -72,6 +72,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <cstring>
 #include <time.h>
 #include <set>
 #include <stack>

@@ -1,6 +1,6 @@
-//     fslcorrecthd.cc - check and correct a nifti file for bad vox-offset
-//     Matthew Webster, FMRIB Image Analysis Group
-//     Copyright (C) 2007 University of Oxford  
+//     fsl2ascii.cc - convert raw ASCII text to a NIFTI image
+//     Mark Jenkinson, FMRIB Image Analysis Group
+//     Copyright (C) 2009 University of Oxford  
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
     fsl@fmrib.ox.ac.uk
@@ -64,91 +64,62 @@
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
 #include "newimage/newimageall.h"
-#include "fslio/fslio.h"
-#include <iostream>
-using namespace NEWIMAGE;
+#include "miscmaths/miscmaths.h"
+#include <fstream>
 
-void print_usage(const string& progname) 
-{
+using namespace NEWIMAGE;
+using namespace MISCMATHS;
+
+void print_usage(const string& progname) {
   cout << endl;
-  cout << "Usage: fslcorrecthd <input> <output>" << endl;
-  cout << "       Note that fslcorrecthd only operates on uncompressed NIFTI or ANALYZE files" << endl;
+  cout << "Usage: fslascii2img <input> <xsize> <ysize> <zsize> <tsize> <xdim> <ydim> <zdim> <TR>  <output>" << endl;
+  cout << "  where sizes are in voxels, dims are in mm, TR in sec " << endl;
 }
+
+
+int do_work(int argc, char *argv[])
+{
+  int xsize, ysize, zsize, tsize;
+  float xdim, ydim, zdim, tr;
+  xsize=atoi(argv[2]);
+  ysize=atoi(argv[3]);
+  zsize=atoi(argv[4]);
+  tsize=atoi(argv[5]);
+  xdim=atof(argv[6]);
+  ydim=atof(argv[7]);
+  zdim=atof(argv[8]);
+  tr=atof(argv[9]);
+  volume4D<float> ovol(xsize,ysize,zsize,tsize);
+  ovol.setdims(xdim,ydim,zdim,tr);
+  string input_name=string(argv[1]);
+  string output_name=string(argv[10]);
+  Matrix amat;
+  amat = read_ascii_matrix(input_name);
+  if (xsize*ysize*zsize*tsize != amat.Nrows() * amat.Ncols()) {
+    cerr << "Sizes incompatible: " <<  xsize*ysize*zsize*tsize << " voxels vs " << amat.Nrows() * amat.Ncols() << " numbers" << endl;
+    cerr << "Matrix dimensions are " << amat.Nrows() << " by " << amat.Ncols() << endl;
+    exit(EXIT_FAILURE);
+  }
+  amat = reshape(amat.t(),tsize,xsize*ysize*zsize);
+  ovol.setmatrix(amat);
+  save_volume4D(ovol,output_name);
+  return 0;
+}
+
 
 int main(int argc,char *argv[])
 {
-  if (argc < 3) 
-  {
-    print_usage(string(argv[0]));
+
+  Tracer tr("main");
+
+  string progname=argv[0];
+  if (argc != 11) 
+  { 
+    print_usage(progname);
     return 1; 
   }
-  FSLIO* fslio=NULL;
-  fslio = FslOpen(FslMakeBaseName(argv[1]),"rb");
-  FslClose(fslio);
-  struct dsr *hdr;
-  hdr = (struct dsr *)calloc(1,sizeof(struct dsr));
-  FslReadRawHeader(hdr,fslio->niftiptr->fname);
-  if (fslio->niftiptr->byteorder != nifti_short_order()) 
-  {
-    cout << "Byte swapping" << endl;
-    AvwSwapHeader(hdr);
-  } 
-  //check nifti-libs output versus raw header info
-  int offset =(int) ( fslio->niftiptr->iname_offset - hdr->dime.vox_offset );
-  int minft=(int)MIN(fslio->niftiptr->iname_offset,hdr->dime.vox_offset);
-  cout << "number of bytes wrong: " << offset << endl << "start at byte location: " << minft << endl;
-
-  if (offset==0) {
-    cout << "No byte correction needed, exiting." << endl;
-    return 0;
-  }
-
-  if (FslIsCompressedFileType(FslGetFileType(fslio))) {
-    cerr << "Error: fslcorrecthd requires uncompressed input" << endl;         
-    return 1;
-  }
-
- ifstream input_file;
- ofstream output_file;
- char *temp,*outputName,*inputName; 
- FslGetHdrImgNames(argv[2],fslio,&temp,&outputName);
- FslGetHdrImgNames(argv[1],fslio,&temp,&inputName);
- char byte[1];
- input_file.open(inputName,ios::in | ios :: binary);
- output_file.open(outputName,ofstream::out | ofstream::binary);
-
- for(int i=1;i<=minft;i++) //Write Header
- {
-   input_file.read(byte,1);
-   if (input_file.eof()) break;
-   output_file.write(byte,1);
- }
-
- for(int i=1;i<=abs(offset) && offset>0;i++) //Pad if we have missing 4 bytes
- {
-   byte[0]=0;
-   output_file.write(byte,1);
- }
-
- for(int i=1;i<=abs(offset) && offset<0;i++) //Read past bad extensions/junk 
- {
-   input_file.read(byte,1);
- }
-
- while(true) //Copy the data
- {
-   input_file.read(byte,1);
-   if (input_file.eof()) break;
-   output_file.write(byte,1);
- }  
- output_file.close();
- input_file.close();
-
- system(("FSLOUTPUTTYPE=NIFTI; ${FSLDIR}/bin/fslmaths " + string(outputName)).c_str());  //To clean up header
- free(temp);
- free(outputName);
- free(hdr);
- return 0;
+   
+  return do_work(argc,argv); 
 }
 
 

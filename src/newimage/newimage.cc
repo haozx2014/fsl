@@ -525,6 +525,16 @@ namespace NEWIMAGE {
     }
   }
 
+  template <class T>
+  vector<int> volume<T>::labelToCoord(const long label) const
+  {
+    vector<int> coordinates;
+    coordinates.push_back(label%this->xsize());
+    coordinates.push_back( (floor) ( ( label%( this->xsize()*this->ysize() ) ) / this->xsize() ));
+    coordinates.push_back( (floor) ( label / ( this->xsize()*this->ysize() ) ) );
+    return coordinates;
+  }
+
   // ROI functions
 
   template <class T>
@@ -3684,9 +3694,8 @@ namespace NEWIMAGE {
     if (!samesize(mask,vols[0])) {
       imthrow("Mask of different size used in matrix()",3);
     }
-    long nvox=0, cidx = 1;
-    nvox = no_mask_voxels(mask);
-    matv.ReSize(this->maxt() - this->mint() + 1,nvox);
+    long cidx(1);
+    matv.ReSize(this->maxt() - this->mint() + 1, no_mask_voxels(mask));
     int xoff = vols[0].minx() - mask.minx();
     int yoff = vols[0].miny() - mask.miny();
     int zoff = vols[0].minz() - mask.minz();
@@ -3695,6 +3704,38 @@ namespace NEWIMAGE {
       for (int y=mask.miny(); y<=mask.maxy(); y++) {
 	for (int x=mask.minx(); x<=mask.maxx(); x++) {
 	  if (mask(x,y,z)>0) {
+	    for (int t=this->mint(); t<=this->maxt(); t++) {
+	      matv(t+toff,cidx) = vols[t](x+xoff,y+yoff,z+zoff);
+	    }
+	    cidx++;
+	  }
+	}
+      }
+    }
+    matv.Release();
+    return matv;
+  }
+
+  template <class T>
+  ReturnMatrix volume4D<T>::matrix(const volume<T>& mask, vector<long>& voxelLabels) const
+  {
+    voxelLabels.clear();
+    Matrix matv;
+    if (tsize()<=0) return matv;
+    if (!samesize(mask,vols[0])) {
+      imthrow("Mask of different size used in matrix()",3);
+    }
+    long cidx (1);
+    matv.ReSize(this->maxt() - this->mint() + 1, no_mask_voxels(mask) );
+    int xoff = vols[0].minx() - mask.minx();
+    int yoff = vols[0].miny() - mask.miny();
+    int zoff = vols[0].minz() - mask.minz();
+    int toff = 1 - this->mint();
+    for (int z=mask.minz(); z<=mask.maxz(); z++) {
+      for (int y=mask.miny(); y<=mask.maxy(); y++) {
+	for (int x=mask.minx(); x<=mask.maxx(); x++) {
+	  if (mask(x,y,z)>0) {
+	    voxelLabels.push_back(x+y*mask.xsize()+z*mask.xsize()*mask.ysize());
 	    for (int t=this->mint(); t<=this->maxt(); t++) {
 	      matv(t+toff,cidx) = vols[t](x+xoff,y+yoff,z+zoff);
 	    }

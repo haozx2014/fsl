@@ -291,10 +291,9 @@ void usage(const string& message)
 int main(int argc, char **argv)
 {
 ofstream     outputFile;
-double       ymin,ymax;
-int          t, numEVs, npts, numContrasts=1, nftests=0, GRPHSIZE(600), PSSIZE(600); 
+int          numEVs, npts, numContrasts=1, nftests=0, GRPHSIZE(600), PSSIZE(600); 
 vector<double> normalisedContrasts, model, triggers;
-string       fmriFileName, fslPath, outputName, featdir, vType, statType, graphFileName, indexText, graphText, graphName, peristimulusText;
+ string       fmriFileName, fslPath, featdir, vType, indexText;
 ColumnVector NewimageVoxCoord(4),NiftiVoxCoord(4);
 bool outputText(true), useCoordinate(false), prewhiten(false), useTriggers(false), customMask(false), modelFree(false), isHigherLevel(false), outputDataOnly(false);
 bool zWeightClusters(true);
@@ -309,6 +308,8 @@ volume<float> immask;
   featdir=string(argv[1]);
   fmriFileName=featdir+"/filtered_func_data";
   fslPath=string(getenv("FSLDIR"));
+
+  string outputName(featdir);
 
   for (int argi=2;argi<argc;argi++)
   {
@@ -367,7 +368,7 @@ volume<float> immask;
       cerr << "Can't open output data file " << outputName << endl;
       exit(1);
     }
-    for(t=0; t<im.tsize(); t++) outputFile << scientific << im((int)NewimageVoxCoord(1),(int)NewimageVoxCoord(2),(int)NewimageVoxCoord(3),t) << endl;
+    for(int t=0; t<im.tsize(); t++) outputFile << scientific << im((int)NewimageVoxCoord(1),(int)NewimageVoxCoord(2),(int)NewimageVoxCoord(3),t) << endl;
     outputFile.close();
     exit(0);
   }
@@ -431,15 +432,15 @@ volume4D<float> acs;
   miscplot newplot;
   for(int type=0;type<2;type++) /* setup stats type */
   {
-    int maxi;
-    if (type==0) { statType="zstat";  maxi=numContrasts; }
-    else         { statType="zfstat"; maxi=nftests; }
-    for(int i=1; i<=maxi; i++)
+    int nPlots(nftests);
+    string statType("zfstat");
+    if (type==0) { statType="zstat";  nPlots=numContrasts; }
+    for(int i=1; i<=nPlots; i++)
     {
       volume<float> imcope, imz;
       bool haveclusters=false;
-      graphText="";
-      peristimulusText="";
+      string graphText("");
+      string peristimulusText("");
       /* read COPE and derived stats; test for f-test output */
       /* load zstat or zfstat */
       if (fsl_imageexists(featdir+"/stats/"+statType+num2str(i))) 
@@ -505,13 +506,13 @@ volume4D<float> acs;
 		  prewhiten_timeseries(acs.voxelts(x,y,z), im.voxelts(x,y,z), prewhitenedTS, npts);
 		else
 		   prewhitenedTS = im.voxelts(x,y,z);
-		for(t=1; t<=npts; t++) TS_data(t)+= prewhitenedTS(t)*weight;
+		for(int t=1; t<=npts; t++) TS_data(t)+= prewhitenedTS(t)*weight;
 		if (!modelFree) {
 		  if (prewhiten)
 		    prewhiten_model(acs.voxelts(x,y,z), model, pwmodel, numEVs, npts);
 		  else
 		    pwmodel=model;
-		  for(t=1; t<=npts; t++)
+		  for(int t=1; t<=npts; t++)
 		    for(int ev=0; ev<numEVs; ev++)
 		    {
 		      double tmpf=pwmodel[(t-1)*numEVs+ev]*impe[ev](x,y,z)*weight;
@@ -527,7 +528,7 @@ volume4D<float> acs;
 	  
 	if (isHigherLevel) tsmean=0;
 	if (!modelFree)
-	  for(t=1; t<=npts; t++)
+	  for(int t=1; t<=npts; t++)
 	  {
 	    TS_model(t) = TS_model(t)/wtotal + tsmean;
 	    TS_copemodel(t) = TS_copemodel(t)/wtotal + tsmean;
@@ -538,8 +539,8 @@ volume4D<float> acs;
 	/* output data text files */
 	if (outputText) 
 	  outputFile.open((outputName+"/tsplot"+vType+"_"+statType+num2str(i)+".txt").c_str());
-	ymin=ymax=TS_data(1);
-	for(t=1; t<=npts; t++)
+	double ymin(TS_data(1)),ymax(TS_data(1));
+	for(int t=1; t<=npts; t++)
 	{
 	  if (outputText) outputFile << scientific << TS_data(t);
 	  ymin=MISCMATHS::Min(TS_data(t),ymin); 
@@ -566,8 +567,8 @@ volume4D<float> acs;
 	if (ymin==ymax) 
 	  ymin-=1; 	
 	/* create graphs */
-	graphName="tsplot"+vType+"_"+statType+num2str(i);
-	graphFileName=outputName+"/"+graphName;
+	string graphName="tsplot"+vType+"_"+statType+num2str(i);
+	string graphFileName(outputName+"/"+graphName);
 	GRPHSIZE= MISCMATHS::Min(MISCMATHS::Max(npts*4,600),3000);
 	newplot.set_minmaxscale(1.001);
 	newplot.set_xysize(GRPHSIZE,192);
@@ -638,7 +639,7 @@ volume4D<float> acs;
 	      {
 		double min_t=triggers[which_event*numEVs+ev];
 		int int_min_t=(int)ceil(min_t-(1e-10*min_t)),max_t=MISCMATHS::Min(npts-1,int_min_t+(int)ps_period);		
-		for(t=int_min_t+1;t<=max_t;t++)
+		for(int t=int_min_t+1;t<=max_t;t++)
 		{
 		  RowVector input(ps_compact.Ncols());
 		  if (!modelFree) input << (ceil((t-min_t-1)*10))/10.0 << TS_residuals(t)+TS_model(t) << TS_model(t) << TS_pemodel(ev*npts+t) << TS_residuals(t)+TS_pemodel(ev*npts+t) << 1;  //(restricted temporal accuraccy (0.1*TR) must be at least 0.1 ( scatter can not take 0 )

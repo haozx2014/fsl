@@ -205,6 +205,7 @@ namespace NEWIMAGE {
 #ifdef EXPOSE_TREACHEROUS
   public:
 #endif 
+    // sampling_mat should now be avoided - use newimagevox2mm_mat instead
     bool RadiologicalFile;
     Matrix sampling_mat() const;
     void set_sform(int sform_code, const Matrix& snewmat) const;
@@ -282,6 +283,7 @@ namespace NEWIMAGE {
     ReturnMatrix vec() const;
     void insert_vec(const ColumnVector& pvec, const volume<T>& pmask);
     void insert_vec(const ColumnVector& pvec);
+    vector<int> labelToCoord(const long label) const;
 
     // SECONDARY PROPERTIES
     // maps *NEWIMAGE* voxel coordinates to mm (consistent with FSLView mm)
@@ -574,6 +576,7 @@ namespace NEWIMAGE {
 #ifdef EXPOSE_TREACHEROUS
   public:
 #endif 
+    // sampling_mat should now be avoided - use newimagevox2mm_mat instead
     Matrix sampling_mat() const;
     void set_sform(int sform_code, const Matrix& snewmat) const;
     void set_qform(int qform_code, const Matrix& qnewmat) const;
@@ -652,6 +655,7 @@ namespace NEWIMAGE {
 
     // MATRIX <-> VOLUME4D CONVERSIONS
     ReturnMatrix matrix(const volume<T>& mask) const;
+    ReturnMatrix matrix(const volume<T>& mask, vector<long>& voxelLabels) const;
     ReturnMatrix matrix() const;
     void setmatrix(const Matrix& newmatrix, const volume<T>& mask, 
 		   const T pad=0);

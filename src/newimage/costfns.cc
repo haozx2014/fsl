@@ -260,7 +260,8 @@ namespace NEWIMAGE {
      refvol(refv), testvol(inputv), rweight(refv), tweight(inputv),
      bindex(0), no_bins(0),jointhist(0), marghist1(0), marghist2(0), 
      fjointhist(0), fmarghist1(0), fmarghist2(0), p_count(0), 
-     p_costtype(CorrRatio), validweights(false), smoothsize(1.0), fuzzyfrac(0.5)
+     p_costtype(CorrRatio), validweights(false), bin_a0(0), bin_a1(1),
+     smoothsize(1.0), fuzzyfrac(0.5)
    { 
    }
 
@@ -270,7 +271,8 @@ namespace NEWIMAGE {
      refvol(refv), testvol(inputv), rweight(refweight), tweight(inweight),
      bindex(0), no_bins(0),jointhist(0), marghist1(0), marghist2(0), 
      fjointhist(0), fmarghist1(0), fmarghist2(0), p_count(0), 
-     p_costtype(CorrRatio), validweights(true), smoothsize(1.0), fuzzyfrac(0.5)
+     p_costtype(CorrRatio), validweights(true), bin_a0(0), bin_a1(1),
+     smoothsize(1.0), fuzzyfrac(0.5)
    { 
    }
 
@@ -369,11 +371,11 @@ namespace NEWIMAGE {
 	  retval = 1.0 - fabs(this->normcorr_smoothed_sinc(affmat));
 	  break;
        case LeastSq:  // Minimise square
-	 retval = 1.0-this->leastsquares_fully_weighted(affmat,refweight,
+	 retval = this->leastsquares_fully_weighted(affmat,refweight,
 							testweight);
 	 break;
        case LabelDiff:  // Minimise label difference (any mismatch is equal)
-	 retval = 1.0-this->labeldiff_fully_weighted(affmat,refweight,
+	 retval = this->labeldiff_fully_weighted(affmat,refweight,
 							testweight);
 	 break;
        case CorrRatio:  // MAXimise corr
@@ -386,11 +388,11 @@ namespace NEWIMAGE {
 	 retval = this->woods_fn(affmat); 
 	 break;
        case MutualInfo:  // MAXimise info
-	retval = 1.0-this->mutual_info_fully_weighted(affmat,refweight,
+	retval = -this->mutual_info_fully_weighted(affmat,refweight,
 						      testweight);
 	break;
        case NormMI:  // MAXimise
-	retval = 1.0-this->normalised_mutual_info_fully_weighted(affmat,
+	retval = -this->normalised_mutual_info_fully_weighted(affmat,
 								 refweight,
 								 testweight);
 	break;
@@ -3381,7 +3383,7 @@ namespace NEWIMAGE {
       fjointhist = new float[(no_bins+1)*(no_bins+1)];
       fmarghist1 = new float[no_bins+1];
       fmarghist2 = new float[no_bins+1];
-      int N = this->refvol.nvoxels();
+      unsigned long int N = this->refvol.nvoxels();
       float p=0.0;
       try {
         plnp.ReSize(Min((unsigned long int) 10000, (unsigned long int) (10*N/(no_bins+1))));
@@ -3402,13 +3404,13 @@ namespace NEWIMAGE {
       refmin = this->refvol.min();
       refmax = this->refvol.max();
       if (refmax-refmin==0.0) refmax+=1;
-      float a1=no_bins/(refmax-refmin);
-      float a0=-refmin*no_bins/(refmax-refmin);
+      bin_a1=no_bins/(refmax-refmin);
+      bin_a0=-refmin*no_bins/(refmax-refmin);
       int *bptr = bindex;
       for (int z=0; z<refvol.zsize(); z++) { 
 	for (int y=0; y<refvol.ysize(); y++) { 
 	  for (int x=0; x<refvol.xsize(); x++) {
-	    *bptr = (int) (refvol(x,y,z)*a1 + a0);
+	    *bptr = (int) get_bin_number(refvol(x,y,z));
 	    if (*bptr >= no_bins)  *bptr = no_bins-1;
 	    if (*bptr < 0.0)  *bptr = 0;
 	    bptr++;
@@ -3416,6 +3418,16 @@ namespace NEWIMAGE {
 	}
       }
     }
+
+  float Costfn::get_bin_intensity(int bin_number) const
+  {
+    return (bin_number +0.5 - bin_a0)/bin_a1;
+  }
+
+  float Costfn::get_bin_number(float intensity) const
+  {
+    return (intensity*bin_a1 + bin_a0);
+  }
 
   // Member function interfaces
 
@@ -3674,6 +3686,184 @@ namespace NEWIMAGE {
 
 
   ///////////////////////////////////////////////////////////////////////////
+
+
+  int Costfn::p_corr_ratio_image_mapper(volume<float>& vout,
+				Matrix& mappingfn,
+				const volume<float>& vref, 
+				const volume<float>& vtest,
+				const volume<float>& refweight, 
+				const volume<float>& testweight,
+				int *bindex, const Matrix& aff,
+				const int no_bins, const float smoothsize) const
+    {
+      // Do everything in practice via the inverse transformation
+      // That is, for every point in vref, calculate the pre-image in
+      //  vtest to which it corresponds, and interpolate vtest to get the
+      //  value there.
+      // Also, the sampling transformations must be accounted for:
+      //     T_vox1->vox2 = (T_samp2)^-1 * T_world * T_samp1
+
+      // NB: only maps the image if it has non-zero size on entry
+
+      bool mapimage=true;
+      if (vout.nvoxels()==0) {
+	mapimage=false;
+      }
+
+      Matrix iaffbig = vtest.sampling_mat().i() * aff.i() *
+	                     vref.sampling_mat();  
+      Matrix iaff=iaffbig.SubMatrix(1,3,1,3);
+      unsigned int xb1=vref.xsize()-1, yb1=vref.ysize()-1, zb1=vref.zsize()-1;
+      float  xb2 = ((float) vtest.xsize())-1.0001,
+	yb2=((float) vtest.ysize())-1.0001, zb2=((float) vtest.zsize())-1.0001;
+
+      float *sumy, *sumy2;
+      sumy = new float[no_bins+1];
+      sumy2 = new float[no_bins+1];
+      float *numy;
+      numy = new float[no_bins+1];
+      int b=0;
+ 
+      for (int i=0; i<=no_bins; i++) {
+	numy[i]=0.0; sumy[i]=0.0;  sumy2[i]=0.0;
+      }
+
+      float a11=iaff(1,1), a12=iaff(1,2), a13=iaff(1,3), a14=iaffbig(1,4),
+	a21=iaff(2,1), a22=iaff(2,2), a23=iaff(2,3), a24=iaffbig(2,4),
+	a31=iaff(3,1), a32=iaff(3,2), a33=iaff(3,3), a34=iaffbig(3,4);
+      float wval=0,val=0,o1,o2,o3;
+
+      float smoothx, smoothy, smoothz, weight;
+      smoothx = smoothsize / vtest.xdim();
+      smoothy = smoothsize / vtest.ydim();
+      smoothz = smoothsize / vtest.zdim();
+
+      // The matrix algebra below has been hand-optimized from
+      //  [o1 o2 o3] = a * [x y z]  at each iteration
+
+      unsigned int xmin, xmax;
+      int *bptr;
+
+      for (unsigned int z=0; z<=zb1; z++) { 
+	for (unsigned int y=0; y<=yb1; y++) { 
+
+	  o1= y*a12 + z*a13 + a14;  // x=0
+	  o2= y*a22 + z*a23 + a24;  // x=0
+	  o3= y*a32 + z*a33 + a34;  // x=0
+	
+	  // determine range
+	  findrangex(xmin,xmax,o1,o2,o3,a11,a21,a31,xb1,yb1,zb1,xb2,yb2,zb2);
+
+	  o1 += xmin * a11;
+	  o2 += xmin * a21;
+	  o3 += xmin * a31;
+
+	  // assume that this is always OK
+	  bptr = get_bindexptr(xmin,y,z,vref,bindex);
+
+	  for (unsigned int x=xmin; x<=xmax; x++) {
+
+	    if ( !((x==xmin) || (x==xmax)) 
+		 || in_interp_bounds(vtest,o1,o2,o3) )
+	      {
+		val = q_tri_interpolation(vtest,o1,o2,o3);
+		wval = q_tri_interpolation(testweight,o1,o2,o3);
+		
+		// do the cost function record keeping...
+		b=*bptr;
+		weight=wval*refweight(x,y,z);
+		if (o1<smoothx)  weight*=o1/smoothx;
+		else if ((xb2-o1)<smoothx) weight*=(xb2-o1)/smoothx;
+		if (o2<smoothy)  weight*=o2/smoothy;
+		else if ((yb2-o2)<smoothy) weight*=(yb2-o2)/smoothy;
+		if (o3<smoothz)  weight*=o3/smoothz;
+		else if ((zb2-o3)<smoothz) weight*=(zb2-o3)/smoothz;
+		if (weight<0.0)  weight=0.0;
+		numy[b]+=weight;
+		sumy[b]+=weight*val;
+		sumy2[b]+=weight*val*val;
+	      }
+
+	    bptr++;
+	    o1 += a11;
+	    o2 += a21;
+	    o3 += a31;
+	  }
+	}
+      }
+
+      // correct for occasion lapses into the last bin
+      numy[no_bins-1] += numy[no_bins];
+      sumy[no_bins-1] += sumy[no_bins];
+      sumy2[no_bins-1] += sumy2[no_bins];
+      numy[no_bins]=0.0;
+      sumy[no_bins]=0.0;
+      sumy2[no_bins]=0.0;
+
+      if (mapimage) {
+	for (unsigned int z=0; z<=zb1; z++) { 
+	  for (unsigned int y=0; y<=yb1; y++) { 
+	    xmin=0; xmax=xb1;
+	    bptr = get_bindexptr(xmin,y,z,vref,bindex);
+	    for (unsigned int x=xmin; x<=xmax; x++) {
+	      b=*bptr;
+	      if (numy[b]>0.01) {
+		vout(x,y,z) = sumy[b]/numy[b];
+	      } else {
+		vout(x,y,z) = 0.0;
+	      }
+	      bptr++;
+	    }
+	  }
+	}
+      }
+
+     // Generate mapping function
+     mappingfn.ReSize(no_bins,2);
+     for (int b=0; b<=no_bins-1; b++) {
+       mappingfn(b+1,1) = get_bin_intensity(b);
+   	if (numy[b]>0) {
+	  mappingfn(b+1,2) = sumy[b]/numy[b];
+	} else { 
+	  mappingfn(b+1,2) = 0;
+	}
+     }
+
+     delete [] numy; delete [] sumy; delete [] sumy2;
+     
+     return 0;
+     
+    }
+
+
+  volume<float> Costfn::image_mapper(const Matrix& affmat) const // affmat is voxel to voxel
+  {
+    volume<float> vnew(this->refvol);
+    Matrix mappingfn;
+    p_corr_ratio_image_mapper(vnew,mappingfn,
+			      this->refvol,this->testvol,
+			      this->rweight,
+			      this->tweight,
+			      this->bindex,affmat,
+			      this->no_bins,
+			      this->smoothsize);
+    return vnew;
+  }
+
+  Matrix Costfn::mappingfn(const Matrix& affmat) const // affmat is voxel to voxel
+  {
+    volume<float> vnew;
+    Matrix mappingmat;
+    p_corr_ratio_image_mapper(vnew,mappingmat,
+			      this->refvol,this->testvol,
+			      this->rweight,
+			      this->tweight,
+			      this->bindex,affmat,
+			      this->no_bins,
+			      this->smoothsize);
+    return mappingmat;
+  }
 
 }
 
