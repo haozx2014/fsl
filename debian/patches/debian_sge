@@ -81,7 +81,7 @@ Description: out-of-the-box compatibility with Debian's SGE
      cat <<EOM > ${subjdir}.bedpostX/monitor
 --- a/src/fdt/fdt.tcl
 +++ b/src/fdt/fdt.tcl
-@@ -729,8 +729,11 @@
+@@ -753,8 +753,11 @@
  	probtrackx {
  	    global probtrack env
  	    set errorStr ""
@@ -95,7 +95,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  	    if { $probtrack(bedpost_dir) == ""  } { set errorStr "You must specify the bedpostX directory!" }
  	    if { $probtrack(mode) == "simple" && $probtrack(usereference_yn) && $probtrack(reference) == "" } { set errorStr "$errorStr You must specify a reference image" } 
  	    if { $probtrack(mode) == "seedmask" && $probtrack(reference) == "" } { set errorStr "$errorStr You must specify a mask image" } 
-@@ -891,7 +894,11 @@
+@@ -915,7 +918,11 @@
                      puts $script "mv $logfile $copylog"
                      puts $script "rm ${filebase}_script.sh"
  		    close $script
