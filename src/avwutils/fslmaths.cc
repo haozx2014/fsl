@@ -65,7 +65,7 @@
     University, to negotiate a licence. Contact details are:
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 //     
-
+#define EXPOSE_TREACHEROUS
 #include "newimage/newimageall.h"
 #include "miscmaths/miscmaths.h"
 #include "utils/fsl_isfinite.h"
@@ -108,6 +108,8 @@ int printUsage(const string& programName)
   cout << "\nBasic unary operations:" << endl;
   cout << " -exp   : exponential" << endl;
   cout << " -log   : natural logarithm" << endl;
+  cout << " -sin   : sine function" << endl;
+  cout << " -cos   : cosine function" << endl;
   cout << " -sqr   : square" << endl;
   cout << " -sqrt  : square root" << endl;
   cout << " -recip : reciprocal (1/current image)" << endl;
@@ -124,6 +126,7 @@ int printUsage(const string& programName)
   cout << " -randn : add Gaussian noise (mean=0 sigma=1)" << endl;
   cout << " -inm <mean> :  (-i i ip.c) intensity normalisation (per 3D volume mean)" << endl;
   cout << " -ing <mean> :  (-I i ip.c) intensity normalisation, global 4D mean)" << endl;
+  cout << " -range : set the output calmin/max to full data range" << endl;
 
   cout << "\nMatrix operations:" << endl;
   cout << " -tensor_decomp : convert a 4D (6-timepoint )tensor image into L1,2,3,FA,MD,MO,V1,2,3 (remaining image in pipeline is FA)" << endl;
@@ -138,8 +141,8 @@ int printUsage(const string& programName)
   cout << " -kernel file   <filename> : use external file as kernel" << endl;
 
   cout << "\nSpatial Filtering operations: N.B. all options apart from -s use the kernel _previously_ specified by -kernel" << endl;
-  cout << " -dilM    : Mean Dilation of zero voxels  (using non-zero voxels in kernel)" << endl;
-  cout << " -dilD    : Modal Dilation of zero voxels (using non-zero voxels in kernel)" << endl;
+  cout << " -dilM    : Mean Dilation of non-zero voxels" << endl;
+  cout << " -dilD    : Modal Dilation of non-zero voxels" << endl;
   cout << " -dilF    : Maximum filtering of all voxels" << endl;
   cout << " -ero     : Erode by zeroing non-zero voxels when zero voxels found in kernel" << endl;
   cout << " -eroF    : Minimum filtering of all voxels" << endl;
@@ -167,6 +170,8 @@ int printUsage(const string& programName)
   cout << " -cpval   : Same as -pval, but gives FWE corrected P-values" << endl;
   cout << " -ztop    : Convert Z-stat to (uncorrected) P" << endl;
   cout << " -ptoz    : Convert (uncorrected) P to Z" << endl;
+  cout << " -rank    : Convert data to ranks (over T dim)" << endl;
+  cout << " -ranknorm: Transform to Normal dist via ranks" << endl;
 
   cout << "\nMulti-argument operations:" << endl;
   cout << " -roi <xmin> <xsize> <ymin> <ysize> <zmin> <zsize> <tmin> <tsize> : zero outside roi (using voxel coordinates)" << endl;
@@ -195,7 +200,20 @@ void loadNewImage(volume4D<T> &oldI, volume4D<T> &newI, string filename)
       oldI.copyproperties(tmpvol);
       for (int t=0;t<newI.tsize();t++) oldI[t]=tmpvol[0]; 
     }
+
+  // sanity check on valid orientation info (it should be consistent)
+  if ((newI.sform_code()!=NIFTI_XFORM_UNKNOWN) || (newI.qform_code()!=NIFTI_XFORM_UNKNOWN))
+    {
+      if ((oldI.sform_code()!=NIFTI_XFORM_UNKNOWN) || (oldI.qform_code()!=NIFTI_XFORM_UNKNOWN))
+	{
+	  float rms = rms_deviation(newI.newimagevox2mm_mat(),oldI.newimagevox2mm_mat());
+	  if (rms>0.5) {   // arbitrary 0.5mm rms diff threshold - maybe too sensitive?
+	    cerr << endl << "WARNING:: Inconsistent orientations for individual images in pipeline!" <<endl;  
+	    cerr <<"          Will use voxel-based orientation which is probably incorrect - *PLEASE CHECK*!" <<endl<<endl; }
+	}
+    }
 }
+
 
 template <class T>
 int inputParser(int argc, char *argv[], short output_dt, bool forceOutputType=false)
@@ -204,11 +222,13 @@ int inputParser(int argc, char *argv[], short output_dt, bool forceOutputType=fa
   volume<float> kernel(box_kernel(3,3,3));
   bool separable(false);
   read_volume4D(input_volume,string(argv[1]));
+  bool modifiedInput(false);
+  bool setDisplayRange(false);
 
   for (int i = 2; i < argc-1; i++)  //main loop
   {    
     volume4D<T> temp_volume;
-
+    modifiedInput=true;
     /***************************************************************/
     /******************** Dimensionality Reduction *****************/
     /***************************************************************/
@@ -528,6 +548,8 @@ if (!separatenoise)
     /***************************************************************/
     else if (string(argv[i])=="-thr") input_volume.threshold((T)atof(argv[++i]),input_volume.max()+1,inclusive);
     /***************************************************************/
+    else if (string(argv[i])=="-range") setDisplayRange=true;
+    /***************************************************************/
     else if (string(argv[i])=="-thrp") 
     {
       T lowerlimit =(T)(input_volume.robustmin()+(atof(argv[++i])/100.0)*(input_volume.robustmax()-input_volume.robustmin())); 
@@ -665,6 +687,24 @@ if (!separatenoise)
 	    for(int x=0;x<input_volume.xsize();x++)
               if (input_volume.value(x,y,z,t)> 0) input_volume.value(x,y,z,t)=(T)log((double)input_volume.value(x,y,z,t));
     }
+    /***************************************************************/
+    else if (string(argv[i])=="-cos")
+    {
+      for(int t=0;t<input_volume.tsize();t++)           
+        for(int z=0;z<input_volume.zsize();z++)
+          for(int y=0;y<input_volume.ysize();y++)	    
+	    for(int x=0;x<input_volume.xsize();x++)
+              input_volume.value(x,y,z,t)=(T)cos((double)input_volume.value(x,y,z,t));
+    }
+    /***************************************************************/
+    else if (string(argv[i])=="-sin")
+    {
+      for(int t=0;t<input_volume.tsize();t++)           
+        for(int z=0;z<input_volume.zsize();z++)
+          for(int y=0;y<input_volume.ysize();y++)	    
+	    for(int x=0;x<input_volume.xsize();x++)
+              input_volume.value(x,y,z,t)=(T)sin((double)input_volume.value(x,y,z,t));
+    }
     /* Uncorrected nonparametric P-value, assuming t-dim is perm-dim */
     else if (string(argv[i])=="-pval" || string(argv[i])=="-pval0")
     {
@@ -756,6 +796,70 @@ if (!separatenoise)
               input_volume.value(x,y,z,t)=(T)((v<=0 || v>=1)?0:ndtri(1-v));
             }
     }
+    /***** Convert to ranks ********/
+    else if (string(argv[i])=="-rank")
+    {
+      ColumnVector val(input_volume.tsize()),rank(input_volume.tsize()),sortval(input_volume.tsize());
+      for(int z=0;z<input_volume.zsize();z++)
+	for(int y=0;y<input_volume.ysize();y++)           
+	  for(int x=0;x<input_volume.xsize();x++) {
+	    for(int t=0;t<input_volume.tsize();t++)
+	      val(t+1)=input_volume.value(x,y,z,t);
+	    
+	    
+	    /* Take sortval and 'unsort' it, finding ranks */
+	    sortval=val;
+	    SortAscending(sortval);
+	    for(int k=1;k<=val.Nrows();k++)	       
+	      rank(k)=k;
+	    for(int k=1;k<=val.Nrows();k++)	       
+	      if(val(k)!=sortval(k))
+		for(int l=k+1;l<=val.Nrows();l++) 
+		  if(sortval(l)==val(k))
+		    {
+		      swap(rank(l),rank(k));
+		      swap(sortval(l),sortval(k));
+		    }
+	    for(int t=0;t<input_volume.tsize();t++)
+	      input_volume.value(x,y,z,t)=(T)rank(t+1);
+	  }
+
+    }
+    /***** Convert to normal distribution via ranks ********/
+    else if (string(argv[i])=="-ranknorm")
+    {
+      ColumnVector val(input_volume.tsize()),rank(input_volume.tsize()),sortval(input_volume.tsize());
+      volume<double> valv(input_volume.tsize(),1,1);
+      for(int z=0;z<input_volume.zsize();z++)
+	for(int y=0;y<input_volume.ysize();y++)           
+	  for(int x=0;x<input_volume.xsize();x++) {
+	    for(int t=0;t<input_volume.tsize();t++) {
+	      val(t+1)=input_volume.value(x,y,z,t); 
+	      valv(t,0,0)=val(t+1);
+	    }
+	    
+	    /* Take sortval and 'unsort' it, finding ranks */
+	    sortval=val;
+	    SortAscending(sortval);
+	    for(int k=1;k<=val.Nrows();k++)	       
+	      rank(k)=k;
+	    for(int k=1;k<=val.Nrows();k++)	       
+	      if(val(k)!=sortval(k))
+		for(int l=k+1;l<=val.Nrows();l++) 
+		  if(sortval(l)==val(k))
+		    {
+		      swap(rank(l),rank(k));
+		      swap(sortval(l),sortval(k));
+		    }
+	    /* Transform to expected order statisics of a Uniform */
+	    rank = (rank-0.5)/rank.Nrows();
+	    /* Transform to expected order statisics of a Normal with same Mean & Sd */
+	    for(int t=0;t<input_volume.tsize();t++)
+	      input_volume.value(x,y,z,t)=(T)(valv.mean()+ndtri(rank(t+1))*valv.stddev()); 
+	    
+	  }
+
+    }
     /***************************************************************/
     else if (string(argv[i])=="-abs") input_volume=abs(input_volume);
     /***************************************************************/
@@ -814,18 +918,21 @@ if (!separatenoise)
     /*****************END OF FILTERING OPTIONS***************/
     else if (string(argv[i])=="-edge")
        input_volume=edge_strengthen(input_volume);
-    else if (string(argv[i])=="-tfce")
-      // {{{ TFCE option
+    else if (string(argv[i])=="-tfce") {
+      float height_power = atof(argv[++i]);
+      float size_power = atof(argv[++i]);
+      int connectivity = atoi(argv[++i]);
 
-      {
-	float height_power = atof(argv[++i]);
-	float size_power = atof(argv[++i]);
-	int connectivity = atoi(argv[++i]);
-
-	for(int t=0;t<input_volume.tsize();t++)
-	  tfce(input_volume[t], height_power, size_power, connectivity, 0, 0);
+      for(int t=0;t<input_volume.tsize();t++) {
+	try { 
+	  tfce(input_volume[t], height_power, size_power, connectivity, 0, input_volume[t].max());
+	}
+	catch(Exception& e) { 
+	  cerr << "ERROR: TFCE failed, please check your file for valid sizes and voxel values." <<  e.what() << endl << endl << "Exiting" << endl; 
+	  return 1;
+	}
       }
-
+    }
 // }}}
     else if (string(argv[i])=="-tfceS")
       // {{{ TFCE supporting-area option
@@ -840,7 +947,7 @@ if (!separatenoise)
 	float tfce_thresh = atof(argv[++i]);
 	
 	for(int t=0;t<input_volume.tsize();t++)
-	  tfce_support(input_volume[t], height_power, size_power, connectivity, 0, 0, X, Y, Z, tfce_thresh);
+	  tfce_support(input_volume[t], height_power, size_power, connectivity, 0, input_volume[t].max(), X, Y, Z, tfce_thresh);
       }
 
 // }}}
@@ -1074,7 +1181,12 @@ if (!separatenoise)
               input_volume.value(x,y,z,t)=(T) MISCMATHS::round(input_volume.value(x,y,z,t));
   }
 
-  input_volume.setDisplayMaximumMinimum((float)input_volume.max(),(float)input_volume.min());
+  if (modifiedInput)
+    input_volume.setDisplayMaximumMinimum(0,0);
+  if (setDisplayRange)
+    input_volume.setDisplayMaximumMinimum((float)input_volume.max(),(float)input_volume.min());
+
+
   save_volume4D_datatype(input_volume,string(argv[argc-1]),output_dt);
   return 0;
 }

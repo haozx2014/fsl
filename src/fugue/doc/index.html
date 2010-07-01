@@ -114,57 +114,10 @@ For example, <br>
 
 
 <A NAME="section2"></A><HR><H2>PRELUDE</H2>
- 
-<I>prelude</I> (Phase Region Expanding Labeller for Unwrapping
-Discrete Estimates) performs 3D phase unwrapping of images.  The input
-can either be a single complex image (Analyze or Nifti), or a pair of
-real images giving the phase and absolute values separately.  Also
-see <a href="../../avwutils/doc/index.html#fslcomplex">fslcomplex</a>
-for ways to manipulate complex image formats.
 
-<p>
-If the images are 4D images, then each 3D volume is unwrapped
-separately, and the result saved as a 4D image of unwrapped phase
-images.  The output in either case is a real, unwrapped phase image
-(in radians).
-
-<p>
-For higher resolution images (e.g. for SWI) a mask should be used in
-order to reduce run-times since any areas that include noisy voxels
-will significantly increase the required run-time.  The best way to
-generate a mask is by running BET to perform brain extraction on the
-absolute image.
-
-<P>
-The three main forms of usage are:
-<dl>
-<dt> <FONT COLOR=PURPLE>prelude -c data -u result</FONT>  </dt>
-<dd> uses a single complex input file </dd>
-<dt> <FONT COLOR=PURPLE>prelude -a data_abs -p data_phase -u result</FONT> </dt>
-<dd> uses separate phase and absolute input files </dd>
-<dt> <FONT COLOR=PURPLE>prelude -a data_abs -p data_phase -u result -m mask</FONT> </dt>
-<dd> uses separate phase and absolute input files with a mask </dd>
-</dl>
-
-<P>
-Additional options that are useful are:
-<dl>
-<dt> <FONT COLOR=PURPLE>-m mask</FONT> </dt> 
-<dd>uses the user defined mask </dd>
-<dt> <FONT COLOR=PURPLE>-n num</FONT> </dt> 
-<dd>specifies the number of phase partitions 
-the algorithm uses for labelling - a larger value is likely to be more
-robust but slower </dd>
-<dt> <FONT COLOR=PURPLE>-s</FONT> </dt> 
-<dd>unwrap in 2D, then stick slices together
-with appropriate offsets - this is less robust but fast - mainly used for
-very high-resolution images where speed is an issue </dd>
-<dt> <FONT COLOR=PURPLE>--labelslices</FONT> </dt> 
-<dd>does labelling in 2D, but
-unwrapping in 3D - the default for high-res images </dd>
-</dl>
-
-
+See separate page on <a href="prelude.html">PRELUDE</a> for phase unwrapping.
+Note that if you need to run phase unwrapping for fieldmap unwarping,
+then PRELUDE is run before FUGUE.
  <!-- J-Back -->
 
 
@@ -237,5 +190,5 @@ fieldmap acquisitions </dd>
 
    <HR>
   <!-- No Footnotes -->
-  <H4>Mark Jenkinson  <BR><BR>Copyright &copy; 2001-2008, University of Oxford</H4><BR>
+  <H4>Mark Jenkinson  <BR><BR>Copyright &copy; 2001-2010, University of Oxford</H4><BR>
 </BODY></HTML>

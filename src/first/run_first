@@ -76,6 +76,7 @@ Usage() {
     echo "-intref <model_name> : reference structure for the local intensity normalization"
     echo "-loadBvars <bvars>   : initializes FIRST with a previous estimate of the structure"
     echo "-multipleImages : run first on multiple images, need to provide a list of images, transformation matrices, and output names"
+	echo "-wfnirt <warp_field> : use FNIRT warp field instead of linear transformation matrix"
     echo ""
     echo "e.g.:  run_first -i im1 -t im1_to_mni.mat -n 60 -o output_name -m ${FSLDIR}/data/first/models_317_bin/L_Hipp_bin.bmv"
     echo ""
@@ -114,6 +115,9 @@ while [ _$1 != _ ] ; do
 	shift 2
     elif [ $1 = -shcond ] ; then
 	comExtras="$comExtras --shcond -b $2"
+	shift 2
+	elif [ $1 = -wfnirt ] ; then
+	comExtras="$comExtras --useFNIRT_warpField -w $2"
 	shift 2
     elif [ $1 = -o ] ; then
 	required=`echo $required + 1 | bc`
@@ -154,7 +158,7 @@ fi
 
 if [ $useMultiImage -eq 1 ] ; then 
 
-	${FSLDIR}/bin/first -i $image -l dummy -m $model -k $outname -n $modes  $verbose $comExtras  --multiImageInput
+	${FSLDIR}/bin/first -i $image -l dummy -m $model -k $outname -n $modes  $verbose $comExtras  --multiImageInput --binarySurfaceOutput
 else
-	 ${FSLDIR}/bin/first -i $image -l $trmat -m $model -k $outname -n $modes  $verbose $comExtras 
+	 ${FSLDIR}/bin/first -i $image -l $trmat -m $model -k $outname -n $modes  $verbose $comExtras --binarySurfaceOutput
 fi;

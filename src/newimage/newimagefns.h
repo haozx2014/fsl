@@ -788,24 +788,29 @@ namespace NEWIMAGE {
     }       
     return SumSq;
   }
-
-
+  //This rewrite of variancevol gives the same output as doing the sumsquaresvol etc in double precision internally
   template <class T>
   volume<float> variancevol(const volume4D<T>& vol4)
   {
-    if (vol4.mint()<0) { volume<float> newvol; return newvol; }
-    volume<float> Mean = meanvol(vol4);
-    volume<float> SumSq = sumsquaresvol(vol4);
-    float n=1.0;
-    if (vol4.maxt() > vol4.mint()) { n = (float) (vol4.maxt() - vol4.mint() + 1); }
-    volume<float> VarVol;
-    VarVol = SumSq - (Mean * Mean)*((float) n);
-    
-    VarVol /= (float) (n-1.0);
+     volume<float> variance;
+     if (vol4.mint()<0) 
+       return variance; 
+     volume<float> Mean = meanvol(vol4);
+     variance.reinitialize(vol4.xsize(),vol4.ysize(),vol4.zsize());
+     float n=1.0;
+     if (vol4.maxt() > vol4.mint()) { n = (float) (vol4.maxt() - vol4.mint() + 1); }
 
-    return VarVol;
+     for (int z=vol4.minz(); z<=vol4.maxz(); z++) 
+       for (int y=vol4.miny(); y<=vol4.maxy(); y++) 
+	 for (int x=vol4.minx(); x<=vol4.maxx(); x++) { 
+	   double total(0);
+	   for (int t=vol4.mint(); t<=vol4.maxt(); t++) 
+	     total+=pow(vol4(x,y,z,t)-Mean(x,y,z),2.0);
+	   variance(x,y,z)=(float)total;
+	 }
+     variance /= (float) (n-1.0);
+     return variance;
   }
-
 
   template <class T>
   volume<float> stddevvol(const volume4D<T>& vol4)
@@ -2812,20 +2817,27 @@ class VecSort{
 // if deltaT is set to 0 it is reset to max/100
 //
 template <class T>
-void tfce(volume<T>& VolIntn, float H, float E, int NumConn, float minT, float deltaT)
+void tfce(volume<T>& data, float H, float E, int NumConn, float minT, float deltaT)
 {
-  volume<int> VolLabl; copyconvert(VolIntn, VolLabl);
-  volume<float> VolEnhn; copyconvert(VolIntn, VolEnhn); VolEnhn=0;
+  volume<int> VolLabl; copyconvert(data, VolLabl);
+  volume<float> VolEnhn; copyconvert(data, VolEnhn); VolEnhn=0;
   bool doIT=false;
   const int INIT=-1, MASK=-2;
   int curlab=0;
   int pX, pY, pZ, qX, qY, qZ, rX, rY, rZ;
   int FldCntr=0, FldCntri=0, tfceCntr=0, xFC = 0;
-  int minX=1, minY=1, minZ=1, maxX=VolIntn.maxx()-1, maxY=VolIntn.maxy()-1, maxZ=VolIntn.maxz()-1;
+  int minX=1, minY=1, minZ=1, maxX=data.maxx()-1, maxY=data.maxy()-1, maxZ=data.maxz()-1;
   int sizeC=maxX*maxY*maxZ;
   int counter=0, edsta[27];
-  float maxT=VolIntn.max();
-  if(deltaT<=0) throw Exception("Error: tfce requires a positive deltaT input.");
+  float maxT=data.max();
+  if(deltaT==0) 
+    deltaT=maxT/100.0;
+  if(deltaT<=0) 
+    throw Exception("Error: tfce requires a positive deltaT input.");
+  if ( data.xsize() < 3 || data.ysize() < 3 || data.zsize() < 3 )
+    throw Exception("Error: tfce currently requires an input with at least 3 voxels extent into each dimension.");
+  if( data.max()/deltaT > 10000 )
+    cout << "Warning: tfce has detected a large number of integral steps. This operation may require a great deal of time to complete." << endl;
   vector<VecSort> VecSortI(sizeC);
   queue<int> Qx, Qy, Qz;      
   for(int z0=-1; z0<=1; z0++)
@@ -2840,9 +2852,9 @@ void tfce(volume<T>& VolIntn, float H, float E, int NumConn, float minT, float d
   FldCntr=0;
   for(int z=minZ; z<=maxZ; z++)
     for(int y=minY; y<=maxY; y++)
-      for(int x=minX; x<=maxX; x++){
-	float iVal=VolIntn.value(x,y,z);
-	if(iVal>minT){
+      for(int x=minX; x<=maxX; x++) {
+	float iVal=data.value(x,y,z);
+	if( iVal > minT ) {
 	  VecSortI[FldCntr].Sx=x; VecSortI[FldCntr].Sy=y; VecSortI[FldCntr].Sz=z;
 	  VecSortI[FldCntr++].Sv=iVal;
 	}
@@ -2898,7 +2910,7 @@ void tfce(volume<T>& VolIntn, float H, float E, int NumConn, float minT, float d
       }
     }
   }//end curThr      
-  copyconvert(VolEnhn,VolIntn);
+  copyconvert(VolEnhn,data);
   return;
 }
 

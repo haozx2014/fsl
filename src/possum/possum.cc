@@ -588,7 +588,7 @@ int compute_volume(int argc, char *argv[])
 	      }
 	     else if (opt_activation4D.set()){
                for (int n=0;n<=Nact-1;n++){
-		 double a=activation4D(xx,yy,zz,n)-tissue(tt+1,2);//zz-zstart_p when having only a pieace of the activation volume so we start from where the phantom starts 
+		 double a=activation4D(xx,yy,zz,n);//zz-zstart_p when having only a pieace of the activation volume so we start from where the phantom starts 
                  double b=tissue(tt+1,2);
                  activation4D_voxel[n]=a*b/(a+b);
 	       }              
@@ -669,7 +669,7 @@ int compute_volume(int argc, char *argv[])
 	      }
 	      else if (opt_activation4D.set()){
                 for (int n=0;n<=Nact-1;n++){
-                  double a=activation4D(xx,yy,zz,n)-tissue(tt+1,2);//zz-zstart_p when having only a pieace of the activation volume so we start from where the phantom starts 
+                  double a=activation4D(xx,yy,zz,n);//zz-zstart_p when having only a pieace of the activation volume so we start from where the phantom starts 
                   double b=tissue(tt+1,2);
                   activation4D_voxel[n]=a*b/(a+b);
                 }
@@ -771,7 +771,7 @@ int compute_volume(int argc, char *argv[])
 	        }
 	        else if (opt_activation4D.set()){
                   for (int n=0;n<=Nact-1;n++){
-                    double a=activation4D(xx,yy,zz,n)-tissue(tt+1,2);//zz-zstart_p when having only a pieace of the activation volume so we start from where the phantom starts 
+                    double a=activation4D(xx,yy,zz,n);//zz-zstart_p when having only a pieace of the activation volume so we start from where the phantom starts 
                     double b=tissue(tt+1,2);
                     activation4D_voxel[n]=a*b/(a+b); 
 		  }
@@ -884,7 +884,7 @@ int compute_volume(int argc, char *argv[])
 		}
 	        else if (opt_activation4D.set()){
                   for (int n=0;n<=Nact-1;n++){
-                    double a=activation4D(xx,yy,zz,n)-tissue(tt+1,2);//zz-zstart_p when having only a pieace of the activation volume so we start from where the phantom starts 
+                    double a=activation4D(xx,yy,zz,n);//zz-zstart_p when having only a pieace of the activation volume so we start from where the phantom starts 
                     double b=tissue(tt+1,2);
                     activation4D_voxel[n]=a*b/(a+b); 
 		  }              

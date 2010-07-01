@@ -150,15 +150,6 @@ Interpolate interpolate;
 }
 
 //////////////////////////////////////////////////////////////////////////////
-
-template <class T>
-inline float sqr(const T& a)
-{
-  return a * a;
-}
-
-
-
 // Standardise the residual field (assuming gaussianity)
 unsigned long standardise(volume<float>& mask, 
 			  volume4D<float>& R)
@@ -184,11 +175,11 @@ unsigned long standardise(volume<float>& mask,
 	      float R_it = R(x,y,z,t);
 	      
 	      Sx += R_it;
-	      SSx += sqr(R_it);
+	      SSx += Sqr(R_it);
 	    }
 	    
 	    float mean = Sx / M;
-	    float sdsq = (SSx - (sqr(Sx) / M)) / (M - 1) ;
+	    float sdsq = (SSx - (Sqr(Sx) / M)) / (M - 1) ;
 	    
 	    if (sdsq<=0) {
 	      // trap for differences between mask and invalid data
@@ -216,7 +207,7 @@ string examples = "\
 \tsmoothest -d <number> -r <filename> -m <filename>\n\
 \tsmoothest -z <filename> -m <filename>";
 
-int main(unsigned int argc, char **argv) {
+int main(int argc, char **argv) {
 
   OptionParser options(title, examples);
 
@@ -329,9 +320,9 @@ int main(unsigned int argc, char **argv) {
 	    SSminus[Y] += R(x, y, z, t) * R(x, y-1, z, t);
 	    if (usez) SSminus[Z] += R(x, y, z, t) * R(x, y, z-1, t);
 
-	    S2[X] += 0.5 * (sqr(R(x, y, z, t)) + sqr(R(x-1, y, z, t)));
-	    S2[Y] += 0.5 * (sqr(R(x, y, z, t)) + sqr(R(x, y-1, z, t)));
-	    if (usez) S2[Z] += 0.5 * (sqr(R(x, y, z, t)) + sqr(R(x, y, z-1, t)));
+	    S2[X] += 0.5 * (Sqr(R(x, y, z, t)) + Sqr(R(x-1, y, z, t)));
+	    S2[Y] += 0.5 * (Sqr(R(x, y, z, t)) + Sqr(R(x, y-1, z, t)));
+	    if (usez) S2[Z] += 0.5 * (Sqr(R(x, y, z, t)) + Sqr(R(x, y, z-1, t)));
 	  }
 	}
 

@@ -126,6 +126,10 @@ else
     set FPD = ../.fslpres
 endif
 
+if ( -f fslpres.css ) then
+    cp fslpres.css $FPD/
+endif
+
 echo mode=$mode cwd=`pwd`
 
 /bin/rm -rf s_*.htm

@@ -168,7 +168,7 @@ int ZMRISegmentation::TanakaMain(NEWIMAGE::volume<float>& pcsf, NEWIMAGE::volume
   // first loop to remove bias field
   BiasRemoval();
 
-  for (int n=1; n<nClasses+1; n++)
+  for (int n=1; n<=nClasses; n++)
     if(isnan(m_mean[n]) || isnan(m_variance[n])  ) cout << "MeaNsK variance nan" << endl;
 
   for(int iter=0;iter<m_nbIter;iter++)
@@ -194,7 +194,7 @@ int ZMRISegmentation::TanakaMain(NEWIMAGE::volume<float>& pcsf, NEWIMAGE::volume
     MeansVariances(nClasses, m_post);
   }
   qsort();
-
+  Classification();
   if(iterationspve>0) {
     if(verboseusage)
       cout<< " Starting Partial Volume Estimation \n";
@@ -208,11 +208,13 @@ int ZMRISegmentation::TanakaMain(NEWIMAGE::volume<float>& pcsf, NEWIMAGE::volume
 
     PVClassificationStep();
     PVestimation();
-    Volumesquant(m_pve);
+    calculateVolumes(m_pve);
     pveClassification();
   }
-  else
-    Volumesquant(m_post);
+  else 
+    calculateVolumes(m_post);
+  if(verboseusage)
+    printVolumeTotals();
   takeexpo();
   return 0;
 }
@@ -330,7 +332,7 @@ double total=0.0f; //Internally a double to avoid truncation when adding small t
     for(int y=0;y<m_nHeight;y++)
       for(int x=0;x<m_nWidth;x++)
 	if(m_mask.value(x, y, z)==1)
-	  for(int c=1;c<nClasses+1;c++)
+	  for(int c=1;c<=nClasses;c++)
 	    total+=MRFWeightsInner(x,y,z,c)*m_post(x, y, z, c);
   return (float)total;   
 }
@@ -409,7 +411,7 @@ void ZMRISegmentation::TanakaPriorHyper()
 		{
 		  m_prob(x, y, z, 0)=0.0f;
 		  float sum=0.0f;
-		  for(int c=1;c<nClasses+1;c++)
+		  for(int c=1;c<=nClasses;c++)
 		    {
 		      if(m_mask(x, y, z)==1)
 			{
@@ -418,7 +420,7 @@ void ZMRISegmentation::TanakaPriorHyper()
 		      else
 			m_prob(x, y, z, c)=0.0f;		    
 		    }
-		  for(int c=1;c<nClasses+1;c++)
+		  for(int c=1;c<=nClasses;c++)
 		    if(sum>0.0)
 		      m_prob(x, y, z, c)/=sum;
 		}
@@ -438,7 +440,7 @@ void ZMRISegmentation::TanakaPriorHyper()
 		      float sum=0.0f;
 		      if(m_mask.value(x, y, z)==1)
 			{
-			  for(int c=1;c<nClasses+1;c++)
+			  for(int c=1;c<=nClasses;c++)
 			    {
 			      float post=MRFWeightsInner(x,y,z,c);
 			      if(bapusedflag<2)
@@ -446,7 +448,7 @@ void ZMRISegmentation::TanakaPriorHyper()
 			      else
 				sum+=m_prob.value(x, y, z, c)=talpriors(x, y, z ,c)*exp(betahtemp*post);				
 			    }
-			  for(int c=1;c<nClasses+1;c++)
+			  for(int c=1;c<=nClasses;c++)
 			    {
 			      if(sum>0.0f)
 				m_prob.value(x, y, z, c)/=sum;
@@ -505,7 +507,7 @@ void ZMRISegmentation::TanakaIterations()
   }
   if(verboseusage)
     {
-      for(int c=1;c<nClasses+1;c++)
+      for(int c=1;c<=nClasses;c++)
 	cout<<" CLASS "<<c<<" MEAN "<<exp(m_mean[c])<<" STDDEV "<<( exp(m_mean[c] + sqrt(m_variance[c]) ) - exp(m_mean[c]-sqrt(m_variance[c])) )/2;
       cout<<endl;
     }
@@ -897,19 +899,24 @@ void ZMRISegmentation::InitSimple(const NEWIMAGE::volume<float>& pcsf, const NEW
 }
 
 
-void ZMRISegmentation::Volumesquant(const NEWIMAGE::volume4D<float>& probs)
+void ZMRISegmentation::calculateVolumes(const NEWIMAGE::volume4D<float>& probs)
 {
-  double tot=0.0;
   for(int c=1;c<nClasses+1;c++)
   {
     volumequant[c]=probs[c].sum(m_mask);
     volumequant[c]*=m_nxdim*m_nydim*m_nzdim;
-    tot+=volumequant[c];
-    if(verboseusage)
-      cout<<"\n tissue "<<c<<" " << volumequant[c];
   }
-  if(verboseusage)
-    cout<<"\n total tissue "<<tot<<"\n";
+}
+
+void ZMRISegmentation::printVolumeTotals()
+{
+  double tot(0);
+  for(int c=1;c<nClasses+1;c++)
+  {
+    tot+=volumequant[c];
+    cout<<"\n tissue "<<c<<" " << volumequant[c];
+  }
+  cout<<"\n total tissue "<<tot<<"\n";
 }
 
 
@@ -984,9 +991,9 @@ void ZMRISegmentation::WeightedKMeans()
   m_post=m_prob=0.0f;
 
   float perc=1.0/((float)(nClasses+1.0));     
-  for(int c=1;c<nClasses+1;c++)
+  for(int c=1;c<=nClasses;c++)
   {
-    if ( (int)inputMeans.size()==nClasses ) m_mean[c]=(inputMeans[c-1]);
+    if ( (int)inputMeans.size()==nClasses ) m_mean[c]=log(inputMeans[c-1]);
     else m_mean[c]=m_Mricopy.percentile((float)(perc*c), m_mask);
     if (verboseusage) cout << c << " " << m_mean[c] << endl;
   }
@@ -1023,16 +1030,13 @@ void ZMRISegmentation::WeightedKMeans()
 }
 
 void ZMRISegmentation::qsort()
-{
-  // sorts images so that 0 is csf, 1 is grey, 2 is white
-  if(imagetype==2)  // for a T2 image reverse the intensity order
-    for(int n=1; n<=nClasses; n++)
-      m_mean[n]*=-1.0f;
-        
+{ // sorts images so that 0 is csf, 1 is grey, 2 is white  
   vector<float> meancopy(m_mean), varcopy(m_variance);
   volume4D<float> postcopy(m_post), probcopy(m_prob);
 
   sort(m_mean.begin()+1, m_mean.end());
+  if(imagetype==2) // for a T2 image reverse the intensity order
+    reverse(m_mean.begin()+1, m_mean.end()); 
 
   for (int n=1; n<=nClasses; n++)
     for (int m=1; m<=nClasses; m++)
@@ -1042,9 +1046,4 @@ void ZMRISegmentation::qsort()
         m_post[n]=postcopy[m];
         m_prob[n]=probcopy[m];
       }
-  Classification();
-
-  if(imagetype==2)
-    for(int n=1; n<=nClasses; n++)
-      m_mean[n]*=-1.0f;
 }

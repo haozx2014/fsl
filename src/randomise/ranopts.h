@@ -93,6 +93,7 @@ class ranopts {
   Option<string> tc_file;
   Option<string> fc_file;
   Option<string> gp_file;
+  Option<string> effectiveDesignFile;
   Option<bool> how_many_perms;
   Option<bool> parallelData;
   Option<int> n_perm;
@@ -112,7 +113,8 @@ class ranopts {
   Option<bool> verbose;
   Option<bool> cluster_norm;
   Option<bool> outputRaw;
-  Option<bool> outputText;
+  Option<bool> outputTextPerm;
+  Option<bool> outputTextNull;
   Option<bool> output_permstat;
   Option<int> randomSeed;
   Option<vector<int> > voxelwise_ev_numbers;
@@ -171,6 +173,9 @@ class ranopts {
    gp_file(string("-e"), string(""),
             string("~<design.grp>\texchangeability block labels file"),
 	   false, requires_argument),  
+   effectiveDesignFile(string("--effective_design"), string(""),
+            string("~<design2.mat>\talternative design for determining valid permutations"),
+	   false, requires_argument),
    how_many_perms(string("-q"), false,
 	    string("\tprint out how many unique permutations would be generated and exit"),
 	    false, no_argument), 
@@ -216,14 +221,17 @@ class ranopts {
    verbose(string("--quiet"), true, 
 	   string("\tswitch off diagnostic messages"),
 	   false, no_argument),
-   cluster_norm(string("-N"), false, 
+   cluster_norm(string("--twopass"), false, 
 	   string("\tcarry out cluster normalisation thresholding"), 
 		false, no_argument,false),
    outputRaw(string("-R"), false, 
 	   string("\toutput raw ( unpermuted ) statistic images"), 
 		false, no_argument),
-   outputText(string("-P"), false, 
-	   string("\toutput permutation vector and null distribution text files"), 
+   outputTextPerm(string("-P"), false, 
+	   string("\toutput permutation vector text file"), 
+		false, no_argument),
+   outputTextNull(string("-N"), false, 
+	   string("\toutput null distribution text files"), 
 		false, no_argument),
    output_permstat(string("--permout"), false, 
 	   string("\toutput permuted tstat"), 
@@ -254,7 +262,7 @@ class ranopts {
 	       false, no_argument, false),
 
 
-   options("randomise v2.5", "randomise -i <input> -o <output> -d <design.mat> -t <design.con> [options]")
+   options("randomise v2.6", "randomise -i <input> -o <output> -d <design.mat> -t <design.con> [options]")
      {
     
      try {
@@ -267,6 +275,7 @@ class ranopts {
        options.add(tc_file);
        options.add(fc_file);
        options.add(gp_file);
+       options.add(effectiveDesignFile);
        options.add(how_many_perms);
        options.add(parallelData);
        options.add(n_perm);    
@@ -283,7 +292,8 @@ class ranopts {
        options.add(verbose);
        options.add(cluster_norm);
        options.add(outputRaw);
-       options.add(outputText);
+       options.add(outputTextPerm);
+       options.add(outputTextNull);
        options.add(output_permstat);
        options.add(randomSeed);
        options.add(tfce_height);     

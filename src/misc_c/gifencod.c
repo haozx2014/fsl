@@ -183,7 +183,7 @@ void GifEncode(FILE *fout, UBYTE *pixels, int depth, int siz)
     if ( chainlen > maxchainlen ) maxchainlen = chainlen;
     chainlen = 0;
     if(pos-buffer>BLOKLEN) {
-      buffer[-1] = BLOKLEN;
+      buffer[-1] = (char)BLOKLEN;
       fwrite(buffer-1, 1, BLOKLEN+1, fout);
       buffer[0] = buffer[BLOKLEN];
       buffer[1] = buffer[BLOKLEN+1];
@@ -200,7 +200,7 @@ void GifEncode(FILE *fout, UBYTE *pixels, int depth, int siz)
       ClearTree(cc,first);
       pos = AddCodeToBuffer(cc, cLength, pos);
       if(pos-buffer>BLOKLEN) {
-	buffer[-1] = BLOKLEN;
+	buffer[-1] = (char)BLOKLEN;
 	fwrite(buffer-1, 1, BLOKLEN+1, fout);
 	buffer[0] = buffer[BLOKLEN];
 	buffer[1] = buffer[BLOKLEN+1];
@@ -215,7 +215,7 @@ void GifEncode(FILE *fout, UBYTE *pixels, int depth, int siz)
 
   pos = AddCodeToBuffer(curNode->code, cLength, pos);
   if(pos-buffer>BLOKLEN-3) {
-    buffer[-1] = BLOKLEN-3;
+    buffer[-1] = (char)(BLOKLEN-3);
     fwrite(buffer-1, 1, BLOKLEN-2, fout);
     buffer[0] = buffer[BLOKLEN-3];
     buffer[1] = buffer[BLOKLEN-2];

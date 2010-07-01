@@ -537,7 +537,7 @@ void fslvtkIO::save(string s)
 	cout<<"open file "<<s<<" to save."<<endl;
 	ofstream fshape;  
 	fshape.open(s.c_str());
-	cout<<"succesfully opennded file "<<s<<" to save."<<endl;
+	cout<<"succesfully opened file "<<s<<" to save."<<endl;
 
 	//calculate total number of points
 	
