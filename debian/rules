@@ -259,6 +259,10 @@ binary-arch: install
 	# set execute permission for GUI application wrapper
 	chmod +x debian/fsl_app_wrapper
 
+	# install a symlink to the main data. directory -- later on we might want to
+	# have more fine-grained linking and abandon the global link
+	ln -sf ../data debian/fsl-$(FSLMAJORVERSION)/usr/share/fsl/$(FSLMAJORVERSION)/data
+
 	$(MAKE) -f debian/rules DH_OPTIONS=-a binary-common
 
 
