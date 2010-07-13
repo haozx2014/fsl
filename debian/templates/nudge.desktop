@@ -2,10 +2,10 @@
 Encoding=UTF-8
 GenericName=Interactive Alignment Correction
 GenericName[de]=Interaktive Ausrichtungskorrektur
-Name=Nudge
-Exec=Nudge
-TryExec=Nudge
-Icon=fsl.xpm
+Name=Nudge #FSLMVERSION#
+Exec=Nudge-#FSLMVERSION#
+TryExec=Nudge-#FSLMVERSION#
+Icon=fsl-#FSLMVERSION#.xpm
 Type=Application
 Terminal=false
 Comment=This program is part of FSL

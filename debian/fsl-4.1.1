@@ -1,0 +1,59 @@
+.TH "FSL-4.1" "1" "April 2009" "Michael Hanke" ""
+.SH "NAME"
+fsl \- analysis tools for FMRI, MRI and DTI brain imaging
+.SH "DESCRIPTION"
+\fBFSL\fR is a comprehensive toolkit for the analysis of medical brain
+imaging data.  It provides tools for data preprocessing, brain
+extraction, image registration as well as statistical analysis.
+\fBFSL\fR provides an easy to use GUI.
+.PP
+\fBFSL\fR requires a number of environment variables to be set properly.
+To achieve this source the config script from /etc/fsl/4.1/fsl.sh.  One way
+to do this automatically is to add a line containing
+.IP
+ \. /etc/fsl/4.1/fsl.sh
+.PP
+to the .bashrc file in a users home directory (or a corresponding file
+for other shells than bash).
+.PP
+However, it is not necessary to manually source the configuration to use
+the GUI applications included in FSL.
+.PP
+\fBFSL\fR documentation and online help is provided by the \fBfsl-doc-4.1\fR
+package.
+.PP
+Questions regarding the usage of \fBFSL\fR or related theory can be
+posted on the
+\fBFSL mailing list\fR (see \fIhttp://www.jiscmail.ac.uk/lists/fsl.html\fR).
+.SH "PARALLELIZATION"
+FSL can be configured to submit jobs to a running Sun Gridengine (SGE). While
+not all functionality implemented in FSL supports this kind of parallelization,
+the most demanding processing tools (e.g. POSSUM and FDT) do.
+.PP
+FSL should be able to use SGE even if the SGE_ROOT environment variable is not
+set, as in the case of the Debian package of SGE. To enable batch processing
+simply set
+.IP
+FSLPARALLEL=1
+.PP
+in the shell where FSL is running. This can be enabled permanently in
+.IP
+/etc/fsl/4.1/fsl.sh
+.PP
+or on a case by case basis.
+.SH "FILES"
+.IP /etc/fsl/4.1/fsl.sh
+Main FSL configuration
+.IP /etc/fsl/4.1/feat.tcl
+Default settings for FEAT
+.SH "SEE ALSO"
+.BR fsl-selftest "(1)",
+.BR fslview "(1)"
+.PP
+The FSL homepage at
+.I http://www.fmrib.ox.ac.uk
+.SH "AUTHOR"
+\fBFSL\fR was written by FMRIB, Oxford, UK.
+.PP
+This manual page was written by Michael Hanke <michael.hanke@gmail.com>,
+for the Debian project (but may be used by others).

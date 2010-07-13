@@ -1,17 +1,16 @@
-?package(fsl):\
+?package(fsl-4.1):\
     needs="X11" \
     section="Applications/Science/Medicine" \
-    title="FSL" \
+    title="FSL 4.1" \
     longtitle="FMRIB Software Library" \
-    command="/usr/bin/fsl" \
-    icon="fsl.xpm" \
+    command="/usr/bin/fsl-4.1" \
+    icon="fsl-4.1.xpm" \
     hints="MRI,fMRI,FSL"
 
-?package(fsl):\
+?package(fsl-4.1):\
     needs="X11" \
     section="Applications/Science/Medicine" \
-    title="Nudge" \
-    longtitle="FSL" \
-    command="/usr/bin/Nudge" \
-    icon="fsl.xpm" \
+    title="Nudge 4.1" \
+    command="/usr/bin/Nudge-4.1" \
+    icon="fsl-4.1.xpm" \
     hints="MRI,fMRI,FSL"

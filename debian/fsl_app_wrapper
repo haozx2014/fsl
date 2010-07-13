@@ -1,7 +1,7 @@
 #! /bin/sh -e
 
-# Copyright (C) 2007 by
-# Michael Hanke        michael.hanke@gmail.com
+# Copyright (C) 2007,2010 by Michael Hanke michael.hanke@gmail.com
+# Copyright (C) 2009 by Mark Hymers <mark.hymers@ynic.york.ac.uk>
 #
 # This script is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -13,15 +13,17 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 
+cmd=${0##*/}
 
-if [ "${0##*/}" = "fsl_gui_app_wrapper" ]; then
-	echo 'fsl_gui_app_wrapper: This script should not be run like this, see fsl(1) for details' 1>&2
-	exit 1
+if [ "${cmd}" = "fsl_app_wrapper" ]; then
+    echo 'fsl_app_wrapper: This script should not be run like this, see fsl-4.1(1) for details' 1>&2
+    exit 1
 fi
+
+# Set up the FSL paths if necessary (if the user hasn't overriden them
 
 if [ -z "${FSLDIR}" ]; then
-	. /etc/fsl/fsl.sh
+    . /etc/fsl/4.1/fsl.sh
 fi
 
-exec /usr/lib/fsl/${0##*/} $@
-
+exec ${FSLDIR}/bin/${cmd} $@

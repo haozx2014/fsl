@@ -1,0 +1,9 @@
+/etc/fsl/#FSLMVERSION#/fsl.sh /usr/share/fsl/#FSLMVERSION#/etc/fslconf/fsl.sh
+/etc/fsl/#FSLMVERSION#/feat.tcl /usr/share/fsl/#FSLMVERSION#/etc/fslconf/feat.tcl
+/usr/share/fsl/#FSLMVERSION#/etc/matlab /usr/share/octave/site/m/fsl-#FSLMVERSION#
+/usr/lib/fsl/#FSLMVERSION# /usr/share/fsl/#FSLMVERSION#/bin
+/usr/lib/fsl/#FSLMVERSION#/fsl_app_wrapper /usr/bin/fsl-#FSLMVERSION#
+/usr/lib/fsl/#FSLMVERSION#/fsl_app_wrapper /usr/bin/Nudge-#FSLMVERSION#
+/usr/share/man/man1/fsl-#FSLMVERSION#.1.gz /usr/share/man/man1/Nudge-#FSLMVERSION#.1.gz
+/usr/bin/fslview /usr/lib/fsl/#FSLMVERSION#/fslview
+/usr/bin/atlasquery /usr/lib/fsl/#FSLMVERSION#/atlasquery
