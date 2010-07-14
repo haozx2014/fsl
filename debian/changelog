@@ -5,7 +5,7 @@ fsl (4.1.6-2) unstable; urgency=low
     previous unversioned 'fsl' package remains and serves as a meta package
     that depends on the latest versioned FSL package and installs wrappers
     for all binaries into /usr/bin that can be used without manually sourcing
-    a config file first.
+    a config file first. This change is based on work by Mark Hymers -- Thanks!
   * Add package conflicts to 'yagiuda', 'kolab-cyrus-clients', 'multimail',
     and 'im' due to namespace conflicts of symlinks in /usr/bin installed by
     the new FSL meta package. The versioned FSL packages are usable without the
@@ -13,7 +13,7 @@ fsl (4.1.6-2) unstable; urgency=low
     workstation) and the added convenience of a readily usable FSL (without
     manual environment tweaks) seems to outweigh the disadvantages.
 
- -- Michael Hanke <michael.hanke@gmail.com>  Tue, 13 Jul 2010 14:53:30 -0400
+ -- Michael Hanke <michael.hanke@gmail.com>  Wed, 14 Jul 2010 11:53:00 -0400
 
 fsl (4.1.6-1) unstable; urgency=low
 

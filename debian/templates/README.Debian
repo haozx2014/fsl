@@ -10,19 +10,19 @@ Configuration
 
 Most (if not all) FSL binaries require the presence of some environment
 variables to be set properly. If the 'fsl' package is installed in addition to
-the versioned 'fsl-4.1' package, convenience symlinks will be
+the versioned 'fsl-#FSLMVERSION#' package, convenience symlinks will be
 available in /usr/bin and a manual environment set up is not necessary. These
 symlinks point to the latest FSL version.
 
 If multiple FSL package versions (e.g. 4.0, 4.1) are installed on a particular
 system the appropriate configuration file has to be sourced manually, depending
 on which version shall be used. To achieve this, one needs to source the FSL
-config script at /etc/fsl/4.1/fsl.sh (or a corresponding location for
+config script at /etc/fsl/#FSLMVERSION#/fsl.sh (or a corresponding location for
 other versions). Please note that FSL packages prior version 4.1.6-2 installed
 the configuration script at /etc/fsl/fsl.sh.
 
 The FSL user interface sometimes refers to an 'FSLDIR'. On Debian systems this
-is /usr/share/fsl/4.1 for the latest FSL version.
+is /usr/share/fsl/#FSLMVERSION# for the latest FSL version.
 
 
 User interface
@@ -43,7 +43,7 @@ Octave
   Octave users can read and write 3d and 4d datasets by using the `read_avw*`
   and `save_avw*` functions. No further configuration is necessary, as the FSL
   package installs the necessary modules into the appropriate locations.
-  Matlab users have to include /usr/share/fsl/4.1/etc/matlab into their search
+  Matlab users have to include /usr/share/fsl/#FSLMVERSION#/etc/matlab into their search
   path (see the 'addpath' command).
 
 Sun Gridengine
@@ -54,7 +54,7 @@ Sun Gridengine
   rely on a fixed set of queue names. By default no jobs are submitted and all
   processing is done locally, even if a Gridengine is running.  Cluster
   computing is enabled by setting the environment variable FSLPARALLEL=1. This
-  can be done on a case-by-case basis, or system-wide in /etc/fsl/4.1/fsl.sh.
+  can be done on a case-by-case basis, or system-wide in /etc/fsl/#FSLMVERSION#/fsl.sh.
   Please see this file for more configuration options, including the cluster
   email setup.  If FSL is used in conjunction with a Sun Gridengine installed by
   the corresponding Debian package, no further configuration should be
