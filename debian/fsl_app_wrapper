@@ -26,4 +26,10 @@ if [ -z "${FSLDIR}" ]; then
     . /etc/fsl/4.1/fsl.sh
 fi
 
-exec ${FSLDIR}/bin/${cmd} $@
+abs_cmd=${FSLDIR}/bin/${cmd}
+if [ ! -x $abs_cmd ]; then
+	# try stripping major version suffix
+	abs_cmd=${FSLDIR}/bin/${cmd%*-4.1}
+fi
+
+exec ${abs_cmd} $@
