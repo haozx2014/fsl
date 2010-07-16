@@ -45,9 +45,9 @@ FSLREMOTECALL=
 
 # If set, tell FSL to use Sun Gridengine to submit jobs instead of running them
 # directly on the machine. If unset, no attempt will be made to utilize
-# gridengine, even if it is running.
+# gridengine, even if it is running. By default SGE is not utilized.
 #FSLPARALLEL=1
-FSLPARALLEL=
+
 # Mail setup for gridengine jobs. See man qsub (-m option) for all possible
 # settings. By default no email is sent.
 FSLCLUSTER_MAILOPTS="n"
