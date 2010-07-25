@@ -178,8 +178,6 @@ clean: cleancontrolfiles controlfiles cextras cprojs
 
 	# finally clean package
 	dh_clean
-	# remove generate dh_link config for the meta package
-	rm -f debian/fsl.links
 
 	# fix permissions in the source
 	find src/ -name '*.fig' -or -name '*.gif' -exec chmod -x {} \;
