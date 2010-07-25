@@ -9,11 +9,10 @@ Homepage: http://www.fmrib.ox.ac.uk/fsl/
 Vcs-Browser: http://git.debian.org/?p=pkg-exppsy/fsl.git
 Vcs-Git: git://git.debian.org/git/pkg-exppsy/fsl.git
 XS-Autobuild: yes
-XS-DM-Upload-Allowed: yes
 
 Package: fsl
 Architecture: all
-Depends: ${misc:Depends}, fsl-4.1 (>= ${source:Version}), fsl-4.1 (<< ${source:Version}.1~)
+Depends: ${misc:Depends}, fsl-#FSLMVERSION# (>= ${source:Version}), fsl-#FSLMVERSION# (<< ${source:Version}.1~)
 Conflicts: fsl (<= 4.1.6-2~), yagiuda, kolab-cyrus-clients, im, multimail
 Description: analysis tools for FMRI, MRI and DTI brain imaging
  FSL is a comprehensive library of image analysis and statistical tools
@@ -25,10 +24,10 @@ Description: analysis tools for FMRI, MRI and DTI brain imaging
  .
  This is a meta-package that depends on the latest FSL version.
 
-Package: fsl-4.1
+Package: fsl-#FSLMVERSION#
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, mozilla-firefox | www-browser, tcsh | c-shell, tk8.4 (>=8.4.7), tcl8.4 (>=8.4.7), fslview, bc, dc
-Recommends: fsl-doc-4.1 (= ${source:Version}), fsl-atlases
+Recommends: fsl-doc-#FSLMVERSION# (= ${source:Version}), fsl-atlases
 Suggests: fsl-feeds, ${octave:Depends}, dicomnifti, fsl-possum-data, fsl-first-data, gridengine-client
 Conflicts: fsl-fslview
 Description: analysis tools for FMRI, MRI and DTI brain imaging
@@ -43,7 +42,7 @@ Description: analysis tools for FMRI, MRI and DTI brain imaging
  Caret, FreeSurfer (cortical flattening and modelling). All FSL tools support
  the NIfTI format.
 
-Package: fsl-doc-4.1
+Package: fsl-doc-#FSLMVERSION#
 Section: non-free/doc
 Architecture: all
 Depends: fslview-doc, ${misc:Depends}

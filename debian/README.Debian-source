@@ -1,5 +1,5 @@
 Debian source package of FSL
------------------------------
+============================
 
 The FSL sources are a mixture of free and non-free source code as well as
 non-free datasets. Additionally it contains 3rd party software as sources
@@ -21,4 +21,16 @@ package.
 This source package provides the non-free (non-commercial) source code of the
 FSL suite.
 
- -- Michael Hanke <michael.hanke@gmail.com>, Sat, 7 Feb 2009 10:02:00 +0200
+Versioned FSL packages
+----------------------
+
+To allow multiple major FSL version to be installed concurrently versioned
+binary packages (ala fsl-4.1) are built since 4.1.6-2. In addition, an
+unversioned 'fsl' package is built that depends on the latest available
+versioned package and provides symlinks to all FSL tools in /usr/bin.
+
+All version-dependent packaging files are included in debian/templates/. The
+'controlfiles' target in debian/rules is used to generate the actual control
+files in debian/ from these templates.
+
+ -- Michael Hanke <michael.hanke@gmail.com>, Sat, 14 Jul 2010 11:21:14 -0500

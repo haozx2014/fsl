@@ -1,0 +1,14 @@
+debian/tmp/bin/* usr/lib/fsl/4.1
+debian/tmp/{tcl,etc} usr/share/fsl/4.1
+debian/tmp/etc/fslconf/feat.tcl etc/fsl/4.1
+debian/tmp/fsl-4.1.xpm usr/share/pixmaps
+debian/tmp/etc usr/share/fsl/4.1
+
+src/fslio/*.tcl usr/share/fsl/4.1/tcl
+
+lib/*.so usr/lib/fsl/4.1
+doc/images usr/share/fsl/4.1/doc
+
+debian/fsl.sh etc/fsl/4.1
+debian/*.desktop usr/share/applications
+debian/fsl_app_wrapper usr/lib/fsl/4.1

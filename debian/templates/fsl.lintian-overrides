@@ -1,0 +1,2 @@
+# this only starts as a shell script but later on turns into TCL
+fsl-#FSLMVERSION# binary: shell-script-fails-syntax-check ./usr/lib/fsl/#FSLMVERSION#/Runtcl

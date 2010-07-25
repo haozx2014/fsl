@@ -8,13 +8,13 @@
 #### Set up standard FSL user environment variables ####
 
 # Debian has a fixed FSLDIR
-FSLDIR=/usr/share/fsl/4.1
+FSLDIR=/usr/share/fsl/#FSLMVERSION#
 
 # Possum is installed in the same directory
 POSSUMDIR=$FSLDIR
 
 # add the fsl binary path to the search path
-PATH=$PATH:/usr/lib/fsl/4.1
+PATH=$PATH:/usr/lib/fsl/#FSLMVERSION#
 
 # The following variable selects the default output image type
 # Legal values are:
@@ -63,7 +63,7 @@ export FSLDIR POSSUMDIR PATH FSLMULTIFILEQUIT FSLOUTPUTTYPE FSLTCLSH \
 
 
 # Configure the linker search path for Debian FSLs internal shared libraries
-LD_LIBRARY_PATH=/usr/lib/fsl/4.1${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+LD_LIBRARY_PATH=/usr/lib/fsl/#FSLMVERSION#${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 export LD_LIBRARY_PATH
 
 

@@ -1,0 +1,6 @@
+etc/fsl/#FSLMVERSION#
+usr/lib/fsl/#FSLMVERSION#
+usr/share/fsl/#FSLMVERSION#/doc/images
+usr/share/fsl/#FSLMVERSION#/etc/fslconf
+usr/share/fsl/#FSLMVERSION#/tcl
+usr/share/fsl/data

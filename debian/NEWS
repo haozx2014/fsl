@@ -1,3 +1,20 @@
+fsl (4.1.6-2) unstable; urgency=low
+
+  * The actual FSL suite is now provided by a versioned package 'fsl-4.1' that
+    installs everything into version-specific locations to allow for parallel
+    installations of multiple FSL major releases. Consequently the main
+    installation directory has been moved to /usr/share/fsl/4.1/ and the
+    configuration to /etc/fsl/4.1/. However, an 'fsl' package is still
+    available that depends on the latest FSL version and provides convenience
+    symlinks for all FSL tools on /usr/bin. If the 'fsl' package is installed,
+    FSL can now be used out-of-the-box and it is no longer necessary to manually
+    modify the environment (e.g. by sourcing a config script). Please note,
+    that the 'fsl' meta package is optional and can be removed if the offered
+    convenience functionality is undesired, or a parallel installation of an
+    older FSL version (prior 4.1) is needed.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Sun, 25 Jul 2010 11:52:46 -0400
+
 fsl (4.1.0-1) unstable; urgency=low
 
   * The new FNIRT tool replaces the previous IRTK, which has never been
