@@ -11,15 +11,17 @@ Configuration
 Most (if not all) FSL binaries require the presence of some environment
 variables to be set properly. If the 'fsl' package is installed in addition to
 the versioned 'fsl-#FSLMVERSION#' package, convenience symlinks will be
-available in /usr/bin and a manual environment set up is not necessary. These
-symlinks point to the latest FSL version.
+available in /usr/bin and a manual environment set up for the default FSL
+version is not necessary.
 
 If multiple FSL package versions (e.g. 4.0, 4.1) are installed on a particular
 system the appropriate configuration file has to be sourced manually, depending
 on which version shall be used. To achieve this, one needs to source the FSL
 config script at /etc/fsl/#FSLMVERSION#/fsl.sh (or a corresponding location for
 other versions). Please note that FSL packages prior version 4.1.6-2 installed
-the configuration script at /etc/fsl/fsl.sh.
+the configuration script at /etc/fsl/fsl.sh. Since version 4.1.6-2, the 'fsl'
+package only installs a symlink to the config script of the default FSL version
+at this location.
 
 The FSL user interface sometimes refers to an 'FSLDIR'. On Debian systems this
 is /usr/share/fsl/#FSLMVERSION# for the latest FSL version.
@@ -31,8 +33,7 @@ User interface
 The FSL package provides desktop integration via desktop files for all FSL
 GUI applications. The package provides a simple wrapper that allows to start
 the GUI applications without prior sourcing of the FSL config file (as
-described above). Please note, that this is still necessary for the
-commandline tools.
+described above).
 
 
 Integration with other Debian Packages

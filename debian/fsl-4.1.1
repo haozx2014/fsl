@@ -8,7 +8,7 @@ extraction, image registration as well as statistical analysis.
 \fBFSL\fR provides an easy to use GUI.
 .PP
 \fBFSL\fR requires a number of environment variables to be set properly.
-To achieve this source the config script from /etc/fsl/4.1/fsl.sh.  One way
+To achieve this, please source the config script from /etc/fsl/4.1/fsl.sh.  One way
 to do this automatically is to add a line containing
 .IP
  \. /etc/fsl/4.1/fsl.sh
@@ -16,8 +16,12 @@ to do this automatically is to add a line containing
 to the .bashrc file in a users home directory (or a corresponding file
 for other shells than bash).
 .PP
-However, it is not necessary to manually source the configuration to use
-the GUI applications included in FSL.
+Alternatively, one may install the \fBfsl\fR package that provides symlinks to
+all FSL tools in /usr/bin and takes care of loading the appropriate
+configuration. Please note that this convenience functionality is only available
+for the latest FSL version. In case of a parallel installation of multiple FSL
+major releases, the matching config file for older FSL releases needs to be
+sourced manually.
 .PP
 \fBFSL\fR documentation and online help is provided by the \fBfsl-doc-4.1\fR
 package.
