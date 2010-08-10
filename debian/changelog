@@ -1,3 +1,10 @@
+fsl (4.1.6-3) unstable; urgency=low
+
+  * Add package conflict between 'fsl' and 'cyrus-clients-2.2', due to file
+    conflict (Closes: #592242). Thanks to Ralf Treinen for detecting.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Sun, 08 Aug 2010 12:20:38 -0400
+
 fsl (4.1.6-2) unstable; urgency=low
 
   * Install package content into version-specific locations to allow multiple
