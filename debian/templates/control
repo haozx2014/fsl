@@ -9,11 +9,12 @@ Homepage: http://www.fmrib.ox.ac.uk/fsl/
 Vcs-Browser: http://git.debian.org/?p=pkg-exppsy/fsl.git
 Vcs-Git: git://git.debian.org/git/pkg-exppsy/fsl.git
 XS-Autobuild: yes
+XS-DM-Upload-Allowed: yes
 
 Package: fsl
 Architecture: all
 Depends: ${misc:Depends}, fsl-#FSLMVERSION# (>= ${source:Version}), fsl-#FSLMVERSION# (<< ${source:Version}.1~)
-Conflicts: fsl (<= 4.1.6-2~), yagiuda, kolab-cyrus-clients, im, multimail
+Conflicts: fsl (<= 4.1.6-2~), yagiuda, kolab-cyrus-clients, cyrus-clients-2.2, im, multimail
 Description: analysis tools for FMRI, MRI and DTI brain imaging
  FSL is a comprehensive library of image analysis and statistical tools
  for fMRI, MRI and DTI brain imaging data. The suite consists of various
