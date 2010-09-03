@@ -3,14 +3,6 @@
     section="Applications/Science/Medicine" \
     title="FSL #FSLMVERSION#" \
     longtitle="FMRIB Software Library" \
-    command="/usr/bin/fsl-#FSLMVERSION#" \
-    icon="fsl-#FSLMVERSION#.xpm" \
-    hints="MRI,fMRI,FSL"
-
-?package(fsl-#FSLMVERSION#):\
-    needs="X11" \
-    section="Applications/Science/Medicine" \
-    title="Nudge #FSLMVERSION#" \
-    command="/usr/bin/Nudge-#FSLMVERSION#" \
+    command="/usr/bin/fsl#FSLMVERSION#-fsl" \
     icon="fsl-#FSLMVERSION#.xpm" \
     hints="MRI,fMRI,FSL"

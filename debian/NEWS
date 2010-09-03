@@ -1,3 +1,13 @@
+fsl (4.1.6-4) unstable; urgency=low
+
+  * The /usr/bin convenience symlinks are now provided by the 'fsl-4.1'
+    package itself, and are prefixed with the corresponding FSL version.
+    For example, the 'slicer' command is available as 'fsl4.1-slicer'.
+    This change prevents filename conflicts and allows multiple versions of a
+    particular tool to coexist.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Fri, 03 Sep 2010 09:32:37 -0400
+
 fsl (4.1.6-2) unstable; urgency=low
 
   * The actual FSL suite is now provided by a versioned package 'fsl-4.1' that

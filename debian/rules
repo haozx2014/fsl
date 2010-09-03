@@ -160,8 +160,8 @@ build: instdir biextras biprojs
 	# for all relevant binaries installed by the versioned FSL package
 	for f in $$(find debian/tmp/bin \! -type d \! -name Runtcl); do \
 		bname=$$(basename $$f); \
-		echo "/usr/lib/fsl/$(FSLMAJORVERSION)/fsl_app_wrapper /usr/bin/$$bname" >> debian/fsl.links ; \
-		echo "/usr/share/man/man1/fsl-$(FSLMAJORVERSION).1.gz /usr/share/man/man1/$${bname}.1.gz" >> debian/fsl.links ; \
+		echo "/usr/lib/fsl/$(FSLMAJORVERSION)/fsl_app_wrapper /usr/bin/fsl$(FSLMAJORVERSION)-$$bname" >> debian/fsl-$(FSLMAJORVERSION).links ; \
+		echo "/usr/share/man/man1/fsl-$(FSLMAJORVERSION).1.gz /usr/share/man/man1/fsl$(FSLMAJORVERSION)-$${bname}.1.gz" >> debian/fsl-$(FSLMAJORVERSION).links ; \
 	done
 
 

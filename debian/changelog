@@ -1,3 +1,18 @@
+fsl (4.1.6-4) unstable; urgency=low
+
+  * Remove /usr/bin symlinks from 'fsl' package and remove now obsolete
+    package conflicts (Closes: #592242 again). Instead, the 'fsl-4.1' package
+    now installs properly prefixed ('fsl4.1-') symlinks into /usr/bin that do
+    not conflict with existing files in any package and, moreover, allow tools
+    from multiple FSL versions to coexist on the same system. Any internal FSL
+    scripts are unaffected by this change. Adjust manpage and README.Debian to
+    document this change, as well as added a NEWS entry.
+  * Bumped Standard version to 3.9.1.0 -- no changes necessary.
+  * Removed menu integration of 'Nudge' tool to prevent overcrowding of menu
+    categories. It is of limited functionality and rarely used.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Fri, 03 Sep 2010 09:35:39 -0400
+
 fsl (4.1.6-3) unstable; urgency=low
 
   * Add package conflict between 'fsl' and 'cyrus-clients-2.2', due to file

@@ -28,8 +28,8 @@ fi
 
 abs_cmd=${FSLDIR}/bin/${cmd}
 if [ ! -x $abs_cmd ]; then
-	# try stripping major version suffix
-	abs_cmd=${FSLDIR}/bin/${cmd%*-#FSLMVERSION#}
+	# try stripping major version prefix
+	abs_cmd=${FSLDIR}/bin/${cmd#fsl#FSLMVERSION#-*}
 fi
 
 exec ${abs_cmd} $@

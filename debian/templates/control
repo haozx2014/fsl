@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: NeuroDebian Team <team@neuro.debian.net>
 Uploaders: Michael Hanke <michael.hanke@gmail.com>, Yaroslav Halchenko <debian@onerussian.com>
 Build-Depends: debhelper (>= 7), zlib1g-dev (>= 1.2.2), libboost-dev (>= 1.32.0), libpng12-dev (>= 1.2.8rel), libgd2-noxpm-dev (>= 2.0.33) | libgd2-xpm-dev (>= 2.0.33), libnewmat10-dev, libgdchart-gd2-noxpm-dev | libgdchart-gd2-xpm-dev, octave3.2-headers | octave3.0-headers, tcl8.4 (>=8.4.7), imagemagick, libnifti-dev (>> 1.1.0-1)
-Standards-Version: 3.8.4.0
+Standards-Version: 3.9.1.0
 Homepage: http://www.fmrib.ox.ac.uk/fsl/
 Vcs-Browser: http://git.debian.org/?p=pkg-exppsy/fsl.git
 Vcs-Git: git://git.debian.org/git/pkg-exppsy/fsl.git
@@ -13,17 +13,14 @@ XS-DM-Upload-Allowed: yes
 
 Package: fsl
 Architecture: all
-Depends: ${misc:Depends}, fsl-#FSLMVERSION# (>= ${source:Version}), fsl-#FSLMVERSION# (<< ${source:Version}.1~)
-Conflicts: fsl (<= 4.1.6-2~), yagiuda, kolab-cyrus-clients, cyrus-clients-2.2, im, multimail
-Description: analysis tools for FMRI, MRI and DTI brain imaging
+Depends: ${misc:Depends}, fsl-#FSLMVERSION# (>= 4.1.6-4~)
+Description: Metapackage for the latest version of FSL
  FSL is a comprehensive library of image analysis and statistical tools
  for fMRI, MRI and DTI brain imaging data. The suite consists of various
- commandline tools, as well as simple GUIs for its core analysis pipelines.
+ command line tools, as well as simple GUIs for its core analysis pipelines.
  Among others, FSL offers implementations of standard GLM analysis,
  white matter tractography, tissue segmentation, affine and non-linear
  co-registration, and independent component analysis.
- .
- This is a meta-package that depends on the latest FSL version.
 
 Package: fsl-#FSLMVERSION#
 Architecture: any
@@ -34,7 +31,7 @@ Conflicts: fsl-fslview
 Description: analysis tools for FMRI, MRI and DTI brain imaging
  FSL is a comprehensive library of image analysis and statistical tools
  for fMRI, MRI and DTI brain imaging data. The suite consists of various
- commandline tools, as well as simple GUIs for its core analysis pipelines.
+ command line tools, as well as simple GUIs for its core analysis pipelines.
  Among others, FSL offers implementations of standard GLM analysis,
  white matter tractography, tissue segmentation, affine and non-linear
  co-registration, and independent component analysis.
@@ -51,7 +48,7 @@ Provides: fsl-doc
 Description: documentation for FSL
  FSL is a comprehensive library of image analysis and statistical tools
  for fMRI, MRI and DTI brain imaging data. The suite consists of various
- commandline tools, as well as simple GUIs for its core analysis pipelines.
+ command line tools, as well as simple GUIs for its core analysis pipelines.
  Among others, FSL offers implementations of standard GLM analysis,
  white matter tractography, tissue segmentation, affine and non-linear
  co-registration, and independent component analysis.

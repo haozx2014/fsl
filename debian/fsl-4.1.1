@@ -4,7 +4,8 @@ fsl \- analysis tools for FMRI, MRI and DTI brain imaging
 .SH "DESCRIPTION"
 \fBFSL\fR is a comprehensive toolkit for the analysis of medical brain
 imaging data.  It provides tools for data preprocessing, brain
-extraction, image registration as well as statistical analysis.
+extraction, image registration as well as a broad spectrum of statistical
+analyses.
 \fBFSL\fR provides an easy to use GUI.
 .PP
 \fBFSL\fR requires a number of environment variables to be set properly.
@@ -16,12 +17,19 @@ to do this automatically is to add a line containing
 to the .bashrc file in a users home directory (or a corresponding file
 for other shells than bash).
 .PP
-Alternatively, one may install the \fBfsl\fR package that provides symlinks to
-all FSL tools in /usr/bin and takes care of loading the appropriate
-configuration. Please note that this convenience functionality is only available
-for the latest FSL version. In case of a parallel installation of multiple FSL
-major releases, the matching config file for older FSL releases needs to be
-sourced manually.
+Alternatively, the Debian package installs symlinks for all FSL tools in
+/usr/bin that take care of loading the appropriate configuration automatically.
+The symlink names are prefixed with the corresponding \fBFSL\fR version to
+prevent filename conflicts and allow multiple version to coexist on the same
+system. For example, the \fBslicer\fR command is available as
+\fBfsl#FSLMVERSION-slicer\fR. Please note that for using \fBFSL\fR tools via
+these symlinks it is \fBnot\fR necessary to perform the setup procedure
+describe above. However, this convenience feature is Debian-specific. Scripts
+that employ FSL commands and are intended to be shared with others should rely
+on unprefixed command names and the FSL environment variable setup.
+.PP
+The \fBFSL\fR user interface sometimes refers to an \fBFSLDIR\fR. On Debian
+systems this is \fI/usr/share/fsl/4.1\fR for FSL version 4.1.
 .PP
 \fBFSL\fR documentation and online help is provided by the \fBfsl-doc-4.1\fR
 package.

@@ -2,8 +2,6 @@
 /etc/fsl/4.1/feat.tcl /usr/share/fsl/4.1/etc/fslconf/feat.tcl
 /usr/share/fsl/4.1/etc/matlab /usr/share/octave/site/m/fsl-4.1
 /usr/lib/fsl/4.1 /usr/share/fsl/4.1/bin
-/usr/lib/fsl/4.1/fsl_app_wrapper /usr/bin/fsl-4.1
-/usr/lib/fsl/4.1/fsl_app_wrapper /usr/bin/Nudge-4.1
-/usr/share/man/man1/fsl-4.1.1.gz /usr/share/man/man1/Nudge-4.1.1.gz
+/usr/lib/fsl/4.1/fsl_app_wrapper /usr/bin/fsl4.1-fsl
 /usr/bin/fslview /usr/lib/fsl/4.1/fslview
 /usr/bin/atlasquery /usr/lib/fsl/4.1/atlasquery
