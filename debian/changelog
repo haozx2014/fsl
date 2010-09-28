@@ -1,3 +1,10 @@
+fsl (4.1.6-5) UNRELEASED; urgency=low
+
+  * Added clarification to the manpage that a .bashrc might not exist and
+    would have to be created.
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Tue, 28 Sep 2010 17:00:39 -0400
+
 fsl (4.1.6-4) unstable; urgency=low
 
   * Remove /usr/bin symlinks from 'fsl' package and remove now obsolete
