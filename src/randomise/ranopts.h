@@ -2,7 +2,7 @@
 
     Matthew Webster, Tim Behrens & Steve Smith (FMRIB) & Tom Nichols (UMich)
 
-    Copyright (C) 2008 University of Oxford  */
+    Copyright (C) 2008-2010 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -116,6 +116,7 @@ class ranopts {
   Option<bool> outputTextPerm;
   Option<bool> outputTextNull;
   Option<bool> output_permstat;
+  Option<bool> disableNonConstantMask;
   Option<int> randomSeed;
   Option<vector<int> > voxelwise_ev_numbers;
   Option<vector<string> > voxelwise_ev_filenames;
@@ -123,6 +124,7 @@ class ranopts {
   Option<bool> isDebugging;
   Option<int> confoundMethod;
   Option<bool> detectNullSubjects;
+  Option<bool> permuteBlocks;
   Option<bool> verbose_old;
 
   void parse_command_line(int argc, char** argv,Log& logger);
@@ -222,8 +224,8 @@ class ranopts {
 	   string("\tswitch off diagnostic messages"),
 	   false, no_argument),
    cluster_norm(string("--twopass"), false, 
-	   string("\tcarry out cluster normalisation thresholding"), 
-		false, no_argument,false),
+	   string("carry out cluster normalisation thresholding"), 
+		false, no_argument),
    outputRaw(string("-R"), false, 
 	   string("\toutput raw ( unpermuted ) statistic images"), 
 		false, no_argument),
@@ -236,6 +238,9 @@ class ranopts {
    output_permstat(string("--permout"), false, 
 	   string("\toutput permuted tstat"), 
 		false, no_argument,false),
+   disableNonConstantMask(string("--norcmask"), false, 
+	   string("dont remove constant voxels from mask"), 
+		false, no_argument),
    randomSeed(string("--seed"),0,
 	    string("~<seed>\tspecific integer seed for random number generator"),
 		 false, requires_argument),
@@ -252,17 +257,20 @@ class ranopts {
 	   string("\tOutput debug information"),
 	       false, no_argument,false),
    confoundMethod(string("-U"),1,
-	    string("~<mode>\tconfound mode. 0: Kennedy Y_a on X_a (old) 1: Freedman-Lane Y_a on X|Z (default) 2: Y on X|Z. Caution BETA option."),
+	    string("~<mode>\tconfound mode. 0: Kennedy Y_a on X_a (old) 1: Freedman-Lane Y_a on X|Z (default) 2: Y on X|Z. 3: ter Braak Y_aFull on X|Z Caution BETA option."),
 		  false, requires_argument, false),
    detectNullSubjects(string("--detectNull"), false, 
 	   string("attempt to detect uninformative rows in the effective regressor and not permute them"), 
 		      false, no_argument, false),
+   permuteBlocks(string("--permuteBlocks"), false, 
+	   string("permute exchangeability blocks. Caution BETA option"), 
+		 false, no_argument, false),
    verbose_old(string("-V"), false, 
 	   string("\tswitch on diagnostic messages (deprecated: now always on unless quiet)"),
 	       false, no_argument, false),
 
 
-   options("randomise v2.6", "randomise -i <input> -o <output> -d <design.mat> -t <design.con> [options]")
+   options("randomise v2.8", "randomise -i <input> -o <output> -d <design.mat> -t <design.con> [options]")
      {
     
      try {
@@ -295,6 +303,7 @@ class ranopts {
        options.add(outputTextPerm);
        options.add(outputTextNull);
        options.add(output_permstat);
+       options.add(disableNonConstantMask);
        options.add(randomSeed);
        options.add(tfce_height);     
        options.add(tfce_size);     
@@ -305,6 +314,7 @@ class ranopts {
        options.add(isDebugging);
        options.add(confoundMethod);
        options.add(detectNullSubjects);
+       options.add(permuteBlocks);
        options.add(verbose_old);
      }
      catch(X_OptionError& e) {

@@ -62,10 +62,9 @@
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
-
+#define EXPOSE_TREACHEROUS
 #include "newimage/newimageall.h"
 #include "newimage/fmribmain.h"
-
 using namespace NEWIMAGE;
 
 void print_usage(const string& progname) 
@@ -125,7 +124,19 @@ int fmrib_main(int argc, char *argv[])
 
   for(int vol = 3; vol < argc; vol++)
   {   
-    if (vol>3) read_volume4D(input_volume,string(argv[vol]));  
+    if (vol>3) {
+      read_volume4D(input_volume,string(argv[vol]));  
+      // sanity check on valid orientation info (it should be consistent)
+      if ((output_volume.sform_code()!=NIFTI_XFORM_UNKNOWN) || (output_volume.qform_code()!=NIFTI_XFORM_UNKNOWN)) {
+	if ((input_volume.sform_code()!=NIFTI_XFORM_UNKNOWN) || (input_volume.qform_code()!=NIFTI_XFORM_UNKNOWN)) {
+	  float rms = rms_deviation(output_volume.newimagevox2mm_mat(),input_volume.newimagevox2mm_mat());
+	  if ( rms > 0.5 && direction == 0 ) {   // arbitrary 0.5mm rms diff threshold - maybe too sensitive?
+	    cerr << endl << "WARNING:: Inconsistent orientations for individual images when attempting to merge." <<endl;  
+	    cerr <<"          Merge will use voxel-based orientation which is probably incorrect - *PLEASE CHECK*!" <<endl<<endl;
+	  }
+	}
+      }
+    }
     if (direction == 0 && (input_volume.xsize() != xdimtot || input_volume.ysize() != ydimtot || input_volume.zsize() != zdimtot)) dimerror=1;
     if (direction == 1 && (input_volume.ysize() != ydimtot || input_volume.zsize() != zdimtot || input_volume.tsize() != tdimtot)) dimerror=1;
     if (direction == 2 && (input_volume.xsize() != xdimtot || input_volume.zsize() != zdimtot || input_volume.tsize() != tdimtot)) dimerror=1; 

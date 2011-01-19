@@ -330,7 +330,7 @@ void Initialise(ranopts& opts, volume<float>& mask, Matrix& datam, Matrix& tc, M
     gp=1;
   }
   if (opts.effectiveDesignFile.value()!="") effectiveDesign=read_vest(opts.effectiveDesignFile.value());
-  if (!opts.nMultiVariate.value()) checkInput(data.tsize(),dm,tc,fc);  // should do a different check in the Multivariate case!
+  if ( opts.nMultiVariate.value() == 1 ) checkInput(data.tsize(),dm,tc,fc);  // should do a different check in the Multivariate case!
 
   if (opts.parallelData.value()) {
     int fragmentPermutations(300); 
