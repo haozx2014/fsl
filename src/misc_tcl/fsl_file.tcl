@@ -164,6 +164,12 @@ proc feat_file:invoke {w output_file1 output_filhis1 output_selhis1 name_space c
     #this is for compatibility with old FSLFile (which appened outputfile on the end)
     destroy $w 
     set outputfile1 $value 
+
+    if { [ llength [split $outputfile1] ] > 1 } {
+	MxPause "Warning: There is at least one whitespace character in the selected filename or path. This will cause subsequent operations to fail. Please rename the file/directory to remove the space."
+	set outputfile1 ""
+	return
+    }
     if { $command != {} } { eval "$command $outputfile1" }
 }
 

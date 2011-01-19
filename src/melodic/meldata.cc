@@ -442,6 +442,9 @@ namespace Melodic{
 
     //seed the random number generator
     double tmptime = time(NULL);
+    if ( opts.seed.value() != -1 ) {
+      tmptime = opts.seed.value(); 
+    }
     srand((unsigned int) tmptime);
 
 	if(opts.paradigmfname.value().length()>0){

@@ -4,7 +4,7 @@
 #
 #   Stephen Smith, Matthew Webster & Mark Jenkinson  FMRIB Analysis Group
 #
-#   Copyright (C) 1999-2008 University of Oxford
+#   Copyright (C) 1999-2010 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -813,7 +813,6 @@ set fmri(overwrite_yn) $fmri(overwrite_yn)"
 	    set result [ catch { exec sh -c "${FSLDIR}/bin/feat_model $filename $conf" } ErrMsg ]
 	    if {$result != 0 || [ string length $ErrMsg ] > 0 } {
 		MxPause "Problem with processing the model: $ErrMsg"
-		#set fmri(donemodel) 0
 	    }
 	}
 
@@ -828,11 +827,11 @@ proc feat5:load { w full filename } {
     global fmri feat_files unwarp_files unwarp_files_mag initial_highres_files highres_files confoundev_files
 
     set FEATVERSION $fmri(version)
-    set INMELODIC [ exec sh -c "grep 'fmri(inmelodic)' $filename | tail -n 1 | awk '{ print \$3 }'" ]
+    set INMELODIC [ exec sh -c "grep -a 'fmri(inmelodic)' $filename | tail -n 1 | awk '{ print \$3 }'" ]
 
     if { $INMELODIC != 1 } {
 
-	set version [ exec sh -c "grep 'fmri(version)' $filename | awk '{ print \$3 }'" ]
+	set version [ exec sh -c "grep -a 'fmri(version)' $filename | awk '{ print \$3 }'" ]
     
 	if { $version > 4.99 } {
 
@@ -888,6 +887,7 @@ proc feat5:load { w full filename } {
 	source ${filename}
 	if { $w != -1 } {
 	    melodic:updatelevel $w
+	    melodic:updatedim $w
 	    feat5:updateanalysis $w
 	}
     }
@@ -5070,7 +5070,7 @@ fsl:echo ${FD}/report_prestats.html "<hr><b>FUGUE fieldmap unwarping</b>"
     fsl:exec "${FSLDIR}/bin/fslmaths FM_UD_fmap_mag_brain_mask_idx -thr $maxidx -bin -mul -1 -add 1 -bin -mas FM_UD_fmap_mag_brain_mask FM_UD_fmap_mag_brain_mask"
 
     # refine mask (remove edge voxels where signal is poor)
-    fsl:exec "${FSLDIR}/bin/fslmaths FM_UD_fmap -mas FM_UD_fmap_mag_brain_mask FM_UD_fmap"
+    fsl:exec "${FSLDIR}/bin/fslmaths FM_UD_fmap -sub [ fsl:exec "${FSLDIR}/bin/fslstats FM_UD_fmap -k FM_UD_fmap_mag_brain_mask -P 50" ] -mas FM_UD_fmap_mag_brain_mask FM_UD_fmap"
     set thresh50 [ fsl:exec "${FSLDIR}/bin/fslstats FM_UD_fmap_mag_brain -P 98" ]
     set thresh50 [ expr $thresh50 / 2.0 ]
     fsl:exec "${FSLDIR}/bin/fslmaths FM_UD_fmap_mag_brain -thr $thresh50 -bin FM_UD_fmap_mag_brain_mask50"
@@ -5084,7 +5084,7 @@ fsl:echo ${FD}/report_prestats.html "<hr><b>FUGUE fieldmap unwarping</b>"
     fsl:exec "/bin/rm -f FM_UD_fmap_tmp_fmapfilt* FM_UD_fmap_mag_brain_mask_ero* FM_UD_fmap_mag_brain_mask50* FM_UD_fmap_mag_brain_i*"
     
     # now demean
-    fsl:exec "${FSLDIR}/bin/fslmaths FM_UD_fmap -sub [ fsl:exec "${FSLDIR}/bin/fslstats FM_UD_fmap -k FM_UD_fmap_mag_brain_mask -P 50" ] FM_UD_fmap"
+    fsl:exec "${FSLDIR}/bin/fslmaths FM_UD_fmap -sub [ fsl:exec "${FSLDIR}/bin/fslstats FM_UD_fmap -k FM_UD_fmap_mag_brain_mask -P 50" ] -mas FM_UD_fmap_mag_brain_mask FM_UD_fmap"
 
     # create report picture of fmap overlaid onto whole-head mag image
     set fmapmin [ fsl:exec "${FSLDIR}/bin/fslstats FM_UD_fmap -R | awk '{ print \$1 }'" ]
@@ -5169,7 +5169,7 @@ fsl:echo ${FD}/report_prestats.html "<hr><b>FUGUE fieldmap unwarping</b>"
 cd $FD
 
 immv example_func example_func_orig_distorted
-fsl:exec "${FSLDIR}/bin/applywarp -i example_func_orig_distorted -o example_func -w unwarp/EF_UD_warp -r example_func_orig_distorted --abs --mask=unwarp/EF_UD_fmap_mag_brain_mask"
+fsl:exec "${FSLDIR}/bin/applywarp -i example_func_orig_distorted -o example_func -w unwarp/EF_UD_warp -r example_func_orig_distorted --abs"
 
 # now either apply unwarping one vol at a time (including applying individual mcflirt transforms at same time),
 # or if mcflirt transforms don't exist, just apply warp to 4D $funcdata
@@ -5329,7 +5329,7 @@ if { $fmri(temphp_yn) || $fmri(templp_yn) } {
     if { $fmri(templp_yn) } {
 	set lp_sigma_sec 2.8
 	set lp_sigma_vol [ expr $lp_sigma_sec / $fmri(tr) ]
-	set ps "$ps; Gaussian lowpass temporal filtering HWHM ${lp_sigma_sec}s"
+	set ps "$ps; Gaussian lowpass temporal filtering, with sigma=${lp_sigma_sec}s"
     }
 
     fsl:exec "${FSLDIR}/bin/fslmaths $funcdata -bptf $hp_sigma_vol $lp_sigma_vol prefiltered_func_data_tempfilt"
@@ -5347,9 +5347,9 @@ if { $fmri(temphp_yn) || $fmri(templp_yn) } {
 set IMTR [ exec sh -c "$FSLDIR/bin/fslval filtered_func_data pixdim4" ]
 
 if { [ expr abs($IMTR - $fmri(tr)) ] > 0.01 } {
-    fsl:exec "${FSLDIR}/bin/fslhd -x filtered_func_data | sed 's/  dt = .*/  dt = '$fmri(tr)'/g' > grot"
-    fsl:exec "cat grot | ${FSLDIR}/bin/fslcreatehd - filtered_func_data"
-    fsl:exec "/bin/rm grot"
+    fsl:exec "${FSLDIR}/bin/fslhd -x filtered_func_data | sed 's/  dt = .*/  dt = '$fmri(tr)'/g' > tmpHeader"
+    fsl:exec "${FSLDIR}/bin/fslcreatehd tmpHeader filtered_func_data"
+    fsl:exec "/bin/rm tmpHeader"
 }
 
 #}}}
@@ -5650,7 +5650,9 @@ eds. P. Jezzard, P.M. Matthews and S.M. Smith. OUP, 2001.<br>
 }
 
 if { $fmri(thresh) == 2 } {
-    set zthresh [ fsl:exec "${FSLDIR}/bin/ptoz $fmri(prob_thresh) -g [ expr int ( $fmri(VOLUME$rawstats) / $fmri(RESELS$rawstats) ) ]" ]
+    set nResels [ expr int ( $fmri(VOLUME$rawstats) / $fmri(RESELS$rawstats) ) ]
+    if { $nResels < 1 } { set nResels 1 }
+    set zthresh [ fsl:exec "${FSLDIR}/bin/ptoz $fmri(prob_thresh) -g $nResels" ]
 }
 
 fsl:exec "$FSLDIR/bin/fslmaths thresh_$rawstats -thr $zthresh thresh_$rawstats"
@@ -5748,7 +5750,7 @@ if { $fmri(thresh) == 3 } {
 
 	# we're not going to re-test cluster size so pthresh is set to 1000
 
-	fsl:exec "$FSLDIR/bin/cluster -i thresh_$rawstats $COPE -t $fmri(z_thresh) -d $fmri(DLH$rawstats) --volume=$fmri(VOLUME$rawstats) --othresh=thresh_$rawstats -o cluster_mask_$rawstats --connectivity=[ feat5:connectivity thresh_$rawstats ] $VOXorMM --olmax=lmax_${rawstats}${STDEXT}.txt > cluster_${rawstats}${STDEXT}.txt"
+	fsl:exec "$FSLDIR/bin/cluster -i thresh_$rawstats $COPE -t $fmri(z_thresh) -p $fmri(prob_thresh) -d $fmri(DLH$rawstats) --volume=$fmri(VOLUME$rawstats) --othresh=thresh_$rawstats -o cluster_mask_$rawstats --connectivity=[ feat5:connectivity thresh_$rawstats ] $VOXorMM --olmax=lmax_${rawstats}${STDEXT}.txt > cluster_${rawstats}${STDEXT}.txt"
 
 	fsl:exec "$FSLDIR/bin/cluster2html . cluster_$rawstats $STDOPT"
     }
@@ -5787,7 +5789,7 @@ if { $rerunning && [ file exists reg/example_func2standard.mat ] && $fmri(thresh
 	    set stdxfm "-x reg/example_func2highres.mat --warpvol=reg/highres2standard_warp"
 	}
 
-	fsl:exec "$FSLDIR/bin/cluster -i thresh_$rawstats ${COPE} -t $z_thresh -d $fmri(DLH$rawstats) --volume=$fmri(VOLUME$rawstats) $stdxfm --stdvol=reg/standard --mm --connectivity=[ feat5:connectivity thresh_$rawstats ] --olmax=lmax_${rawstats}_std.txt > cluster_${rawstats}_std.txt"
+	fsl:exec "$FSLDIR/bin/cluster -i thresh_$rawstats ${COPE} -t $z_thresh -p $prob_thresh -d $fmri(DLH$rawstats) --volume=$fmri(VOLUME$rawstats) $stdxfm --stdvol=reg/standard --mm --connectivity=[ feat5:connectivity thresh_$rawstats ] --olmax=lmax_${rawstats}_std.txt > cluster_${rawstats}_std.txt"
 	fsl:exec "$FSLDIR/bin/cluster2html . cluster_${rawstats} -std"
     }
 }
@@ -6808,7 +6810,7 @@ fsl:exec "${FSLDIR}/bin/fslmaths mask -Tmin -bin mask -odt char"
 #}}}
     #{{{ MELODIC
 
-set thecommand "${FSLDIR}/bin/melodic -i .filelist -o groupmelodic.ica -v --nobet --bgthreshold=$fmri(thresh) --tr=$fmri(tr) --report --guireport=../../report.html --bgimage=bg_image"
+set thecommand "${FSLDIR}/bin/melodic -i .filelist -o groupmelodic.ica -v --nobet --bgthreshold=$fmri(brain_thresh) --tr=$fmri(tr) --report --guireport=../../report.html --bgimage=bg_image"
 
 if { $fmri(dim_yn) == 1 } {
     set thecommand "$thecommand -d 0"
