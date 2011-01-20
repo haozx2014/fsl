@@ -1,3 +1,12 @@
+fsl (4.1.7-1) unstable; urgency=low
+
+  * New upstream bugfix release. Improved TFCE handling in fslmaths. Better
+    error detection in randomise. MELODIC now has an option to use a
+    user-defined seed. There are a number of minor fixes to FEAT. fslmerge
+    now attempts to detect orientation problems during a temporal merge.
+
+ -- Michael Hanke <mih@debian.org>  Wed, 19 Jan 2011 14:19:59 -0500
+
 fsl (4.1.6-5) UNRELEASED; urgency=low
 
   * Added clarification to the manpage that a .bashrc might not exist and
