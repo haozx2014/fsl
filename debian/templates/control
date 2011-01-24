@@ -2,9 +2,9 @@ Source: fsl
 Section: non-free/science
 Priority: optional
 Maintainer: NeuroDebian Team <team@neuro.debian.net>
-Uploaders: Michael Hanke <michael.hanke@gmail.com>, Yaroslav Halchenko <debian@onerussian.com>
+Uploaders: Michael Hanke <mih@debian.org>, Yaroslav Halchenko <debian@onerussian.com>
 Build-Depends: debhelper (>= 7), zlib1g-dev (>= 1.2.2), libboost-dev (>= 1.32.0), libpng12-dev (>= 1.2.8rel), libgd2-noxpm-dev (>= 2.0.33) | libgd2-xpm-dev (>= 2.0.33), libnewmat10-dev, libgdchart-gd2-noxpm-dev | libgdchart-gd2-xpm-dev, octave3.2-headers | octave3.0-headers, tcl8.4 (>=8.4.7), imagemagick, libnifti-dev (>> 1.1.0-1)
-Standards-Version: 3.9.1.0
+Standards-Version: 3.9.1
 Homepage: http://www.fmrib.ox.ac.uk/fsl/
 Vcs-Browser: http://git.debian.org/?p=pkg-exppsy/fsl.git
 Vcs-Git: git://git.debian.org/git/pkg-exppsy/fsl.git
