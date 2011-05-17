@@ -1,6 +1,6 @@
 //     fslmerge.cc concatenate AVW files into a single output
 //     Steve Smith, David Flitney, Stuart Clare and Matthew Webster, FMRIB Image Analysis Group
-//     Copyright (C) 2000-2008 University of Oxford  
+//     Copyright (C) 2000-2010 University of Oxford  
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
     fsl@fmrib.ox.ac.uk
@@ -70,31 +70,38 @@ using namespace NEWIMAGE;
 void print_usage(const string& progname) 
 {
   cout << endl;
-  cout << "Usage: fslmerge <-x/y/z/t/a> <output> <file1 file2 .......>" << endl;
+  cout << "Usage: fslmerge <-x/y/z/t/a/tr> <output> <file1 file2 .......> [tr value in seconds]" << endl;
   cout << "     -t : concatenate images in time" << endl;
   cout << "     -x : concatenate images in the x direction"  << endl;
   cout << "     -y : concatenate images in the y direction"  << endl;
   cout << "     -z : concatenate images in the z direction" << endl;
   cout << "     -a : auto-choose: single slices -> volume, volumes -> 4D (time series)"  << endl;
+  cout << "     -tr : concatenate images in time and set the output image tr to the final option value"  << endl;
 }
 
 template <class T>
 int fmrib_main(int argc, char *argv[])
 {
   volume4D<T> input_volume;
+  float newTR(-1);
   int direction,dimerror=0,xoffset=0,yoffset=0,zoffset=0,toffset=0;
+  read_volume4D_hdr_only(input_volume,string(argv[3]));
+  newTR = input_volume.TR();
  
   if (!strcmp(argv[1], "-t"))       direction=0;
   else if (!strcmp(argv[1], "-x"))  direction=1;
   else if (!strcmp(argv[1], "-y"))  direction=2;
   else if (!strcmp(argv[1], "-z"))  direction=3; 
   else if (!strcmp(argv[1], "-a"))  direction=4;
+  else if (!strcmp(argv[1], "-tr")) {
+    direction=0;
+    newTR=atof(argv[--argc]);
+  }
   else 
   {
     print_usage(string(argv[0]));
     return(1);
   }
-  read_volume4D_hdr_only(input_volume,string(argv[3]));
 
   int xdimtot(input_volume.xsize()); 
   int ydimtot(input_volume.ysize()); 
@@ -143,7 +150,7 @@ int fmrib_main(int argc, char *argv[])
     if (direction == 3 && (input_volume.xsize() != xdimtot || input_volume.ysize() != ydimtot || input_volume.tsize() != tdimtot)) dimerror=1;
     if (dimerror)
     {
-      cerr << "Error in size-match along non-concatenated dimension" << endl; 
+      cerr << "Error in size-match along non-concatenated dimension for input file: " << string(argv[vol]) << endl; 
       return 1;
     }
 
@@ -159,7 +166,7 @@ int fmrib_main(int argc, char *argv[])
     if (direction==3)  zoffset+=input_volume.zsize(); 
     input_volume.destroy();   //Remove when new newimage comes out      
   }
-
+  output_volume.setTR(newTR);
   save_volume4D(output_volume,string(argv[2]));
   return 0;
 }

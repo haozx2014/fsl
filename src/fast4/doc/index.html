@@ -175,6 +175,8 @@ the mean value by the volume (in voxels).
 <br>&nbsp;&nbsp;&nbsp;<kbd>tissuevol=`echo "$mean * $vol" | bc -l`</kbd>
 <br>&nbsp;&nbsp;&nbsp;<kbd>echo $tissuevol</kbd>
 <br>This prints the total tissue volume in voxels (which is also stored in the variable <kbd>tissuevol</kbd>).  Note that to get the volume in mm<sup>3</sup> just replace the <kbd>{print $1}</kbd> with <kbd>{print $2}</kbd> in the first line above.
+<br>Alternatively, this can be done in the single line:
+<br>&nbsp;&nbsp;&nbsp;<kbd>fslstats structural_bet_pve_1 -M -V | awk '{ print $1 * $3 }'</kbd>
 <hr>
 
 <A NAME="convtable"></A><h3>Conversion table for fast3 and fast4 options</h3>

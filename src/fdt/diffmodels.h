@@ -1,6 +1,6 @@
 /*  Diffusion model fitting
 
-    Timothy Behrens, Saad Jbabdi  - FMRIB Image Analysis Group
+    Timothy Behrens, Saad Jbabdi, Stam Sotiropoulos  - FMRIB Image Analysis Group
  
     Copyright (C) 2005 University of Oxford  */
 
@@ -88,8 +88,14 @@ using namespace MISCMATHS;
 
 
 #define two_pi 0.636619772
-#define f2x(x) (std::tan((x)/two_pi))
+#define f2x(x) (std::tan((x)/two_pi))   //fraction transformation used in the old model 1
 #define x2f(x) (std::abs(two_pi*std::atan((x))))
+
+#define f2beta(f) (std::asin(std::sqrt(f))) //fraction transformation used in the new model 1
+#define beta2f(beta) (std::pow(std::sin(beta),2.0))
+#define d2lambda(d) (std::sqrt(d))     //diffusivity transformation used in the new model 1
+#define lambda2d(lambda) (lambda*lambda)
+
 #define bigger(a,b) ((a)>(b)?(a):(b))
 #define smaller(a,b) ((a)>(b)?(b):(a))
 
@@ -242,6 +248,7 @@ private:
   SymmetricMatrix m_covar;
 };
 
+
 ////////////////////////////////////////////////
 //       Partial Volume Models
 ////////////////////////////////////////////////
@@ -290,14 +297,131 @@ protected:
 
 };
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Model 1 : mono-exponential (for single shell). Contrained optimization for the diffusivity, fractions and their sum<1
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+class PVM_single_c : public PVM, public NonlinCF {
+public:
+   PVM_single_c(const ColumnVector& iY,
+	     const Matrix& ibvecs, const Matrix& ibvals,
+	     const int& nfibres, bool incl_f0=false):PVM(iY,ibvecs,ibvals,nfibres),m_include_f0(incl_f0){
+
+    if (m_include_f0)
+      nparams = nfib*3 + 3; 
+    else
+      nparams = nfib*3 + 2;
+    
+    m_f.ReSize(nfib);
+    m_th.ReSize(nfib);
+    m_ph.ReSize(nfib);
+  }
+  ~PVM_single_c(){}
+
+  // routines from NonlinCF
+  NEWMAT::ReturnMatrix grad(const NEWMAT::ColumnVector& p)const;
+  boost::shared_ptr<BFMatrix> hess(const NEWMAT::ColumnVector&p,boost::shared_ptr<BFMatrix> iptr)const;
+  double cf(const NEWMAT::ColumnVector& p)const;
+  NEWMAT::ReturnMatrix forwardModel(const NEWMAT::ColumnVector& p)const;
+
+  // other routines
+  void fit();
+  void sort();
+  void fit_pvf(ColumnVector& x)const;
+  void fix_fsum(ColumnVector& fs) const;
+
+  void print()const{
+    cout << "PVM (Single) FIT RESULTS " << endl;
+    cout << "S0   :" << m_s0 << endl;
+    cout << "D    :" << m_d << endl;
+    for(int i=1;i<=nfib;i++){
+      cout << "F" << i << "   :" << m_f(i) << endl;
+      ColumnVector x(3);
+      x << sin(m_th(i))*cos(m_ph(i)) << sin(m_th(i))*sin(m_ph(i)) << cos(m_th(i));
+      if(x(3)<0)x=-x;
+      float _th,_ph;cart2sph(x,_th,_ph);
+      cout << "TH" << i << "  :" << _th*180.0/M_PI << " deg" << endl; 
+      cout << "PH" << i << "  :" << _ph*180.0/M_PI << " deg" << endl; 
+      cout << "DIR" << i << "   : " << x(1) << " " << x(2) << " " << x(3) << endl;
+    }
+    if (m_include_f0)
+      cout << "F0    :" << m_f0 << endl;
+  }
+
+  //Print the estimates using a vector with the untransformed parameter values
+  void print(const ColumnVector& p)const{
+    ColumnVector f(nfib);
+
+    cout << "PARAMETER VALUES " << endl;
+    cout << "S0   :" << p(1) << endl;
+    cout << "D    :" << p(2) << endl;
+    for(int i=3,ii=1;ii<=nfib;i+=3,ii++){
+      f(ii) = beta2f(p(i))*partial_fsum(f,ii-1);
+      cout << "F" << ii << "   :" << f(ii) << endl;
+      cout << "TH" << ii << "  :" << p(i+1)*180.0/M_PI << " deg" << endl; 
+      cout << "PH" << ii << "  :" << p(i+2)*180.0/M_PI << " deg" << endl; 
+    }
+    if (m_include_f0)
+      cout << "F0    :" << beta2f(p(nparams))*partial_fsum(f,nfib);
+  }
+
+  //Returns 1-Sum(f_j), 1<=j<=ii. (ii<=nfib)
+  //Used for transforming beta to f and vice versa
+  float partial_fsum(ColumnVector& fs, int ii) const{
+    float fsum=1.0;
+    for(int j=1;j<=ii;j++)
+	fsum-=fs(j);
+    return fsum;
+  }
+  
+  float get_s0()const{return m_s0;}
+  float get_f0()const{return m_f0;}
+  float get_d()const{return m_d;}
+  ColumnVector get_f()const{return m_f;}
+  ColumnVector get_th()const{return m_th;}
+  ColumnVector get_ph()const{return m_ph;}
+  float get_f(const int& i)const{return m_f(i);}
+  float get_th(const int& i)const{return m_th(i);}
+  float get_ph(const int& i)const{return m_ph(i);}
+  ReturnMatrix get_prediction()const;
+
+  // useful functions for calculating signal and its derivatives
+  // functions
+  float isoterm(const int& pt,const float& _d)const;
+  float anisoterm(const int& pt,const float& _d,const ColumnVector& x)const;
+  // 1st order derivatives
+  float isoterm_lambda(const int& pt,const float& lambda)const;
+  float anisoterm_lambda(const int& pt,const float& lambda,const ColumnVector& x)const;
+  float anisoterm_th(const int& pt,const float& _d,const ColumnVector& x,const float& _th,const float& _ph)const;
+  float anisoterm_ph(const int& pt,const float& _d,const ColumnVector& x,const float& _th,const float& _ph)const;
+  ReturnMatrix fractions_deriv(const int& nfib, const ColumnVector& fs, const ColumnVector& bs) const;
+  
+private:  
+  int   nparams;
+  float m_s0;
+  float m_d;
+  float m_f0;
+  ColumnVector m_f;
+  ColumnVector m_th;
+  ColumnVector m_ph;
+  const bool m_include_f0;   //Indicate whether f0 will be used in the model (an unattenuated signal compartment). That will be added as the last parameter
+};
+
+
+
+///////////////////////////////////////////////////////////////////////////
+//       Old Model 1 with no constraints for the sum of fractions
+//////////////////////////////////////////////////////////////////////////
 // Model 1 : mono-exponential (for single shell)
 class PVM_single : public PVM, public NonlinCF {
 public:
   PVM_single(const ColumnVector& iY,
 	     const Matrix& ibvecs, const Matrix& ibvals,
-	     const int& nfibres):PVM(iY,ibvecs,ibvals,nfibres){
+	     const int& nfibres, bool incl_f0=false):PVM(iY,ibvecs,ibvals,nfibres), m_include_f0(incl_f0){
 
-    nparams = nfib*3 + 2;
+    if (m_include_f0)
+      nparams = nfib*3 + 3; 
+    else
+      nparams = nfib*3 + 2;
 
     m_f.ReSize(nfib);
     m_th.ReSize(nfib);
@@ -330,6 +454,7 @@ public:
       cout << "DIR" << i << "   : " << x(1) << " " << x(2) << " " << x(3) << endl;
     }
   }
+
   void print(const ColumnVector& p)const{
     cout << "PARAMETER VALUES " << endl;
     cout << "S0   :" << p(1) << endl;
@@ -339,9 +464,12 @@ public:
       cout << "TH" << ii << "  :" << p(i+1)*180.0/M_PI << " deg" << endl; 
       cout << "PH" << ii << "  :" << p(i+2)*180.0/M_PI << " deg" << endl; 
     }
+    if (m_include_f0)
+      cout << "f0    :" << x2f(p(nparams)) << endl;
   }
 
   float get_s0()const{return m_s0;}
+  float get_f0()const{return m_f0;}
   float get_d()const{return m_d;}
   ColumnVector get_f()const{return m_f;}
   ColumnVector get_th()const{return m_th;}
@@ -371,14 +499,15 @@ public:
   float anisoterm_phph(const int& pt,const float& _d,const ColumnVector& x,const float& _th,const float& _ph)const;
   float anisoterm_thph(const int& pt,const float& _d,const ColumnVector& x,const float& _th,const float& _ph)const;
 
-
 private:  
   int   nparams;
   float m_s0;
   float m_d;
+  float m_f0;
   ColumnVector m_f;
   ColumnVector m_th;
   ColumnVector m_ph;
+  const bool m_include_f0;   //Indicate whether f0 will be used in the model (an unattenuated signal compartment)
 };
 
 
