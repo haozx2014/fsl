@@ -1,3 +1,11 @@
+fsl (4.1.8-1) unstable; urgency=low
+
+  * New upstream bugfix release.
+  * Install README.Debian into the versioned FSL package.
+  * Bumped Standard version to 3.9.2 -- no changes necessary.
+
+ -- Michael Hanke <mih@debian.org>  Tue, 17 May 2011 16:45:10 -0400
+
 fsl (4.1.7-1) unstable; urgency=low
 
   * New upstream bugfix release. Improved TFCE handling in fslmaths. Better

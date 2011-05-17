@@ -76,7 +76,7 @@ controlfiles:
 			> debian/$$(basename $$f) ; \
 	done
 	# renamed files that need to have a version-specific name
-	for suffix in 1 desktop dirs install links lintian-overrides manpages menu postinst; do \
+	for suffix in 1 desktop dirs install links lintian-overrides manpages menu postinst docs; do \
 		for prefix in fsl fsl-doc nudge; do \
 		[ -f debian/$$prefix.$$suffix ] &&  \
 			mv debian/$$prefix.$$suffix debian/$$prefix-$(FSLMAJORVERSION).$$suffix || true ; \
@@ -95,7 +95,7 @@ cleancontrolfiles:
 	done
 	rm -f debian/fsl.preinst
 	# versioned files
-	rm -f debian/{fsl,fsl-doc,nudge}-$(FSLMAJORVERSION).{1,desktop,dirs,install,links,lintian-overrides,manpages,menu,postinst,preinst}
+	rm -f debian/{fsl,fsl-doc,nudge}-$(FSLMAJORVERSION).{1,desktop,dirs,install,links,lintian-overrides,manpages,menu,postinst,preinst,docs}
 
 # build and install extra
 biextra-%:
