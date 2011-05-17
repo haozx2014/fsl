@@ -216,6 +216,15 @@ void loadNewImage(volume4D<T> &oldI, volume4D<T> &newI, string filename)
     }
 }
 
+int check_for_output_name(int i, int argc_1)
+{
+  if (i>argc_1) {
+    cerr << "Error: no output filename specified!" << endl;
+    exit(EXIT_FAILURE);
+  }
+  return 0;
+}
+
 
 template <class T>
 int inputParser(int argc, char *argv[], short output_dt, bool forceOutputType=false)
@@ -227,7 +236,8 @@ int inputParser(int argc, char *argv[], short output_dt, bool forceOutputType=fa
   bool modifiedInput(false);
   bool setDisplayRange(false);
 
-  for (int i = 2; i < argc-1; i++)  //main loop
+  int i=2;
+  for (i = 2; i < argc-1; i++)  //main loop
   {    
     volume4D<T> temp_volume;
     modifiedInput=true;
@@ -1169,6 +1179,8 @@ if (!separatenoise)
        for(int j=5;j>0;j--)
 	 inputVolume.deletevolume(j);
 
+       // if i+1>argc-1 then can save (otherwise it is a syntax error with no specific output specified)
+       check_for_output_name(i+1,argc-1);
        save_volume(dti_L1,string(argv[argc-1])+"_L1");
        save_volume(dti_L2,string(argv[argc-1])+"_L2");
        save_volume(dti_L3,string(argv[argc-1])+"_L3");
@@ -1189,6 +1201,9 @@ if (!separatenoise)
     else { cout << "\n Error in command line: unknown option \"" << argv[i] << "\"\n" << endl; return printUsage("blah"); }
      /******************************************************/
   } 
+
+  // if i>argc-1 then can save (otherwise it is a syntax error with no specific output specified)
+  check_for_output_name(i,argc-1);
 
   double max(inputVolume.max()),min(inputVolume.min());
   if ( !forceOutputType && ((int)max-(int)min)==0 && (max-min)!=0 && (output_dt<DT_FLOAT))

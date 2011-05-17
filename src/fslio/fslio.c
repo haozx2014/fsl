@@ -27,6 +27,7 @@
 
 #include "fslio.h"
 #include "assert.h"
+#include <unistd.h>
 
 static int FslIgnoreMFQ=0;
 static int FslOverrideOutputType=-1;
@@ -146,6 +147,13 @@ int FslIsCompressedFileType(int filetype)
   if ( filetype >=100 ) return 1;
   return 0;
 }
+
+
+int FslGetErrorFlag(const FSLIO *fslio)
+{
+  if (fslio==NULL) return 1;
+  return fslio->errorflag;
+} 
 
 
 int FslGetWriteMode(const FSLIO *fslio)
@@ -376,6 +384,7 @@ void FslSetInit(FSLIO* fslio)
   FslSetFileType(fslio,FslGetEnvOutputType());
   FslSetWriteMode(fslio,0);
   fslio->written_hdr = 0;
+  fslio->errorflag = 0;
 }
 
 
@@ -500,10 +509,7 @@ void FslCloneHeader(FSLIO *dest, const FSLIO *src)
 
 int  fsl_fileexists(const char* fname)
 {
-   znzFile fp;
-   fp = znzopen( fname , "rb" , 1 ) ;
-   if( !znz_isnull(fp) )  { znzclose(fp);  return 1; }
-   return 0;
+  return( nifti_fileexists(fname) );
 }
 
 
@@ -694,14 +700,14 @@ FSLIO *FslXOpen(const char *filename, const char *opts, int filetype)
   /* see if the extension indicates a minc file */
   imgtype = FslFileType(filename);
   if ((imgtype>=0) && (FslBaseFileType(imgtype)==FSL_TYPE_MINC)) {
-    fprintf(stderr,"Warning:: Minc is not yet supported\n");
+    fprintf(stderr,"WARNING:: Minc is not yet supported\n");
     return NULL;
   }
 
   /* otherwise open nifti file: read header and open img file (may be same file) */
   fslio->fileptr = nifti_image_open(filename,bopts,&(fslio->niftiptr));
   if (znz_isnull(fslio->fileptr)) { 
-    fprintf(stderr,"Error: failed to open file %s\n",filename); 
+    fprintf(stderr,"ERROR: failed to open file %s\n",filename); 
     return NULL;
   }
 
@@ -714,8 +720,16 @@ FSLIO *FslXOpen(const char *filename, const char *opts, int filetype)
   if (FslBaseFileType(FslGetFileType(fslio))==FSL_TYPE_NIFTI) {
     if (FslGetLeftRightOrder(fslio) == FSL_INCONSISTENT)
       {
-	fprintf(stderr,"ERROR: inconsistent left-right order stored in sform and qform in file %s\n",filename); 
+	fprintf(stderr,"ERROR: Inconsistent left-right order stored in sform and qform in file %s\n",filename); 
 	fprintf(stderr,"       Using sform instead of qform values\n\n");
+	fslio->errorflag += 2;
+	/* return NULL; */
+      }
+    if (FslGetLeftRightOrder(fslio) == FSL_ZERODET)
+      {
+	fprintf(stderr,"ERROR: Illegal NIfTI file - %s\n",filename);
+	fprintf(stderr,"       Zero determinant stored in sform and/or qform that is marked as valid\n"); 
+	fslio->errorflag += 4;
 	/* return NULL; */
       }
   }
@@ -957,7 +971,7 @@ void FslWriteHeader(FSLIO *fslio)
     fslio->written_hdr = 1;
     if (znz_isnull(fslio->fileptr)) FSLIOERR("FslWriteHeader: no file opened!");
     /* modify niftiptr for FSL-specific purposes */
-    strcpy(fslio->niftiptr->descrip,"FSL4.0");
+    strcpy(fslio->niftiptr->descrip,"FSL4.1");
     /* set qform to equal sform if currently unset (or vice versa) */
     qform_code = FslGetRigidXform(fslio,&qmat);
     sform_code = FslGetStdXform(fslio,&smat);
@@ -1321,9 +1335,9 @@ void FslGetVoxDim(FSLIO *fslio, float *x, float *y, float *z, float *tr)
     { *x *= 1000.0;   *y *= 1000.0;   *z *= 1000.0; }
     if (fslio->niftiptr->xyz_units == NIFTI_UNITS_MICRON) 
     { *x /= 1000.0;   *y /= 1000.0;   *z /= 1000.0; }
-    if (fslio->niftiptr->xyz_units == NIFTI_UNITS_MSEC) 
+    if (fslio->niftiptr->time_units == NIFTI_UNITS_MSEC) 
     { *tr /= 1000.0; }
-    if (fslio->niftiptr->xyz_units == NIFTI_UNITS_USEC) 
+    if (fslio->niftiptr->time_units == NIFTI_UNITS_USEC) 
     { *tr /= 1000000.0; }
     /* if it is Hz or other frequency then leave it */
   }
@@ -1795,7 +1809,9 @@ int FslGetLeftRightOrder2(int sform_code, mat44 sform44,
   if ( (sform_code!=NIFTI_XFORM_UNKNOWN) && 
        (qform_code!=NIFTI_XFORM_UNKNOWN) ) { 
     if (dets * detq < 0.0) order=FSL_INCONSISTENT;
+    if (fabs(dets * detq)<1e-12)  order=FSL_ZERODET;
   }
+  if (fabs(det)<1e-12) order=FSL_ZERODET;
   return order;
 }
 
@@ -2025,7 +2041,7 @@ int FslClose(FSLIO *fslio)
 
     /* must write the header now */
     filetype = FslGetFileType(fslio);
-    strcpy(fslio->niftiptr->descrip,"FSL4.0");
+    strcpy(fslio->niftiptr->descrip,"FSL4.1");
     if (!FslIsSingleFileType(filetype)) {
       /* for file pairs - open new header file and write it */
       nifti_image_write_hdr_img(fslio->niftiptr,0,"wb");

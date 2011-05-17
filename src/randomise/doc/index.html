@@ -418,11 +418,6 @@ produce Monte Carlo P-values between <em>p</em> &plusmn;
 2&radic;(<em>p</em>(1-<em>p</em>)/<em>n</em>) about 95% of the time,
 where <em>n</em> is the number of Monte Carlo permutations.  
 
-The table below shows confidence limits for <em>p</em>=0.05 for various
-<em>n</em>.  At least 5,000 permutations are required to reduce the
-uncertainty appreciably, though 10,000 permutations are required to
-reduce the margin-of-error to below 10% of the nominal alpha.
-
 <center>
 <table
   border="0"
@@ -450,17 +445,32 @@ reduce the margin-of-error to below 10% of the nominal alpha.
 <tr>
 <td align="right">50,000</td>
 <td>0.0500 &plusmn; 0.0019</td>
+</tr>
 </table>
 </center>
 
-In <b>randomise</b> the number of permutations to use is specified
-with the <code>-n</code> option.  If this number is greater than or equal
-to the number of possible permutations, an exhaustive test is run.  If
-it is less than the number of possible permutations a Monte Carlo
-permutation test is performed.  The default is 5000, though if time
-permits, 10000 is recommended.
+The table above shows confidence limits for <em>p</em> = 0.05 for various
+<em>n</em>.  At least 5,000 permutations are required to reduce the
+uncertainty appreciably, though 10,000 permutations are required to
+reduce the margin-of-error to below 10% of the nominal alpha.
+Hence the default is 5000, though if time permits, 10000 is
+recommended.  Use the <code>-n</code> to set the number of
+permutations (if this number is greater than or equal
+to the number of possible permutations, an exhaustive test is run.)
 
 
+<p><a name="draft"><b>'Draft' Analyses to Check for Any Significance</b></a>
+
+<P>To minimize computational expense a very short 'draft' analysis
+can be run to screen for any significance.  Since the draft analysis
+won't be very accurate, you use a generous thresold to ensure you'll
+catch a significant result.  Specifically, if you run with 200 
+permutations and use a FWE significance threshold of <em>p</em> &le; 0.1,
+you will almost always (greater than 99.9% chance) detect a true
+<em>p</em>-value of 0.05 (where "truth" corresponds to running every
+permutation).  If you find anything
+significant you should re-run with at least 5,000  (ideally 10,000)
+permutations to get the final result. 
 
 <p><b>Counting Permutations</b> 
 
@@ -523,6 +533,13 @@ counted and a one-way ANOVA calculation is used.
 
 <p>If you are have an SGE-capable system then a randomise job can be split in parallel with <code>randomise_parallel</code> which takes
 the same input options as the standard randomise binary and then calculates and batches an optimal number of randomise sub-tasks. The parallelisation has two stages - firstly the randomise sub-jobs are run, and then the sub-job results are combined in the final output.
+
+<p><b>Exchangeability Blocks</b>
+
+<p>The pre-FSL4.1.8 version of randomise had a bug in the -e option that could generate incorrect permutation of scans over subject blocks. Incorrectly permuting scans over subject blocks does two things:  Under permutation, it will randomly induce big positive or negative effects (inflating the variability in the numerator of the t statistics over permutations), but it will ALSO increase the residual standard deviation for each fit (inflating the denominator of the t statistic on each permutation).  Hence it isn't clear which will dominate, whether the permutation distribution of T values will be artifactually expanded (wrongly decreasing significance), or artifactually contracted (wrongly inflating significance).
+
+With some simulations, and with some re-analysis of real data, it appears that the effect of the bug is to always to wrongly deflate significance.  Thus, it is anticipated that results with the corrected code will have improved significance.
+
 
 
 <a name="refs"></a><hr><p><h2>REFERENCES</h2>

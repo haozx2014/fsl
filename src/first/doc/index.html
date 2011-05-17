@@ -48,18 +48,25 @@ thorough and complete description.
 
 <hr><a name="refs"><h3>References</h3></a>
 
-The following three references (thesis and two HBM abstracts) are the current best references for FIRST:
-<p>
-1. Brian Patenaude. Bayesian Statistical Models of Shape and Appearance for Subcortical Brain Segmentation. D.Phil. Thesis. University of Oxford. 2007.
+
+The following reference is the main journal paper describing FIRST:
 
 <p>
-2. Brian Patenaude, Stephen Smith, David Kennedy, and Mark Jenkinson. Improved Surface Models for FIRST. In Human 
-Brian Mapping Conference, 2008.
+<i>
+Patenaude, B., Smith, S.M., Kennedy, D., and Jenkinson M. 
+<br>A Bayesian Model of Shape and Appearance for Subcortical Brain 
+<br>NeuroImage, 2011 (in press).
+</i>
+<p>
+
+There is also a thesis relating to FIRST that contains some more technical details:
 
 <p>
-3. Brian Patenaude, Stephen Smith, David Kennedy, and Mark Jenkinson. FIRST - FMRIB's 
-integrated registration and segmentation tool. In Human Brain Mapping Conference, 
-2007. 
+Brian Patenaude. Bayesian Statistical Models of Shape and Appearance for Subc
+ortical Brain Segmentation. D.Phil. Thesis. University of Oxford. 2007.
+
+<p>
+
 
 <p><h4>FIRST Training Data Contributors</h4>
 
@@ -169,8 +176,8 @@ single-Gaussian intensity model); or none.
 <p><li> <b>-s</b> allows a restricted set of structures (one or more) to
 be selected.  For more than one structure the list must be comma
 separated with no spaces.  The list of possible structures is:
-<code>L_Accu L_Amyg L_Caud L_Hipp L_Late L_Pall L_Puta L_Thal R_Accu
-R_Amyg R_Caud R_Hipp R_Late R_Pall R_Puta R_Thal BrStem</code>.
+<code>L_Accu L_Amyg L_Caud L_Hipp L_Pall L_Puta L_Thal R_Accu
+R_Amyg R_Caud R_Hipp R_Pall R_Puta R_Thal BrStem</code>.
 
 <p><li> <b>-b</b> specifies that the input image is brain extracted -
 important when calculating the registration.
@@ -483,8 +490,7 @@ subject in the order con01-con10, followed by dis01-dis10.
 <p><b>Create a design matrix:</b>
 <p>
 This is easiest done by using the "Higher-level" mode of
-the <code>Glm</code> gui (note that you can also make a text file of
-the design matrix directly). However, the design matrices are treated
+the <code>Glm</code> gui. However, the design matrices are treated
 slightly differently by FIRST compared with FEAT.  One difference is
 that FIRST does not model separate group variances and so ignores the
 "Group" column in the <code>Glm</code> gui.  Another difference is
@@ -502,7 +508,7 @@ zeroes. That is:
 <br> 1 <br> 1 <br> 1 <br> 1 <br> 1 <br> 1 <br> 1 <br> 1 <br> 1 <br> 1 </code>
 
 <p>
-Create this design and save it in a file
+Create this design (using the Glm GUI) and save it in a file
 called <code>con0_dis1.mat</code> (choose the
 name <code>con0_dis1</code> in the "Save" dialog of
 the <code>Glm</code> GUI). Note that because the concatenated bvars
@@ -726,10 +732,6 @@ intensities.
 require no boundary correction (all boundary
 voxels are considered part of the structure).
 
-<p><LI> The posterior horns of the lateral ventricles are not yet fully
-modelled, so there may be areas of the ventricle horns not labelled as
-ventricle.
-
 <p><LI> The fourth ventricle is combined with the brainstem, and so the
 labels for the BrainStem also (intentionally) cover the fourth ventricle.
 
@@ -910,7 +912,7 @@ precedes the model file that will be used for <i>reference</i>
 structure (i.e. the thalamus). The model file used
 (the <code>-m</code> option) must correspond to the intensity model of
 the reference structure (i.e. the thalamus). Currently the
-Caudate, Hippocampus, Lateral Ventricles and Amygdala can be segmented
+Caudate, Hippocampus and Amygdala can be segmented
 in this way using the Thalamus as reference, and the Cerebellum can be segmented using the Putamen as reference; the relevant models are located
 in <code>${FSLDIR}/data/first/models_336_bin/intref_thal/</code>, and
 in <code>${FSLDIR}/data/first/models_336_bin/intref_puta/</code>.  The

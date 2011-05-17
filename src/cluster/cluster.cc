@@ -521,7 +521,8 @@ void print_results(const vector<int>& idx,
 			MISCMATHS::round(erasecoord[0].y),
 			MISCMATHS::round(erasecoord[0].z))=0;
 		lmaxidx.erase(lmaxidx.begin()+source) ; 
-		lmaxlistcounter--;		
+		lmaxlistcounter--;	
+		break;
 	      }
 	    }
 	  }

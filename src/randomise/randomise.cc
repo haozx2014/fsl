@@ -1,6 +1,6 @@
 /*  randomise.cc
     Tim Behrens & Steve Smith & Matthew Webster (FMRIB) & Tom Nichols (UMich)
-    Copyright (C) 2004-2008 University of Oxford  */
+    Copyright (C) 2004-2010 University of Oxford  */
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
     fsl@fmrib.ox.ac.uk
@@ -125,21 +125,22 @@ class Permuter
 public:
   bool isFlipping;
   bool isRandom;
-  int nGroups;
+  bool isPermutingBlocks;
+  int nBlocks;
   int nSubjects;
   double finalPermutation;
-  vector<double>       uniquePermutations; //0 is unique for whole design, 1..nGroups is unique per block
+  vector<double>       uniquePermutations; //0 is unique for whole design, 1..nBlocks is unique per block
   vector<ColumnVector> permutedLabels;
   vector<ColumnVector> originalLabels;
-  vector<ColumnVector> originalLocations;
+  vector<ColumnVector> originalLocation;
   vector<ColumnVector> previousPermutations;
   ColumnVector truePermutation;
   ColumnVector unpermutedVector;
   Permuter();
   ~Permuter();
   void writePermutationHistory(const string& filename);
-  void createPermutationGroups(const Matrix& design, Matrix groups, const bool oneNonZeroContrast, const long requiredPermutations, const bool detectingNullElements, const bool outputDebug);
-  void initialisePermutationGroups(const ColumnVector& labels, const long requiredPermutations);
+  void createPermutationScheme(const Matrix& design, ColumnVector groups, const bool oneNonZeroContrast, const long requiredPermutations, const bool detectingNullElements, const bool outputDebug, const bool permuteBLocks=false);
+  void initialisePermutationBlocks(const ColumnVector& labels, const long requiredPermutations);
   ColumnVector createDesignLabels(const Matrix& design);
   void createTruePermutation(const ColumnVector& labels, ColumnVector copyOldlabels, ColumnVector& permvec);
   ColumnVector nextPermutation(const long perm);
@@ -151,6 +152,7 @@ public:
   ColumnVector returnPreviousTruePermutation(const long permutationNumber, ColumnVector& previousState);
 
 private:
+  Permuter *blockPermuter;
   double computeUniquePermutations(const ColumnVector& labels, const bool calculateFlips);
   void nextShuffle(ColumnVector& perm);
   void nextFlip(ColumnVector& mult);
@@ -280,23 +282,47 @@ volume4D<float> spatialStatistic, originalSpatialStatistic;
 
 Matrix tfceStatistic(ParametricStatistic& output, const Matrix& inputStatistic, const volume<float>& mask, float& tfceDelta, const float tfceHeight, const float tfceSize, const int tfceConnectivity, const int permutationNo, const bool isF, const int numContrasts, const vector<float>& dof)
 {
-   if (permutationNo==1) 
+  if (permutationNo==1) {
      tfceDelta=inputStatistic.Maximum()/100.0;  // i.e. 100 subdivisions of the max input stat height
-   Matrix tstat_ce=tfce(inputStatistic,mask,tfceDelta,tfceHeight,tfceSize,tfceConnectivity);
-   if ( isF ) { 
-     ColumnVector zstat, dofVector(inputStatistic.AsColumn());
-     dofVector=dof[0];
-     F2z::ComputeFStats( tstat_ce.AsColumn(), numContrasts, dofVector, zstat);
-     tstat_ce=zstat.AsRow();
-   }
-   output.store(tstat_ce, permutationNo);
-   return (tstat_ce.Row(1));
+     if ( tfceDelta <= 0 )
+       cout << "Warning: The unpermuted statistic image for the current image contains no positive values, and cannot be processed with TFCE. A blank output image will be created." << endl;
+  }
+  Matrix tstat_ce(inputStatistic);
+  tstat_ce=0;
+  if ( tfceDelta > 0 ) {
+    tstat_ce=tfce(inputStatistic,mask,tfceDelta,tfceHeight,tfceSize,tfceConnectivity);
+    if ( isF ) { 
+      ColumnVector zstat, dofVector(inputStatistic.AsColumn());
+      dofVector=dof[0];
+      F2z::ComputeFStats( tstat_ce.AsColumn(), numContrasts, dofVector, zstat);
+      tstat_ce=zstat.AsRow();
+    }
+  }
+  output.store(tstat_ce, permutationNo);
+  return (tstat_ce.Row(1));
 }
 
-void checkInput(const short st,const  Matrix& dm,const  Matrix& tc,const  Matrix& fc){
+void checkInput(const short st,const  Matrix& dm,const  Matrix& tc,const  Matrix& fc) {
   if (dm.Nrows()!=st) throw Exception("number of rows in design matrix doesn't match number of \"time points\" in input data!"); 
   if (tc.Ncols()!=dm.Ncols()) throw Exception("number of columns in t-contrast matrix doesn't match number of columns in design matrix!");
   if (fc.Ncols() !=0 && fc.Ncols()!=tc.Nrows()) throw Exception("number of columns in f-contrast matrix doesn't match number of rows in t-contrast matrix!");
+}
+
+volume<float> nonConstantMask(volume4D<float>& data)
+{
+  volume<float> nonConstantMask(data.xsize(),data.ysize(),data.zsize());
+  nonConstantMask=0;
+  for(int z=0; z<data.zsize(); z++)
+    for(int y=0; y<data.ysize(); y++)
+      for(int x=0; x<data.xsize(); x++)
+	for(int t=1; t<data.tsize(); t++)
+	{
+	  if ( data(x,y,z,t)!=data(x,y,z,0) ) {
+	    nonConstantMask(x,y,z)=1;
+	    break;
+	  }
+	}
+  return nonConstantMask;
 }
 
 void Initialise(ranopts& opts, volume<float>& mask, Matrix& datam, Matrix& tc, Matrix& dm, Matrix& fc, Matrix& gp, Matrix& effectiveDesign)
@@ -307,7 +333,12 @@ void Initialise(ranopts& opts, volume<float>& mask, Matrix& datam, Matrix& tc, M
     opts.tfce_size.set_value("1");     
     opts.tfce_connectivity.set_value("26");  
   }
-  if ( opts.randomSeed.set()) srand(opts.randomSeed.value());
+
+  if ( opts.n_perm.value() < 0 ) {
+    throw Exception(("Randomise requires a postive number of permutations, did you mean to type -n "+num2str(opts.n_perm.value()).erase(0,1)+"?").c_str());
+  }
+
+  if ( opts.randomSeed.set() ) srand(opts.randomSeed.value() );
   if ( opts.randomSeed.set() && opts.verbose.value() ) cout << "Seeding with " << opts.randomSeed.value() << endl;
   if (opts.verbose.value()) cout << "Loading Data: "; 
   volume4D<float> data;
@@ -368,6 +399,8 @@ void Initialise(ranopts& opts, volume<float>& mask, Matrix& datam, Matrix& tc, M
     }
     else mask = data[0];
     mask.binarise(0.0001);
+    if (!opts.disableNonConstantMask.value())
+      mask*=nonConstantMask(data);
     if ( mask.sum() < 1 ) throw Exception("Data mask is blank.");
     datam=data.matrix(mask);
     if (opts.demean_data.value()) datam=remmean(datam);
@@ -701,10 +734,11 @@ bool convertContrast(const Matrix& inputModel,const Matrix& inputContrast,const 
     Matrix c2=U.Columns(1,p-r);
     c2=c2.t();
     Matrix C = inputContrast & c2;
+    if ( rank(C) < C.Nrows() )
+      throw Exception("Error: This (f)contrast appears to be rank defficient, please check your design.");
     Matrix W=inputModel*C.i();
     Matrix W1=W.Columns(1,r);
     Matrix W2=W.Columns(r+1,W.Ncols());
-
     bool confoundsExist( W2.Ncols() > 0 ); 
     if ( confoundsExist && mode == 0 ) 
       outputData=(IdentityMatrix(W2.Nrows())-W2*pinv(W2))*inputData;
@@ -770,7 +804,6 @@ void analyseContrast(const Matrix& inputContrast, const Matrix& dm, const Matrix
   }
   else hasConfounds=convertContrast(dm,inputContrast,datam,NewModel,NewCon,NewDataM,opts.confoundMethod.value());
 
-
   if ( opts.isDebugging.value() ) {
     if ( hasConfounds ) 
       cerr << "Confounds detected." << endl;
@@ -779,14 +812,14 @@ void analyseContrast(const Matrix& inputContrast, const Matrix& dm, const Matrix
   }
 
   bool oneRegressor( inputContrast.SumAbsoluteValue() == inputContrast.MaximumAbsoluteValue() );
-  if (opts.effectiveDesignFile.value()!="")
-    permuter.createPermutationGroups(effectiveDesign,gp,(contrastNo>0 && oneRegressor),opts.n_perm.value(),opts.detectNullSubjects.value(),opts.isDebugging.value()); 
+  if ( opts.effectiveDesignFile.value()!="" )
+    permuter.createPermutationScheme(effectiveDesign,gp.Column(1),(contrastNo>0 && oneRegressor),opts.n_perm.value(),opts.detectNullSubjects.value(),opts.isDebugging.value(),opts.permuteBlocks.value()); 
   else
-    permuter.createPermutationGroups(remmean(dm)*inputContrast.t(),gp,(contrastNo>0 && oneRegressor),opts.n_perm.value(),opts.detectNullSubjects.value(),opts.isDebugging.value());
-  if(permuter.isFlipping) cout << "One-sample design detected; sign-flipping instead of permuting." << endl;
-  if(opts.verbose.value() || opts.how_many_perms.value()) 
+    permuter.createPermutationScheme(remmean(dm)*inputContrast.t(),gp.Column(1),(contrastNo>0 && oneRegressor),opts.n_perm.value(),opts.detectNullSubjects.value(),opts.isDebugging.value(),opts.permuteBlocks.value());
+  if( permuter.isFlipping ) cout << "One-sample design detected; sign-flipping instead of permuting." << endl;
+  if( opts.verbose.value() || opts.how_many_perms.value() ) 
   {
-    if(permuter.isFlipping) cout << permuter.uniquePermutations[0] << " sign-flips required for exhaustive test";
+    if( permuter.isFlipping ) cout << permuter.uniquePermutations[0] << " sign-flips required for exhaustive test";
     else cout << permuter.uniquePermutations[0] << " permutations required for exhaustive test";
     if (contrastNo>0)  cout << " of t-test " << contrastNo << endl;
     if (contrastNo==0) cout << " of all t-tests " << endl;
@@ -846,33 +879,51 @@ int main(int argc,char *argv[]) {
 }
 
 //Permuter Class
-void Permuter::createPermutationGroups(const Matrix& design, Matrix groups,const bool oneNonZeroContrast,const long requiredPermutations, const bool detectingNullElements, const bool outputDebug)
+void Permuter::createPermutationScheme(const Matrix& design, ColumnVector groups, const bool oneNonZeroContrast, const long requiredPermutations, const bool detectingNullElements, const bool outputDebug, const bool permuteBlocks)
 {
-  nGroups=int(groups.Maximum())+1;
+  nBlocks=int(groups.Maximum())+1; //+1 to include the "0" block
   nSubjects=design.Nrows();
-  ColumnVector labels = createDesignLabels(design);
-  isFlipping = ( (labels.Maximum()==1) && oneNonZeroContrast );
-
   if (detectingNullElements)
     for(int row=1;row<=nSubjects;row++)
       if (abs(design.Row(row).Sum())<1e-10 && !isFlipping) //original just checked if Sum()==0
-	groups(row,1)=0;
+	groups(row)=0;
+  isPermutingBlocks=permuteBlocks;
 
-  originalLocations.resize(nGroups);
-  permutedLabels.resize(nGroups);
-  originalLabels.resize(nGroups);
-  for(int group=0;group<=groups.Maximum();group++)
-  {
-     int active=0;
-     for(int row=1;row<=nSubjects;row++)
-       if(groups(row,1)==group) active++;
-     originalLocations[group].ReSize(active);
-     permutedLabels[group].ReSize(active);
-     for(int row=nSubjects;row>=1;row--) //Now work backwards to fill in the row numbers
-       if(groups(row,1)==group) originalLocations[group](active--)=row;
+  if ( isPermutingBlocks ) {
+    blockPermuter=new Permuter;
+      ColumnVector dummyBlocks(nBlocks-1);
+      dummyBlocks=1;
+      Matrix effectiveBlockDesign(0,design.Ncols()*design.Nrows()/(nBlocks-1));
+    for(int group=1;group<nBlocks;group++) {
+      RowVector currentRow;
+      for(int row=1;row<=nSubjects;row++)
+	if(groups(row)==group) currentRow |= design.Row(row);
+      effectiveBlockDesign &= currentRow;
+    }
+      blockPermuter->createPermutationScheme(effectiveBlockDesign,dummyBlocks,false,requiredPermutations,false,outputDebug,false);
   }
+  
+  ColumnVector labels = createDesignLabels(design|groups);
+  if ( isPermutingBlocks ) 
+    for( int row=1;row<=nSubjects;row++ )
+      labels(row)=row;
 
-  initialisePermutationGroups(labels,requiredPermutations);
+  isFlipping = ( (labels.Maximum()==1) && oneNonZeroContrast );
+
+  originalLocation.resize(nBlocks);
+  permutedLabels.resize(nBlocks);
+  originalLabels.resize(nBlocks);
+  for(int group=0;group<nBlocks;group++)
+  {
+     int member(0);
+     for(int row=1;row<=nSubjects;row++)
+       if(groups(row)==group) member++;
+     originalLocation[group].ReSize(member);
+     permutedLabels[group].ReSize(member);
+     for(int row=nSubjects;row>=1;row--) //Now work backwards to fill in the starting locations
+       if(groups(row)==group) originalLocation[group](member--)=row;
+  }
+  initialisePermutationBlocks(labels,requiredPermutations);
   if (outputDebug) 
     cerr << "Subject | Design | group | label" << endl << ( truePermutation | design | groups | labels ) << endl;
 }
@@ -899,22 +950,25 @@ ColumnVector Permuter::returnPreviousTruePermutation(const long permutationNumbe
   }
 }
 
-void Permuter::initialisePermutationGroups(const ColumnVector& designLabels,const long requiredPermutations)
+void Permuter::initialisePermutationBlocks(const ColumnVector& designLabels,const long requiredPermutations)
 {
   truePermutation.ReSize(nSubjects);
   for(int i=1;i<=nSubjects;i++) truePermutation(i)=i;
   if (isFlipping) truePermutation=1;
   unpermutedVector=truePermutation;
-  uniquePermutations.resize(nGroups);
+  uniquePermutations.resize(nBlocks);
   uniquePermutations[0]=1;
-  for(int group=0;group<nGroups;group++)
+  for(int group=0;group<nBlocks;group++)
   { 
     for(int row=1;row<=permutedLabels[group].Nrows();row++) 
-      permutedLabels[group](row)=designLabels((int)originalLocations[group](row));
+      permutedLabels[group](row)=designLabels((int)originalLocation[group](row));
     if (group>0) uniquePermutations[group]=computeUniquePermutations(permutedLabels[group],isFlipping);
     uniquePermutations[0]*=uniquePermutations[group];
     originalLabels[group]=permutedLabels[group];
   }
+
+  if ( isPermutingBlocks )
+    uniquePermutations[0]=blockPermuter->finalPermutation;
   isRandom=!(requiredPermutations==0 || requiredPermutations>=uniquePermutations[0]);
   if (isRandom) finalPermutation=requiredPermutations;
   else finalPermutation=uniquePermutations[0];
@@ -924,9 +978,9 @@ void Permuter::initialisePermutationGroups(const ColumnVector& designLabels,cons
 ColumnVector Permuter::permutationVector()
 {
 ColumnVector newvec(nSubjects); 
-   for(int group=0;group<nGroups;group++)
-     for(int row=1;row<=permutedLabels[group].Nrows();row++) 
-       newvec((int)originalLocations[group](row))=permutedLabels[group](row);
+   for(int block=0;block<nBlocks;block++)
+     for(int row=1;row<=permutedLabels[block].Nrows();row++) 
+       newvec( (int)originalLocation[block](row) ) = permutedLabels[block](row);
    return newvec;
 }
 
@@ -948,7 +1002,15 @@ void Permuter::createTruePermutation(const ColumnVector& newLabels,ColumnVector 
 
 ColumnVector Permuter::nextPermutation(const long permutationNumber)
 {
-  for(int group=1;group<nGroups;group++)
+  if ( isPermutingBlocks ) {
+    ColumnVector permutedBlocksFoo=blockPermuter->nextPermutation(permutationNumber,false,false);
+    for(int block=1;block<nBlocks;block++) {
+      permutedLabels[block]=originalLabels[(int)permutedBlocksFoo(block)];
+    }
+    return(permutationVector());
+  }
+
+  for(int group=1;group<nBlocks;group++)
   {
       if(isFlipping) nextFlip(permutedLabels[group]);
       else nextShuffle(permutedLabels[group]);
@@ -970,7 +1032,7 @@ ColumnVector Permuter::nextPermutation(const long permutationNumber, const bool 
     if (permutationNumber!=1) newPermutation=nextPermutation(permutationNumber);
   } while(isRandom && isPreviousPermutation(newPermutation));
   if(isStoring || isRandom) previousPermutations.push_back(permutationVector());
-  createTruePermutation(permutationVector(),currentLabels,truePermutation);
+  createTruePermutation(permutationVector(),currentLabels,truePermutation);				       
   return(truePermutation);
 }
 
@@ -1059,8 +1121,12 @@ void Permuter::writePermutationHistory(const string& fileName)
 
 Permuter::Permuter()
 {
+  isPermutingBlocks=false;
+  blockPermuter=NULL;
 }
 
 Permuter::~Permuter()
 {
+  if ( blockPermuter != NULL )
+     delete blockPermuter;
 }

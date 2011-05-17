@@ -1,6 +1,6 @@
 /*  first_utils.cc
-    Brian Patenaude and Mark Jenkinson
-    Copyright (C) 2006-2009 University of Oxford  */
+    Brian Patenaude, Mark Jenkinson and Matthew Webster
+    Copyright (C) 2006-2010 University of Oxford  */
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
     fsl@fmrib.ox.ac.uk
@@ -63,14 +63,9 @@
     University, to negotiate a licence. Contact details are:
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
-#include <iostream>
-#include <string>
-#include <sstream>
-#include <fstream>
 #include <stdio.h>
-#include <cmath>
-#include <algorithm>
-#include "math.h"
+#include <unistd.h>
+
 
 #include "utils/options.h"
 #include "newimage/newimageall.h"
@@ -592,7 +587,7 @@ volume<short> make_mask_from_meshInOut(const volume<float> & image, const Mesh& 
 	
 	
 	
-  // THIS EXCLUDEDS THE ACTUAL MESH
+  // THIS EXCLUDES THE ACTUAL MESH
   volume<short> otl=mask;
   getBounds(m,bounds,xdim,ydim,zdim);
   vector<Pt> current;
@@ -916,6 +911,14 @@ string read_bvars_ModelName(string fname){
   //throw away first three lines 
   getline(fin,stemp);//this is bvars file
   getline(fin,modelNames);//modelnames
+
+  if ( access(modelNames.c_str(),F_OK)!=0 ) {
+    string FslDir(getenv("FSLDIR"));
+    string modelNameReplaced(modelNames);
+    modelNameReplaced.replace(0,14,FslDir);
+    cerr << "Warning: " << modelNames << " does not exist. Attempting to switch to: " << modelNameReplaced << endl;
+    modelNames=modelNameReplaced;
+  }
 			
   return modelNames;
 }
@@ -930,13 +933,13 @@ float mode(vector<float> vdists, float min, float max){
 	
   float binwidth=(max-min)/bins;
   vector<int> bincounts;
-  //innitialize bincounts to zero
+  //initialize bincounts to zero
   for (int b=0;b<bins;b++){
     bincounts.push_back(0);
   }
 	
   for (int i=0;i<N;i++){
-    //search thgrough each bin
+    //search through each bin
     for (int b=0;b<bins;b++){
       if (vdists.at(i)<(min+(b+1)*binwidth)){
 	bincounts.at(b)++;
@@ -1079,7 +1082,7 @@ float boundaryCorr(volume<short>* mask, volume<float>* ref, int label, float zth
   float mean=(halfmin+halfmax)/2;
   float sdev=abs(halfmax-halfmin)/2.35;
 	
-  //tets for thalamus
+  //test for thalamus
   //	volume<float> zvol;
   //	copyconvert(*mask, zvol);
   //	zvol=0;
@@ -1088,7 +1091,7 @@ float boundaryCorr(volume<short>* mask, volume<float>* ref, int label, float zth
   float vol=0;
 
   float min=0, max=0;
-  //calculates z-value for all lgive a nice place to initialize EM or could act directly oon intesity anduse range to initialize
+  //calculates z-value for all lgive a nice place to initialize EM or could act directly on intensity and use range to initialize
   for (int i=bounds[0];i<bounds[1];i++){
     for (int j=bounds[2];j<bounds[3];j++){
       for (int k=bounds[4];k<bounds[5];k++){
@@ -1163,13 +1166,13 @@ int findStructLabel(volume<short>* mask, int* bounds){
 //********************************GLM for stats******************************//
 ColumnVector GLM_fit(Matrix G, Matrix D, ColumnVector contrast){
 	
-  //start for only well connditioned design matrices
+  //start for only well conditioned design matrices
   Matrix A=G.t()*G;
   Matrix Betas(D.Nrows(),D.Ncols());
   Betas=A.i()*G.t()*D;
   Matrix Mres;
   Mres=D-G*(Betas);
-  //calculate residula variance
+  //calculate residual variance
   ColumnVector avgRes(D.Ncols());
   for (int i=0; i<D.Ncols();i++){
     avgRes.element(i)=((Mres.SubMatrix(1,Mres.Nrows(),i+1,i+1)).t()*(Mres.SubMatrix(1,Mres.Nrows(),i+1,i+1))).AsScalar()/(G.Nrows()-G.Ncols());
@@ -1194,14 +1197,14 @@ float MVGLM_fit(Matrix G, Matrix D, Matrix contrast, int& df1, int& df2){
 	
   //Calculate estimated values
   Matrix Yhat=G*(G.t()*G).i()*G.t()*D;
-  //caluclate E covariance matrix
+  //calculate E covariance matrix
   Matrix E=D-Yhat;
   E=E.t()*E;
 //	cout<<"hmm"<<G.t()*G<<endl<<contrast*G.t()*G*contrast.t()<<endl;
-  //calculate H, the sum-square /cross square porduct for hypthosis test
+  //calculate H, the sum-square /cross square product for hypothesis test
   Matrix YhatH= G*contrast.t()*(contrast*G.t()*G*contrast.t()).i()*contrast*G.t()*D;
   Matrix H=D-YhatH;
-  //nto effecient but easy to convert to other statistics
+  //not efficient but easy to convert to other statistics
   H=H.t()*H-E;
 
   // Calculate Pillai's Trace
@@ -1262,6 +1265,7 @@ void do_work_SingleClean(){
   volume<float> vz1;
 
   boundaryCorr(&segim, &t1im,label, thresh.value(), bounds);
+  segim.setAuxFile("MGH-Subcortical");  // for automatic colormap
   save_volume(segim,outname.value());
 	
 }
@@ -1304,8 +1308,8 @@ Matrix rigid_linear_xfm(Matrix Data,ColumnVector meanm, Mesh mesh, bool writeToF
   vector< float > vscale;
 	
   for (int subject=0;subject<Data.Ncols();subject++){
-    //***********Demena data*************//
-    //Deamean the Data and reformat
+    //***********Demean data*************//
+    //Demean the Data and reformat
     //Demean Mean mesh and reformat
     Matrix DataDM(3,Data.Nrows()/3);
     Matrix RefDM(3,Data.Nrows()/3);
@@ -1323,7 +1327,7 @@ Matrix rigid_linear_xfm(Matrix Data,ColumnVector meanm, Mesh mesh, bool writeToF
     if (useScale.value()){
       //***********calculate scale*************//
       //Data is right (in Horn), Ref is left
-      //caluclate length vectors and sum
+      //calculate length vectors and sum
       float sumr=0, suml=0;
       for (int i=0;i<DataDM.Nrows();i++){
 	suml+=(DataDM.element(0,i)*DataDM.element(0,i) + DataDM.element(1,i)*DataDM.element(1,i) +DataDM.element(0,i)*DataDM.element(1,i) );
@@ -1349,7 +1353,7 @@ Matrix rigid_linear_xfm(Matrix Data,ColumnVector meanm, Mesh mesh, bool writeToF
     vR.push_back(R);
   }
 	
-  //*****************APPLY TRANFSORMATIOON TO MESHES**********************//
+  //*****************APPLY TRANSFORMATION TO MESHES**********************//
   //NO SCALE IS CALCULATED
 	
 	
@@ -1444,7 +1448,7 @@ Matrix recon_meshesMNI( shapeModel* model1, Matrix bvars, ColumnVector* meanm, M
   }
 
 
-  //need number of subjects (to detrmine number of modes)
+  //need number of subjects (to determine number of modes)
   //int M=model1->getNumberOfSubjects();
   int Tpts=model1->smean.size()/3;
   Matrix MeshVerts(3*Tpts,bvars.Ncols());
@@ -1497,7 +1501,7 @@ Matrix recon_meshesNative( const string & modelname, const Matrix & bvars, Colum
     int count=0;
     int cumnum=0; 
     for (int sh=0; sh<1;sh++){
-      //dieferrence between origin specification
+      //difference between origin specification
       Mesh m=convertToMesh( model1->smean , model1->cells );
       //			m.save("targetMesh.vtk",3);
       //Mesh m=model1->getShapeMesh(sh);
@@ -1515,7 +1519,7 @@ Matrix recon_meshesNative( const string & modelname, const Matrix & bvars, Colum
 		
   }
 	
-  //need number of subjects (to detrmine number of modes)
+  //need number of subjects (to determine number of modes)
   int Tpts=model1->smean.size()/3;
   Matrix MeshVerts(3*Tpts,bvars.Ncols());
   //this is different than mnumber of subjects which were used to create model
@@ -1571,14 +1575,14 @@ Matrix deMeanMatrix(Matrix M){
 
 
 void do_work_bvars(){
-  //**********read in bvars and models and lfirt matrices***************//
+  //**********read in bvars and models and flirt matrices***************//
   string mname;
   mname=read_bvars_ModelName(inname.value() );	
 	
   //load model 
   shapeModel* model1=loadAndCreateShapeModel(mname);
   cout<<"model loaded"<<endl;
-  //need number of subjects (to detrmine number of modes)
+  //need number of subjects (to determine number of modes)
   vector<string> subjectnames;
   Matrix bvars;
   vector<int> vN;
@@ -1587,10 +1591,23 @@ void do_work_bvars(){
   //modelname is used to set a path
 	vector< vector< vector<float> > > vec_fmats; 
   read_bvars(inname.value(),bvars,subjectnames, vN, pathname.value(),vec_fmats);
-  target=read_vest(designname.value());
+  target=read_ascii_matrix(designname.value());
+  if (target.Nrows()!=bvars.Ncols()) {
+    try {
+      target=read_vest(designname.value());
+    } catch (...)
+    { 
+      cerr << "ERROR:: Design matrix incorrect (wrong size or cannot be read)" << endl;
+     exit(EXIT_FAILURE);
+    }
+    if (target.Nrows()!=bvars.Ncols()) {
+      cerr << "ERROR:: Design matrix incorrect (wrong size or cannot be read)" << endl;
+      exit(EXIT_FAILURE);
+    }
+  }
   //can filter meshes
   if (usePCAfilter.value()){
-    //truncate number of mdoes to recon mehs (smoothing)
+    //truncate number of modes to recon mesh (smoothing)
     bvars=bvars.SubMatrix(1,numModes.value(),1,bvars.Ncols());
   }
 				
@@ -1606,7 +1623,7 @@ void do_work_bvars(){
   ifstream flirtmats;
   vector<string> flirtmatnames;
 					
-  //**********done reading in bvars and models adn lfirt matrices ***************//
+  //**********done reading in bvars and models and flirt matrices ***************//
   //****************RECONSTRUCTION AND ALIGNMENT*********************/
 					
   //Choose the space in which to reconstruct the meshes
@@ -1618,10 +1635,10 @@ void do_work_bvars(){
     for (unsigned int i =0; i<subjectnames.size();i++){
       string stemp;
       flirtmats>>stemp;
-      flirtmatnames.push_back(stemp); ///inversion fo flirtmatrix is handled in shape model function when a string is input
+      flirtmatnames.push_back(stemp); ///inversion of flirtmatrix is handled in shape model function when a string is input
     }
 						
-    //Reconstruct in native spoace of the image (it recons the mni then applies flirt matrix)
+    //Reconstruct in native space of the image (it recons the mni then applies flirt matrix)
     MeshVerts=recon_meshesNative( mname, bvars, CVmodelMeanMesh, modelMeanMesh,subjectnames, vec_fmats, vMeshes);
 	  cout<<"done recon"<<endl;
   }
@@ -1639,11 +1656,11 @@ void do_work_bvars(){
     MeshVerts=rigid_linear_xfm(MeshVerts,CVmodelMeanMesh, modelMeanMesh, false);
   }
   //****************END RECONSTRUCTION AND ALIGNMENT*********************/
-  //****************DEMEAN DESIGN MATRIX AND ADD ONE COLUMS*********************/
+  //****************DEMEAN DESIGN MATRIX AND ADD ONE COLUMNS*********************/
 					
 					
   cout<<"done recon and reg"<<endl;
-  //if the design has nto been demeaned and you are dooing discrimiant analysis
+  //if the design has not been demeaned and you are doing discriminant analysis
   //then perform demean of matrix
 					
 					
@@ -1658,7 +1675,7 @@ void do_work_bvars(){
 						
 						
   if(!isOne){
-    //create demena deisgn, assume a nomean column at start
+    //create demeaned design, assume a non-mean column at start
     Matrix targTemp(target.Nrows(),target.Ncols()+1);
     for (int i=0;i<targTemp.Ncols();i++){
       if (i==0){
@@ -1730,6 +1747,7 @@ void do_work_bvars(){
       string lbst;
       sstemp2>>lbst;
 							
+      segim.setAuxFile("MGH-Subcortical");  // for automatic colormap
       save_volume(segim,subjectnames.at(subject)+"FIRSTbcorr_lb"+lbst);
       fvol_all<<subjectnames.at(subject)<<" "<<voltemp<<" "<<voltemp*t1im.xdim()*t1im.ydim()*t1im.zdim()<<endl;
       //save volume to a matrix if you wish to use in GLM
@@ -1771,7 +1789,7 @@ void do_work_bvars(){
       }
     }
 						
-  }else{
+  }else{  // VERTEX ANALYSIS FROM HERE
 	  ColumnVector CVnorm(target.Nrows());
 	  // if chosen can include a normalization EV (i.e. control for size) ...useful for vertex shape statistics
 	  if (useNorm.value()){
@@ -1787,7 +1805,7 @@ void do_work_bvars(){
 	  
 	  
 	  
-	  //****************END DEMEAN DESIGN MATRIX AND ADD ONE COLUMS*********************/
+	  //****************END DEMEAN DESIGN MATRIX AND ADD ONE COLUMNS*********************/
 	  
 	  Matrix contrast(target.Ncols()-1,target.Ncols());
 	  int EVmin=1;//ignore mean column first EV to examine
@@ -1858,11 +1876,12 @@ void do_work_bvars(){
 		  }
 		  m.update();
 		  setShapeMesh(model1,m);
-		  cout<<"set hsape Mesh"<<endl;
+		  cout<<"set shape Mesh"<<endl;
 		  vector<float> scalarsT;
 		  
 		  //this provides the option to do stats on the vertices 
-		  //create F test contrast matrix (testing each EV separately
+		  //create F test contrast matrix (testing each EV separately)
+		  //contrast matrix is the identity matrix minus the EV'th row
 		  count=0;
 		  for (int j=0;j<contrast.Ncols();j++){
 			  if (j!=EV){
@@ -1903,7 +1922,7 @@ void do_work_bvars(){
 		  //use multivariate test on each vertex
 		  int dof1=0, dof2=0;
 		  for (int i=0;i<MeshVerts.Nrows();i=i+3){
-			  //use multivariate multiple regression on each veretx 
+			  //use multivariate multiple regression on each vertex 
 			  cout<<"do mvglm"<<endl;
 			  float F=MVGLM_fit(target, MeshVerts.SubMatrix(i+1,i+3,1,MeshVerts.Ncols()).t(),contrast,dof1,dof2);
 			  cout<<"done mvglm"<<endl;
@@ -1959,6 +1978,7 @@ void do_work_meshToVol(){
 	
   segim=make_mask_from_meshInOut(ref,m1,label,bounds);
 
+  segim.setAuxFile("MGH-Subcortical");  // for automatic colormap
   save_volume(segim,outname.value());
 
 }

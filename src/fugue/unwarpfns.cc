@@ -1069,22 +1069,6 @@ volume<float> unwrap2D(const volume<float>& phasemap,
     mslice.binarise(0.5);
     // unwrap 
     uslice = unwrap(pslice,lslice,verbose);
-    // fix any potential phase difference
-    if (z>zmin) { 
-      udiff = uslice - olduslice;
-      volume<float> combmslice;
-      combmslice = mslice * oldmslice;
-      udiff *= combmslice;
-      float avpdiff;
-      // Using the mean phase difference
-//        avpdiff = round(udiff.sum() / combmslice.sum() / (2.0*M_PI));
-      // Using the median phase difference
-      float percent = 1.0 - combmslice.sum() / combmslice.nvoxels() / 2.0;
-      avpdiff = MISCMATHS::round(udiff.percentile(percent) / (2.0*M_PI));
-      if (avpdiff != 0.0) {
-	uslice -= ((float) (avpdiff*2.0*M_PI))*mslice;
-      }
-    }
     // set the corresponding slice of uphase to uslice
     uphase.setROIlimits(uphase.minx(),uphase.miny(),z,
 			uphase.maxx(),uphase.maxy(),z);
@@ -1094,7 +1078,52 @@ volume<float> unwrap2D(const volume<float>& phasemap,
   // restore previous ROI status...
   phasemap.deactivateROI();
   label.deactivateROI();
+  uphase.deactivateROI();
   
+// now fix slice-offsets using median difference
+
+// //  NB: used to try the same unwrap() call with a single label per slice but it did not work well!
+//   volume<int> slicelabels(label);
+//   int labelnum=0;
+//   for (int z=zmin; z<=zmax; z++) {
+//     bool empty=true;
+//     for (int y=slicelabels.miny(); y<=slicelabels.maxy(); y++) {
+//       for (int x=slicelabels.minx(); x<=slicelabels.maxx(); x++) {
+// 	if (slicelabels(x,y,z)>0) {
+// 	  if (empty) { empty=false; labelnum++; }
+// 	  slicelabels(x,y,z)=labelnum;
+// 	}
+//       }
+//     }
+//   }
+//   save_volume(slicelabels,"slicelabels");
+//   unwrap(uphase,slicelabels,true);
+
+  // instead, use a median difference (best when combined with --removeramps)
+  vector<float> diffvec;
+  for (int z=zmin; z<zmax; z++) {
+    float phasediff=0.0;
+    diffvec.clear();
+    for (int y=label.miny(); y<=label.maxy(); y++) {
+      for (int x=label.minx(); x<=label.maxx(); x++) {
+	if ((label(x,y,z)>0) && (label(x,y,z+1)>0))  {
+	  phasediff = uphase(x,y,z+1)-uphase(x,y,z);
+	  diffvec.push_back(phasediff);
+	}
+      }
+    }
+    if (diffvec.size()>0) {
+      sort(diffvec.begin(),diffvec.end());
+      float median_diff=diffvec[MISCMATHS::round((int) diffvec.size()/2)];
+      int m=MISCMATHS::round(median_diff/(2.0*M_PI));
+      for (int y=label.miny(); y<=label.maxy(); y++) {
+	for (int x=label.minx(); x<=label.maxx(); x++) {
+	  if (label(x,y,z)>0) { uphase(x,y,z+1) -= m*2.0*M_PI; }
+	}
+      }
+    }
+  }
+
   return uphase;
 }
 

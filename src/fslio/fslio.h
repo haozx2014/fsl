@@ -114,6 +114,7 @@ extern "C" {
 #define FSL_RADIOLOGICAL        -1
 #define FSL_NEUROLOGICAL         1
 #define FSL_INCONSISTENT         0
+#define FSL_ZERODET           -101
 
 /*! \struct FSLIO
     \brief High level data structure for open datasets in the fslio API.
@@ -132,6 +133,7 @@ typedef struct
   int file_mode;
   int write_mode;
   int written_hdr;
+  int errorflag;
 } FSLIO;
 
 
@@ -173,6 +175,7 @@ int  FslIsCompressedFileType(int filetype);
 int  FslBaseFileType(int filetype);
 char* FslFileTypeString(int filetype);
 
+int FslGetErrorFlag(const FSLIO *fslio);
 int  FslGetWriteMode(const FSLIO *fslio);
 void FslSetWriteMode(FSLIO *fslio, int mode);
 
