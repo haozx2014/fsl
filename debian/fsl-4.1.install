@@ -1,5 +1,6 @@
 debian/tmp/bin/* usr/lib/fsl/4.1
-debian/tmp/{tcl,etc} usr/share/fsl/4.1
+debian/tmp/tcl usr/share/fsl/4.1
+debian/tmp/etc usr/share/fsl/4.1
 debian/tmp/etc/fslconf/feat.tcl etc/fsl/4.1
 debian/tmp/fsl-4.1.xpm usr/share/pixmaps
 debian/tmp/etc usr/share/fsl/4.1

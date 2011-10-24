@@ -1,5 +1,6 @@
 debian/tmp/bin/* usr/lib/fsl/#FSLMVERSION#
-debian/tmp/{tcl,etc} usr/share/fsl/#FSLMVERSION#
+debian/tmp/tcl usr/share/fsl/#FSLMVERSION#
+debian/tmp/etc usr/share/fsl/#FSLMVERSION#
 debian/tmp/etc/fslconf/feat.tcl etc/fsl/#FSLMVERSION#
 debian/tmp/fsl-#FSLMVERSION#.xpm usr/share/pixmaps
 debian/tmp/etc usr/share/fsl/#FSLMVERSION#
