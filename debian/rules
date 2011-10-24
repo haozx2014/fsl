@@ -137,7 +137,10 @@ cprojs: $(PROJECTS:%=cproj-%)
 
 
 #Architecture
-build: instdir biextras biprojs
+build: build-arch build-indep
+build-arch: build-stamp
+build-indep: build-stamp
+build-stamp: instdir biextras biprojs
 	dh_testdir
 
 	# fix permissions
@@ -163,6 +166,7 @@ build: instdir biextras biprojs
 		echo "/usr/lib/fsl/$(FSLMAJORVERSION)/fsl_app_wrapper /usr/bin/fsl$(FSLMAJORVERSION)-$$bname" >> debian/fsl-$(FSLMAJORVERSION).links ; \
 		echo "/usr/share/man/man1/fsl-$(FSLMAJORVERSION).1.gz /usr/share/man/man1/fsl$(FSLMAJORVERSION)-$${bname}.1.gz" >> debian/fsl-$(FSLMAJORVERSION).links ; \
 	done
+	touch $@
 
 
 clean: cleancontrolfiles controlfiles cextras cprojs
@@ -183,6 +187,8 @@ clean: cleancontrolfiles controlfiles cextras cprojs
 
 	# fix permissions in the source
 	find src/ -name '*.fig' -or -name '*.gif' -exec chmod -x {} \;
+
+	-rm build-stamp
 
 
 # checks that the included desktop files are ok
