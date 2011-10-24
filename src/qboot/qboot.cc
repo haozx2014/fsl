@@ -1,11 +1,7 @@
-/* {{{ copyright */
-
-/*  ztop - convert a single z value into p
-
-    Stephen Smith, FMRIB Image Analysis Group
-
-    Copyright (C) 2002 University of Oxford  */
-
+/*   Copyright (C) 2010 University of Oxford  
+     
+     Stamatios Sotiropoulos - FMRIB Image Analysis Group   */
+ 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
     fsl@fmrib.ox.ac.uk
@@ -68,63 +64,43 @@
     University, to negotiate a licence. Contact details are:
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
-/* }}} */
-/* {{{ defines */
 
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include "libprob.h"
+#include <iostream>
+#include <fstream>
+#include <iomanip>
+#include <string>
+#include "utils/log.h"
+#include "utils/tracer_plus.h"
+#include "stdlib.h"
+#include "qboot.h"
+#include "qbootOptions.h"
 
-#define MINP 1e-15
 
-using namespace MISCMATHS;
+using namespace ODFs;
 
-/* }}} */
-/* {{{ usage */
 
-void usage(void)
-{
-  printf("Usage: ztop <z> [-2]\n");
-  printf("-2 : use 2-tailed conversion (default is 1-tailed)\n");
-  exit(1);
-}
-
-/* }}} */
-
-int main(int argc,char *argv[])
-{
-  int i, twotailed=0;
-  double p, z;
-
-  if (argc<2)
-    usage();
-
-  z=atof(argv[1]);
-
-  /* {{{ process args */
-
-for (i=2; i<argc; i++)
-{
-  if (!strcmp(argv[i], "-2"))
-    twotailed=1;
-
-  else
-    usage();
-}
-
-/* }}} */
-
-  p=1-ndtr(z);
-
-  if (twotailed)
-    p*=2;
+////////////////////////////////////////////
+//       MAIN
+////////////////////////////////////////////
   
-  if (p>0.0001) 
-    printf("%f\n",p);
-  else
-    printf("%e\n",p);
+int main(int argc, char *argv[])
+{
+  try{  
+    // Setup logging:
+    Log& logger = LogSingleton::getInstance();
+    qbootOptions& opts = qbootOptions::getInstance();
+    opts.parse_command_line(argc,argv,logger);
+    srand(qbootOptions::getInstance().seed.value());
+    ODF_Volume_Manager vm;
+    vm.run_all();
+  }
 
-  return(0);
+  catch(Exception& e) {
+    cerr << endl << e.what() << endl;
+  }
+  catch(X_OptionError& e) {
+    cerr << endl << e.what() << endl;
+    } 
+
+  return 0;
 }

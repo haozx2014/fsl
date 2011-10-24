@@ -7,7 +7,7 @@ PROJNAME = flirt
 USRINCFLAGS = -I${INC_NEWMAT} -I${INC_ZLIB} -I${INC_BOOST}
 USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_ZLIB}
 
-LIBS = -lwarpfns -lbasisfield -lnewimage -lmiscmaths -lprob -lfslio -lniftiio -lznz -lnewmat -lutils -lm -lz
+LIBS = -lwarpfns -lbasisfield -lnewimage -lmiscmaths -lfslio -lniftiio -lznz -lnewmat -lutils -lm -lz
 
 FL_OBJS = globaloptions.o flirt.o 
 C_OBJS = convert_xfm.o
@@ -20,10 +20,11 @@ X_OBJS = applyxfm4D.o
 P_OBJS = pointflirt.o
 M_OBJS = makerot.o
 I_OBJS = imapper.o
+MT_OBJS = midtrans.o
 
 RUNTCLS = Flirt InvertXFM ApplyXFM ConcatXFM Nudge
 XFILES = flirt convert_xfm avscale rmsdiff std2imgcoord img2stdcoord \
-	img2imgcoord applyxfm4D pointflirt makerot
+	img2imgcoord applyxfm4D pointflirt makerot midtrans
 TESTXFILES = 
 HFILES =
 SCRIPTS = extracttxt pairreg standard_space_roi flirt_average
@@ -68,4 +69,7 @@ makerot:	${M_OBJS}
 
 imapper:	${I_OBJS}
 		${CXX}  ${CXXFLAGS} ${LDFLAGS} -o $@  ${I_OBJS} ${LIBS}
+
+midtrans:	${MT_OBJS}
+		${CXX}  ${CXXFLAGS} ${LDFLAGS} -o $@  ${MT_OBJS} ${LIBS}
 

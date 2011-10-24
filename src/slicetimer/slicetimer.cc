@@ -1,8 +1,8 @@
 /*  slicetimer.cc - FMRIB's Slice Timing Utility
     
-    Peter Bannister and Stephen Smith, FMRIB Image Analysis Group
+    Peter Bannister, Stephen Smith and Matthew Webster, FMRIB Image Analysis Group
     
-    Copyright (C) 2001-2003 University of Oxford  */
+    Copyright (C) 2001-2009 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -88,7 +88,7 @@ using namespace NEWMAT;
 using namespace NEWIMAGE;
 using namespace Utilities;
 
-string title="slicetimer (Version 1.8)\nFMRIB's Interpolation for Slice Timing\nCopyright(c) 2001-2002, University of Oxford";
+string title="slicetimer (Version 1.9)\nFMRIB's Interpolation for Slice Timing\nCopyright(c) 2001-2009, University of Oxford";
 string examples="slicetimer -i <timeseries> [-o <corrected_timeseries>] [options]\n";
 
 Option<bool> help(string("-h,--help"), false,
@@ -110,10 +110,10 @@ Option<string> outputname(string("-o,--out"), string(""),
 			  string("filename of output timeseries"),
 			  false, requires_argument);
 Option<string> tcustom(string("--tcustom"), string(""),
-			  string("filename of single-column slice timings, in fractions of TR, range 0:1 (default is 0.5 = no shift)"),
+			  string("filename of single-column slice timings, in fractions of TR, +ve values shift slices forwards in time."),
 			  false, requires_argument);
-Option<float>  tglobal(string("--tglobal"), 0.5,
-			  string("global shift in fraction of TR, range 0:1 (default is 0.5 = no shift)"),
+Option<float>  tglobal(string("--tglobal"), 0,
+			  string("global shift in fraction of TR, (default is 0)"),
 			  false, requires_argument);
 Option<string> ocustom(string("--ocustom"), string(""),
 			  string("filename of single-column custom interleave order file (first slice is referred to as 1 not 0)"),
@@ -173,9 +173,9 @@ int do_slice_correction()
   for (int slice=1; slice<=no_slices; slice++) {
 
     if (tglobal.set()) {
-      offset = 0.5 - tglobal.value();
+      offset = tglobal.value();
     } else if (tcustom.set()) {
-      offset = 0.5 - timings(slice, 1);
+      offset = timings(slice, 1);
     } else if (ocustom.set()) { 
       int local_count=1;
       while (local_count <= no_slices) {
@@ -202,7 +202,7 @@ int do_slice_correction()
 	ColumnVector interpseries = voxeltimeseries;
 	for (int time_step=1; time_step <= no_volumes; time_step++){
 	  // interpseries(time_step) = interpolate_1d(voxeltimeseries, time_step - offset);
-	  interpseries(time_step) = kernelinterpolation_1d(voxeltimeseries, time_step - offset, userkernel, 7);
+	  interpseries(time_step) = kernelinterpolation_1d(voxeltimeseries, time_step + offset, userkernel, 7);
 	}
 	timeseries.setvoxelts(interpseries,x_pos,y_pos,slice-1);
       }
@@ -211,8 +211,8 @@ int do_slice_correction()
       cerr << "Slice " << slice << " offset " << offset << endl;
   }
   
-  if (direction.value() == 1) timeseries. swapdimensions(3,2,1); // reverse Flip z and x
-  if (direction.value() == 2) timeseries. swapdimensions(1,3,2); // reverse Flip z and y
+  if (direction.value() == 1) timeseries.swapdimensions(3,2,1); // reverse Flip z and x
+  if (direction.value() == 2) timeseries.swapdimensions(1,3,2); // reverse Flip z and y
 
   save_volume4D(timeseries, outputname.value());
   return 0;

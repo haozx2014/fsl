@@ -94,7 +94,7 @@ Variations on default bet2 functionality (mutually exclusive options):
   -S          eye & optic nerve cleanup (can be useful in SIENA)
   -B          bias field & neck cleanup (can be useful in SIENA)
   -Z          improve BET if FOV is very small in Z (by temporarily padding end slices)
-  -F          apply to 4D FMRI data (uses -f 0.4 and dilates brain mask slightly)
+  -F          apply to 4D FMRI data (uses -f 0.3 and dilates brain mask slightly)
   -A          run bet2 and then betsurf to get additional skull and scalp surfaces (includes registrations)
   -A2 <T2>    as with -A, when also feeding in non-brain-extracted T2 (includes registrations)
 

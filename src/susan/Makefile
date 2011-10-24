@@ -10,7 +10,7 @@ SSLIBS = -lss_32R $(IOLIBS)
 
 
 LIBS = -lss_16SI -lfslio -lniftiio -lznz -lm -lz
-LIBS++ = -lnewimage -lmiscmaths -lprob -lfslio -lnewmat -lutils -lniftiio -lznz -lm -lz
+LIBS++ = -lnewimage -lmiscmaths -lfslio -lnewmat -lutils -lniftiio -lznz -lm -lz
 
 
 RUNTCLS = Susan

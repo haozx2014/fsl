@@ -1560,7 +1560,7 @@ void ZMRIMULTISegmentation::WeightedKMeans()
   m_mean.ReSize(noclasses+1, numberofchannels);m_mean=0.0;
   m_co_variance=new Matrix[noclasses+1];
   m_inv_co_variance=new Matrix[noclasses+1];
-  for(int i=1;i<noclasses+1;i++)
+  for(int i=1;i<=noclasses;i++)
     {
       m_co_variance[i].ReSize(numberofchannels, numberofchannels);
       m_inv_co_variance[i].ReSize(numberofchannels, numberofchannels);
@@ -1568,10 +1568,10 @@ void ZMRIMULTISegmentation::WeightedKMeans()
       m_inv_co_variance[i]=0.0f;
 
     }
-  for(int n=1;n<numberofchannels+1;n++)
+  for(int n=1;n<=numberofchannels;n++)
    {
       float perc=1.0/((float)(noclasses+1.0));
-      for(int c=1;c<noclasses+1;c++)
+      for(int c=1;c<=noclasses;c++)
 	{
           if ( (int)inputMeans.size() == (noclasses*numberofchannels) ) m_mean(c, n)=log(inputMeans[c+noclasses*(n-1)-1]); 
 	  else m_mean(c, n)=m_Mricopy[n].percentile((float)(perc*c), m_maskc);

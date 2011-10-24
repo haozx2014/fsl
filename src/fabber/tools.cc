@@ -68,6 +68,7 @@
 
 #include "tools.h"
 #include "easylog.h"
+#include <limits>
 
 double DescendingZeroFinder::FindZero() const
 {
@@ -194,7 +195,7 @@ double DescendingZeroFinder::FindZero() const
     */
 
     // Pick either lower or upper bound, depending on which is closer to zero
-    assert(atLower > 0 && -atUpper > 0);
+    assert(atLower >= 0 && -atUpper >= 0);
     if (atLower < -atUpper)
       guess = lower;
     else

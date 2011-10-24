@@ -1048,16 +1048,12 @@ volume<float> unwrap2D(const volume<float>& phasemap,
   uphase = 0;
   uphase.activateROI();
 
-  volume<float> pslice, uslice, olduslice, udiff, mslice, oldmslice;
+  volume<float> pslice, uslice, udiff, mslice;
   volume<int> lslice;
 
   for (int z=zmin; z<=zmax; z++) {
     if (verbose) cout << "SLICE NUMBER " << z << endl;
 
-    if (z>zmin) {
-      olduslice = uslice;
-      oldmslice = mslice;
-    }
     // get slices from phasemap and label
     phasemap.setROIlimits(phasemap.minx(),phasemap.miny(),z,
 			  phasemap.maxx(),phasemap.maxy(),z);
@@ -1118,7 +1114,7 @@ volume<float> unwrap2D(const volume<float>& phasemap,
       int m=MISCMATHS::round(median_diff/(2.0*M_PI));
       for (int y=label.miny(); y<=label.maxy(); y++) {
 	for (int x=label.minx(); x<=label.maxx(); x++) {
-	  if (label(x,y,z)>0) { uphase(x,y,z+1) -= m*2.0*M_PI; }
+	  if (label(x,y,z+1)>0) { uphase(x,y,z+1) -= m*2.0*M_PI; }
 	}
       }
     }

@@ -191,7 +191,7 @@ Optional arguments (You may optionally specify one or more of):
 <br><b>b0calc</b> -i <I>tis_air_seg</I> -o <I>b0z</I> --b0x=0 --b0y=0 --b0=1 --xyz
 
 <br>The output of these command-lines will be nine volumes (values in Teslas). Once you generate them (note that it can take a few hours!) merge them into one 4D file. The order of the files needs to be as in the following example:
-<br><b>fslmerge</b>  -t <I> b0  b0z_dz  b0z_dy  b0z_dx  b0y_dz  b0y_dy  b0y_dx  b0x_dz  b0x_dy  b0x_dx </I>
+<br><b>fslmerge</b>  -t <I> b0  b0z b0y b0x </I>
 <br>as that is what the POSSUM GUI will expect to find. The basis set generated in this way is for the 1T magnetic field. In order to generate the basis set for any other magnetic field strength just multiply the whole 4D volume with the desired field strength.
  
 <p>The details of the command line program <b>b0calc</b> are:

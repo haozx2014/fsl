@@ -1,10 +1,8 @@
-/* {{{ copyright */
+/*  qbootOptions.cc
 
-/*  ztop - convert a single z value into p
+    Stamatios Sotiropoulos - FMRIB Image Analysis Group
 
-    Stephen Smith, FMRIB Image Analysis Group
-
-    Copyright (C) 2002 University of Oxford  */
+    Copyright (C) 2010 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -68,63 +66,44 @@
     University, to negotiate a licence. Contact details are:
     innovation@isis.ox.ac.uk quoting reference DE/1112. */
 
-/* }}} */
-/* {{{ defines */
-
-#include <string.h>
-#include <stdio.h>
+#include <iostream>
+#include <fstream>
 #include <stdlib.h>
-#include <math.h>
-#include "libprob.h"
+#include <stdio.h>
+#include "qbootOptions.h"
+#include "utils/log.h"
+#include "utils/tracer_plus.h"
 
-#define MINP 1e-15
+using namespace Utilities;
 
-using namespace MISCMATHS;
-
-/* }}} */
-/* {{{ usage */
-
-void usage(void)
-{
-  printf("Usage: ztop <z> [-2]\n");
-  printf("-2 : use 2-tailed conversion (default is 1-tailed)\n");
-  exit(1);
-}
-
-/* }}} */
-
-int main(int argc,char *argv[])
-{
-  int i, twotailed=0;
-  double p, z;
-
-  if (argc<2)
-    usage();
-
-  z=atof(argv[1]);
-
-  /* {{{ process args */
-
-for (i=2; i<argc; i++)
-{
-  if (!strcmp(argv[i], "-2"))
-    twotailed=1;
-
-  else
-    usage();
-}
-
-/* }}} */
-
-  p=1-ndtr(z);
-
-  if (twotailed)
-    p*=2;
+namespace ODFs {
   
-  if (p>0.0001) 
-    printf("%f\n",p);
-  else
-    printf("%e\n",p);
+  qbootOptions* qbootOptions::gopt = NULL;
+  
+  void qbootOptions::parse_command_line(int argc, char** argv, Log& logger){
+    Tracer_Plus("qbootOptions::parse_command_line");
 
-  return(0);
+    // do once to establish log directory name
+    for(int a = options.parse_command_line(argc, argv); a < argc; a++);
+    
+    if(help.value() || ! options.check_compulsory_arguments()){
+      options.usage();
+      //throw Exception("Not all of the compulsory arguments have been provided");
+      exit(2);
+    }
+    else{
+      // setup logger directory
+      if(forcedir.value())
+	logger.setthenmakeDir(logdir.value());
+      else
+	logger.makeDir(logdir.value());
+
+      cout << "Log directory is: " << logger.getDir() << endl;
+      
+      // do again so that options are logged
+      for(int a = 0; a < argc; a++)
+	logger.str() << argv[a] << " ";
+      logger.str() << endl << "---------------------------------------------" << endl << endl;
+    }      
+  }
 }

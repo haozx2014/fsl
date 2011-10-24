@@ -158,7 +158,7 @@ fi
 
 if [ $useMultiImage -eq 1 ] ; then 
 
-	${FSLDIR}/bin/first -i $image -l dummy -m $model -k $outname -n $modes  $verbose $comExtras  --multiImageInput --binarySurfaceOutput
+	${FSLDIR}/bin/first -i $image -l dummy -m $model -k $outname -n $modes  $verbose $comExtras  --multiImageInput
 else
-	 ${FSLDIR}/bin/first -i $image -l $trmat -m $model -k $outname -n $modes  $verbose $comExtras --binarySurfaceOutput
+	 ${FSLDIR}/bin/first -i $image -l $trmat -m $model -k $outname -n $modes  $verbose $comExtras 
 fi;

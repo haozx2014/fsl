@@ -4366,9 +4366,9 @@ states which slice was acquired second, etc. The first slice is
 numbered 1 not 0.
 
 If a slice timings file is to be used, put one value (ie for each
-slice) on each line of a text file. The units are in TRs, with 0.5
+slice) on each line of a text file. The units are in TRs, with 0
 corresponding to no shift. Therefore a sensible range of values will
-be between 0 and 1."
+be between -0.5 and 0.5."
 
 #}}}
     #{{{ spin history

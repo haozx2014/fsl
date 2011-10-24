@@ -3391,6 +3391,17 @@ namespace NEWIMAGE {
     }
     roivol.copyproperties(*this);
     roivol.deactivateROI();
+    // set sform and qform matrices appropriately (if set)
+    Matrix roi2vol= IdentityMatrix(4);
+    roi2vol(1,4) = this->minx();
+    roi2vol(2,4) = this->miny();
+    roi2vol(3,4) = this->minz();
+    if (this->sform_code()!=NIFTI_XFORM_UNKNOWN) {
+      roivol.set_sform(this->sform_code(),this->sform_mat() * roi2vol);
+    }
+    if (this->qform_code()!=NIFTI_XFORM_UNKNOWN) {
+      roivol.set_qform(this->qform_code(),this->qform_mat() * roi2vol);
+    }
     roivol.set_whole_cache_validity(false);
     return roivol;
   }

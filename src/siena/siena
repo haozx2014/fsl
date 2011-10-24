@@ -81,7 +81,7 @@ Usage: siena <input1> <input2> [options]
   -m                    : use standard-space masking as well as BET
   -t <t>                : ignore from t (mm) upwards in MNI152/Talairach space
   -b <b>                : ignore from b (mm) downwards in MNI152/Talairach space (b should probably be negative)
-  -S "sienadiffopts"    : options to pass to siena_diff timepoint differencing (inside double-quotes), e.g. -S "-s -i 20"
+  -S "sienadiffopts"    : options to pass to siena_diff timepoint differencing (inside double-quotes), e.g. -S "-s -I 20"
 
 EOF
     exit 1

@@ -112,10 +112,10 @@ if [ `${FSLDIR}/bin/fslnvols even` != `${FSLDIR}/bin/fslnvols odd` ] ; then
     ${FSLDIR}/bin/fslroi even even 0 `${FSLDIR}/bin/fslnvols odd`
 fi
 
-${FSLDIR}/bin/slicetimer -i odd  -o odd_earlier  --tglobal=0.75
-${FSLDIR}/bin/slicetimer -i odd  -o odd_later    --tglobal=0.25
-${FSLDIR}/bin/slicetimer -i even -o even_earlier --tglobal=0.75
-${FSLDIR}/bin/slicetimer -i even -o even_later   --tglobal=1.25
+${FSLDIR}/bin/slicetimer -i odd  -o odd_earlier  --tglobal=0.25
+${FSLDIR}/bin/slicetimer -i odd  -o odd_later    --tglobal=-0.25
+${FSLDIR}/bin/slicetimer -i even -o even_earlier --tglobal=0.25
+${FSLDIR}/bin/slicetimer -i even -o even_later   --tglobal=0.75
 ${FSLDIR}/bin/fslmaths odd_later   -sub even_earlier even_to_odd
 ${FSLDIR}/bin/fslmaths odd_earlier -sub even_later   odd_to_even
 ${FSLDIR}/bin/fslsplit even_to_odd e_

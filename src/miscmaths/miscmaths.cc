@@ -2153,7 +2153,7 @@ ReturnMatrix read_vest(string p_fname)
     {
       for(int j = 1; j <= numWaves; j++)    
 	{
-	  if (!in.eof()) in >> p_mat(i,j);
+	  if (!in.eof()) in >> ws >> p_mat(i,j) >> ws;
 	  else throw Exception(string(p_fname+" has insufficient data points").c_str());
 	}
     }

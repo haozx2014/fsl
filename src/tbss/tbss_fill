@@ -80,7 +80,7 @@ do_tbss_fill() {
     IN=$1
     OUT=$2
 
-    # threshold the input then smooth with Gaussian of sigma=3mm
+    # threshold the input then convolve with sphere of radius 3mm
     $FSLDIR/bin/fslmaths $IN -thr $THRESH -kernel sphere 3 -fmean $OUT -odt float
 
     # renorm so that the max is same as input's max
@@ -101,7 +101,7 @@ THRESH=$2
 MEANFA=$3
 OUTPUT=$4
 
-if [ `${FSLDIR}/bin/imtest $STATS` = 0 -o `${FSLDIR}/bin/imtest $MEANFA` = 0 ] ; then
+if [ `${FSLDIR}/bin/imtest $STATS` = 0 ] || [ `${FSLDIR}/bin/imtest $MEANFA` = 0 ] ; then
     echo "Error - either <stats_image> or <mean_FA> is not valid"
     Usage
 fi

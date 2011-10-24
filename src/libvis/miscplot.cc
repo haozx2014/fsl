@@ -79,6 +79,7 @@ extern "C" {
  #include "gd.h"
  #include "gdc.h"
  #include "gdchart.h"
+ #include "gdcpie.h"
 }
 
 namespace MISCPLOT{
@@ -756,6 +757,13 @@ void miscplot::histogram(const Matrix& mat, string filename, string title){
   float tmax = datam.Maximum2(i,j);
   float tmin = datam.Minimum2(i,j); 
   float trange = tmax-tmin;
+
+  // check to see if the data is all the same - if it is then return without plotting
+  if(trange==0)
+    {
+      return;
+    }
+
   int bins = (int)floor(MISCMATHS::sqrt(numpoint));
   if (histogram_bins>0)
     bins = histogram_bins;
@@ -890,9 +898,9 @@ void miscplot::histogram(const Matrix& mat, string filename, string title){
   delete [] ctl;
 }
 
-	void miscplot::gmmfit(const Matrix& mat, Matrix& mu, Matrix& sig, 
-		Matrix& pi, string filename, string title, 
-		bool gammamix, float meanoffset, float detailfactor){
+  void miscplot::gmmfit(const Matrix& mat, Matrix& mu, Matrix& sig, 
+			Matrix& pi, string filename, string title, 
+			bool gammamix, float meanoffset, float detailfactor){
   RowVector datam = mat.Row(1);
   int numpoint=datam.Ncols();
   int i,j;
@@ -1105,6 +1113,209 @@ void miscplot::histogram(const Matrix& mat, string filename, string title){
   delete [] lbls;
   delete [] ctl;
   }
+
+
+
+
+void miscplot::gmmfit(const NEWMAT::Matrix& mat,const NEWMAT::ColumnVector& mu,const NEWMAT::ColumnVector& var,const NEWMAT::ColumnVector& pi,
+		      string filename,string title,bool mtype,float offset, float detailfactor){
+
+  RowVector datam = mat.Row(1);
+  RowVector _mu(mu.Nrows());
+  RowVector _sig(var.Nrows());
+  RowVector _pi(pi.Nrows());
+  
+
+  _mu  = mu.t();
+  _sig = var.t();
+  _pi  = pi.t();
+  
+
+  int numpoint=datam.Ncols();
+  int i,j;
+  double scale=std::max(1.0,MISCMATHS::pow((float)10.0,(double)
+					   -(std::floor(std::log10(std::min(std::abs(datam.Maximum2(i,j)),
+									    std::abs(datam.Minimum2(i,j)))/2.0)))));
+
+
+  float tmax = datam.Maximum2(i,j);
+  float tmin = datam.Minimum2(i,j); 
+  float trange = tmax-tmin;
+  int bins = (int)floor(MISCMATHS::sqrt(numpoint));
+
+  if (histogram_bins>0)
+    bins = histogram_bins;
+  float intsize = trange / bins;
+  int xlint = (int)ceil(trange/6);
+  int binperint = (int)ceil(xlint / intsize);
+
+  intsize = float(xlint) / float(binperint);
+
+  float xmin = ceil(std::abs(1.02*tmin)/intsize)*intsize * sign(tmin);
+  float xmax = ceil(std::abs(1.02*tmax)/intsize)*intsize * sign(tmax);
+
+  bins = (int)((xmax-xmin)/intsize);
+
+  Matrix bindata(1,bins);
+  bindata = 0.0;
+
+  double binsize = (xmax-xmin)/std::max(bins,1);
+  for(int ctr = 1; ctr<= datam.Ncols(); ctr++){
+    bindata(1,std::max(std::min(int(floor((datam(ctr) - xmin) / binsize) + 1),bins),1))++;
+  }
+
+  int factor = 1;
+
+  bindata = bindata / max(double(factor*bindata.SumAbsoluteValue()),double(1.0));
+
+  numpoint = factor * bindata.Ncols();
+  float* histdata = new float[numpoint]; 
+  for(int ctr1=0;ctr1< numpoint; ctr1++){
+   	histdata[ctr1] = bindata(1,(int)floor(float(ctr1 / factor + 1)));
+  }
+  
+  RowVector xax(numpoint);
+  for(int ctr1=0;ctr1< numpoint; ctr1++){
+    xax(ctr1+1) = xmin + (ctr1+ 0.5) * intsize/factor; 
+  }
+
+  char* ctl = new char[numpoint];
+  xlint = (int)ceil((xmax-xmin)/(factor*2));
+  
+  ctl[0]=FALSE;
+  for(int ctr=1;ctr<numpoint;ctr++){
+    int lblpoint = (int)(MISCMATHS::round(abs(xax(ctr))/xlint)*xlint);
+    if(xax(ctr)<0) 
+			lblpoint *= -1;
+    if( (xax(ctr)<lblpoint)&&(xax(ctr+1)>lblpoint) )	
+     	ctl[ctr]=TRUE;
+    else
+     	ctl[ctr]=FALSE;
+  } 
+
+  char** lbls = new char*[numpoint];
+ 
+  string s;
+  for(int ctr=0;ctr<numpoint;ctr++){
+    if(ctl[ctr]){
+      if(scale<2||scale>100)
+	s = float2str((int)MISCMATHS::round(xax(ctr+1)/xlint)*xlint,
+		      3,2,false);
+      else
+	s = float2str((float)MISCMATHS::round(xax(ctr+1)/xlint)*xlint/scale,
+		      3,2,false);
+      lbls[ctr] = new char[s.length()+1];
+      strcpy(lbls[ctr],s.c_str());
+    }
+    else{
+      lbls[ctr] = new char[1];
+      strcpy(lbls[ctr],string("").c_str());
+    }
+  }
+  
+  // Calculate lines
+  int numlines=mu.Nrows()+1;
+  
+   
+
+
+  for(int i=1;i<=var.Nrows();i++){
+    if(_sig(i)<0.000001){
+      _sig(i) = 0.000001;
+      _pi(i) = 0.0;
+    }
+  }
+
+  Matrix fit;
+  //OUT(_pi);
+  fit = normpdf(xax,_mu,_sig);
+  fit = SD(fit,MISCMATHS::repmat(MISCMATHS::sum(fit,2),1,numpoint));
+  fit = SP(fit,_pi.t()*ones(1,numpoint));
+
+  //OUT(fit);
+  fit = sum(fit,1) & fit;
+  //fit = fit / fit.Row(1).SumAbsoluteValue();
+
+  float* linesdata = new float[(numlines)*numpoint];
+  for(int ctr1=1;ctr1<=numlines; ctr1++)
+    for(int ctr2=1;ctr2<=numpoint; ctr2++)
+      linesdata[(ctr1-1)*numpoint + ctr2-1] = fit(ctr1,ctr2);	
+
+  GDC_xlabel_ctl = ctl;
+
+  unsigned long*   sc2 = new unsigned long[numlines];
+  for(int ctr=0;ctr<numlines;ctr++) sc2[ctr] = 0xFFDD00;
+  sc2[0]=0xFF0000;
+  
+  unsigned long  sc3[64];
+  for(int ctr=0;ctr<64;ctr++) sc3[ctr] = sc[ctr];
+  for(int ctr=0;ctr<numlines;ctr++)
+    sc3[ctr+1] = sc2[ctr];
+
+
+  GDC_BGColor   = 0xFFFFFFL;                  /* backgound color (white) */
+  GDC_LineColor = 0x000000L;                  /* line color      (black) */
+  GDC_SetColor  = &(sc2[0]);                  /* MATLAB-like colors */
+
+  GDC_title = (char*)title.c_str();
+  GDC_title_size = GDC_SMALL;
+
+  GDC_ticks = GDC_TICK_LABELS;
+  GDC_grid  = GDC_TICK_NONE;
+	if(gridswapdefault)
+		GDC_grid = GDC_TICK_LABELS;
+  GDC_yaxis = ylabels.size()>0;
+  GDC_yaxis2 = FALSE;
+  GDC_xaxis = TRUE;
+  GDC_xaxis_angle = 0;
+  GDC_bar_width =  75;
+  GDC_ylabel_density = 50;
+  GDC_requested_ymax = 1.15*bindata.Maximum2(i,j);
+  GDC_requested_ymin = 1.15*bindata.Minimum2(i,j);
+
+  int xsize = 600;
+  int ysize = 400;
+
+  if(req_xsize>0){
+    xsize=req_xsize;
+    ysize=req_ysize;
+  }
+
+  
+
+  if(filename.substr(filename.size()-4,filename.size())!=string(".png"))
+    filename += string(".png");
+
+  FILE  *outpng1 = fopen(filename.c_str(), "wb" );
+  GDC_image_type     = GDC_PNG;
+
+  if (labels.size()>0||ylabels.size()>0||xlabels.size()>0||explabel.length()>0)
+    GDC_hold_img = GDC_EXPOSE_IMAGE;
+  
+  GDC_out_graph( xsize, ysize, outpng1 , GDC_COMBO_LINE_AREA, numpoint, 
+		(char**) lbls , numlines, linesdata, histdata ); 
+  fclose( outpng1 );
+
+  if (labels.size()>0||ylabels.size()>0||xlabels.size()>0||
+		explabel.length()>0){
+    outpng1 = fopen(filename.c_str(), "wb" );
+    add_legend(GDC_image, sc3, TRUE);
+   
+    gdImagePng(outim, outpng1); 
+    fclose( outpng1 );
+    GDC_destroy_image(GDC_image);
+    if(outim) gdImageDestroy(outim);
+    }
+
+  for(int ctr=0;ctr<numpoint;ctr++)
+    delete [] lbls[ctr];
+    
+  delete [] histdata;
+  delete [] linesdata;
+  delete [] lbls;
+  delete [] ctl;
+  }
+
 
 }
 

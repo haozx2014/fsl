@@ -56,8 +56,8 @@ namespace MISCPLOT{
 				string title);
 
       void gmmfit(const NEWMAT::Matrix& mat, Matrix& mu, Matrix& sig, 
-				Matrix& pi, string filename, string title, bool mtype = false, 
-        float offset = 0.0, float detailfactor = 0.0); 
+		  Matrix& pi, string filename, string title, bool mtype = false, 
+		  float offset = 0.0, float detailfactor = 0.0); 
     
       inline void ggmfit(const NEWMAT::Matrix& mat, Matrix& mu, 
 				Matrix& sig, Matrix& pi, string filename, string title, 
@@ -65,6 +65,11 @@ namespace MISCPLOT{
 					this->gmmfit(mat, mu, sig, pi, filename, title, true, 
 					offset, detailfactor);
 				}
+
+    // plot a mixture of K gaussians
+    void gmmfit(const NEWMAT::Matrix& mat,const NEWMAT::ColumnVector& mu,const NEWMAT::ColumnVector& var,const NEWMAT::ColumnVector& pi,
+		string filename,string title,
+		bool mtype = false,float offset = 0.0, float detailfactor = 0.0);
     
       inline void add_label(string txt){ 
 				labels.push_back(txt);}
