@@ -6,7 +6,7 @@ USRINCFLAGS = -I${INC_NEWMAT} -I${INC_ZLIB}
 USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_ZLIB}
 
 #LIBS = -lss_32R -lfslio -lniftiio -lznz -lm -lz
-LIBCC = -lnewimage -lmiscmaths -lprob -lfslio -lniftiio -lznz -lnewmat -lutils -lm -lz
+LIBCC = -lnewimage -lmiscmaths -lfslio -lniftiio -lznz -lnewmat -lutils -lm -lz
 
 SN_OBJS = surface_norm.o
 CS_OBJS = cylsamp.o

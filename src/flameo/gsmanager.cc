@@ -306,7 +306,7 @@ namespace Gs {
     DiagonalMatrix iU(y.Nrows());
     for(int t=1;t<=y.Nrows();t++)
       { 
-	//float vr=Sqr(1-prob_outlier(t))*(S(t)+beta)+Sqr(prob_outlier(t))*(S(t)+beta_outlier);
+	//double vr=Sqr(1-prob_outlier(t))*(S(t)+beta)+Sqr(prob_outlier(t))*(S(t)+beta_outlier);
 	double vr=Sqr(1-prob_outlier(t))*(S(t)+beta)+Sqr(prob_outlier(t))*(beta_outlier);
 // 	double vr2=(S(t)+beta);
 
@@ -1223,8 +1223,11 @@ namespace Gs {
 		//		cout << x << "," << y << "," << z << endl;
 		// setup data
 		ColumnVector Y = design.getcopedata().voxelts(x,y,z);
+	        float norm=sqrt(var(Y).AsScalar());
+		OUT(norm);
+		Y=Y/norm;
 		ColumnVector S = design.getvarcopedata().voxelts(x,y,z);
-
+		S=S/Sqr(norm);
 		// setup data for groups		
 		vector<Matrix> zg(ngs);
 		vector<ColumnVector> Yg(ngs);
@@ -1233,7 +1236,9 @@ namespace Gs {
 		  {
 		    zg[g-1]=design.getdm(x,y,z,g);
 		    Yg[g-1]=design.getcopedata(x,y,z,g);
+		    Yg[g-1]=Yg[g-1]/norm;
 		    Sg[g-1]=design.getvarcopedata(x,y,z,g);
+		    Sg[g-1]=Sg[g-1]/Sqr(norm);
 		  }
 		Matrix dm=design.getdm(x,y,z);
 
@@ -1674,7 +1679,9 @@ namespace Gs {
     beta_outlier=Sqr(100);       
 
 //     OUT("===================");
-//     OUT(beta);
+
+ //    OUT(beta);
+//     OUT(gam);
 //     OUT(prob_outlier);
 
     // setup grid for marg
@@ -1734,12 +1741,20 @@ namespace Gs {
 
 	int count_outliers=0;
 	ColumnVector zout(zc.size());
+	prob_outlier_g[g-1].ReSize(design.getntptsingroup(g));
+	prob_outlier_g[g-1]=0.2;
 	for(unsigned int cock=0; cock<zc.size(); cock++)
 	  {
 	    if(zc[cock]==2) count_outliers++;
 	    zout(cock+1)=zc[cock];
+
+	    if(zout(cock+1)==2)
+	      {
+		prob_outlier_g[g-1](cock+1)=0.8;
+	      }
 	  }
-// 	OUT(zout.t());
+
+//  	OUT(zout.t());
 // 	OUT(means);
 
 	//	global_prob_outlier(g)=(1.0/design.getntptsingroup(g))/2.0;
@@ -1747,14 +1762,21 @@ namespace Gs {
 
 	// 	OUT(gpo);
 	
-	if(gpo>0.25) gpo=0.25;
+	if(gpo>0.25) 
+	  {
+	    gpo=0.25;
 
-	global_prob_outlier(g)=gpo;
-	
-	prob_outlier_g[g-1].ReSize(design.getntptsingroup(g));
-	prob_outlier_g[g-1]=global_prob_outlier(g);
-      }
-    
+	    global_prob_outlier(g)=gpo;
+	    prob_outlier_g[g-1]=global_prob_outlier(g);
+	  }
+	else
+	  {
+	    global_prob_outlier(g)=gpo;
+	  }
+
+// 	OUT(prob_outlier_g[g-1]);    
+      }    
+
     int niters=opts.io_niters.value();
     vector<bool> converged(ngs,false);
     vector<float> marg_io_old(ngs,0);
@@ -1767,8 +1789,8 @@ namespace Gs {
       {
 //    	num_bins_log_beta_col(it)=10+2*(it-1);
 //    	num_bins_log_rho_outlier_col(it)=5+1*(it-1);
-   	num_bins_log_beta_col(it)=15+2*(it-1);
-   	num_bins_log_rho_outlier_col(it)=15+1*(it-1);
+   	num_bins_log_beta_col(it)=20+2*(it-1);
+   	num_bins_log_rho_outlier_col(it)=20+1*(it-1);
       }
 
     num_bins_log_beta_col(niters)=100;
@@ -1794,7 +1816,7 @@ namespace Gs {
 	// calc betas for each group
 	for(int g = 1; g <= ngs; g++)
 	  {
-	    if(!converged[g-1])
+	     if(!converged[g-1])
 	      {
 	    // setup values for doing 2D grid integration later
 	    //	    int num_bins_log_beta=30;
@@ -1838,12 +1860,21 @@ namespace Gs {
 		double pin=(1-global_prob_outlier(g))*normpdf(Yg[g-1](i),mu(i),Uin(i));
 		double pout=global_prob_outlier(g)*normpdf(Yg[g-1](i),mu(i),Uout(i));
 
-// 		OUT(pin);
-// 		OUT(pout);
-// 		OUT(Uout(i));
-// 		OUT(Uin(i));
-// 		OUT(normpdf(Yg[g-1](i),mu(i),Uout(i)));
-// 		OUT(normpdf(Yg[g-1](i),mu(i),Uin(i)));
+	// 	if(it==niters){
+// 		  OUT(Yg[g-1](i));
+// 		  OUT(mu(i));
+// 		  OUT(Yg[g-1](i)-mu(i));	
+// 		  OUT(Sg[g-1](i));
+// 		  OUT(beta(g));		  
+// 		  OUT(beta_outlier(g));
+  
+// 		  OUT(pin);
+// 		  OUT(pout);
+// 		  OUT(Uout(i));
+// 		  OUT(Uin(i));
+// 		  OUT(normpdf(Yg[g-1](i),mu(i),Uout(i)));
+// 		  OUT(normpdf(Yg[g-1](i),mu(i),Uin(i)));
+// // 		}
 
 		if(pin+pout==0)
 		  {
@@ -1937,7 +1968,7 @@ namespace Gs {
 // 		write_ascii_matrix(marg_beta_outlier,LogSingleton::getInstance().appendDir("marg_beta_outlier"));
 		
 	
-// 		//cd ..;X=load('zg'); y=load('Yg'); s=load('Sg'); x2=X(2:end); y2=y(2:end); s2=s(2:end); res=ols(y2,x2); [gam, beta, covgam] = flame1(y2,x2,s2); gam, covgam, beta, gam/sqrt(covgam)
+// 		//X=load('zg'); y=load('Yg'); s=load('Sg'); x2=X(2:end); y2=y(2:end); s2=s(2:end); res=ols(y2,x2); [gam, beta, covgam] = flame1(y2,x2,s2); gam, covgam, beta, gam/sqrt(covgam)
 // 		// p=load('prob_outlier_g');
 // 		//mp=load('margpost');mb=load('marg_beta');mbo=load('marg_beta_outlier');lb=load('log_beta');[i,j]=min(mb);exp(lb(j))
 // 	      }
@@ -1949,21 +1980,21 @@ namespace Gs {
 	    int ind2;
 	    marg_beta_outlier.Minimum1(ind2);
 	    beta_outlier(g)=std::exp(log_rho_outlier[g-1](ind2))*(std::exp(log_beta[g-1](ind))+maxsg(g));
-	    //beta_outlier(g)=std::exp(log_rho_outlier[g-1](ind2))*(std::exp(log_beta[g-1](ind)));
+	    //beta_outlier(g)=std::exp(log_rho_outlier[g-1](ind2))*(std::exp(log_beta[g-1](ind)));	  
 
-// 	    if(it==niters)
-// 	      {
-// 		OUT(ind);
-// 		OUT(ind2);
-// 		OUT(log_rho_outlier[0].Nrows());
-// 		OUT(std::exp(log_rho_outlier[0](ind2)));
-// 		OUT(beta_outlier(g));
-// 		OUT(std::exp(log_beta[0](ind)));
-// 		OUT(log_beta[0](ind));
-// 		OUT(marg_posterior_energy_outlier(log(beta(g)),log(beta_outlier(g)),Yg[0],zg[0],Sg[0],prob_outlier_g[0]));
-// 		OUT(marg_posterior_energy(log(beta(g)),Yg[0],zg[0],Sg[0]));
+	    // 	    if(it==niters)
+	    // 	      {
+	    // 		OUT(ind);
+	    // 		OUT(ind2);
+	    // 		OUT(log_rho_outlier[0].Nrows());
+	    // 		OUT(std::exp(log_rho_outlier[0](ind2)));
+	    // 		OUT(beta_outlier(g));
+	    // 		OUT(std::exp(log_beta[0](ind)));
+	    // 		OUT(log_beta[0](ind));
+	    // 		OUT(marg_posterior_energy_outlier(log(beta(g)),log(beta_outlier(g)),Yg[0],zg[0],Sg[0],prob_outlier_g[0]));
+	    // 		OUT(marg_posterior_energy(log(beta(g)),Yg[0],zg[0],Sg[0]));
 
-// 	      }
+	    // 	      }
 
 	    weights_g[g-1].ReSize(design.getntptsingroup(g));
 
@@ -1981,55 +2012,75 @@ namespace Gs {
    	
 	// calc gam
 	DiagonalMatrix iU(ntpts);
-// 	DiagonalMatrix iU2(ntpts);
+	// 	DiagonalMatrix iU2(ntpts);
 	
  	for(int t=1;t<=ntpts;t++)
  	  {		 
 
-// 	    OUT(design.getgroup(t));
-// 	    OUT(design.getglobalindex(design.getgroup(t),t));
+	    // 	    OUT(design.getgroup(t));
+	    // 	    OUT(design.getglobalindex(design.getgroup(t),t));
 
 	    iU(t)=weights_g[design.getgroup(t)-1](design.getindexingroup(design.getgroup(t),t));
 
-// 	    // 	    float vr=Sqr(1-prob_outlier(t))*(S(t)+beta(design.getgroup(t)))+Sqr(prob_outlier(t))*(S(t)+beta_outlier(design.getgroup(t)));
-// 	    float vr=Sqr(1-prob_outlier(t))*(S(t)+beta(design.getgroup(t)))+Sqr(prob_outlier(t))*(beta_outlier(design.getgroup(t)));
+	    // 	    // 	    float vr=Sqr(1-prob_outlier(t))*(S(t)+beta(design.getgroup(t)))+Sqr(prob_outlier(t))*(S(t)+beta_outlier(design.getgroup(t)));
+	    // 	    float vr=Sqr(1-prob_outlier(t))*(S(t)+beta(design.getgroup(t)))+Sqr(prob_outlier(t))*(beta_outlier(design.getgroup(t)));
 	    
-// 	    iU(t) = 1.0/vr;
+	    // 	    iU(t) = 1.0/vr;
 	      
-// 	      if(prob_outlier(t)>0.999)
-// 		iU(t)=0;
+	    // 	      if(prob_outlier(t)>0.999)
+	    // 		iU(t)=0;
 
  	  }
 
 	// calc gam covariance
 	gamcovariance << pinv(z.t()*iU*z);
-	
-	gam=gamcovariance*z.t()*iU*Y;          	
-	      	
-// 	if(it==niters)	      	
-// 	  {
-//  	    OUT(Y.t());
-//  	    OUT(z.t());
-//  	    OUT(S.t());
-// // 	    OUT(iU);
-//  	    OUT(gam);
-// 	    OUT(prob_outlier_g[0].t());
-// 	    OUT(prob_outlier.t());
-// 	    OUT(global_prob_outlier(1));
-// 	    OUT(beta);
-// 	    OUT(beta_outlier);
-// 	    OUT(max_log_beta);
-// 	    OUT(min_log_beta);
-// // 	    OUT(gamcovariance);
-// 	    OUT(gam(1)/sqrt(gamcovariance(1,1)));	  	
-// 	  }
 
+	gam=gamcovariance*z.t()*iU*Y; 
+	       
+	  // 	if(it==niters)	      	
+	  // 	  {
+	  //  	    OUT(Y.t());
+	  //  	    OUT(z.t());
+	  //  	    OUT(S.t());
+	  // // 	    OUT(iU);
+	  //  	    OUT(gam);
+	  // 	    OUT(prob_outlier_g[0].t());
+	  // 	    OUT(prob_outlier.t());
+	  // 	    OUT(global_prob_outlier(1));
+	  // 	    OUT(beta);
+	  // 	    OUT(beta_outlier);
+	  // 	    OUT(max_log_beta);
+	  // 	    OUT(min_log_beta);
+	  // // 	    OUT(gamcovariance);
+	  // 	    OUT(gam(1)/sqrt(gamcovariance(1,1)));	  	
+	  // 	  }
 
-// 	gamtmp=gam;
-// 	gamtmp = design.insert_zeroev_pes(px,py,pz,gamtmp);
+	  // 	gamtmp=gam;
+	  // 	gamtmp = design.insert_zeroev_pes(px,py,pz,gamtmp);
 
-  	for(int g = 1; g <= ngs; g++)
+	  for(int g = 1; g <= ngs; g++)
  	  {
+
+	    if(it==niters && mean(prob_outlier_g[g-1]).AsScalar() > 0.5)	      	
+	      {
+		OUT(px); OUT(py); OUT(pz);
+		OUT(g);
+		OUT(Y.t());
+		OUT(z.t());
+		OUT(S.t());
+		// 	    OUT(iU);
+		OUT(gam);
+		OUT(prob_outlier_g[g-1].t());
+		OUT(prob_outlier.t());
+		OUT(global_prob_outlier(g));
+		OUT(beta);
+		OUT(beta_outlier);
+		OUT(max_log_beta);
+		OUT(min_log_beta);
+		// 	    OUT(gamcovariance);
+		OUT(gam(1)/sqrt(gamcovariance(1,1)));	  
+		throw Exception("Excessive number of outliers detected. Something has gone wrong.");	
+	      }
 
 // 	    // need to extract gamg from gam
 // 	    ColumnVector gamg(zg[g-1].Ncols());
@@ -2194,6 +2245,7 @@ namespace Gs {
 	for(int z = 0; z < zsize; z++)
 	  {
 	    if(design.getmask()(x,y,z))
+	      //           if(x==20 && y==36 && z==0)		      
 	      {
 		vox2++;
 		if(vox2 > voxout*nmaskvoxels/100.0)
@@ -2203,12 +2255,30 @@ namespace Gs {
 		    cout.flush();
 		    voxout++;
 		  }
-		//		cout << x << "," << y << "," << z << endl;
+		//		cout << x << "," << y << "," << z << endl;       
 		// setup data
-		ColumnVector Y = design.getcopedata().voxelts(x,y,z);
-		ColumnVector S = design.getvarcopedata().voxelts(x,y,z);
-		Matrix dm = design.getdm(x,y,z);    
+	// 	ColumnVector Y = design.getcopedata().voxelts(x,y,z);
+// 		ColumnVector S = design.getvarcopedata().voxelts(x,y,z);
+// 		Matrix dm = design.getdm(x,y,z);    
    
+// 		// setup data for groups		
+// 		vector<Matrix> zg(ngs);
+// 		vector<ColumnVector> Yg(ngs);
+// 		vector<ColumnVector> Sg(ngs);
+// 		for(int g = 1; g <= ngs; g++)
+// 		  {
+// 		    zg[g-1]=design.getdm(x,y,z,g);
+// 		    Yg[g-1]=design.getcopedata(x,y,z,g);
+// 		    Sg[g-1]=design.getvarcopedata(x,y,z,g);
+// 		  }
+
+ 		Matrix dm = design.getdm(x,y,z);    
+		ColumnVector Y = design.getcopedata().voxelts(x,y,z);
+	        float norm=sqrt(var(Y).AsScalar());
+		//		OUT(norm);
+		Y=Y/norm;
+		ColumnVector S = design.getvarcopedata().voxelts(x,y,z);
+		S=S/Sqr(norm);
 		// setup data for groups		
 		vector<Matrix> zg(ngs);
 		vector<ColumnVector> Yg(ngs);
@@ -2217,7 +2287,9 @@ namespace Gs {
 		  {
 		    zg[g-1]=design.getdm(x,y,z,g);
 		    Yg[g-1]=design.getcopedata(x,y,z,g);
+		    Yg[g-1]=Yg[g-1]/norm;
 		    Sg[g-1]=design.getvarcopedata(x,y,z,g);
+		    Sg[g-1]=Sg[g-1]/Sqr(norm);
 		  }
 
 		// containers for output
@@ -2274,7 +2346,7 @@ namespace Gs {
 		      {
 			if(!no_outliers[g])
 			  {
-			    beta_outlier_mean[g](x,y,z) = beta_outlier(g+1);
+			    beta_outlier_mean[g](x,y,z) = beta_outlier(g+1)*Sqr(norm);
 			    global_prob_outlier_mean[g](x,y,z) = global_prob_outlier(g+1);
 			    prob_outlier_mean[g].setvoxelts(prob_outlier_g[g],x,y,z);
 			  }
@@ -2292,7 +2364,7 @@ namespace Gs {
 		  }
 
 		// insert any zero EV PEs back in
-		gam = design.insert_zeroev_pes(x,y,z,gam);
+		gam = design.insert_zeroev_pes(x,y,z,gam)*norm;
 
 		// store results for gam:
 		for(int e = 0; e < nevs; e++)
@@ -2303,11 +2375,11 @@ namespace Gs {
 		// store results for beta:
 		for(int g = 0; g < ngs; g++)
 		  {
-		    beta_mean[g](x,y,z) = beta(g+1);
+		    beta_mean[g](x,y,z) = beta(g+1)*Sqr(norm);
 		  }	      
 	
 		// insert any zero EV PEs back in
-		gamcovariance = design.insert_zeroev_covpes(x,y,z,gamcovariance);
+		gamcovariance = design.insert_zeroev_covpes(x,y,z,gamcovariance)*Sqr(norm);
 
 		// store results for gam covariance
 		ColumnVector gamcovariance2;

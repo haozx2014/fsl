@@ -91,8 +91,14 @@ Option<bool> verbose(string("-v,--verbose"), false,
 Option<bool> help(string("-h,--help"), false,
 		  string("display this message"),
 		  false, no_argument);
+Option<bool> debug(string("--debug"), false, 
+		     string("switch on debugging output"), 
+		     false, no_argument);
 Option<bool> conservativetest(string("--conservative"), false,
 			      string("use conservative FDR correction factor"),
+			      false, no_argument);
+Option<bool> invertp(string("--oneminusp"), false,
+			      string("treat input as 1-p (also save output like this)"),
 			      false, no_argument);
 Option<float>  qthresh(string("-q"),0,
 		  string("q-value (FDR) threshold"),
@@ -109,6 +115,9 @@ Option<string> mask(string("-m"), string(""),
 Option<string> qoutname(string("-o"), string(""),
 		       string("output q-rate filename"),
 		       false, requires_argument);
+Option<string> othresh(string("--othresh"), string(""),
+		       string("output a thresholded p-value image"),
+		       false, requires_argument);
 int nonoptarg;
 
 ////////////////////////////////////////////////////////////////////////////
@@ -118,6 +127,9 @@ vector<int> get_sortindex(const Matrix& vals)
   // return the mapping of old indices to new indices in the
   //   new *ascending* sort of vals
   int length=vals.Nrows();
+  if (debug.value()) { cout << "LENGTH = " << length << endl; }
+  if (debug.value()) { cout << "MIN = " << vals.Minimum() << endl; }
+  if (debug.value()) { cout << "MAX = " << vals.Maximum() << endl; }
   vector<pair<double, int> > sortlist(length);
   for (int n=0; n<length; n++) {
     sortlist[n] = pair<double, int>((double) vals(n+1,1),n+1);
@@ -149,6 +161,7 @@ int do_work(int argc, char* argv[], int nonoptarg)
 {
   volume4D<float> pimg; // reading in 4D in order to be able to use the newimage<->newmat functions - only actually use first timepoint
   read_volume4D(pimg,inname.value());
+  if (invertp.value()) { pimg = 1.0f - pimg; }
   if (verbose.value()) print_info(pimg,"p-value image");
 
   volume<float> vmask;
@@ -185,21 +198,19 @@ int do_work(int argc, char* argv[], int nonoptarg)
   vector<int> norder = get_sortindex(pmat);
 
   // output the appropriate p-threshold, if requested
-  if (qthresh.set()) {
-    float qthr = qthresh.value();
-    float qfac = qthr / ( C * (float) Ntot );
-    float pthresh = 0.0;
-    for (int j=1; j<=Ntot; j++) {
-      if ( (pmat(j,1) > pthresh) && 
-	   ( pmat(j,1) < qfac * (float) norder[j-1] ) )
+  float pthresh = 0.0;
+  float qthr = qthresh.value();
+  float qfac = qthr / ( C * (float) Ntot );
+  for (int j=1; j<=Ntot; j++) {
+    if ( (pmat(j,1) > pthresh) && 
+	 ( pmat(j,1) < qfac * (float) norder[j-1] ) )
       {
-	 if (verbose.value()) { cout << "p = " << pmat(j,1) << " , n = " 
-	         << norder[j-1] << " , qfac = " << qfac << endl; }
-         pthresh = pmat(j,1);
+	if (verbose.value()) { cout << "p = " << pmat(j,1) << " , n = " 
+				    << norder[j-1] << " , qfac = " << qfac << endl; }
+	pthresh = pmat(j,1);
       }
-    }
-    cout << "Probability Threshold is: " << endl << pthresh << endl;
   }
+  cout << "Probability Threshold is: " << endl << pthresh << endl;
   
 
   // output the q (fdr) image, if requested
@@ -221,6 +232,14 @@ int do_work(int argc, char* argv[], int nonoptarg)
     save_as_image(ordername.value(),vmask,ordermat);
   }
 
+  // save the thresholded p-values, if requested
+  if (othresh.set()) {
+    pimg=1.0f-pimg;  // convert to 1-p for straightforward thresholding
+    pimg.threshold(1.0f-pthresh);
+    if (!invertp.value()) { pimg=1.0f-pimg; }  // convert back to p unless 1-p was the input
+    save_volume4D(pimg,othresh.value());
+  }
+
   return 0;
 }
 
@@ -237,8 +256,11 @@ int main(int argc,char *argv[])
     options.add(mask);
     options.add(qthresh);
     options.add(qoutname);
+    options.add(othresh);
     options.add(ordername);
+    options.add(invertp);
     options.add(conservativetest);
+    options.add(debug);
     options.add(verbose);
     options.add(help);
     

@@ -203,7 +203,7 @@ namespace FILM {
     {
       Tracer trace("AutoCorrEstimator::fitAutoRegressiveModel");
       
-      cerr << "Fitting autoregressive model..." << endl;
+      cout << "Fitting autoregressive model..." << endl;
       
       const int maxorder = 15;
       const int minorder = 1;
@@ -262,7 +262,7 @@ namespace FILM {
 	      if(co > 200)
 		{
 		  co = 1;
-		  cerr << (float)i/(float)numTS << ",";
+		  cout<< (float)i/(float)numTS << ",";
 		}
 	      else
 		co++;
@@ -272,7 +272,7 @@ namespace FILM {
       write_ascii_matrix(LogSingleton::getInstance().appendDir("order"), order);
       write_ascii_matrix(LogSingleton::getInstance().appendDir("betas"), betas);
       countLargeE = 0;
-      cerr << " Completed" << endl; 
+      cout<< " Completed" << endl; 
       return(betas);
     }
 
@@ -322,7 +322,7 @@ namespace FILM {
       Histogram hist(epivol, max(num/200,1));
       hist.generate();
       float mode = hist.mode();
-      cerr << "mode = " << mode << endl;
+      cout<< "mode = " << mode << endl;
 
       float sum = 0.0;
       int count = 0;
@@ -336,7 +336,7 @@ namespace FILM {
       }
 
       int sig = (int)pow(sum/num, 0.5);
-      cerr << "sig = " << sig << endl;
+      cout<< "sig = " << sig << endl;
 
       usanthresh = sig/3;
 
@@ -363,7 +363,7 @@ namespace FILM {
 	volume<float> kernel;
 	kernel = gaussian_kernel3D(masksize,mask.xdim(),mask.ydim(),mask.zdim(),2.0);	
 	int factor = 10000;
-	cerr << "Spatially smoothing auto corr estimates" << endl;
+	cout<< "Spatially smoothing auto corr estimates" << endl;
 	
 	for(int i=2 ; i <= lag; i++)
 	  {
@@ -374,27 +374,27 @@ namespace FILM {
 	    // insert output back into acEst
             susan_vol/=factor;
 	    acEst.Row(i)=susan_vol.matrix(mask);
-	    cerr << ".";
+	    cout<< ".";
 	  }
 	
-	cerr << endl << "Completed" << endl;
+	cout<< endl << "Completed" << endl;
       }
   }
   
   void AutoCorrEstimator::calcRaw(int lag) { 
     
-    cerr << "Calculating raw AutoCorrs...";      
+    cout<< "Calculating raw AutoCorrs...";      
 
     MISCMATHS::xcorr(xdata, acEst, lag, zeropad);
 
-    cerr << " Completed" << endl;  
+    cout<< " Completed" << endl;  
   }
   
   void AutoCorrEstimator::filter(const ColumnVector& filterFFT) {
 
     Tracer tr("AutoCorrEstimator::filter");
 
-    cerr << "Combining temporal filtering effects with AutoCorr estimates... ";
+    cout<< "Combining temporal filtering effects with AutoCorr estimates... ";
 
     // This function adjusts the autocorrelations as if the
     // xdata has been filtered by the passed in filterFFT
@@ -424,14 +424,14 @@ namespace FILM {
 	acEst.Column(i) = realifft.Rows(1,sizeTS)/realifft(1);
       }
 
-    cerr << " Completed" << endl;
+    cout<< " Completed" << endl;
     
   }
 
   void AutoCorrEstimator::multitaper(int M) {
     Tracer tr("AutoCorrEstimator::multitaper");
     
-    cerr << "Multitapering... ";
+    cout<< "Multitapering... ";
 
     Matrix slepians;
     getSlepians(M, sizeTS, slepians);
@@ -485,7 +485,7 @@ namespace FILM {
 	acEst.Column(i)=realifft.Rows(1,sizeTS)/varx;
       }
     countLargeE = 0;
-    cerr << "Completed" << endl;
+    cout<< "Completed" << endl;
   }
 
   void AutoCorrEstimator::getSlepians(int M, int sizeTS, Matrix& slepians) {
@@ -518,9 +518,9 @@ namespace FILM {
     
     Tracer tr("AutoCorrEstimator::tukey");
 
-    cerr << "Tukey M = " << M << endl;
+    cout<< "Tukey M = " << M << endl;
 
-    cerr << "Tukey estimates... ";
+    cout<< "Tukey estimates... ";
 	
     ColumnVector window(M);
 
@@ -536,14 +536,14 @@ namespace FILM {
 	
     }
     countLargeE = 0;
-    cerr << "Completed" << endl;
+    cout<< "Completed" << endl;
   }
 
   void AutoCorrEstimator::pava() {
     
     Tracer tr("AutoCorrEstimator::pava");
     
-    cerr << "Using New PAVA on AutoCorr estimates... ";
+    cout<< "Using New PAVA on AutoCorr estimates... ";
 
     for(int i = 1; i <= numTS; i++) {
 	int stopat = (int)sizeTS/2;
@@ -622,14 +622,14 @@ namespace FILM {
     }
     countLargeE = 0;
 
-    cerr << " Completed" << endl;
+    cout<< " Completed" << endl;
   }
   
   void AutoCorrEstimator::applyConstraints() {
 
     Tracer tr("AutoCorrEstimator::applyConstraints");
 
-    cerr << "Applying constraints to AutoCorr estimates... ";
+    cout<< "Applying constraints to AutoCorr estimates... ";
 
     for(int i = 1; i <= numTS; i++)
       {
@@ -680,7 +680,7 @@ namespace FILM {
 	      acEst(j,i) = 0;
 	  }
       }
-    cerr << "Completed" << endl;
+    cout<< "Completed" << endl;
   }
 
   void AutoCorrEstimator::getMeanEstimate(ColumnVector& ret)

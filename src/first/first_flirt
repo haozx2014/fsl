@@ -2,9 +2,9 @@
 
 #   first_flirt - initial standard space registration before running the main part of FIRST
 #
-#   Brian Patenaude, FMRIB Image Analysis Group
+#   Brian Patenaude, Courtney Bishop and Mark Jenkinson, FMRIB Image Analysis Group
 #
-#   Copyright (C) 2006-2007 University of Oxford
+#   Copyright (C) 2006-2010 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -75,7 +75,9 @@ Usage() {
     echo "-b        : input is already brain extracted"
     echo "-d        : debug (don't delete intermediate files)"
     echo "-inweight : use a weighting mask on the first registration"
+    echo "-strucweight <maskimage> : use a specific structure weighting mask (in standard space) for an (optional) third-stage registration step"
     echo "-cort : use a weighting mask of the whole brain on the first registration (for specific models)"
+    echo "-cost <costfunction> : specify the costfunction to be used by all FLIRT calls"
     echo ""
     echo "e.g.:    first_flirt subject10rawT1 subject10rawT1_to_std_sub"
     echo ""
@@ -92,6 +94,8 @@ debug=0
 doCortAlignment=0
 
 inweightCom=""
+strucweight=""
+costCom=""
 while [ _$1 != _ ] ; do
     if [ $1 = -d ] ; then
         debug=1
@@ -102,34 +106,45 @@ while [ _$1 != _ ] ; do
 	elif [ $1 = "-cort" ] ; then
 		 doCortAlignment=1
 		 shift
+    elif [ $1 = -cost ] ; then
+        costCom="${1} ${2}"
+        shift 2
     elif [ $1 = -inweight ] ; then
         inweightCom="${1} ${2}"
+        shift 2
+    elif [ $1 = -strucweight ] ; then
+        strucweight="${2}"
         shift 2
     fi
 done
 
 echo "initial registration $doCortAlignment"
-${FSLDIR}/bin/flirt -in $A -out ${B}_tmp_stage1 -ref ${FSLDIR}/data/standard/${refim} -omat ${B}_tmp_stage1.mat $inweightCom
+${FSLDIR}/bin/flirt -in $A -out ${B}_tmp_stage1 -ref ${FSLDIR}/data/standard/${refim} -omat ${B}_tmp_stage1.mat $inweightCom $costCom
 
 echo "Stage 2: use subcortical mask"
 #do subcortical alignment
-${FSLDIR}/bin/flirt -in ${B}_tmp_stage1 -out ${B}_tmp_stage2 -ref ${FSLDIR}/data/standard/${refim} -omat ${B}_tmp_stage2.mat -nosearch -refweight ${FSLDIR}/data/standard/MNI152lin_T1_1mm_subbr_mask
+${FSLDIR}/bin/flirt -in ${B}_tmp_stage1 -out ${B}_tmp_stage2 -ref ${FSLDIR}/data/standard/${refim} -omat ${B}_tmp_stage2.mat -nosearch -refweight ${FSLDIR}/data/standard/MNI152lin_T1_1mm_subbr_mask $costCom
 ${FSLDIR}/bin/convert_xfm -omat ${B}.mat -concat ${B}_tmp_stage2.mat ${B}_tmp_stage1.mat 
 
 
 #generate registered images
-${FSLDIR}/bin/flirt -in ${A} -out ${B} -ref ${FSLDIR}/data/standard/${refim} -applyxfm -init ${B}.mat
+${FSLDIR}/bin/flirt -in ${A} -out ${B} -ref ${FSLDIR}/data/standard/${refim} -applyxfm -init ${B}.mat 
 
 if [ $doCortAlignment -eq 1 ] ; then 
-#do hemisphere/cerebellum alignment
-echo "Alternate Stage 2: Use brain mask"
-${FSLDIR}/bin/flirt -in ${B}_tmp_stage1 -out ${B}_tmp_cort_stage2 -ref ${FSLDIR}/data/standard/${refim} -omat ${B}_tmp_cort_stage2.mat -nosearch -refweight ${FSLDIR}/data/standard/MNI152_T1_1mm_first_brain_mask.nii.gz 
-
-${FSLDIR}/bin/convert_xfm -omat ${B}_cort.mat -concat ${B}_tmp_cort_stage2.mat ${B}_tmp_stage1.mat 
-
-${FSLDIR}/bin/flirt -in ${A} -out ${B}_cort -ref ${FSLDIR}/data/standard/${refim} -applyxfm -init ${B}_cort.mat
-
+    #do hemisphere/cerebellum alignment
+    echo "Alternate Stage 2: Use brain mask"
+    ${FSLDIR}/bin/flirt -in ${B}_tmp_stage1 -out ${B}_tmp_cort_stage2 -ref ${FSLDIR}/data/standard/${refim} -omat ${B}_tmp_cort_stage2.mat -nosearch -refweight ${FSLDIR}/data/standard/MNI152_T1_1mm_first_brain_mask.nii.gz $costCom
+    
+    ${FSLDIR}/bin/convert_xfm -omat ${B}_cort.mat -concat ${B}_tmp_cort_stage2.mat ${B}_tmp_stage1.mat 
+    
+    ${FSLDIR}/bin/flirt -in ${A} -out ${B}_cort -ref ${FSLDIR}/data/standard/${refim} -applyxfm -init ${B}_cort.mat
 fi
+
+if [ X$strucweight != X ] ; then
+    ${FSLDIR}/bin/flirt -in ${A} -ref ${FSLDIR}/data/standard/${refim} -init ${B}.mat -out ${B} -omat ${B}_tmp_stage3.mat -refweight ${strucweight} -nosearch $costCom
+    cp ${B}_tmp_stage3.mat ${B}.mat
+fi
+
 
 
 if [ $debug = 0 ] ; then

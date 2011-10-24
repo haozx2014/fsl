@@ -10,6 +10,7 @@ Voxelwise analysis of multi-subject diffusion data<br><br>
 <a href="#intro">Intro</a> &nbsp;&nbsp;-&nbsp;&nbsp;
 <a href="#overview">Running TBSS</a> &nbsp;&nbsp;-&nbsp;&nbsp;
 <a href="#nonFA">Using non-FA images</a> &nbsp;&nbsp;-&nbsp;&nbsp;
+<a href="#X">Using crossing-fibres measures</a> &nbsp;&nbsp;-&nbsp;&nbsp;
 <a href="#sym">Testing left vs. right</a><br>
 <a href="#display">Displaying TBSS results</a> &nbsp;&nbsp;-&nbsp;&nbsp;
 <a href="#back">Transforming TBSS results back to native space</a> &nbsp;&nbsp;-&nbsp;&nbsp;
@@ -387,7 +388,7 @@ imglob *_FA.*
 cd ../stats
 design_ttest2 design 7 11
 
-randomise -i all_FA_skeletonised -o tbss -m mean_FA_skeleton_mask -d design.mat -t design.con -n 500 --T2 -V
+randomise -i all_FA_skeletonised -o tbss -m mean_FA_skeleton_mask -d design.mat -t design.con -n 500 --T2
 
 fslview $FSLDIR/data/standard/MNI152_T1_1mm mean_FA_skeleton -l Green -b 0.2,0.8 tbss_tstat1 -l Red-Yellow -b 3,6 tbss_tstat2 -l Blue-Lightblue -b 3,6
 </pre>
@@ -451,6 +452,67 @@ fslview $FSLDIR/data/standard/MNI152_T1_1mm mean_FA_skeleton -l Green -b 0.2,0.8
   manner as described above</a>.
 
 </UL>
+
+<!-- }}} -->
+
+<!-- }}} -->
+<!-- {{{ X-fibres -->
+
+<a name="X"></a><p><hr><H2>Using crossing-fibre measurements in TBSS</H2>
+
+<p> The interpretation of FA changes in crossing-fibre regions can be ambiguous and challenging.
+  One solution to this problem is the use of models that incorporate fibre-specific 
+  measurements, i.e. two or more measurements that relate to two or more
+  fibre orientations within each voxel. For example, you may use partial volume fraction 
+  estimates from bedpostX instead of FA at each voxel. If we estimate orientations x1 and x2, 
+  together with their partial volume fractions f1 and f2, you may want to use f1 and f2 instead of FA
+  which should increase the interpretability of the results in crossing fibre areas.
+
+<p> When using measurements that are orientation specific, it is not sufficient to use tbss_non_FA,
+  because we need to ensure that a fibre orientation x1 in a subject corresponds to the same fibre population
+  across all subjects. The ouput of bedpostX may be such that x1 relates to a given pathway (say cortico-spinal tract)
+  in a subset of the subjects, but to another tract (e.g. SLF) in other subjects. I.e. x1 and x2 are swapped between those two 
+  subsets of subjects. 
+
+<p> TBSS deals with these situations automatically, via the use of the tbss_x script.
+  As for tbss_non_FA, we recommend using FA for the
+  nonlinear registration and skeletonisation stages, and also to
+  estimate the projection vectors from each individual subject onto
+  the mean FA skeleton. The nonlinear warps and skeleton projection
+  can then be applied to crossing fibre measurements. The following instructions 
+  assume that you are using bedpostX estimates of fibres orientations (dyads1,dyads2,etc.)
+  and related partial volumes (f1,f2,etc). You can replace these with any other orientation-dependent
+  measurements (e.g. using another diffusion model).
+
+<UL>
+
+<LI>Run the full TBSS analysis (see all steps above) on your FA data.
+
+<LI>Create one directory per orientation and per measurement in your TBSS
+  analysis directory (the one that contains the
+  existing <code>origdata</code>, <code>FA</code>
+  and <code>stats</code> directories from the FA
+  analysis):<br><code>mkdir F1 F2 D1 D2</code>
+
+<LI>Copy your images into this new directory, making sure that they
+  are named <b>exactly</b> the same as the original FA images were (look in
+  <code>origdata</code> to check the original names). For example, if you are using bedpostX outputs, copy
+  the dyads (dyads1,dyads2,etc.) onto D1,D2,etc., and the partial volumes (mean_f1samples, mean_f2samples,etc.) onto
+  F1,F2,etc.
+
+<LI>Now, making sure that you are in your top working TBSS directory
+  (the one that contains FA, stats and origdata subdirectories) and run
+  the <code>tbss_x</code> script: <code>tbss_x F1 F2 D1 D2</code>, telling it that 
+  the measurements in F1 are associated with the orientations in D1, etc.
+  This will apply the original nonlinear registration to the data in F* and D*, 
+  then perform a series of operations that ensure that F* will be associated with
+  the same orientations across subjects.
+
+<LI>You can now run voxelwise stats on the output 4D
+  data <code>all_F*_x_skeletonised</code> <a href="#5">as described above</a>.
+
+</UL>
+
 
 <!-- }}} -->
 <!-- {{{ sym -->

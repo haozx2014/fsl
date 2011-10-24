@@ -3,8 +3,8 @@
 if [ $# -ge 1 ] ; then
   PROJECTS="$@";
 else
-  PROJECTS="extras utils znzlib niftiio fslio miscmaths newimage libhfunc libvis first_lib \ 
-meshclass fslvtkio misc_tcl basisfield warpfns bint shapeModel MVdisc fslvtkconv libmeshutils \
+  PROJECTS="extras utils znzlib niftiio fslio giftiio miscmaths newimage libhfunc libvis first_lib \ 
+meshclass fslvtkio misc_tcl basisfield warpfns bint shapeModel MVdisc fslvtkconv fslsurface libmeshutils \
 avwutils basil bet2 cluster dpm copain tissue fast4 feat5 film filmbabe flirt fabber  \
 fslpres fslvbm mcflirt melodic misc_c miscvis mm nma \
 randomise siena slicetimer susan tbss fnirt fugue \

@@ -417,31 +417,40 @@ public:
     Log& logger = LogSingleton::getInstance();
     if(opts.modelnum.value()==1){
       tmp.setmatrix(m_mean_dsamples,mask);
+      tmp.setDisplayMaximumMinimum(tmp.max(),0);
       save_volume4D(tmp,logger.appendDir("mean_dsamples"));
     }
     else if(opts.modelnum.value()==2){
       tmp.setmatrix(m_mean_dsamples,mask);
+      tmp.setDisplayMaximumMinimum(tmp.max(),0);
       save_volume4D(tmp,logger.appendDir("mean_dsamples"));
       tmp.setmatrix(m_mean_d_stdsamples,mask);
+      tmp.setDisplayMaximumMinimum(tmp.max(),0);
       save_volume4D(tmp,logger.appendDir("mean_d_stdsamples"));
       
       tmp.setmatrix(m_dsamples,mask);
+      tmp.setDisplayMaximumMinimum(tmp.max(),0);
       save_volume4D(tmp,logger.appendDir("dsamples"));
       tmp.setmatrix(m_d_stdsamples,mask);
+      tmp.setDisplayMaximumMinimum(tmp.max(),0);
       save_volume4D(tmp,logger.appendDir("d_stdsamples"));
     }
     if (opts.f0.value()){
       tmp.setmatrix(m_mean_f0samples,mask);
+      tmp.setDisplayMaximumMinimum(1,0);
       save_volume4D(tmp,logger.appendDir("mean_f0samples"));
       tmp.setmatrix(m_f0samples,mask);
+      tmp.setDisplayMaximumMinimum(1,0);
       save_volume4D(tmp,logger.appendDir("f0samples"));
     }
     if (opts.rician.value()){
       tmp.setmatrix(m_mean_tausamples,mask);
+      tmp.setDisplayMaximumMinimum(tmp.max(),0);
       save_volume4D(tmp,logger.appendDir("mean_tausamples"));
     }
 
     tmp.setmatrix(m_mean_S0samples,mask);
+    tmp.setDisplayMaximumMinimum(tmp.max(),0);
     save_volume4D(tmp,logger.appendDir("mean_S0samples"));
     //tmp.setmatrix(m_lik_energy,mask);
     //save_volume4D(tmp,logger.appendDir("lik_energy"));
@@ -486,21 +495,30 @@ public:
       //      element_mod_n(thsamples_out[f],M_PI);
       //      element_mod_n(phsamples_out[f],2*M_PI);
       tmp.setmatrix(thsamples_out[f],mask);
+      tmp.setDisplayMaximumMinimum(tmp.max(),tmp.min());
       string oname="th"+num2str(f+1)+"samples";
       save_volume4D(tmp,logger.appendDir(oname));
+      
       tmp.setmatrix(phsamples_out[f],mask);
+      tmp.setDisplayMaximumMinimum(tmp.max(),tmp.min());
       oname="ph"+num2str(f+1)+"samples";
       save_volume4D(tmp,logger.appendDir(oname));
+   
       tmp.setmatrix(fsamples_out[f],mask);
+      tmp.setDisplayMaximumMinimum(1,0);
       oname="f"+num2str(f+1)+"samples";
       save_volume4D(tmp,logger.appendDir(oname));
+
       //      tmp.setmatrix(lamsamples_out[f],mask);
       //      oname="lam"+num2str(f+1)+"samples";
       //      save_volume4D(tmp,logger.appendDir(oname));
       tmp.setmatrix(mean_fsamples_out[f],mask);
+      tmp.setDisplayMaximumMinimum(1,0);
       oname="mean_f"+num2str(f+1)+"samples";
       save_volume(tmp[0],logger.appendDir(oname));
+      
       tmp.setmatrix(dyadic_vectors_out[f],mask);
+      tmp.setDisplayMaximumMinimum(1,-1);
       oname="dyads"+num2str(f+1);
       save_volume4D(tmp,logger.appendDir(oname));
     }
@@ -662,7 +680,7 @@ public:
 	}
       }
 
-      if(pvmd<0)
+      if(pvmd<0 || pvmd>0.01)
 	pvmd=2e-3;
    
       m_multifibre.set_S0(pvmS0);
@@ -685,27 +703,36 @@ public:
     else{ 
       //////////////////////////////////////////////////////
       // model 2 : non-mono-exponential
-      if (opts.f0.value())
-	m_multifibre.set_f0(0.001); //Need to include f0 in the non-linear initialization of model2 as well!! For now set it initially to almost zero
-
-      PVM_multi pvm(m_data,m_bvecs,m_bvals,opts.nfibres.value());
+      float pvmS0, pvmd, pvmd_std, pvmf0=0.001;
+      ColumnVector pvmf,pvmth,pvmph;
+      
+      PVM_multi pvm(m_data,m_bvecs,m_bvals,opts.nfibres.value(),opts.f0.value());
       pvm.fit();
 
-      m_multifibre.set_S0(pvm.get_s0());
-      if(pvm.get_d()>=0)
-	m_multifibre.set_d(pvm.get_d());
-      else
-	m_multifibre.set_d(2e-3);
-      if(pvm.get_d_std()>=0)
-	m_multifibre.set_d_std(pvm.get_d());
-      else
-	m_multifibre.set_d(2e-3);
+      pvmf  = pvm.get_f();  pvmth = pvm.get_th(); pvmph = pvm.get_ph(); pvmd_std=pvm.get_d_std();
+      pvmS0 = pvm.get_s0(); pvmd  = pvm.get_d();  predicted_signal=pvm.get_prediction();
+      
+      if (opts.f0.value()){
+	  pvmf0=pvm.get_f0();
+	  //If the full model gives values that are implausible, or we are in a CSF voxel (f1<0.05)
+	  //then fit a model without the f0 and drive f0_init to almost zero 
+	  if ((opts.nfibres.value()>0 && pvmf(1)<0.05) || pvmd>0.007 || pvmf0>0.4){
+	    PVM_multi pvm2(m_data,m_bvecs,m_bvals,opts.nfibres.value(),false);
+	    pvm2.fit();
+	    pvmf0=0.001; pvmS0=pvm2.get_s0(); pvmd=pvm2.get_d(); pvmd_std=pvm2.get_d_std();
+	    pvmf  = pvm2.get_f();  pvmth = pvm2.get_th(); pvmph = pvm2.get_ph();
+	    predicted_signal=pvm2.get_prediction();
+	  }
+	  m_multifibre.set_f0(pvmf0);
+      }
 
-      ColumnVector pvmf,pvmth,pvmph;
-      pvmf  = pvm.get_f();
-      pvmth = pvm.get_th();
-      pvmph = pvm.get_ph();
+      if(pvmd<0 || pvmd>0.01) pvmd=2e-3;
+      if(pvmd_std<0 || pvmd_std>0.01) pvmd_std=pvmd/10;
 
+      m_multifibre.set_S0(pvmS0);
+      m_multifibre.set_d(pvmd);
+      m_multifibre.set_d_std(pvmd_std);
+     
       if(opts.nfibres.value()>0){
 	m_multifibre.addfibre(pvmth(1),
 			      pvmph(1),
@@ -719,7 +746,7 @@ public:
 	}
 	
       }
-      residuals=m_data-pvm.get_prediction();
+      residuals=m_data-predicted_signal;
     }
     residuals.Release();
     return residuals;   

@@ -41,7 +41,7 @@ MAKEOPTIONS="${MAKEOPTIONS} FSLEXTLIB=${FSLEXTLIB} FSLEXTINC=${FSLEXTINC} FSLEXT
 
 errorprojs="" ; export errorprojs ;
 
-PROJECTS="tcl tk zlib libpng libiconv libgd libgdc libprob libcprob newmat cprob newran cephes fftw irtk"
+PROJECTS="tcl tk zlib libpng libiconv libgd libgdc libprob libcprob newmat cprob newran cephes fftw"
 
 for projname in $PROJECTS; do
 

@@ -77,6 +77,7 @@ Usage() {
     echo "  -b               : input is already brain extracted"
     echo "  -s <name>        : run only on one specified structure (e.g. L_Hipp) or a comma separated list (no spaces)"
     echo "  -a <img2std.mat> : use affine matrix (do not re-run registration)"
+    echo "  -3               : use 3-stage affine registration (only currently for hippocampus)"
     echo "  -d               : do not cleanup image output files (useful for debugging)"
     echo "  -v               : verbose output"
     echo "  -h               : display this help message"
@@ -96,7 +97,7 @@ verbose=no;
 doReg=yes;
 bmeth=auto;
 cleanUp=yes;
-
+threestage=no;
 
 if [ $# -eq 0 ] ; then Usage; exit 0; fi
 # also accept old syntax for now (without -b option): <input_image> <threshold> <output_image>
@@ -105,7 +106,7 @@ if [ $# -eq 3 ] ; then
   bmeth="$2";
   oname=$3;
 else
-    args=`getopt i:o:m:s:a:bdvh $*`
+    args=`getopt i:o:m:s:a:bd3vh $*`
     if [ $? != 0 ] ; then 
 	Usage
     fi
@@ -116,7 +117,10 @@ else
 	  in
 	  -b)
 	      BETdone=yes; 
-	      opts="-b" ; 
+	      flirtopts="-b" ; 
+	      shift;;
+	  -3)
+	      threestage="yes";
 	      shift;;
 	  -v)
 	      verbose=yes; 
@@ -181,8 +185,11 @@ if [ $doReg = yes ] ; then
     else
 	matname=${oname}_in_to_std_sub;
     fi
-    if [ $verbose = yes ] ; then echo ${FSLDIR}/bin/first_flirt $iname ${matname} $opts ; fi
-    FLIRTID=`${FSLDIR}/bin/fsl_sub -l $logdir -T 15 ${FSLDIR}/bin/first_flirt $iname ${matname} $opts`
+    if [ $threestage = yes ] ; then
+	flirtopts="$flirtopts -strucweight $FSLDIR/data/standard/MNI152_T1_1mm_Hipp_mask_dil8"
+    fi
+    if [ $verbose = yes ] ; then echo ${FSLDIR}/bin/first_flirt $iname ${matname} $flirtopts ; fi
+    FLIRTID=`${FSLDIR}/bin/fsl_sub -l $logdir -T 15 ${FSLDIR}/bin/first_flirt $iname ${matname} $flirtopts`
     FLIRTJOBHOLD="-j $FLIRTID"
     affmat=${matname}.mat
 fi

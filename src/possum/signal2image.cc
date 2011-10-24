@@ -277,7 +277,7 @@ int do_work(int argc, char* argv[])
   int n=(int) (pulseinfo(12));
   int nslc=(int) (pulseinfo(13));//Nslc
   double dt=pulseinfo(3);//TR
-  double dslc=pulseinfo(14)*1e03;//slcthk (mm)
+  double dslc=(pulseinfo(14)+pulseinfo(16))*1e03;//slcthk (mm);
   double dread=pulseinfo(7)*1e03;//read
   double dphase=pulseinfo(8)*1e03;//phase
   int nread=(int) (pulseinfo(5));

@@ -772,7 +772,12 @@ int main (int argc,char** argv)
 
   // interpolate with final transform values
   for (int i=0; i < globalopts. no_volumes; i++){
-    testvol = timeseries[i];
+    // initial testvol is used as the reference (for properties like sform)
+    if (globalopts. reffileflag) {
+      testvol = extrefvol; 
+    } else {
+      testvol = timeseries[i];  
+    }
     if (globalopts. sinc_final) {
       timeseries[i].setextrapolationmethod(extraslice);
       timeseries[i].setinterpolationmethod(sinc);
@@ -780,6 +785,11 @@ int main (int argc,char** argv)
     } else  if (globalopts. nn_final) {
       timeseries[i].setextrapolationmethod(extraslice);
       timeseries[i].setinterpolationmethod(nearestneighbour);
+      affine_transform(timeseries[i],testvol,mat_array0[i]*init_trans,1.0);
+    } else  if (globalopts. spline_final) {
+      timeseries[i].setextrapolationmethod(extraslice);
+      timeseries[i].setinterpolationmethod(spline);
+      affine_transform(timeseries[i],testvol,mat_array0[i]*init_trans,1.0);
     } else {
       timeseries[i].setextrapolationmethod(extraslice);
       timeseries[i].setinterpolationmethod(trilinear);
@@ -793,7 +803,10 @@ int main (int argc,char** argv)
     if (globalopts. reffileflag) {
       decompose_mats(mat_index, mat_array0, extrefvol);
     } else {
+      cerr << "refnum = " << globalopts.refnum << endl;
+      cerr << "Original_refvol = " << original_refvol << endl;
       if (globalopts.refnum<0) globalopts.refnum=original_refvol;
+      if (globalopts.refnum<0) globalopts.refnum=0;
       decompose_mats(mat_index, mat_array0, timeseries[globalopts. refnum]);
     }
   }

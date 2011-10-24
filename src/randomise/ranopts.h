@@ -239,7 +239,7 @@ class ranopts {
 	   string("\toutput permuted tstat"), 
 		false, no_argument,false),
    disableNonConstantMask(string("--norcmask"), false, 
-	   string("dont remove constant voxels from mask"), 
+	   string("don't remove constant voxels from mask"), 
 		false, no_argument),
    randomSeed(string("--seed"),0,
 	    string("~<seed>\tspecific integer seed for random number generator"),
@@ -264,13 +264,13 @@ class ranopts {
 		      false, no_argument, false),
    permuteBlocks(string("--permuteBlocks"), false, 
 	   string("permute exchangeability blocks. Caution BETA option"), 
-		 false, no_argument, false),
+		 false, no_argument),
    verbose_old(string("-V"), false, 
 	   string("\tswitch on diagnostic messages (deprecated: now always on unless quiet)"),
 	       false, no_argument, false),
 
 
-   options("randomise v2.8", "randomise -i <input> -o <output> -d <design.mat> -t <design.con> [options]")
+   options("randomise v2.9", "randomise -i <input> -o <output> -d <design.mat> -t <design.con> [options]")
      {
     
      try {

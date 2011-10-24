@@ -95,6 +95,8 @@ for f in `$FSLDIR/bin/imglob $@` ; do
     # create mask (for use in FLIRT & FNIRT)
     $FSLDIR/bin/fslmaths FA/${f}_FA -bin FA/${f}_FA_mask
 
+    $FSLDIR/bin/fslmaths FA/${f}_FA_mask -dilD -dilD -sub 1 -abs -add FA/${f}_FA_mask FA/${f}_FA_mask -odt char
+
     $FSLDIR/bin/immv $f origdata
 	
 done

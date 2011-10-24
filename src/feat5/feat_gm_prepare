@@ -97,11 +97,11 @@ CWD=`pwd`
 /bin/rm -rf ${OUT}.log
 mkdir ${OUT}.log
 for f in $@ ; do
-  printf "cd ${f}/reg; $FSLDIR/bin/fast -R 0.3 -H 0.1 -o grot highres; $FSLDIR/bin/immv grot_pve_2 highresGM; /bin/rm grot*; $FSLDIR/bin/fslmaths highresGM -s $struc_smoothing highresGMs; " >> ${OUT}.log/featseg1
+  ${FSLDIR}/bin/fslecho "cd ${f}/reg; $FSLDIR/bin/fast -R 0.3 -H 0.1 -o grot highres; $FSLDIR/bin/immv grot_pve_1 highresGM; /bin/rm grot*; $FSLDIR/bin/fslmaths highresGM -s $struc_smoothing highresGMs; \c" >> ${OUT}.log/featseg1
   if [ `${FSLDIR}/bin/imtest ${f}/reg/highres2standard_warp` = 1 ] ; then
-      printf "${FSLDIR}/bin/applywarp --ref=standard --in=highresGMs --out=highresGMs2standard --warp=highres2standard_warp; " >> ${OUT}.log/featseg1
+      ${FSLDIR}/bin/fslecho "${FSLDIR}/bin/applywarp --ref=standard --in=highresGMs --out=highresGMs2standard --warp=highres2standard_warp; \c" >> ${OUT}.log/featseg1
   else
-      printf "${FSLDIR}/bin/flirt -in highresGMs -out highresGMs2standard -ref standard -applyxfm -init highres2standard.mat; " >> ${OUT}.log/featseg1
+      ${FSLDIR}/bin/fslecho "${FSLDIR}/bin/flirt -in highresGMs -out highresGMs2standard -ref standard -applyxfm -init highres2standard.mat; \c" >> ${OUT}.log/featseg1
   fi 
   echo "cd $CWD" >> ${OUT}.log/featseg1
   GMlist="$GMlist ${f}/reg/highresGMs2standard"

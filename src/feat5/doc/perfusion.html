@@ -66,21 +66,24 @@ frameborder="0" src="top.html">Broken</IFRAME>
 </UL>
 
 <p> For an experiment with just a single experimental condition, these
-  EVs are generally all that you need, and can be setup via
-  the <b>Model setup wizard</b>. If you have more than one condition,
-  then for each new condition you will need a new EV similar to EV2,
+  EVs are generally all that you need, and can be setup via the
+  <b>Model setup wizard</b>. If you have more than one condition, then
+  for each new condition you will need a new EV similar to EV2,
   modelling the BOLD response, and also a corresponding EV formed from
   interacting the BOLD response EV with EV1. Note that for each
-  interaction EV, you need to click on the <b>Demean EV</b> button for
-  EV1 only. This makes the modulation envelope for the perfusion
-  activation EV symmetric about zero, rather than only positive, and
-  results in a slightly better model of the perfusion data.
+  interaction EV, you need to set <b>Make zero</b> to <b>Centre</b>
+  for EV1 only (i.e. leave the BOLD EV at <b>Min</b>). This makes the
+  modulation envelope for the perfusion activation EV symmetric about
+  zero, rather than only positive, and results in a slightly better
+  model of the perfusion data.
 
 <p> The above assumes that the tag-control order of the data is such
   that the first timepoint is tag. If not, you should change
   the <b>Phase</b> for EV1 from 0 to the TR.
 
 <p> You should leave FILM whitening turned on.
+
+<p> Note that if you use this approach then featquery will not automatically output percent change values that relate to 100*(perfusion signal change)/(perfusion baseline). Instead you need to use featquery to output COPE1 (perfusion activation in the example above) and COPE5 (perfusion baseline in the example above), and then calculate 100*COPE1/COPE5.
 
 <hr><H3>Subtraction</H3>
 
@@ -133,6 +136,8 @@ control</b>.
   turned off, and instead, to correct for the reduced degrees of
   freedom in the filtered data, the varcope and degrees-of-freedom are
   automatically corrected after running FILM in OLS mode.
+
+<p> Note that if you use this approach then featquery will automatically output percent change values that correspond to 100*(perfusion signal change)/(perfusion baseline).
 
 </BODY></HTML>
 
