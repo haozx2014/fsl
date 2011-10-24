@@ -1,3 +1,13 @@
+fsl (4.1.9-1) unstable; urgency=low
+
+  * New upstream relase. Merged patches (gdc_bugfix, missing_newline,
+    gcc_compat).
+  * Make fslview recommended (instead of depend), as it is currently not
+    available for post-squeeze systems, due to VTK5-Qt3 dependency.
+  * Remove brace expansion in debhelper install file (reported by lintian).
+
+ -- Michael Hanke <mih@debian.org>  Mon, 24 Oct 2011 15:06:03 +0200
+
 fsl (4.1.8-1) unstable; urgency=low
 
   * New upstream bugfix release.
