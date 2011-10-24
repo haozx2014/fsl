@@ -188,8 +188,8 @@ Description: Debian build setup and shared libraries
 +	$(CXX) ${CXXFLAGS} ${LDFLAGS} -o $@ ${TOBJS}
 --- a/src/melodic/Makefile
 +++ b/src/melodic/Makefile
-@@ -37,7 +37,7 @@
- all: ggmix fsl_regfilt fsl_glm fsl_mvlm fsl_sbca melodic
+@@ -33,7 +33,7 @@
+ all: ggmix fsl_regfilt fsl_glm melodic
  
  ggmix: ${GGMIX_OBJS}
 -	${AR} -r libggmix.a ${GGMIX_OBJS} 

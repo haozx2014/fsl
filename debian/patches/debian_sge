@@ -27,7 +27,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  
  Usage() {
      echo ""
-@@ -164,14 +166,20 @@
+@@ -176,14 +178,20 @@
  mkdir -p ${subjdir}.bedpostX/logs/pid_${$}
  mkdir -p ${subjdir}.bedpostX/xfms
  
@@ -51,7 +51,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  
  # 
  # Need to set off a backgrounded monitoring task
-@@ -241,15 +249,20 @@
+@@ -253,15 +261,20 @@
      fi
      slice=$(($slice + 1))
  done
