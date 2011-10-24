@@ -1,8 +1,5 @@
 tcl_shell_spec
-gdc_bugfix
-missing_newline
 debian_webhelp
-gcc_compat
 fix_bashisms
 debian_sge
 debian_build_cfg
