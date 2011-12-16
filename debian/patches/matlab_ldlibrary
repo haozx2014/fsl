@@ -1,0 +1,99 @@
+From: Duncan Mortimer <duncan@fmrib.ox.ac.uk>
+Subject: Prevent failure due to redefinition of LD_LIBRARY_PATH in MATLAB.
+Origin: upstream
+
+--- fsl-old/etc/matlab/read_avw.m	2011-12-16 14:49:39.000000000 +0000
++++ fsl/etc/matlab/read_avw.m	2011-12-16 15:14:20.000000000 +0000
+@@ -7,7 +7,7 @@
+ %  Note: automatically detects - unsigned char, short, long, float
+ %         double and complex formats
+ %  Extracts the 4 dimensions (dims), 
+-%  4 scales (scales) and bytes per pixel (bpp) for voxels 
++%  4 scales (scales) and bits per pixel (bpp) for voxels 
+ %  contained in the Analyze or nifti header file (fname)
+ %  Also returns endian = 'l' for little-endian or 'b' for big-endian
+ %
+@@ -15,38 +15,11 @@
+ 
+ % remove extension if it exists
+ 
+-[PATHSTR,NAME1,EXT,VERSN] = fileparts(fname);
+-
+-if(strcmp(EXT,'.gz'))
+-    [PATHSTR,NAME2,EXT,VERSN] = fileparts([PATHSTR filesep NAME1]);
+-    if(strcmp(EXT,'.img') | strcmp(EXT,'.nii') | strcmp(EXT,'.hdr'))
+-        NAME1 = NAME2;
+-    end
+-elseif(~strcmp(EXT,'.nii')&~strcmp(EXT,'.hdr')&~strcmp(EXT,'.img'))
+-    NAME1 = [PATHSTR filesep NAME1 EXT];
+-end
+-
+-
+-
+-
+-%         
+-% if ( (length(findstr(fname,'.hdr.gz')>0)) | ...
+-%         (length(findstr(fname,'.img.gz')>0)) | ...
+-%         (length(findstr(fname,'.nii.gz')>0)) ),
+-%   fname=fname(1:(length(fname)-7));
+-% end
+-% if ( (length(findstr(fname,'.hdr'))>0) | ...
+-%         (length(findstr(fname,'.img')>0)) | ...
+-%         (length(findstr(fname,'.nii')>0)) ),
+-%   fname=fname(1:(length(fname)-4));
+-% end
+-
+-
+ 
+ 
+ %% convert to uncompressed nifti pair (using FSL)
+ tmpname = tempname;
+-command = sprintf('sh -c ". ${FSLDIR}/etc/fslconf/fsl.sh; FSLOUTPUTTYPE=NIFTI_PAIR; export FSLOUTPUTTYPE; $FSLDIR/bin/fslmaths %s %s"\n', fname, tmpname);
++command = sprintf('sh -c ". ${FSLDIR}/etc/fslconf/fsl.sh; FSLOUTPUTTYPE=NIFTI_PAIR; export FSLOUTPUTTYPE; LD_LIBRARY_PATH=$FSLDIR/bin $FSLDIR/bin/fslmaths %s %s"\n', fname, tmpname);
+ system(command);
+ 
+   [dims,scales,bpp,endian,datatype]= read_avw_hdr(tmpname);
+--- fsl-old/etc/matlab/read_avw_complex.m	2011-12-16 14:49:39.000000000 +0000
++++ fsl/etc/matlab/read_avw_complex.m	2011-12-16 14:31:46.000000000 +0000
+@@ -16,7 +16,7 @@
+ %            SAVE_AVW_IMG, SAVE_AVW_COMPLEX
+ %   
+ 
+-command=sprintf('sh -c ". ${FSLDIR}/etc/fslconf/fsl.sh; ${FSLDIR}/bin/fslcomplex -realcartesian %s %s %s "\n',fname,[fname,'R'],[fname,'I']);
++command=sprintf('sh -c ". ${FSLDIR}/etc/fslconf/fsl.sh;  LD_LIBRARY_PATH=$FSLDIR/bin ${FSLDIR}/bin/fslcomplex -realcartesian %s %s %s "\n',fname,[fname,'R'],[fname,'I']);
+ system(command);
+ 
+ [imgr,dims,scales,bpp,endian]=read_avw([fname,'R']);
+--- fsl-old/etc/matlab/save_avw.m	2011-12-16 14:49:40.000000000 +0000
++++ fsl/etc/matlab/save_avw.m	2011-12-16 14:31:34.000000000 +0000
+@@ -31,7 +31,7 @@
+    end
+          
+ %% Convert volume from NIFTI_PAIR format to user default
+-tmp=sprintf('sh -c ". ${FSLDIR}/etc/fslconf/fsl.sh; $FSLDIR/bin/fslmaths %s %s"\n',tmpname,fname);
++tmp=sprintf('sh -c ". ${FSLDIR}/etc/fslconf/fsl.sh; LD_LIBRARY_PATH=$FSLDIR/bin $FSLDIR/bin/fslmaths %s %s"\n',tmpname,fname);
+ system(tmp);
+ 
+ % cross platform compatible deleting of files
+--- fsl-old/etc/matlab/save_avw_complex.m	2011-12-16 14:49:40.000000000 +0000
++++ fsl/etc/matlab/save_avw_complex.m	2011-12-16 14:33:00.000000000 +0000
+@@ -14,7 +14,7 @@
+ 
+ save_avw(real(img),[fname,'R'],'f',vsize);
+ save_avw(imag(img),[fname,'I'],'f',vsize);
+-command=sprintf('sh -c ". $FSLDIR/etc/fslconf/fsl.sh; $FSLDIR/bin/fslcomplex -complex %s %s %s \n"',[fname,'R'],[fname,'I'],fname);
++command=sprintf('sh -c ". $FSLDIR/etc/fslconf/fsl.sh; LD_LIBRARY_PATH=$FSLDIR/bin $FSLDIR/bin/fslcomplex -complex %s %s %s \n"',[fname,'R'],[fname,'I'],fname);
+ system(command);
+ 
+ % cross platform compatible deleting of files
+diff -Naur matlab/save_avw_hdr.m matlab/save_avw_hdr.m
+--- fsl-old/etc/matlab/save_avw_hdr.m	2011-12-16 14:49:40.000000000 +0000
++++ fsl/etc/matlab/save_avw_hdr.m	2011-12-16 14:33:34.000000000 +0000
+@@ -85,6 +85,6 @@
+ 
+ % call avwcreatehd program
+ 
+-tmp=sprintf('sh -c ". ${FSLDIR}/etc/fslconf/fsl.sh; FSLOUTPUTTYPE=NIFTI_PAIR; export FSLOUTPUTTYPE; $FSLDIR/bin/fslcreatehd %d %d %d %d %6.4f %6.4f %6.4f %6.4f 0 0 0 %d %s"',dims(1),dims(2),dims(3),dims(4),vsize(1),vsize(2),vsize(3),vsize(4),dtype,fname);
++tmp=sprintf('sh -c ". ${FSLDIR}/etc/fslconf/fsl.sh; FSLOUTPUTTYPE=NIFTI_PAIR; export FSLOUTPUTTYPE; LD_LIBRARY_PATH=$FSLDIR/bin $FSLDIR/bin/fslcreatehd %d %d %d %d %6.4f %6.4f %6.4f %6.4f 0 0 0 %d %s"',dims(1),dims(2),dims(3),dims(4),vsize(1),vsize(2),vsize(3),vsize(4),dtype,fname);
+ system(tmp);
+ disp(' ');
