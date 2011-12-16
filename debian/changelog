@@ -1,3 +1,12 @@
+fsl (4.1.9-2) unstable; urgency=low
+
+  * Added patch to prevent MATLAB scripts from failing because MATLAB
+    redefines LD_LIBRARY_PATH. Courtesy of Duncan Mortimer.
+  * Added initial support for using Condor for cluster support instead of
+    SGE (FSLPARALLEL=condor).
+
+ -- Michael Hanke <mih@debian.org>  Fri, 16 Dec 2011 19:24:00 +0100
+
 fsl (4.1.9-1) unstable; urgency=low
 
   * New upstream relase. Merged patches (gdc_bugfix, missing_newline,
