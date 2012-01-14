@@ -1,3 +1,10 @@
+fsl (4.1.9-3) unstable; urgency=low
+
+  * Relax dependency of fsl-doc on fslview-doc to recommends. FSLView is
+    no longer available in unstable.
+
+ -- Michael Hanke <mih@debian.org>  Sat, 14 Jan 2012 11:26:18 +0100
+
 fsl (4.1.9-2) unstable; urgency=low
 
   * Added patch to prevent MATLAB scripts from failing because MATLAB
