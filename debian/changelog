@@ -1,3 +1,10 @@
+fsl (4.1.9-4) unstable; urgency=low
+
+  * Actually do the changes listed for 4.1.9-3. They needed to be implemented
+    in the template files.
+
+ -- Michael Hanke <mih@debian.org>  Sat, 17 Mar 2012 10:23:23 +0100
+
 fsl (4.1.9-3) unstable; urgency=low
 
   * Relax dependency of fsl-doc on fslview-doc to recommends. FSLView is

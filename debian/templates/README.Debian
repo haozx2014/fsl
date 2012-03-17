@@ -61,4 +61,11 @@ Sun Gridengine
   the corresponding Debian package, no further configuration should be
   necessary.
 
- -- Michael Hanke <michael.hanke@gmail.com>, Fri, 14 Jul 2010 11:12:43 -0500
+Condor
+
+  There is also experimental support for the Condor high-throughput-computing
+  system. To enable this functionality set the environment variable
+  FSLPARALLEL=condor. An experimental Condor package can be obtained from
+  http://neuro.debian.net.
+
+ -- Michael Hanke <michael.hanke@gmail.com>, Sat, 17 Mar 2012 10:22:00 +0100
