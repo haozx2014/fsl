@@ -228,8 +228,9 @@ binary-common:
 	dh_installdeb
 	# dh_shlibdeps needs access to the private libs
 	dh_shlibdeps -l $(FSL_LIBRARY_PATH)
-	# get the correct dependency for octave
-	octave-depends
+	# get the correct dependency for older octave
+	[ -e /usr/bin/octave-depends ] \
+        && octave-depends || true
 	dh_gencontrol
 	dh_md5sums
 	dh_builddeb
