@@ -1,3 +1,16 @@
+fsl (4.1.9-5) unstable; urgency=low
+
+  * Bugfix release.
+  * Bumped Standard version to 3.9.3 -- no changes necessary.
+  * Adjustments for Octave transition: changed dependencies in debian/control,
+    make call to octave-depends conditional upon its presence to allow for
+    easy backports (Closes: #674426)
+  * Move fsl.css from -doc into the main package to prevent error message due
+    to failed access to this file when the -doc package is not installed.
+    (Closes: #675195)
+
+ -- Michael Hanke <mih@debian.org>  Fri, 01 Jun 2012 10:35:16 +0200
+
 fsl (4.1.9-4) unstable; urgency=low
 
   * Actually do the changes listed for 4.1.9-3. They needed to be implemented

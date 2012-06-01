@@ -9,7 +9,7 @@ Build-Depends: debhelper (>= 7), zlib1g-dev (>= 1.2.2),
  libgdchart-gd2-noxpm-dev | libgdchart-gd2-xpm-dev,
  liboctave-dev | octave3.2-headers | octave3.0-headers, tcl8.4 (>=8.4.7),
  imagemagick, libnifti-dev (>> 1.1.0-1)
-Standards-Version: 3.9.2
+Standards-Version: 3.9.3
 Homepage: http://www.fmrib.ox.ac.uk/fsl/
 Vcs-Browser: http://git.debian.org/?p=pkg-exppsy/fsl.git
 Vcs-Git: git://git.debian.org/git/pkg-exppsy/fsl.git
