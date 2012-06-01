@@ -239,8 +239,9 @@ binary-common:
 binary-indep: install
 	dh_installdirs -i
 
-	# install docs (except images which are in fsl package)
+	# install docs (except images and stylesheet, which are in fsl package)
 	cp -r doc/!(images) debian/fsl-doc-$(FSLMAJORVERSION)/usr/share/fsl/$(FSLMAJORVERSION)/doc
+	rm -f debian/fsl-doc-$(FSLMAJORVERSION)/usr/share/fsl/$(FSLMAJORVERSION)/doc/fsl.css
 	# wipe installer script - useless on Debian
 	rm debian/fsl-doc-$(FSLMAJORVERSION)/usr/share/fsl/$(FSLMAJORVERSION)/doc/fsl/fsl_installer.sh
 
@@ -258,6 +259,9 @@ binary-indep: install
 # Build architecture dependant packages using the common target.
 binary-arch: install
 	dh_installdirs -a
+
+	# install the stylesheet
+	cp -r doc/fsl.css debian/fsl-$(FSLMAJORVERSION)/usr/share/fsl/$(FSLMAJORVERSION)/doc
 
 	# remove previous link to make repeated builds work
 	-rm debian/fsl-$(FSLMAJORVERSION)/usr/share/fsl/$(FSLMAJORVERSION)/etc/fslconf/{feat.tcl,fsl.sh}
