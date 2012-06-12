@@ -1,3 +1,10 @@
+fsl (4.1.9-6) unstable; urgency=low
+
+  * Declare a conflict to pre-4.1.9-5 fsl4.1-doc packages. Otherwise,
+    upgrades might fail due to duplicate files .
+
+ -- Michael Hanke <mih@debian.org>  Fri, 08 Jun 2012 07:54:20 +0200
+
 fsl (4.1.9-5) unstable; urgency=low
 
   * Bugfix release.
