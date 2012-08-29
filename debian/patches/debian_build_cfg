@@ -188,8 +188,8 @@ Description: Debian build setup and shared libraries
 +	$(CXX) ${CXXFLAGS} ${LDFLAGS} -o $@ ${TOBJS}
 --- a/src/melodic/Makefile
 +++ b/src/melodic/Makefile
-@@ -33,7 +33,7 @@
- all: ggmix fsl_regfilt fsl_glm melodic
+@@ -59,7 +59,7 @@
+ all: ggmix fsl_regfilt fsl_glm melodic ${OTHERFILES}
  
  ggmix: ${GGMIX_OBJS}
 -	${AR} -r libggmix.a ${GGMIX_OBJS} 
@@ -263,7 +263,7 @@ Description: Debian build setup and shared libraries
  	$(CXX)  ${CXXFLAGS} ${LDFLAGS} -o $@ ${SOBJS} ${LIBS}
 --- a/src/newimage/newimage.h
 +++ b/src/newimage/newimage.h
-@@ -80,7 +80,7 @@
+@@ -20,7 +20,7 @@
  #include "positerators.h"
  #include "miscmaths/miscmaths.h"
  #include "miscmaths/kernel.h"

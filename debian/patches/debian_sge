@@ -4,9 +4,9 @@ Description: out-of-the-box compatibility with Debian's SGE
  SGE, if not, not.
 --- a/src/fdt/bedpostx
 +++ b/src/fdt/bedpostx
-@@ -64,13 +64,15 @@
- #   University, to negotiate a licence. Contact details are:
- #   innovation@isis.ox.ac.uk quoting reference DE/1112.
+@@ -4,13 +4,15 @@
+ #
+ #   SHCOPYRIGHT
  
 -if [ "x$SGE_ROOT" = "x" ] ; then
 -    if [ -f /usr/local/share/sge/default/common/settings.sh ] ; then
@@ -27,7 +27,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  
  Usage() {
      echo ""
-@@ -176,14 +178,20 @@
+@@ -129,14 +131,20 @@
  mkdir -p ${subjdir}.bedpostX/logs/pid_${$}
  mkdir -p ${subjdir}.bedpostX/xfms
  
@@ -36,10 +36,10 @@ Description: out-of-the-box compatibility with Debian's SGE
 +# centralized configuration
 +#mailto=`whoami`@fmrib.ox.ac.uk
  echo Queuing preprocessing stages
--preprocid=`${FSLDIR}/bin/fsl_sub -T 60 -m as -N bpx_preproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_preproc.sh ${subjdir}`
+-preprocid=`${FSLDIR}/bin/fsl_sub -T 60 -m as -N bpx_preproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_preproc.sh ${subjdir} ${gflag}`
 +# don't setup email options, rely on fsl_sub's setting
-+#preprocid=`${FSLDIR}/bin/fsl_sub -T 60 -m as -N bpx_preproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_preproc.sh ${subjdir}`
-+preprocid=`${FSLDIR}/bin/fsl_sub -T 60 -N bpx_preproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_preproc.sh ${subjdir}`
++#preprocid=`${FSLDIR}/bin/fsl_sub -T 60 -m as -N bpx_preproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_preproc.sh ${subjdir} ${gflag}`
++preprocid=`${FSLDIR}/bin/fsl_sub -T 60 -N bpx_preproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_preproc.sh ${subjdir} ${gflag}`
  
  echo Queuing parallel processing stage
  nslices=`${FSLDIR}/bin/fslval ${subjdir}/data dim3`
@@ -51,7 +51,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  
  # 
  # Need to set off a backgrounded monitoring task
-@@ -253,15 +261,20 @@
+@@ -211,14 +219,20 @@
      fi
      slice=$(($slice + 1))
  done
@@ -65,7 +65,6 @@ Description: out-of-the-box compatibility with Debian's SGE
 -mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -T 60 -m as -N bpx_postproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_postproc.sh $subjdir`
 -
 -[ "x$SGE_ROOT" = "x" ] && kill -USR1 $monitorpid
--
 -if [ "x$SGE_ROOT" != "x" ]; then
 +# don't setup email options, rely on fsl_sub's setting
 +#mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -T 60 -m as -N bpx_postproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_postproc.sh $subjdir`
@@ -81,7 +80,7 @@ Description: out-of-the-box compatibility with Debian's SGE
      cat <<EOM > ${subjdir}.bedpostX/monitor
 --- a/src/fdt/fdt.tcl
 +++ b/src/fdt/fdt.tcl
-@@ -753,8 +753,11 @@
+@@ -694,8 +694,11 @@
  	probtrackx {
  	    global probtrack env
  	    set errorStr ""
@@ -95,7 +94,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  	    if { $probtrack(bedpost_dir) == ""  } { set errorStr "You must specify the bedpostX directory!" }
  	    if { $probtrack(mode) == "simple" && $probtrack(usereference_yn) && $probtrack(reference) == "" } { set errorStr "$errorStr You must specify a reference image" } 
  	    if { $probtrack(mode) == "seedmask" && $probtrack(reference) == "" } { set errorStr "$errorStr You must specify a mask image" } 
-@@ -915,7 +918,11 @@
+@@ -856,7 +859,11 @@
                      puts $script "mv $logfile $copylog"
                      puts $script "rm ${filebase}_script.sh"
  		    close $script
@@ -126,7 +125,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  set OSFLAVOUR unix
 --- a/src/possum/possumX
 +++ b/src/possum/possumX
-@@ -231,7 +231,9 @@
+@@ -171,7 +171,9 @@
  mkdir -p ${subjdir}/diff_proc
  mkdir -p ${subjdir}/logs
  mkdir -p ${subjdir}/logs/pid_${$}
@@ -137,7 +136,7 @@ Description: out-of-the-box compatibility with Debian's SGE
      
  echo Processing stage 
  date
-@@ -244,9 +246,12 @@
+@@ -184,9 +186,12 @@
      procnum=$(($procnum + 1))
  done
  
@@ -154,7 +153,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  date
 --- a/src/sgeutils/fsl_sub
 +++ b/src/sgeutils/fsl_sub
-@@ -75,6 +75,15 @@
+@@ -10,6 +10,15 @@
  # cluster.
  ###########################################################################
  
@@ -170,7 +169,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  
  ###########################################################################
  # The following section determines what to do when fsl_sub is called
-@@ -89,10 +98,11 @@
+@@ -24,10 +33,11 @@
  # cluster to be used.
  ###########################################################################
  
@@ -184,7 +183,7 @@ Description: out-of-the-box compatibility with Debian's SGE
      elif [ -f /usr/local/sge/default/common/settings.sh ] ; then
  	. /usr/local/sge/default/common/settings.sh
      else
-@@ -100,30 +110,26 @@
+@@ -35,30 +45,26 @@
      fi
  fi
  
@@ -231,9 +230,9 @@ Description: out-of-the-box compatibility with Debian's SGE
 +    fslcluster_mailopts=${FSLCLUSTER_MAILOPTS}
 +fi
  
- 
  ###########################################################################
-@@ -146,13 +152,13 @@
+ # Don't change the following (but keep scrolling down!)
+@@ -80,13 +86,13 @@
  $command -q short.q gzip *.img *.hdr
  $command -a darwin regscript rawdata outputdir ...
  
@@ -252,9 +251,9 @@ Description: out-of-the-box compatibility with Debian's SGE
    -j <jid>              Place a hold on this task until job jid has completed
    -t <filename>         Specify a task file of commands to execute in parallel
    -N <jobname>          Specify jobname as it will appear on queue
-@@ -160,21 +166,6 @@
-   -m <mailoptions>      Change the SGE mail options, see qsub for details
-   -F                    Use flags embedded in scripts to set SGE queuing options
+@@ -98,21 +104,6 @@
+                         configured for the requested queues.
+                         <threads> specifies the number of threads to run
    -v                    Verbose mode.
 -
 -Queues:
@@ -274,7 +273,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  EOF
  
    exit 1
-@@ -201,9 +192,10 @@
+@@ -147,9 +138,10 @@
  # change. It also sets up the basic emailing control.
  ###########################################################################
  
@@ -288,9 +287,9 @@ Description: out-of-the-box compatibility with Debian's SGE
  
  
  ###########################################################################
-@@ -243,10 +235,11 @@
- while [ $1 != -- ] ; do
-   case $1 in
+@@ -194,10 +186,11 @@
+       fi
+       shift;;
      -T)
 -      map_qname $2
 +      # qsub wants the time limit in seconds
@@ -299,27 +298,27 @@ Description: out-of-the-box compatibility with Debian's SGE
      -q)
 -      queue=$2
 +      queue="-q $2"
-       shift;;
-     -a)
-       acceptable_arch=no
-@@ -337,9 +330,9 @@
-     SGE)
+       qconf -sql | grep ^$queue 2>&1 >/dev/null
+       if [ $? -eq 1 ]; then
+ 	  echo "Invalid queue specified!"
+@@ -344,9 +337,9 @@
+ 
  	if [ "x$tasks" = "x" ] ; then
  	    if [ $scriptmode -ne 1 ] ; then
--		sge_command="qsub -V -cwd -shell n -b y -r y -q $queue -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold"
-+		sge_command="$qsub_cmd -V -cwd -shell n -b y -r y $job_timelimit $queue -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold"
+-		sge_command="qsub -V -cwd -shell n -b y -r y -q $queue $pe_options -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold"
++		sge_command="$qsub_cmd -V -cwd -shell n -b y -r y $job_timelimit $queue $pe_options -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold"
  	    else
 -		sge_command="qsub $LogOpts $sge_arch $sge_hold"
 +		sge_command="$qsub_cmd $LogOpts $sge_arch $sge_hold"
  	    fi
  	    if [ $verbose -eq 1 ] ; then 
  		echo sge_command: $sge_command >&2
-@@ -347,7 +340,7 @@
+@@ -354,7 +347,7 @@
  	    fi
  	    exec $sge_command $@ | awk '{print $3}'
  	else
--	    sge_command="qsub -V -cwd -q $queue -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold $sge_tasks"
-+	    sge_command="$qsub_cmd -V -cwd $job_timelimit $queue -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold $sge_tasks"
+-	    sge_command="qsub -V -cwd -q $queue $pe_options -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold $sge_tasks"
++	    sge_command="$qsub_cmd -V -cwd $job_timelimit $queue $pe_options -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold $sge_tasks"
  	    if [ $verbose -eq 1 ] ; then 
  		echo sge_command: $sge_command >&2
  		echo control file: $taskfile >&2

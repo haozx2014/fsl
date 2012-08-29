@@ -1,7 +1,7 @@
 Description: Fix bashisms in the code.
 --- a/src/possum/possumX
 +++ b/src/possum/possumX
-@@ -98,7 +98,7 @@
+@@ -38,7 +38,7 @@
  fi
  
  echo "POSSUMDIR (before)" $POSSUMDIR
@@ -12,7 +12,7 @@ Description: Fix bashisms in the code.
      export POSSUMDIR=$FSLDIR
 --- a/src/possum/possumX_postproc.sh
 +++ b/src/possum/possumX_postproc.sh
-@@ -77,7 +77,7 @@
+@@ -17,7 +17,7 @@
  #$ -m ae
  
  echo "POSSUMDIR (before)" $POSSUMDIR
