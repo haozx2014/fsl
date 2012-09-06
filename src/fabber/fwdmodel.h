@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 
 /* fwdmodel.h
@@ -72,7 +72,7 @@
  * Written by Adrian Groves, 2007
  * FMRIB Centre, University of Oxford
  *
- * Last modified: $Date: 2008/03/18 14:31:59 $ $Author: chappell $ $Revision: 1.14 $
+ * Last modified: $Date: 2011/08/24 10:29:29 $ $Author: chappell $ $Revision: 1.17 $
  */
 
 //#pragma once // prevent multiple includes
@@ -103,6 +103,9 @@ public:
   virtual void Evaluate(const ColumnVector& params, 
 			      ColumnVector& result) const = 0;
   // Evaluate the forward model
+
+  virtual int Gradient(const ColumnVector& params, Matrix& grad) const;
+  // evaluate the gradient, the int return is to indicate whether a valid gradient is returned by the model
                   
   virtual string ModelVersion() const; 
   // Return a CVS version info string
@@ -117,7 +120,10 @@ public:
   // Various other useful functions:
   virtual void HardcodedInitialDists(MVNDist& prior, MVNDist& posterior) const = 0;
   // Load up some sensible suggestions for initial prior & posterior values
-  
+
+  virtual void Initialise(MVNDist& posterior) const {};
+  // voxelwise initialization of the posterior
+ 
   virtual void NameParams(vector<string>& names) const = 0;
   // Name each of the parameters -- see fwdmodel_linear.h for a generic implementation
   
@@ -142,6 +148,9 @@ public:
   // For models that need the data values in the voxel to calculate
   virtual void pass_in_data( const ColumnVector& voxdata ) { };
 
+  // For models that need to know the voxel co-ordinates of the data
+  virtual void pass_in_coords( const ColumnVector& coords);
+
   virtual ~FwdModel() { return; };
   // Virtual destructor
   
@@ -149,6 +158,12 @@ public:
   // implicitly part of g() -- e.g. pulse sequence parameters, any parameters
   // that are assumed to take known values, and basis functions.  Given these
   // constants, NumParams() should have a fixed value.
+
+ protected:
+  // storage for voxel co-ordinates
+  int coord_x;
+  int coord_y;
+  int coord_z;
 };
 
 #endif /* __FABBER_FWDMODEL_H */

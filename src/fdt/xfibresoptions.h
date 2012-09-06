@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #if !defined(xfibresOptions_h)
 #define xfibresOptions_h
@@ -96,7 +96,7 @@ class xfibresOptions {
   Option<string> bvecsfile;
   Option<string> bvalsfile;
   Option<int> nfibres;
-  FmribOption<int> modelnum;
+  Option<int> modelnum;
   Option<float> fudge;
   Option<int> njumps;
   Option<int> nburn;
@@ -109,9 +109,10 @@ class xfibresOptions {
   Option<bool> localinit;
   Option<bool> nonlin;
   Option<bool> cnonlin;
-  FmribOption<bool> rician;
-  FmribOption<bool> f0;
-  FmribOption<bool> ardf0;
+  Option<bool> rician;
+  Option<bool> f0;
+  Option<bool> ardf0;
+  FmribOption<string> grad_file;
 
   void parse_command_line(int argc, char** argv,  Log& logger);
   
@@ -195,7 +196,10 @@ class xfibresOptions {
    rician(string("--rician"),false,string("Use Rician noise modelling"),false,no_argument),
    f0(string("--f0"),false,string("Add to the model an unattenuated signal compartment"),false,no_argument),
    ardf0(string("--ardf0"),false,string("Use ard on f0"),false,no_argument),
-   options("xfibres v1.11", "xfibres --help (for list of options)\n")
+   grad_file(string("--gradnonlin"), string("gradnonlin"),
+	     string("Gradient Nonlinearity Tensor file"),
+	     false, requires_argument),  
+   options("xfibres","xfibres --help (for list of options)\n")
      {
        try {
        options.add(verbose);
@@ -223,6 +227,7 @@ class xfibresOptions {
        options.add(rician);
        options.add(f0);
        options.add(ardf0);
+       options.add(grad_file);
      }
      catch(X_OptionError& e) {
        options.usage();

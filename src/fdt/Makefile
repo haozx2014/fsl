@@ -10,8 +10,6 @@ DLIBS = -lwarpfns -lbasisfield -lmeshclass -lnewimage -lutils -lmiscmaths -lnewm
 DTIFIT=dtifit
 CCOPS=ccops
 PTX=probtrackx
-FTB=find_the_biggest
-PJ=proj_thresh
 MED=medianfilter
 ROM=reord_OM
 SAUS=sausages
@@ -27,17 +25,18 @@ KURTOSIS=kurtosis
 SWAPDYADS=swap_dyadic_vectors
 PVMFIT=pvmfit
 DTIGEN=dtigen
+RARNG=rearrange
+XPRED=xfibres_pred
+RUBIX=rubix
 
 
-DTIFITOBJS=dtifit.o dtifitOptions.o diffmodels.o
+DTIFITOBJS=dtifit.o dtifitOptions.o diffmodels.o Bingham_Watson_approx.o
 CCOPSOBJS=ccops.o ccopsOptions.o
 PTXOBJS=probtrackx.o probtrackxOptions.o streamlines.o ptx_simple.o ptx_seedmask.o ptx_twomasks.o ptx_nmasks.o ptx_meshmask.o
-FTBOBJS=find_the_biggest.o
-PJOBJS=proj_thresh.o
 MEDOBJS=medianfilter.o 
 ROMOBJS=reord_OM.o
 SAUSOBJS=sausages.o
-XFIBOBJS=xfibres.o xfibresoptions.o diffmodels.o
+XFIBOBJS=xfibres.o xfibresoptions.o diffmodels.o Bingham_Watson_approx.o 
 XFIBOBJS2=xfibres_2.o xfibresoptions.o
 RVOBJS=replacevols.o
 MDVOBJS=make_dyadic_vectors.o
@@ -47,8 +46,11 @@ TESTOBJS=testfile.o
 VECREGOBJS=vecreg.o
 KURTOSISOBJS=kurtosis.o dtifitOptions.o
 SWAPDYADSOBJS=swap_dyadic_vectors.o
-PVMFITOBJS=pvmfit.o pvmfitOptions.o diffmodels.o
+PVMFITOBJS=pvmfit.o pvmfitOptions.o diffmodels.o Bingham_Watson_approx.o
 DTIGENOBJS=dtigen.o
+RARNGOBJS=rearrange.o
+XPREDOBJS=xfibres_pred.o
+RUBIXOBJS=rubix.o diffmodels.o rubixvox.o rubixoptions.o Bingham_Watson_approx.o
 
 SGEBEDPOST = bedpost 
 SGEBEDPOSTX = bedpostx bedpostx_postproc.sh bedpostx_preproc.sh bedpostx_single_slice.sh bedpostx_datacheck
@@ -56,9 +58,9 @@ SGEBEDPOSTX = bedpostx bedpostx_postproc.sh bedpostx_preproc.sh bedpostx_single_
 SCRIPTS = eddy_correct zeropad maskdyads probtrack rotate_bvecs ${SGEBEDPOST} ${SGEBEDPOSTX} 
 FSCRIPTS = correct_and_average ocmr_preproc
 
-XFILES = dtifit ccops find_the_biggest medianfilter make_dyadic_vectors proj_thresh vecreg xfibres probtrackx pvmfit
+XFILES = dtifit ccops medianfilter make_dyadic_vectors vecreg xfibres probtrackx pvmfit 
 
-FXFILES = reord_OM sausages replacevols fdt_matrix_ops indexer
+FXFILES = reord_OM sausages replacevols fdt_matrix_ops indexer rearrange xfibres_pred
 
 
 RUNTCLS = Fdt
@@ -129,3 +131,11 @@ ${PVMFIT}:    	${PVMFITOBJS}
 ${DTIGEN}:    	${DTIGENOBJS}
 		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${DTIGENOBJS} ${DLIBS}
 
+${RARNG}: 	${RARNGOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${RARNGOBJS} ${DLIBS}
+
+${XPRED}: 	${XPREDOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${XPREDOBJS} ${DLIBS}
+
+${RUBIX}: 	${RUBIXOBJS}
+		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${RUBIXOBJS} ${DLIBS}

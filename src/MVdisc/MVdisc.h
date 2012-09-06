@@ -43,7 +43,7 @@ public:
 		
 		vector<unsigned int> applyLDA(const vector<ColumnVector> & Data, const float & eigThresh) const ;
 		short applyLDA(ColumnVector & Data, const float & eigThresh) const; 
-		float run_LOO_LDA(const NEWMAT::Matrix & Data, const ColumnVector & target);
+		ColumnVector run_LOO_LDA(const NEWMAT::Matrix & Data, const ColumnVector & target);
 
 		void estimateLDAParams(const NEWMAT::Matrix & Data, const ColumnVector & target) ;
 				void estimateAndAppendLDAParams(const NEWMAT::Matrix & Data, const ColumnVector & target) ;

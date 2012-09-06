@@ -1,0 +1,17 @@
+#!/bin/sh
+
+if [ $# -lt 2 ] ; then 
+  echo "`basename $0` <text file> <vest file>"
+  exit 0
+fi
+
+NumPoints=`wc $1 | awk '{ print $1 }'`
+NumWaves=`wc $1 | awk '{ print $2 }'`
+NumWaves=`expr $NumWaves / $NumPoints`
+
+echo /NumWaves $NumWaves    > $2
+echo /NumPoints $NumPoints >> $2
+echo /Matrix               >> $2
+
+cat $1 >> $2
+

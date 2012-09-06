@@ -17,7 +17,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
+#   FMRIB Software Library, Release 5.0 (c) 2012, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -66,7 +66,7 @@
 #   interested in using the Software commercially, please contact Isis
 #   Innovation Limited ("Isis"), the technology transfer company of the
 #   University, to negotiate a licence. Contact details are:
-#   innovation@isis.ox.ac.uk quoting reference DE/1112.
+#   innovation@isis.ox.ac.uk quoting reference DE/9564.
 
 
 Usage() {
@@ -105,9 +105,9 @@ if [ $background != $space ] ; then
     if [ `${FSLDIR}/bin/imtest ../reg/highres2standard_warp` = 1 ] ; then
 	if [ $background = standard ] ; then
 	    ${FSLDIR}/bin/invfeatreg ..
-	    ${FSLDIR}/bin/applywarp --ref=../reg/highres --in=../reg/standard --out=background --warp=../reg/highres2standard_warp_inv --interp=sinc
+	    ${FSLDIR}/bin/applywarp --ref=../reg/highres --in=../reg/standard --out=background --warp=../reg/highres2standard_warp_inv --interp=spline
 	else
-	    ${FSLDIR}/bin/applywarp --ref=../reg/standard --in=../reg/highres --out=background --warp=../reg/highres2standard_warp --interp=sinc
+	    ${FSLDIR}/bin/applywarp --ref=../reg/standard --in=../reg/highres --out=background --warp=../reg/highres2standard_warp --interp=spline
 	fi
     else
 	${FSLDIR}/bin/flirt -in ../reg/$background -out background -ref ../reg/$space -applyxfm -init ../reg/${background}2${space}.mat -interp sinc -sincwidth 7 -sincwindow hanning
@@ -120,7 +120,7 @@ for f in `cd .. ; ${FSLDIR}/bin/imglob thresh_*.*` ; do
     f=`${FSLDIR}/bin/remove_ext $f`
 
     if [ $space = standard ] && [ `${FSLDIR}/bin/imtest ../reg/highres2standard_warp` = 1 ] ; then
-	${FSLDIR}/bin/applywarp --ref=../reg/standard --in=../$f --out=$f --warp=../reg/highres2standard_warp --premat=../reg/example_func2highres.mat --interp=sinc
+	${FSLDIR}/bin/applywarp --ref=../reg/standard --in=../$f --out=$f --warp=../reg/highres2standard_warp --premat=../reg/example_func2highres.mat --interp=spline
     else
 	${FSLDIR}/bin/flirt -in ../$f -out $f -ref ../reg/$space -applyxfm -init ../reg/example_func2${space}.mat -interp sinc -sincwidth 7 -sincwindow hanning
     fi

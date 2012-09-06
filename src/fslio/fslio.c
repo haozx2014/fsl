@@ -695,6 +695,7 @@ FSLIO *FslXOpen(const char *filename, const char *opts, int filetype)
 
   /** ======================== Open file for reading ====================== **/
 
+  if (!FslFileExists(filename)) return NULL;
   check_for_multiple_filenames(filename);
 
   /* see if the extension indicates a minc file */
@@ -971,7 +972,7 @@ void FslWriteHeader(FSLIO *fslio)
     fslio->written_hdr = 1;
     if (znz_isnull(fslio->fileptr)) FSLIOERR("FslWriteHeader: no file opened!");
     /* modify niftiptr for FSL-specific purposes */
-    strcpy(fslio->niftiptr->descrip,"FSL4.1");
+    strcpy(fslio->niftiptr->descrip,"FSL5.0");
     /* set qform to equal sform if currently unset (or vice versa) */
     qform_code = FslGetRigidXform(fslio,&qmat);
     sform_code = FslGetStdXform(fslio,&smat);
@@ -1221,14 +1222,14 @@ size_t FslGetVolSize(FSLIO *fslio)
 }
 
 
-void FslSetDim(FSLIO *fslio, short x, short y, short z, short v)
+void FslSetDim5(FSLIO *fslio, short x, short y, short z, short v, short u)
 {
   int ndim;
   if (fslio==NULL)  FSLIOERR("FslSetDim: Null pointer passed for FSLIO");
   if (fslio->niftiptr!=NULL) {
 
-    ndim=4;
-    if (v<=1) {ndim--; if (z<=1) {ndim--; if (y<=1) {ndim--; if (x<=1) {ndim--;}}}}
+    ndim=5;
+    if (u<=1) { ndim--; if (v<=1) {ndim--; if (z<=1) {ndim--; if (y<=1) {ndim--; if (x<=1) {ndim--;}}}}}
 
     fslio->niftiptr->ndim = ndim;
 
@@ -1236,7 +1237,7 @@ void FslSetDim(FSLIO *fslio, short x, short y, short z, short v)
     if (y>=1) fslio->niftiptr->ny = y; else fslio->niftiptr->ny=1;
     if (z>=1) fslio->niftiptr->nz = z; else fslio->niftiptr->nz=1;
     if (v>=1) fslio->niftiptr->nt = v; else fslio->niftiptr->nt=1;
-    fslio->niftiptr->nu = 1;
+    if (u>=1) fslio->niftiptr->nu = u; else fslio->niftiptr->nu=1;
     fslio->niftiptr->nv = 1;
     fslio->niftiptr->nw = 1;
 
@@ -1260,7 +1261,13 @@ void FslSetDim(FSLIO *fslio, short x, short y, short z, short v)
 }
 
 
-void FslGetDim(FSLIO *fslio, short *x, short *y, short *z, short *v)
+void FslSetDim(FSLIO *fslio, short x, short y, short z, short v)
+{
+  FslSetDim5(fslio,x,y,z,v,1);
+}
+
+
+void FslGetDim5(FSLIO *fslio, short *x, short *y, short *z, short *v, short *u)
 {
   if (fslio==NULL)  FSLIOERR("FslGetDim: Null pointer passed for FSLIO");
   if (fslio->niftiptr!=NULL) {
@@ -1268,12 +1275,18 @@ void FslGetDim(FSLIO *fslio, short *x, short *y, short *z, short *v)
     *y = fslio->niftiptr->ny;
     *z = fslio->niftiptr->nz;
     *v = fslio->niftiptr->nt;
+    *u = fslio->niftiptr->nu;
   }
   if (fslio->mincptr!=NULL) {
     fprintf(stderr,"Warning:: Minc is not yet supported\n");
   }
 }
 
+void FslGetDim(FSLIO *fslio, short *x, short *y, short *z, short *v)
+{
+  short u=1;
+  FslGetDim5(fslio,x,y,z,v,&u);
+}
 
 void FslSetDimensionality(FSLIO *fslio, size_t dim)
 {
@@ -2041,7 +2054,7 @@ int FslClose(FSLIO *fslio)
 
     /* must write the header now */
     filetype = FslGetFileType(fslio);
-    strcpy(fslio->niftiptr->descrip,"FSL4.1");
+    strcpy(fslio->niftiptr->descrip,"FSL5.0");
     if (!FslIsSingleFileType(filetype)) {
       /* for file pairs - open new header file and write it */
       nifti_image_write_hdr_img(fslio->niftiptr,0,"wb");

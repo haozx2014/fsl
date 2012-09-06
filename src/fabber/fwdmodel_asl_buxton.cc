@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include "fwdmodel_asl_buxton.h"
 
@@ -77,7 +77,7 @@ using namespace NEWIMAGE;
 
 string BuxtonFwdModel::ModelVersion() const
 {
-  return "$Id: fwdmodel_asl_buxton.cc,v 1.7 2008/05/22 11:57:48 chappell Exp $";
+  return "$Id: fwdmodel_asl_buxton.cc,v 1.8 2010/02/11 16:48:42 chappell Exp $";
 }
 
 void BuxtonFwdModel::HardcodedInitialDists(MVNDist& prior, 
@@ -185,7 +185,7 @@ void BuxtonFwdModel::Evaluate(const ColumnVector& params, ColumnVector& result) 
   }
     
 
-    float lambda = 0.9;
+  //float lambda = 0.9;
 
     float T_1app = 1/( 1/T_1 + 0.01/lambda );
     float R = 1/T_1app - 1/T_1b;
@@ -259,6 +259,7 @@ BuxtonFwdModel::BuxtonFwdModel(ArgsType& args)
       repeats = convertTo<int>(args.Read("repeats")); // number of repeats in data
       t1 = convertTo<double>(args.ReadWithDefault("t1","1.3"));
       t1b = convertTo<double>(args.ReadWithDefault("t1b","1.5"));
+      lambda = convertTo<double>(args.ReadWithDefault("lambda","0.9"));
       infertau = args.ReadBool("infertau"); // infer on bolus length?
       infert1 = args.ReadBool("infert1"); //infer on T1 values?
       twobol = args.ReadBool("twobol"); //infer a second bolus?

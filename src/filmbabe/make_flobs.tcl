@@ -17,7 +17,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
+#   FMRIB Software Library, Release 5.0 (c) 2012, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -66,7 +66,7 @@
 #   interested in using the Software commercially, please contact Isis
 #   Innovation Limited ("Isis"), the technology transfer company of the
 #   University, to negotiate a licence. Contact details are:
-#   innovation@isis.ox.ac.uk quoting reference DE/1112.
+#   innovation@isis.ox.ac.uk quoting reference DE/9564.
 
 source [ file dirname [ info script ] ]/fslstart.tcl
 
@@ -143,7 +143,7 @@ button $w.f.btns.go -command "make_flobs:apply $w 1" -text "Go"
 
 button $w.f.btns.cancel -command "destroy $w" -text "Exit"
 
-button $w.f.btns.help -command "FmribWebHelp file: ${FSLDIR}/doc/filmbabe/index.html" -text "Help" -width 5
+button $w.f.btns.help -command "FmribWebHelp file: ${FSLDIR}/doc/redirects/flobs.html" -text "Help" -width 5
  
 pack $w.f.btns.preview $w.f.btns.go $w.f.btns.cancel $w.f.btns.help -in $w.f.btns -side left -expand yes -padx 3 -pady 3 -fill y
 

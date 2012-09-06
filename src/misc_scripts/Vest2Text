@@ -1,0 +1,8 @@
+#!/bin/sh
+
+if [ $# -lt 2 ] ; then 
+  echo "`basename $0` <vest file> <text file>"
+  exit 0
+fi
+sed -e "/\//d" $1 | sed '/^$/d' > $2
+

@@ -15,7 +15,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
+#   FMRIB Software Library, Release 5.0 (c) 2012, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
 #   interested in using the Software commercially, please contact Isis
 #   Innovation Limited ("Isis"), the technology transfer company of the
 #   University, to negotiate a licence. Contact details are:
-#   innovation@isis.ox.ac.uk quoting reference DE/1112.
+#   innovation@isis.ox.ac.uk quoting reference DE/9564.
 
 #{{{ setups
 
@@ -91,7 +91,8 @@ set graphpic [image create photo -file ${FSLDIR}/doc/images/fsl-logo.gif ]
 
 frame $w.f1
 
-button $w.f1.label -image $graphpic -borderwidth 0 -relief raised -borderwidth 2 -command "FmribWebHelp file: ${FSLDIR}/doc/index.html"
+button $w.f1.label -image $graphpic -borderwidth 0 -relief raised -borderwidth 2 -command "FmribWebHelp file: ${FSLDIR}/doc/redirects/index.html"
+
 pack $w.f1.label -in $w.f1
 
 #}}}
@@ -196,11 +197,12 @@ if { [ file exists ${FSLDIR}/tcl/renderhighres.tcl ] } {
     $w.menub.menu add command -label "Renderhighres" -command { exec sh -c "${FSLDIR}/bin/Renderhighres$gui_ext" & }
 }
 
+$w.menub.menu add command -label "Offline Documentation" -command "FmribWebHelp file: ${FSLDIR}/doc/wiki/index.html"
 #}}}
  
     button $w.cancel -command "destroy $w" -text "Exit"
  
-    button $w.help -command "FmribWebHelp file: ${FSLDIR}/doc/index.html" -text "Help"
+    button $w.help -command  "FmribWebHelp file: ${FSLDIR}/doc/redirects/index.html" -text "Help"
 
     pack $w.menub $w.cancel $w.help -in $w.btns -side left -anchor s -expand yes -padx 2 -pady 2 -fill x
  

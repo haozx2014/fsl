@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.46 2010/01/04 11:35:56 mwebster Exp $
+# $Id: Makefile,v 1.52 2012/08/20 13:25:06 cowboy Exp $
 include ${FSLCONFDIR}/default.mk
 
 PROJNAME = fugue
@@ -6,7 +6,7 @@ PROJNAME = fugue
 USRINCFLAGS = -I${INC_NEWMAT} -I${INC_BOOST} -I${INC_ZLIB}
 USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_ZLIB}
 
-LIBS=-lwarpfns -lbasisfield -lmeshclass -lnewimage -lmiscmaths -lprob -lfslio -lniftiio -lznz -lnewmat -lutils -lz
+LIBS=-lwarpfns -lbasisfield -lmeshclass -lnewimage -lmiscmaths -lfslio -lniftiio -lznz -lnewmat -lutils -lz
 
 PRELUDEOBJS=prelude.o unwarpfns.o
 FUGUEOBJS=fugue.o unwarpfns.o
@@ -17,9 +17,10 @@ I2OBJS=interpwarp.o unwarpfns.o
 SOBJS=sigloss.o
 FNIRTFILEUTILSOBJS=fnirtfileutils.o
 
+RUNTCLS = Fsl_prepare_fieldmap
 XFILES=prelude fugue applywarp convertwarp sigloss invwarp_exe fnirtfileutils
-SCRIPTS=extractfidparams dof2warp invwarp
-FSCRIPTS=fmrib_prepare_fieldmap fix_OCMR_fieldmaps
+SCRIPTS=fsl_prepare_fieldmap extractfidparams dof2warp invwarp
+FSCRIPTS=fix_OCMR_fieldmaps
 TESTXFILES=interpwarp
 
 all: ${XFILES}

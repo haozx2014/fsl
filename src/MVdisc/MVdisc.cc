@@ -427,10 +427,11 @@ void MVdisc::saveLDAParams(const string & outname, const Matrix & polygons)  con
 				delete discOut;
 }
 
-float MVdisc::run_LOO_LDA(const NEWMAT::Matrix & Data, const ColumnVector & target)
+ColumnVector MVdisc::run_LOO_LDA(const NEWMAT::Matrix & Data, const ColumnVector & target)
 {
 	unsigned int N=Data.Ncols();
-	float accuracy=0;
+	float accuracy=0, tn=0, tp=0, fp=0, fn=0;
+	ColumnVector results(N+5);
 	for (unsigned int i=1;i<=N;i++)//main loop across subjects
 	{
 		Matrix DataLOO;
@@ -452,12 +453,22 @@ float MVdisc::run_LOO_LDA(const NEWMAT::Matrix & Data, const ColumnVector & targ
 		estimateLDAParams(DataLOO,TargetLOO);
 		ColumnVector testSub=Data.Column(i);
 		short cl=applyLDA(testSub,0.00);
-		if (cl==target.element(i-1))
-			accuracy++;
+		if (cl==target.element(i-1)) { accuracy++; results(i)=1; if (cl==0) tn++; else tp++; }
+		else { results(i)=0; if (cl==0) fn++ ; else fp++; }
 	}
-	return accuracy/N;
+	accuracy/=N;
+	tp/=N;
+	tn/=N;
+	fp/=N;
+	fn/=N;
+	results(N+1)=accuracy;
+	results(N+2)=tp;
+	results(N+3)=tn;
+	results(N+4)=fp;
+	results(N+5)=fn;
+	return results;
 }
 
 
 
-	}
+}

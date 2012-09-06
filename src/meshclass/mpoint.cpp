@@ -11,7 +11,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -60,7 +60,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include "mpoint.h"
 #include "triangle.h"
@@ -177,6 +177,9 @@ const Vec Mpoint::max_triangle() const
 
 const bool operator ==(const Mpoint &p2, const Mpoint &p1){
   return (fabs(p1.get_coord().X- p2.get_coord().X)<1e-8 && fabs(p1.get_coord().Y - p2.get_coord().Y)<1e-8 && fabs(p1.get_coord().Z - p2.get_coord().Z)<1e-8);
+}
+const bool operator ==(const Mpoint &p1, const Pt &p2){
+  return (fabs(p1.get_coord().X- p2.X)<1e-2 && fabs(p1.get_coord().Y - p2.Y)<1e-2 && fabs(p1.get_coord().Z - p2.Z)<1e-2);
 }
 
 const Vec operator -(const Mpoint&p1, const Mpoint &p2){

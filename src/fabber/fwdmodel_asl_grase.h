@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include "fwdmodel.h"
 #include "inference.h"
@@ -84,7 +84,10 @@ public:
                                 
   virtual void NameParams(vector<string>& names) const;     
   virtual int NumParams() const 
-  { return 2 - (singleti?1:0) + (infertau?1:0) + (inferart?2:0) + (infert1?2:0) + (inferinveff?1:0) + (infertrailing?1:0) + (infertaub?1:0); } 
+  { return 2 - (singleti?1:0) + (infertau?1:0) + (inferart?2:0) + (infert1?2:0) + (infertaub?1:0);
+
+    //return 2 - (singleti?1:0) + (infertau?1:0) + (inferart?2:0) + (infert1?2:0) + (inferinveff?1:0) + (infertrailing?1:0) + (infertaub?1:0); 
+  } 
 
   virtual ~GraseFwdModel() { return; }
 
@@ -108,29 +111,36 @@ protected: // Constants
 
   int t1_index() const { return 2 + (infertau?1:0) + (inferart?2:0) + (infert1?1:0); }
   
-  int inveff_index() const { return 2 + (infertau?1:0) + (inferart?2:0) + (infert1?2:0) +(inferinveff?1:0); }
+  //int inveff_index() const { return 2 + (infertau?1:0) + (inferart?2:0) + (infert1?2:0) +(inferinveff?1:0); }
 
-  int trailing_index() const { return 2 + (infertau?1:0) + (inferart?2:0) + (infert1?2:0) + (infertrailing?1:0); }
+  //int trailing_index() const { return 2 + (infertau?1:0) + (inferart?2:0) + (infert1?2:0) + (infertrailing?1:0); }
 
-  int taub_index() const { return 2 + (infertau?1:0) + (inferart?2:0) + (infert1?2:0) + (inferinveff?1:0) + (infertrailing?1:0) + (infertaub?1:0);}
+  //int taub_index() const { return 2 + (infertau?1:0) + (inferart?2:0) + (infert1?2:0) + (inferinveff?1:0) + (infertrailing?1:0) + (infertaub?1:0);}
+
+  int taub_index() const { return 2 + (infertau?1:0) + (inferart?2:0) + (infert1?2:0) + (infertaub?1:0);}
 
   // index for the parameter to expereicne ARD (this is the arterial perfusion flow)
   int ard_index() const { return 2 + (infertau?1:0) + (inferart?1:0); }
   
   // scan parameters
   double seqtau; //bolus length as set by the sequence
+  double setdelt; //BAT for prior (tissue compartment)
   int repeats;
   double t1;
   double t1b;
+  double lambda;
+  double pretisat;
+  double slicedt;
+  bool casl;
   bool grase; //to indicate data was collected with GRASE-ASL
-
+  bool calib; //indicates calibrated data for T_1app calculation
   bool singleti; //specifies that only tissue perfusion should be inferred
   bool infertau;
   bool infertaub;
   bool inferart;
   bool infert1;
-  bool inferinveff;
-  bool infertrailing;
+  //bool inferinveff;
+  //bool infertrailing;
   bool doard;
   ColumnVector tis;
   Real timax;

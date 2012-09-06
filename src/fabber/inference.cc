@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include "inference.h"
 #include "newimage/newimageall.h"
@@ -241,7 +241,7 @@ void InferenceTechnique::SaveResults(const DataSet& data) const
         }
         if (saveModelFit)
         {
- 	  output.setmatrix(residuals,mask);
+ 	  output.setmatrix(modelFit,mask);
 	  output.set_intent(NIFTI_INTENT_NONE,0,0,0);
 	  output.setDisplayMaximumMinimum(output.max(),output.min());
 	  save_volume4D(output,outputDir + "/modelfit");
@@ -252,6 +252,144 @@ void InferenceTechnique::SaveResults(const DataSet& data) const
     LOG << "    Done writing results." << endl;
 }
 
+void InferenceTechnique::InitMVNFromFile(vector<MVNDist*>& continueFromDists,string continueFromFile, const DataSet& allData, string paramFilename="") {
+  // Loads in a MVN to set it as inital values for inference
+  // can cope with the special scenario in which extra parameters have been added to the inference
+  Tracer_Plus tr("InferenceTechnique::InitMVNFromFile");
+
+  LOG << "Merging supplied MVN with model intialization." << endl;
+
+  if (paramFilename == "") {
+    MVNDist::Load(continueFromDists, continueFromFile, allData.GetMask());
+  }
+  else {
+    // load in parameters
+    LOG << "Parameters named in file" << endl;
+    string currparam;
+    ifstream paramFile((paramFilename).c_str());
+    if (!paramFile.good()) {
+      throw Invalid_option("Check filename of the parameter name file. ");
+    }
+    vector<string> paramNames;
+    while (paramFile.good())
+      {
+	getline(paramFile,currparam);
+	paramNames.push_back(currparam);
+	LOG << currparam << endl;
+      }
+    paramNames.pop_back(); //remove final empty line assocaited with eof
+    
+    // get the parameters in the model
+    vector<string> ModelparamNames;
+    model->NameParams(ModelparamNames);
+    int nmodparams = model->NumParams();
+    LOG << "Parameters named in model" << endl;
+    for (int p=0; p<nmodparams; p++) {
+      LOG << ModelparamNames[p] << endl;
+    }
+
+    //load in the MVN
+    vector<MVNDist*> MVNfile;
+    MVNDist::Load(MVNfile, continueFromFile, allData.GetMask());
+
+    // Get deafults from the model
+    
+    MVNDist tempprior(nmodparams);
+    MVNDist tempposterior(nmodparams);
+    model->HardcodedInitialDists(tempprior,tempposterior);
+
+
+    // go through the parameters in the model and either:
+    // 1.) load the MVN from MVNfile if it is included, or
+    // 2.) use the default value from the model
+
+    // first work out where parameters in file MVN go in the model
+    LOG << "Matching parameters from file with model:" << endl;
+    vector<bool> usefile (ModelparamNames.size(),false);
+    vector<int> oldloc (ModelparamNames.size(), 0);
+    vector<bool> hasmatched (paramNames.size(), false); // to store if the file paramers have been matched
+    for (int p=0; p<ModelparamNames.size(); p++) {
+      usefile[p]=false;
+        for (int q=0; q<paramNames.size(); q++) {
+	  if (ModelparamNames[p] == paramNames[q]) {
+	    usefile[p]=true;
+	    oldloc[p] = q;
+	    hasmatched[q]=true;
+	    LOG << ModelparamNames[p] << ": Matched with file" << endl;
+	  }
+	}
+	if (!usefile[p]) {
+	  LOG << ModelparamNames[p] << ": Not matched, set from model default" << endl;
+	}
+    }
+
+    //Make a note of any parameters in the file that were not matched
+    for (int q=0; q<paramNames.size(); q++) {
+      if (!hasmatched[q]) {
+	LOG_ERR(paramNames[q] + ": Not matched!");
+      }
+    }
+
+    // for (int a=0; a<usefile.size(); a++) {
+//       cout << usefile[a] << "  " << oldloc[a] << endl;
+//     }
+ 
+    ColumnVector filemeans;
+    ColumnVector modelmeans;
+    ColumnVector newmeans;
+    modelmeans = tempposterior.means;
+    newmeans = modelmeans;
+
+    SymmetricMatrix filecov;
+    SymmetricMatrix modelcov;
+    SymmetricMatrix newcov;
+    modelcov = tempposterior.GetCovariance();
+    newcov = modelcov;
+
+    MVNDist fwddist;
+    MVNDist noisedist;
+    MVNDist newfwd(nmodparams);
+
+    int nfwdparams = paramNames.size(); //number of fwd params in the MVN file
+    int nnoiseparams = MVNfile[1]->means.Nrows() - nfwdparams; //number of noise parameters in the MVN file
+    int nvox = MVNfile.size();
+
+    for (int v=0; v<nvox; v++) {
+      fwddist = MVNfile[v]->GetSubmatrix(1,nfwdparams);
+      noisedist = MVNfile[v]->GetSubmatrix(nfwdparams+1,nfwdparams+nnoiseparams);
+
+      for (int p=0; p<ModelparamNames.size(); p++) {
+	// deal with the means
+	if (usefile[p]) {
+	  newmeans(p+1) = fwddist.means(oldloc[p]+1);
+	}
+      }
+      newfwd.means=newmeans;
+
+      //deal with the covariances
+      filecov =fwddist.GetCovariance();
+      for (int p=0; p<ModelparamNames.size(); p++) {
+	for (int q=0; q<=p; q++) {
+	  if(usefile[p]) {
+	    if (usefile[q]) {
+	      newcov(p+1,q+1) = filecov(oldloc[p]+1,oldloc[q]+1);
+	    }
+	  }
+	}
+      }
+      newfwd.SetCovariance(newcov);
+
+      //MVNDist distout(newfwd,noisedist);
+      //continueFromDists.push_back(&distout);
+      continueFromDists.push_back(new MVNDist(newfwd,noisedist) );
+    }
+
+  }
+
+  
+
+
+}
 
 InferenceTechnique::~InferenceTechnique() 
 { 

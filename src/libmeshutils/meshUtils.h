@@ -3,9 +3,70 @@
  *  
  *
  *  Created by Brian Patenaude on 04/04/2008.
- *  Copyright 2008 __MyCompanyName__. All rights reserved.
+ *  Copyright 2008 University of Oxford All rights reserved.
  *
  */
+/*  Part of FSL - FMRIB's Software Library
+    http://www.fmrib.ox.ac.uk/fsl
+    fsl@fmrib.ox.ac.uk
+    
+    Developed at FMRIB (Oxford Centre for Functional Magnetic Resonance
+    Imaging of the Brain), Department of Clinical Neurology, Oxford
+    University, Oxford, UK
+    
+    
+    LICENCE
+    
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
+    Oxford (the "Software")
+    
+    The Software remains the property of the University of Oxford ("the
+    University").
+    
+    The Software is distributed "AS IS" under this Licence solely for
+    non-commercial use in the hope that it will be useful, but in order
+    that the University as a charitable foundation protects its assets for
+    the benefit of its educational and research purposes, the University
+    makes clear that no condition is made or to be implied, nor is any
+    warranty given or to be implied, as to the accuracy of the Software,
+    or that it will be suitable for any particular purpose or for use
+    under any specific conditions. Furthermore, the University disclaims
+    all responsibility for the use which is made of the Software. It
+    further disclaims any liability for the outcomes arising from using
+    the Software.
+    
+    The Licensee agrees to indemnify the University and hold the
+    University harmless from and against any and all claims, damages and
+    liabilities asserted by third parties (including claims for
+    negligence) which arise directly or indirectly from the use of the
+    Software or the sale of any products based on the Software.
+    
+    No part of the Software may be reproduced, modified, transmitted or
+    transferred in any form or by any means, electronic or mechanical,
+    without the express permission of the University. The permission of
+    the University is not required if the said reproduction, modification,
+    transmission or transference is done without financial return, the
+    conditions of this Licence are imposed upon the receiver of the
+    product, and all original and amended source code is included in any
+    transmitted product. You may be held legally responsible for any
+    copyright infringement that is caused or encouraged by your failure to
+    abide by these terms and conditions.
+    
+    You are not permitted under this Licence to use this Software
+    commercially. Use for which any financial return is received shall be
+    defined as commercial use, and includes (1) integration of all or part
+    of the source code or the Software into a product for sale or license
+    by or on behalf of Licensee to third parties or (2) use of the
+    Software or any derivative of it for research with the final aim of
+    developing software products for sale or license to a third party or
+    (3) use of the Software or any derivative of it for research with the
+    final aim of developing non-software products for sale or license to a
+    third party, or (4) use of the Software to provide any service to an
+    external organisation for which payment is received. If you are
+    interested in using the Software commercially, please contact Isis
+    Innovation Limited ("Isis"), the technology transfer company of the
+    University, to negotiate a licence. Contact details are:
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 #ifndef MESHUTILS_H
 #define MESHUTILS_H
 
@@ -26,12 +87,23 @@ public:
 
 		//convience method to read polydata
 		void loadMesh(const std::string & meshname);
-			
+
+		float getMinX() { return Points.Column(1).Minimum(); }
+		float getMaxX() { return Points.Column(1).Maximum(); }
+		float getMinY() { return Points.Column(2).Minimum(); }
+		float getMaxY() { return Points.Column(2).Maximum(); }	
+		float getMinZ() { return Points.Column(3).Minimum(); }
+		float getMaxZ() { return Points.Column(3).Maximum(); }
+		
+		
 		static void generateRandomMeshUsingScalar(const mesh::Mesh & m, const string & outname, const vector<bool> & scal, const int & N);
 	//	static void addModesToModelUsingMask(shapemodel::shapeModel * min, const vector<bool> & scal);
 	//	static void getConditionalMeanAndVariance(shapemodel::shapeModel * min, volume4D<float> & iCondMean, volume4D<float> & iCondVar , const volume<float> & im, const int & mode, const float & bmin, const float & bmax, const float & res, const float & mean_offset);
 		static void generateRandom6DOFMatrices( const string & outname, const int & N);
 	
+		int getNumberOfPolygons(){ return Polygons.Nrows(); }
+		
+		float interpolateScalar(const unsigned int & tri_index, const float & x, const float & y, const float& z );
 
 		static ReturnMatrix vectorOfVectorsToMatrix(const vector< vector<float> > & vin);
 		static void fileToVector(const string & fname, vector<string> list);
@@ -74,7 +146,7 @@ public:
 		static void intersectionPoint(const float & ycut, const float & px0, const float & py0, const float & pz0, const  float & dx, const float & dy, const float & dz, vector<float> & px, vector<float> & py, vector<float> & pz);
 
 		template<class T,class T2>
-		void deformSurface(const volume<T> & im, const float & maxit, const float & w_im, const float & wTang, const float & maxTri, const float & w_norm, const T & max_thresh, const string & name);
+		void deformSurface(const volume<T> & im, const float & maxit, const float & w_im, const float & wTang, const float & maxTri, const float & w_norm, const T & max_thresh,const unsigned int & interRate, const bool & enableInteraction, const string & name);
 
 
 		//transformation matrix utilities
@@ -95,16 +167,24 @@ public:
 
 		//template<class T>
 		void findMidPointOfMidSlice(const volume<char> & im, const Matrix & fmat, float & cx, float & cy, float & cz);
-		vector<float> sliceMesh(const volume<char> & im, const Matrix & fmat, const float & ycut);
-		vector<float> meshToContours(const NEWIMAGE::volume<char> & im, const NEWMAT::Matrix & flirtmat);
+		vector<float> sliceMesh(const float & ycut);
 		
+		void sampleMeshProfilesFromImage(const volume<float> & image, const float & sample_interval, const unsigned int & ipp);
+
 		
 		static void warpMeshWithDefField(const string & fieldname, const string & meshname, const string & meshoutname, const float & dx, const float & dy, const float & dz);
 	
 		template< class T >
 		void warpGridWithDefField(const volume4D<T> & fieldname, const float & dx, const float & dy, const float & dz);
 
+		template< class T >
+		static void warpGridWithDefField(const volume4D<T> & defField, vector<float> & points_in, float warpSc,const float & dx, const float & dy, const float & dz);
+		
 
+		float drawTriangleScalars(volume<float>& image, volume<int> &count, const unsigned int & tri_index);
+
+		
+		
 //-----------------------VERTEX ANALYSIS STUFF-----------------------//
 //return linear transformation matrix 
 Matrix reg_leastsq(const Matrix & TargetPoints,  const short & dof);

@@ -12,7 +12,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -61,7 +61,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #define _GNU_SOURCE 1
 #define POSIX_SOURCE 1
@@ -72,6 +72,7 @@
 #include "newimage/newimageall.h"
 #include "libprob.h"
 #include "ranopts.h"
+
 #include <algorithm>
 
 using namespace MISCMATHS;
@@ -139,7 +140,7 @@ public:
   Permuter();
   ~Permuter();
   void writePermutationHistory(const string& filename);
-  void createPermutationScheme(const Matrix& design, ColumnVector groups, const bool oneNonZeroContrast, const long requiredPermutations, const bool detectingNullElements, const bool outputDebug, const bool permuteBLocks=false);
+  void createPermutationScheme(const Matrix& design, ColumnVector groups, const bool oneNonZeroContrast, const long requiredPermutations, const bool detectingNullElements, const bool outputDebug, const bool permuteBLocks=false,const bool forceFlipping=false);
   void initialisePermutationBlocks(const ColumnVector& labels, const long requiredPermutations);
   ColumnVector createDesignLabels(const Matrix& design);
   void createTruePermutation(const ColumnVector& labels, ColumnVector copyOldlabels, ColumnVector& permvec);
@@ -163,15 +164,17 @@ class ParametricStatistic
 public:
   Matrix originalStatistic,uncorrectedStatistic,maximumDistribution,sumStatMat,sumSampMat;
   bool isAveraging,storingUncorrected;
-  void   store(const volume<int>& clusterLabels, const ColumnVector& clusterSizes, const volume<float>& mask, const int contrastNo, const unsigned long permNo);
-  void   store(const Matrix& parametricMatrix, const unsigned long permNo);
-  void   setup(const int nContrasts,const unsigned long nPerms, const int nVoxels, const bool wantAverage, const bool wantUncorrected);
+  string outputName;
+  void   store(const volume<int>& clusterLabels, const ColumnVector& clusterSizes, const volume<float>& mask, const int contrastNo, const unsigned long permNo, const bool outputRaw);
+  void   store(const Matrix& parametricMatrix, const unsigned long permNo,const volume<float> *mask, const bool outputRaw);
+  void   setup(const int nContrasts,const unsigned long nPerms, const int nVoxels, const bool wantAverage, const bool wantUncorrected, const string outputFileName);
   void   average(const string filename, const float percentileThreshold,const volume<float>& mask);
   ParametricStatistic() { isAveraging=false; }
 };
 
-void ParametricStatistic::setup(const int nContrasts,const unsigned long nPerms, const int nVoxels, const bool wantAverage,const bool wantUncorrected=false)
+void ParametricStatistic::setup(const int nContrasts,const unsigned long nPerms, const int nVoxels, const bool wantAverage,const bool wantUncorrected=false,const string outputFileName="")
 {
+  outputName=outputFileName;
   isAveraging=wantAverage;
   storingUncorrected=wantUncorrected;
   maximumDistribution.ReSize(nContrasts,nPerms);
@@ -188,11 +191,11 @@ void ParametricStatistic::setup(const int nContrasts,const unsigned long nPerms,
   }
 }
 
-void ParametricStatistic::store(const volume<int>& clusterLabels, const ColumnVector& clusterSizes ,const volume<float>& mask, const int contrastNo, const unsigned long permNo)
+void ParametricStatistic::store(const volume<int>& clusterLabels, const ColumnVector& clusterSizes , const volume<float>& mask, const int contrastNo, const unsigned long permNo, const bool outputtingRaw=false)
 {
   if ( clusterSizes.Nrows() > 0 ) 
-    maximumDistribution(contrastNo,permNo)=clusterSizes.MaximumAbsoluteValue();
-  if (permNo==1 || isAveraging) { 
+    maximumDistribution(contrastNo,permNo)=clusterSizes.MaximumAbsoluteValue(); 
+  if ( permNo==1 || isAveraging || outputtingRaw ) { 
     volume4D<float> parametricImage(mask.xsize(),mask.ysize(),mask.zsize(),1);
     parametricImage=0;
     for(int z=0; z<mask.zsize(); z++)
@@ -206,10 +209,12 @@ void ParametricStatistic::store(const volume<int>& clusterLabels, const ColumnVe
       sumStatMat.Row(contrastNo)+=parametricImage.matrix(mask);
       sumSampMat.Row(contrastNo)+=SD(parametricImage.matrix(mask),parametricImage.matrix(mask));
     }
+    if ( outputtingRaw )
+      save_volume4D( parametricImage, outputName+"_perm"+(num2str(permNo).insert(0,"00000")).erase(0,num2str(permNo).length()) );
   }
 }
 
-void ParametricStatistic::store(const Matrix& parametricMatrix, const unsigned long permNo)
+void ParametricStatistic::store(const Matrix& parametricMatrix, const unsigned long permNo, const volume<float> *mask=NULL, const bool outputtingRaw=false )
 {
   maximumDistribution.Column(permNo)=max(parametricMatrix.t()).t();
   if (permNo==1) 
@@ -219,6 +224,11 @@ void ParametricStatistic::store(const Matrix& parametricMatrix, const unsigned l
   if (isAveraging) {
     sumStatMat+=parametricMatrix;
     sumSampMat+=SD(parametricMatrix,parametricMatrix);
+  }
+  if ( outputtingRaw ) {
+     volume4D<float> rawImage;
+     rawImage.setmatrix( parametricMatrix, *mask );
+     save_volume4D( rawImage, outputName+"_perm" + (num2str(permNo).insert(0,"00000")).erase(0,num2str(permNo).length()) );
   }
   
 }
@@ -253,17 +263,17 @@ Matrix tfce(const Matrix& tstat, const volume<float>& mask, const float delta, f
   return(spatialStatistic.matrix(mask));
 }
 
-void clusterStatistic(ParametricStatistic& output, const Matrix& inputStatistic, const volume<float>& mask, const float threshold, const int permutationNo)
+void clusterStatistic(ParametricStatistic& output, const Matrix& inputStatistic, const volume<float>& mask, const float threshold, const int permutationNo, const bool outputPerms)
 {
 ColumnVector clusterSizes;
 volume4D<float> spatialStatistic;  
    spatialStatistic.setmatrix(inputStatistic,mask);
    spatialStatistic.binarise(threshold);
    volume<int> clusterLabels=connected_components(spatialStatistic[0],clusterSizes,CLUST_CON);
-   output.store(clusterLabels,clusterSizes,mask,1,permutationNo);
+   output.store(clusterLabels,clusterSizes,mask,1,permutationNo,outputPerms);
 }
 
-void clusterMassStatistic(ParametricStatistic& output, const Matrix& inputStatistic, const volume<float>& mask, const float threshold, const int permutationNo)
+void clusterMassStatistic(ParametricStatistic& output, const Matrix& inputStatistic, const volume<float>& mask, const float threshold, const int permutationNo, const bool outputPerms)
 {
 ColumnVector clusterSizes;
 volume4D<float> spatialStatistic, originalSpatialStatistic;  
@@ -277,10 +287,10 @@ volume4D<float> spatialStatistic, originalSpatialStatistic;
        for(int x=0; x<mask.xsize(); x++)
 	 if(clusterLabels(x,y,z)>0)
 	   clusterSizes(clusterLabels(x,y,z))=clusterSizes(clusterLabels(x,y,z))+originalSpatialStatistic[0](x,y,z);
-   output.store(clusterLabels,clusterSizes,mask,1,permutationNo);
+   output.store(clusterLabels,clusterSizes,mask,1,permutationNo,outputPerms);
 }
 
-Matrix tfceStatistic(ParametricStatistic& output, const Matrix& inputStatistic, const volume<float>& mask, float& tfceDelta, const float tfceHeight, const float tfceSize, const int tfceConnectivity, const int permutationNo, const bool isF, const int numContrasts, const vector<float>& dof)
+Matrix tfceStatistic(ParametricStatistic& output, const Matrix& inputStatistic, const volume<float>& mask, float& tfceDelta, const float tfceHeight, const float tfceSize, const int tfceConnectivity, const int permutationNo, const bool isF, const int numContrasts, const vector<float>& dof, const bool outputPerms)
 {
   if (permutationNo==1) {
      tfceDelta=inputStatistic.Maximum()/100.0;  // i.e. 100 subdivisions of the max input stat height
@@ -298,7 +308,7 @@ Matrix tfceStatistic(ParametricStatistic& output, const Matrix& inputStatistic, 
       tstat_ce=zstat.AsRow();
     }
   }
-  output.store(tstat_ce, permutationNo);
+  output.store(tstat_ce, permutationNo,&mask,outputPerms);
   return (tstat_ce.Row(1));
 }
 
@@ -308,9 +318,13 @@ void checkInput(const short st,const  Matrix& dm,const  Matrix& tc,const  Matrix
   if (fc.Ncols() !=0 && fc.Ncols()!=tc.Nrows()) throw Exception("number of columns in f-contrast matrix doesn't match number of rows in t-contrast matrix!");
 }
 
-volume<float> nonConstantMask(volume4D<float>& data)
+volume<float> nonConstantMask(volume4D<float>& data, const bool allOnes)
 {
   volume<float> nonConstantMask(data.xsize(),data.ysize(),data.zsize());
+  if ( allOnes ) {
+    nonConstantMask=1;
+    return nonConstantMask;
+  }
   nonConstantMask=0;
   for(int z=0; z<data.zsize(); z++)
     for(int y=0; y<data.ysize(); y++)
@@ -360,16 +374,22 @@ void Initialise(ranopts& opts, volume<float>& mask, Matrix& datam, Matrix& tc, M
     gp.ReSize(dm.Nrows(),1);
     gp=1;
   }
+  vector<bool> groupListed((int)gp.Maximum()+1,false);
+  for ( int i=1; i<=gp.Nrows() ; i++ )
+    groupListed[(int)gp(i,1)]=true;
+  for ( int i=1; i<=gp.Maximum(); i++ )
+    if ( !groupListed[i] )
+      throw Exception(("Error: block "+num2str(i)+" must be assigned to at least one design row in the blocks file.").c_str());
+
   if (opts.effectiveDesignFile.value()!="") effectiveDesign=read_vest(opts.effectiveDesignFile.value());
   if ( opts.nMultiVariate.value() == 1 ) checkInput(data.tsize(),dm,tc,fc);  // should do a different check in the Multivariate case!
 
   if (opts.parallelData.value()) {
-    int fragmentPermutations(300); 
-    if (opts.tfce.value()) fragmentPermutations=240;
-    if (data.tsize()>100 || tc.Nrows() > 10 ) fragmentPermutations=200;
-    if (opts.voxelwise_ev_numbers.set() && opts.voxelwise_ev_filenames.set()) fragmentPermutations=200;
+    int permutationsPerContrast(300); 
+    if (opts.tfce.value()) permutationsPerContrast=100;
+    if (opts.voxelwise_ev_numbers.set() && opts.voxelwise_ev_filenames.set()) permutationsPerContrast=100;
 
-    cout << opts.n_perm.value() << " " << tc.Nrows() << " " << opts.out_fileroot.value() << " " << fragmentPermutations << endl;
+    cout << opts.n_perm.value() << " " << int(tc.Nrows()+fc.Nrows()) << " " << opts.out_fileroot.value() << " " << permutationsPerContrast << endl;
     exit(0);
   }
 
@@ -397,10 +417,7 @@ void Initialise(ranopts& opts, volume<float>& mask, Matrix& datam, Matrix& tc, M
       read_volume(mask,opts.maskname.value());
       if (!samesize(data[0],mask)) throw Exception("Mask dimensions do not match input data dimensions!");
     }
-    else mask = data[0];
-    mask.binarise(0.0001);
-    if (!opts.disableNonConstantMask.value())
-      mask*=nonConstantMask(data);
+    else mask=nonConstantMask(data, opts.disableNonConstantMask.value() );
     if ( mask.sum() < 1 ) throw Exception("Data mask is blank.");
     datam=data.matrix(mask);
     if (opts.demean_data.value()) datam=remmean(datam);
@@ -447,7 +464,8 @@ Matrix calculateFStat(const Matrix& data, const Matrix& model, const Matrix& con
   Matrix residuals= data-model*estimate;
   residuals = sum(SP(residuals,residuals))/dof; //residuals now hold sigmasquared
   estimate = pinv((contrast*pinvModel).t()).t()*contrast*estimate;
-  estimate = sum(SP(estimate,estimate))/rank;
+  estimate = sum(SP(estimate,estimate))/rank;   
+
   return(SD(estimate,residuals));
 }        
 
@@ -461,11 +479,11 @@ Matrix smoothTstat(const Matrix inputSigmaSquared,const volume<float>& mask,cons
   return(SD(newSigmaSquared,inputSigmaSquared));
 }
 
-void OutputStat(const ParametricStatistic input,const volume<float>& mask, const int nPerms,string statLabel,const string fileRoot,const bool outputText, const bool outputRaw=true)
+void OutputStat(const ParametricStatistic input,const volume<float>& mask, const int nPerms,string statLabel,const string fileRoot,const bool outputText, const bool outputRaw=true, const bool writeCritical=true)
 { 
-volume4D<float> output(mask.xsize(),mask.ysize(),mask.zsize(),1);
-long nVoxels(input.originalStatistic.Ncols());
-Matrix currentStat(1,nVoxels);
+ volume4D<float> output(mask.xsize(),mask.ysize(),mask.zsize(),1);
+ long nVoxels(input.originalStatistic.Ncols());
+ Matrix currentStat(1,nVoxels);
  output.setmatrix(input.originalStatistic.Row(1),mask);
  if (outputRaw) save_volume4D(output,fileRoot+statLabel);
  RowVector distribution = input.maximumDistribution.Row(1);    
@@ -476,6 +494,12 @@ Matrix currentStat(1,nVoxels);
    output_file.close();
  }
  SortAscending(distribution);
+
+ int criticalLocation=(int)ceil(0.95*nPerms);
+ double criticalValue=distribution(criticalLocation);
+ if ( writeCritical )
+   cout << "Critical Value for: " << fileRoot+"_corrp"+statLabel << " is: " << criticalValue << endl;
+
  currentStat=0;
  for(int i=1; i<=nVoxels; i++)
    for(int j=nPerms; j>=1; j--) //N.B. it's probably safe to start at nPerms-1, which would also help the '1's bug
@@ -515,9 +539,9 @@ float MVGLM_fit(const Matrix& X, const Matrix& Y, const Matrix& contrast, vector
 	
   // Calculate Pillai F
   int g=Y.Ncols();
-  float F=0, df2=0,df1=0;
   int p=X.Ncols();//number of dependant
-  int N=Y.Nrows();//total sampel size
+  int N=Y.Nrows();//total sample size
+  float F=0, df2=0,df1=0;
 				
   float pillai=(R1*(R1+R0).i()).Trace();
 				
@@ -597,7 +621,7 @@ void calculatePermutationStatistics(ranopts& opts, const volume<float>& mask, Ma
     smoothedMask=smooth(mask,opts.var_sm_sig.value());
   // containers for different inference distribution
   ParametricStatistic clusters, clusterMasses, clusterNormals, clusterEnhanced, clusterEnhancedNormals, voxels;
-  Matrix dmperm, tstat(1,nVoxels), cope, varcope, sigmaSquared(1,nVoxels), previousTFCEStat;
+  Matrix dmperm, tstat(1,nVoxels), pe(dm.Ncols(),nVoxels), cope(1,nVoxels), varcope(1,nVoxels), sigmaSquared(1,nVoxels), previousTFCEStat;
   unsigned long nPerms=(unsigned long)permuter.reportRequiredPermutations(opts.verbose.value());
 
   if ( !((clusterThreshold>0) || (massThreshold>0) || opts.tfce.value() || opts.voxelwiseOutput.value()) )
@@ -606,17 +630,17 @@ void calculatePermutationStatistics(ranopts& opts, const volume<float>& mask, Ma
     nPerms=1;
   }
   // resize the containers for the relevant inference distributions
-  voxels.setup(1,nPerms,nVoxels,false,true);
+  voxels.setup(1,nPerms,nVoxels,false,true,opts.out_fileroot.value()+"_vox"+statLabel);
   if ( clusterThreshold >0 )  
-    clusters.setup(1,nPerms,nVoxels,isNormalising);
+    clusters.setup(1,nPerms,nVoxels,isNormalising,false,opts.out_fileroot.value()+"_clustere"+statLabel);
   if ( massThreshold>0 ) 
-    clusterMasses.setup(1,nPerms,nVoxels,false);
+    clusterMasses.setup(1,nPerms,nVoxels,false,false,opts.out_fileroot.value()+"_clusterm"+statLabel);
   if ( clusters.isAveraging ) 
-    clusterNormals.setup(1,nPerms,nVoxels,false);
+    clusterNormals.setup(1,nPerms,nVoxels,false,false,opts.out_fileroot.value()+"_clustern"+statLabel);
   if ( opts.tfce.value() )    
-    clusterEnhanced.setup(1,nPerms,nVoxels,isNormalising,true);
+    clusterEnhanced.setup(1,nPerms,nVoxels,isNormalising,true,opts.out_fileroot.value()+"_tfce"+statLabel);
   if ( clusterEnhanced.isAveraging ) { 
-    clusterEnhancedNormals.setup(1,nPerms,nVoxels,false);
+    clusterEnhancedNormals.setup(1,nPerms,nVoxels,false,false,opts.out_fileroot.value()+"_tfcen"+statLabel);
     try { previousTFCEStat.ReSize(nPerms,clusterEnhanced.sumStatMat.Ncols());} //between 5e17 - 5e18 values for a 2gb machine
     catch (...) {cerr << "using lowram" << endl; lowram=true;}         
   }
@@ -629,35 +653,46 @@ void calculatePermutationStatistics(ranopts& opts, const volume<float>& mask, Ma
     if (voxelwiseDesign.isSet)
       for(int voxel=1;voxel<=datam.Ncols();voxel++)
 	{
-	Matrix dmtemp(voxelwiseDesign.adjustDesign(dm,voxel)), sigmaTemp(1,1);
+	  Matrix dmtemp(voxelwiseDesign.adjustDesign(dm,voxel)), sigmaTemp(1,1), copeTemp(1,1), varcopeTemp(1,1);
 	dof[0]=ols_dof(dmtemp); 
 	if (opts.demean_data.value()) dof[0]--;
 	dmperm=PermutedDesign(dmtemp,permvec,permuter.isFlipping);
-	tstat.Column(voxel)=evaluateStatistics(datam.Column(voxel), dmperm, tc, cope, varcope, sigmaTemp, dof, rankF, opts.nMultiVariate.value(), (tstatnum < 0) );
+	tstat.Column(voxel)=evaluateStatistics(datam.Column(voxel), dmperm, tc, copeTemp, varcopeTemp, sigmaTemp, dof, rankF, opts.nMultiVariate.value(), (tstatnum < 0) );
 	sigmaSquared.Column(voxel)=sigmaTemp;
+	cope.Column(voxel)=copeTemp;
+	varcope.Column(voxel)=varcopeTemp;
       }
     else 
       tstat=evaluateStatistics(datam, dmperm, tc, cope, varcope, sigmaSquared, dof, rankF, opts.nMultiVariate.value(), (tstatnum < 0) );
+
+    if ( opts.outputGlm.value() && perm == 1 && tstatnum>0 ) {
+       volume4D<float> temp4D;
+       Matrix estimate( pinv(dm)*datam ); //regenerate paramter estimates - make efficient later
+       temp4D.setmatrix(estimate,mask);
+       save_volume4D(temp4D,opts.out_fileroot.value()+"_glm_pe"+statLabel);
+       temp4D.setmatrix(cope,mask);
+       save_volume4D(temp4D,opts.out_fileroot.value()+"_glm_cope"+statLabel);
+       temp4D.setmatrix(varcope,mask);
+       save_volume4D(temp4D,opts.out_fileroot.value()+"_glm_varcope"+statLabel);
+       temp4D.setmatrix(sigmaSquared,mask);
+       save_volume4D(temp4D,opts.out_fileroot.value()+"_glm_sigmasqr"+statLabel);    
+    }
  
     if( opts.var_sm_sig.value()>0 && tstatnum > 0 ) 
       tstat=SD(tstat,sqrt(smoothTstat(sigmaSquared,mask,smoothedMask,opts.var_sm_sig.value())));
     if ( opts.isDebugging.value() ) 
       cerr << "statistic Maximum: " << tstat.Maximum() << endl;
-    voxels.store(tstat,perm);
-    if (opts.output_permstat.value()) {
-      tstat4D.setmatrix(tstat,mask);
-      save_volume4D(tstat4D,opts.out_fileroot.value()+"_rawstat" + statLabel + "_" + ((num2str(perm)).insert(0,"00000")).erase(0,num2str(perm).length()));
-    }
+    voxels.store(tstat,perm,&mask,opts.output_permstat.value());
     if (opts.tfce.value())
     {
-      Matrix tfceOutput=tfceStatistic(clusterEnhanced,tstat,mask,tfce_delta,opts.tfce_height.value(),opts.tfce_size.value(),opts.tfce_connectivity.value(),perm,(tstatnum<0),tc.Nrows(),dof);
+      Matrix tfceOutput=tfceStatistic(clusterEnhanced,tstat,mask,tfce_delta,opts.tfce_height.value(),opts.tfce_size.value(),opts.tfce_connectivity.value(),perm,(tstatnum<0),tc.Nrows(),dof,opts.output_permstat.value());
       if(!lowram && clusterEnhanced.isAveraging ) previousTFCEStat.Row(perm)=tfceOutput.Row(1);
     }
     if ( clusterThreshold > 0 ) 
-      clusterStatistic(clusters,tstat,mask,clusterThreshold,perm);
+      clusterStatistic(clusters,tstat,mask,clusterThreshold,perm,opts.output_permstat.value());
     
     if ( massThreshold > 0 ) 
-      clusterMassStatistic(clusterMasses,tstat,mask,massThreshold,perm);
+      clusterMassStatistic(clusterMasses,tstat,mask,massThreshold,perm,opts.output_permstat.value());
   }
   //End of Permutations
     
@@ -714,12 +749,12 @@ void calculatePermutationStatistics(ranopts& opts, const volume<float>& mask, Ma
   //OUTPUT Routines 
   tstat4D.setmatrix(voxels.originalStatistic.Row(1),mask);
   save_volume4D(tstat4D,opts.out_fileroot.value()+statLabel);
-  if ( opts.voxelwiseOutput.value() ) OutputStat(voxels,mask,nPerms,statLabel,opts.out_fileroot.value()+"_vox",opts.outputTextNull.value(),false);
-  if ( clusterThreshold > 0 ) OutputStat(clusters,mask,nPerms,statLabel,opts.out_fileroot.value()+"_clustere",opts.outputTextNull.value(),opts.outputRaw.value());
-  if ( massThreshold > 0 )    OutputStat(clusterMasses,mask,nPerms,statLabel,opts.out_fileroot.value()+"_clusterm",opts.outputTextNull.value(),opts.outputRaw.value());
-  if ( clusters.isAveraging ) OutputStat(clusterNormals,mask,nPerms,statLabel,opts.out_fileroot.value()+"_clustern",opts.outputTextNull.value(),opts.outputRaw.value());  
-  if ( opts.tfce.value() )    OutputStat(clusterEnhanced,mask,nPerms,statLabel,opts.out_fileroot.value()+"_tfce",opts.outputTextNull.value(),opts.outputRaw.value());
-  if ( clusterEnhanced.isAveraging ) OutputStat(clusterEnhancedNormals,mask,nPerms,statLabel,opts.out_fileroot.value()+"_tfcen",opts.outputTextNull.value(),opts.outputRaw.value());
+  if ( opts.voxelwiseOutput.value() ) OutputStat(voxels,mask,nPerms,statLabel,opts.out_fileroot.value()+"_vox",opts.outputTextNull.value(),false,opts.verbose.value());
+  if ( clusterThreshold > 0 ) OutputStat(clusters,mask,nPerms,statLabel,opts.out_fileroot.value()+"_clustere",opts.outputTextNull.value(),opts.outputRaw.value(),opts.verbose.value());
+  if ( massThreshold > 0 )    OutputStat(clusterMasses,mask,nPerms,statLabel,opts.out_fileroot.value()+"_clusterm",opts.outputTextNull.value(),opts.outputRaw.value(),opts.verbose.value());
+  if ( clusters.isAveraging ) OutputStat(clusterNormals,mask,nPerms,statLabel,opts.out_fileroot.value()+"_clustern",opts.outputTextNull.value(),opts.outputRaw.value(),opts.verbose.value());  
+  if ( opts.tfce.value() )    OutputStat(clusterEnhanced,mask,nPerms,statLabel,opts.out_fileroot.value()+"_tfce",opts.outputTextNull.value(),opts.outputRaw.value(),opts.verbose.value());
+  if ( clusterEnhanced.isAveraging ) OutputStat(clusterEnhancedNormals,mask,nPerms,statLabel,opts.out_fileroot.value()+"_tfcen",opts.outputTextNull.value(),opts.outputRaw.value(),opts.verbose.value());
   if (opts.outputTextPerm.value()) 
     permuter.writePermutationHistory(opts.out_fileroot.value()+"_perm"+statLabel+".txt");  
 }
@@ -813,9 +848,9 @@ void analyseContrast(const Matrix& inputContrast, const Matrix& dm, const Matrix
 
   bool oneRegressor( inputContrast.SumAbsoluteValue() == inputContrast.MaximumAbsoluteValue() );
   if ( opts.effectiveDesignFile.value()!="" )
-    permuter.createPermutationScheme(effectiveDesign,gp.Column(1),(contrastNo>0 && oneRegressor),opts.n_perm.value(),opts.detectNullSubjects.value(),opts.isDebugging.value(),opts.permuteBlocks.value()); 
+    permuter.createPermutationScheme(effectiveDesign,gp.Column(1),(contrastNo>0 && oneRegressor),opts.n_perm.value(),opts.detectNullSubjects.value(),opts.isDebugging.value(),opts.permuteBlocks.value(),opts.one_samp.value()); 
   else
-    permuter.createPermutationScheme(remmean(dm)*inputContrast.t(),gp.Column(1),(contrastNo>0 && oneRegressor),opts.n_perm.value(),opts.detectNullSubjects.value(),opts.isDebugging.value(),opts.permuteBlocks.value());
+    permuter.createPermutationScheme(remmean(dm)*inputContrast.t(),gp.Column(1),(contrastNo>0 && oneRegressor),opts.n_perm.value(),opts.detectNullSubjects.value(),opts.isDebugging.value(),opts.permuteBlocks.value(),opts.one_samp.value());
   if( permuter.isFlipping ) cout << "One-sample design detected; sign-flipping instead of permuting." << endl;
   if( opts.verbose.value() || opts.how_many_perms.value() ) 
   {
@@ -833,13 +868,19 @@ void analyseContrast(const Matrix& inputContrast, const Matrix& dm, const Matrix
 
 void analyseFContrast(Matrix& fc,Matrix& tc,Matrix& model,Matrix& data,volume<float>& mask,Matrix& gp,ranopts& opts, const Matrix& effectiveDesign)
 {   
-   for( int fstat=1; fstat<=fc.Nrows() ; fstat++ ) 
-   {
-      Matrix fullFContrast(0,tc.Ncols());
+  int startingContrast(1);
+  int finalContrast(fc.Nrows());
+  if ( opts.skipTo.value() > 0 ) {
+    startingContrast=opts.skipTo.value();
+    finalContrast=min( fc.Nrows(), opts.skipTo.value() );
+  }
+
+    for( int fstat=startingContrast; fstat<=finalContrast ; fstat++ ) {
+      Matrix fullFContrast( 0, tc.Ncols() );
       for (int tcon=1; tcon<=fc.Ncols() ; tcon++ )
 	if (fc(fstat,tcon)==1) fullFContrast &= tc.Row(tcon);
       analyseContrast(fullFContrast,model,data,mask,gp,-fstat,opts,effectiveDesign);
-   }
+    }
 }
 
 int main(int argc,char *argv[]) {
@@ -859,9 +900,22 @@ int main(int argc,char *argv[]) {
     bool needsDemean=true;
     for (int i=1;i<=model.Ncols();i++) if ( fabs( (model.Column(i)).Sum() ) > 0.0001 ) needsDemean=false;
     if (needsDemean && !opts.demean_data.value()) cerr << "Warning: All design columns have zero mean - consider using the -D option to demean your data" << endl;
-    if (!needsDemean && opts.demean_data.value()) cerr << "Warning: You have demeaned your data, but at least one design column has non-zero mean" << endl;
+    if (!needsDemean && opts.demean_data.value()) {
+      cerr << "Warning: Data demeaning selected, but at least one design column has non-zero mean - therefore invoking automatic demeaning of design matrix" << endl;
+      model=remmean(model);
+    }
     if(opts.fc_file.value()!="") analyseFContrast(Fcontrasts,Tcontrasts,model,data,mask,blockLabels,opts,effectiveDesign); 
-    for (int tstat=1; tstat<=Tcontrasts.Nrows() && !opts.doFOnly.value(); tstat++ )  analyseContrast(Tcontrasts.Row(tstat),model,data,mask,blockLabels,tstat,opts,effectiveDesign); 
+
+    int startingContrast(1);
+    int finalContrast( Tcontrasts.Nrows() );
+    if ( opts.skipTo.value() > 0 ) {
+      startingContrast=opts.skipTo.value()-Fcontrasts.Nrows();
+      finalContrast=min( Tcontrasts.Nrows(), opts.skipTo.value()-Fcontrasts.Nrows() );
+    }
+
+
+    for (int tstat = startingContrast; tstat <= finalContrast && !opts.doFOnly.value(); tstat++ )  
+      analyseContrast(Tcontrasts.Row(tstat),model,data,mask,blockLabels,tstat,opts,effectiveDesign); 
   }
   catch(Exception& e) 
   { 
@@ -879,7 +933,7 @@ int main(int argc,char *argv[]) {
 }
 
 //Permuter Class
-void Permuter::createPermutationScheme(const Matrix& design, ColumnVector groups, const bool oneNonZeroContrast, const long requiredPermutations, const bool detectingNullElements, const bool outputDebug, const bool permuteBlocks)
+void Permuter::createPermutationScheme(const Matrix& design, ColumnVector groups, const bool oneNonZeroContrast, const long requiredPermutations, const bool detectingNullElements, const bool outputDebug, const bool permuteBlocks, const bool forceFlipping)
 {
   nBlocks=int(groups.Maximum())+1; //+1 to include the "0" block
   nSubjects=design.Nrows();
@@ -904,11 +958,16 @@ void Permuter::createPermutationScheme(const Matrix& design, ColumnVector groups
   }
   
   ColumnVector labels = createDesignLabels(design|groups);
+  if ( forceFlipping )
+    labels=1;
+
   if ( isPermutingBlocks ) 
     for( int row=1;row<=nSubjects;row++ )
       labels(row)=row;
 
-  isFlipping = ( (labels.Maximum()==1) && oneNonZeroContrast );
+  if ( forceFlipping )
+    labels=1;
+  isFlipping = ( (labels.Maximum()==1) && oneNonZeroContrast ) || forceFlipping ;
 
   originalLocation.resize(nBlocks);
   permutedLabels.resize(nBlocks);

@@ -14,7 +14,7 @@ GT_OBJS = groupttest.o
 
 XFILES = siena_diff
 TESTXFILES = groupttest surface_norm cylsamp 
-SCRIPTS = siena siena_flirt siena_cal sienax siena_flow2std
+SCRIPTS = siena siena_flirt siena_cal sienax siena_flow2std viena_quant viena_createpng
 
 all:	${XFILES}
 

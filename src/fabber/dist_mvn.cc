@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include "dist_mvn.h"
 #include "easyoptions.h"
@@ -103,7 +103,8 @@ MVNDist::MVNDist(const MVNDist& from1, const MVNDist& from2)
 
 const MVNDist& MVNDist::operator=(const MVNDist& from)
 {
-  Tracer_Plus tr("MVNDist::operator=");
+  // Not useful and dominates --debug-running-stack:
+  // Tracer_Plus tr("MVNDist::operator=");
 
   assert(&from != NULL); // yes, this can happen.  References are but pointers in disguise...
 
@@ -174,7 +175,8 @@ void MVNDist::CopyFromSubmatrix(const MVNDist& from, int first, int last,
 
 void MVNDist::SetSize(int dim)
 {
-  Tracer_Plus tr("MVNDist::SetSize");
+  // Not useful and dominates --debug-running-stack:
+  // Tracer_Plus tr("MVNDist::SetSize");
   if (dim<=0)
     throw RBD_COMMON::Logic_error("Can't have dim<=0\n");
     
@@ -182,7 +184,7 @@ void MVNDist::SetSize(int dim)
     
   if (len != dim)
   {
-    Tracer_Plus tr("MVNDist::SetSize (actually resizing)");
+    //Tracer_Plus tr("MVNDist::SetSize (actually resizing)");
     len = dim;
     means.ReSize(dim);
     precisions.ReSize(dim);

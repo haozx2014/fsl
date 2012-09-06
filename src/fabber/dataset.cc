@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include "easylog.h"
 #include "dataset.h"
@@ -100,11 +100,27 @@ void DataSet::LoadData(ArgsType& args)
   Tracer_Plus tr("LoadData");
   string dataOrder = args.ReadWithDefault("data-order","interleave");
 
+      string maskFile = args.Read("mask");
+      LOG_ERR("    Loading mask data from '" + maskFile << "'" << endl);
+      read_volume(mask,maskFile);
+      DumpVolumeInfo(mask);
+
+      // create coordinates matrix using mask
+      int nx = mask.xsize();
+      int ny = mask.ysize();
+      int nz = mask.zsize();
+      volume4D<float> coordvol(nx,ny,nz,3);
+      for (int i=0; i<nx; i++) { for (int j=0; j<ny; j++) { for (int k=0; k<nz; k++) {
+	    ColumnVector vcoord(3);
+	    vcoord << i << j << k;
+	    coordvol.setvoxelts(vcoord,i,j,k);
+	  } } }
+      voxelCoords=coordvol.matrix(mask);
+
   if (dataOrder == "singlefile")
     {
       LOG << "  Loading all data from a single file..." << endl;
       string dataFile = args.Read("data");
-      string maskFile = args.Read("mask");
 
       // Load the files.  Note: these functions don't throw errors if file doesn't exist --
       // they just crash.  Hence the detailed logging before we try anything.
@@ -114,9 +130,7 @@ void DataSet::LoadData(ArgsType& args)
       read_volume4D(data,dataFile);
       DumpVolumeInfo(data);
 
-      LOG_ERR("    Loading mask data from '" + maskFile << "'" << endl);
-      read_volume(mask,maskFile);
-      DumpVolumeInfo(mask);
+      
 
       LOG << "    Applying mask to data..." << endl;
       mask.binarise(1e-16,mask.max()+1,exclusive);
@@ -157,7 +171,8 @@ void DataSet::LoadData(ArgsType& args)
 
 	  if (nTimes == -1) 
 	    nTimes = dataSets[0].tsize();
-	  else if (nTimes != dataSets.back().tsize())
+	  else if (nTimes != dataSets.back().tsize() & dataOrder == "interleave")
+	    // data sets only strictly need same number of time points if they are to be interleaved
 	    throw Invalid_option("Data sets must all have the same number of time points");
 	}
 
@@ -165,11 +180,11 @@ void DataSet::LoadData(ArgsType& args)
       if (nSets < 1)
 	throw Invalid_option("At least one data file is required: --data1=<file1> [--data2=<file2> [...]]\n");      
 
-      string maskFile = args.Read("mask");
+      //string maskFile = args.Read("mask");
  
-      LOG_ERR("    Loading mask data from '" + maskFile << "'" << endl);
-      read_volume(mask,maskFile);
-      DumpVolumeInfo(mask);
+      //LOG_ERR("    Loading mask data from '" + maskFile << "'" << endl);
+      //read_volume(mask,maskFile);
+      //DumpVolumeInfo(mask);
 
       LOG << "    Applying mask to all data sets..." << endl;
       mask.binarise(1e-16,mask.max()+1,exclusive);

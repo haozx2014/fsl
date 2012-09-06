@@ -18,7 +18,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -67,7 +67,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include <iostream>
 #include <iomanip>
@@ -128,7 +128,7 @@ int main(int argc, char *argv[]){
     //set up report object     
     MelodicReport report(melodat,opts,logger);
    
-    if (opts.filtermode || opts.filtermix.value().length()>0){
+    if (opts.filtermode || opts.filtermix.value().length()>0 || opts.ICsfname.value().length()>0){
       if(opts.filtermode){ // just filter out some noise from a previous run
     		melodat.setup();
 				if(opts.debug.value())
@@ -297,13 +297,18 @@ void mmonly(Log& logger, MelodicOptions& opts,
     message(" done" << endl);
   }
 
-  message("Reading mixing matrix " << opts.filtermix.value() << " ... ");
-  mixMatrix = read_ascii_matrix(opts.filtermix.value());
-  if (mixMatrix.Storage()<=0) {
-    cerr <<" Please specify the mixing matrix correctly" << endl;
-    exit(2);
+  if(opts.filtermix.value().length() > 0){
+    message("Reading mixing matrix " << opts.filtermix.value() << " ... ");
+    mixMatrix = read_ascii_matrix(opts.filtermix.value());
+    if (mixMatrix.Storage()<=0) {
+      cerr <<" Please specify the mixing matrix correctly" << endl;
+      exit(2);
+    }
+    message(" done" << endl);
+  }else{
+	mixMatrix=unifrnd(ICs.Nrows()+1,ICs.Nrows());	
   }
-  message(" done" << endl);
+
 
   if(opts.smodename.value().length() > 0){
     message("Reading matrix of subject modes: " << opts.smodename.value());
@@ -360,7 +365,8 @@ Matrix mmall(Log& logger, MelodicOptions& opts,MelodicData& melodat, MelodicRepo
     message("  IC map " << ctr << " ... "<< endl;);
     
     Matrix ICmap;
-		dbgmsg(" stdNoisei max : "<< melodat.get_stdNoisei().Maximum() <<" "<< melodat.get_stdNoisei().Minimum() << endl);
+    if(melodat.get_stdNoisei().Storage()>0)
+ 		dbgmsg(" stdNoisei max : "<< melodat.get_stdNoisei().Maximum() <<" "<< melodat.get_stdNoisei().Minimum() << endl);
 
     if(opts.varnorm.value()&&melodat.get_stdNoisei().Storage()>0){
       ICmap = SP(melodat.get_IC().Row(ctr),diagvals(ctr)*melodat.get_stdNoisei());
@@ -382,9 +388,12 @@ Matrix mmall(Log& logger, MelodicOptions& opts,MelodicData& melodat, MelodicRepo
     mixmod.fit("GGM");
 
     if(opts.output_MMstats.value()){
-      message("   saving probability map:");
+      message("   saving probability map:  ");
       melodat.save4D(mixmod.get_probmap(),
 		     string("stats/probmap_")+num2str(ctr));
+	  message("   saving mixture model fit:");
+	  melodat.saveascii(mixmod.get_params(),
+			 string("stats/MMstats_")+num2str(ctr));  
     }
 
     //re-scale spatial maps to mean 0 for nht
@@ -475,7 +484,7 @@ Matrix mmall(Log& logger, MelodicOptions& opts,MelodicData& melodat, MelodicRepo
     }
   }
   
-  if(!opts.filtermode&&opts.filtermix.value().length()==0){
+  if(!opts.filtermode&&opts.ICsfname.value().length()==0){
     //now safe new data
     //    bool what = opts.verbose.value();
     //opts.verbose.set_T(false);

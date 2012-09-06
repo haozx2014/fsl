@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #if !defined(dtifitOptions_h)
 #define dtifitOptions_h
@@ -105,6 +105,8 @@ class dtifitOptions {
   Option<int> y_max;
   Option<int> x_min;
   Option<int> x_max;
+  FmribOption<string> grad_file;
+  FmribOption<bool> save_bvals;
   bool parse_command_line(int argc, char** argv);
   
  private:
@@ -180,6 +182,12 @@ class dtifitOptions {
    x_max(string("-X,--xmax"), 128, 
 	 string("max x"), 
 	 false, requires_argument),
+   grad_file(string("--gradnonlin"), string("gradnonlin"),
+	     string("Gradient Nonlinearity Tensor file"),
+	     false, requires_argument),
+   save_bvals(string("--savebvals"), false,
+	     string("Save 4D file with bvalues, corrected for gradient nonlinearities"),
+	     false,  no_argument),
    options("dtifit", "dtifit -k <filename>\n dtifit --verbose\n")
    {
      
@@ -203,7 +211,8 @@ class dtifitOptions {
        options.add(y_max);
        options.add(x_min);
        options.add(x_max);
-       
+       options.add(grad_file);
+       options.add(save_bvals);
      }
      catch(X_OptionError& e) {
        options.usage();

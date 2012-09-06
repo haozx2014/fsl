@@ -11,7 +11,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -60,7 +60,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #ifndef _triangle
 #define _triangle
@@ -99,7 +99,8 @@ class Triangle
   const int operator <(const Triangle *const t) const;   //checks if two triangles are adjacents and well-oriented
   const bool operator ==(const Triangle & t) const;
   const bool intersect(const Triangle & t) const; //checks if two triangles intersect
-
+  const bool intersect(const vector<Pt> & p)const; // checks if a segment intersects the triangle
+  const bool intersect(const vector<Pt> & p,int& ind)const; // checks if a segment intersects the triangle
   bool oriented;           //has the triangle been well oriented ?
   
 

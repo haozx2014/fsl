@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #if !defined(ranopts_h)
 #define ranopts_h
@@ -126,6 +126,8 @@ class ranopts {
   Option<bool> detectNullSubjects;
   Option<bool> permuteBlocks;
   Option<bool> verbose_old;
+  Option<int>  skipTo;
+  Option<bool> outputGlm;
 
   void parse_command_line(int argc, char** argv,Log& logger);
   
@@ -268,7 +270,12 @@ class ranopts {
    verbose_old(string("-V"), false, 
 	   string("\tswitch on diagnostic messages (deprecated: now always on unless quiet)"),
 	       false, no_argument, false),
-
+   skipTo(string("--skipTo"),0,
+	    string("~<number>\tdo only contrast<number>. A setting of 0 will do all contrasts, numbering starts with f- and then t-contrasts"),
+		false, requires_argument, false),
+   outputGlm(string("--glm_output"), false, 
+	   string("output glm information for t-statistics ( unpermuted case only )"), 
+		false, no_argument),
 
    options("randomise v2.9", "randomise -i <input> -o <output> -d <design.mat> -t <design.con> [options]")
      {
@@ -316,6 +323,8 @@ class ranopts {
        options.add(detectNullSubjects);
        options.add(permuteBlocks);
        options.add(verbose_old);
+       options.add(skipTo);
+       options.add(outputGlm);
      }
      catch(X_OptionError& e) {
        options.usage();

@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include "noisemodel_ar.h"
 #include <stdexcept>
@@ -338,7 +338,8 @@ void Ar1cNoiseModel::UpdateTheta(
   	const MVNDist& thetaPrior,
   	const LinearFwdModel& linear,
         const ColumnVector& data,
-        MVNDist* thetaWithoutPrior
+    MVNDist* thetaWithoutPrior,
+    float LMalpha
     ) const
 {	
   Tracer_Plus tr("Ar1cNoiseModel::UpdateTheta");

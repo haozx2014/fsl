@@ -11,7 +11,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -60,7 +60,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include <iostream>
 #include <fstream>
@@ -157,7 +157,9 @@ int main ( int argc, char **argv ){
     }
   }
 
+  dyadic_vecs.setDisplayMaximumMinimum(1,-1);
   save_volume4D(dyadic_vecs,oname);
+  disp.setDisplayMaximumMinimum(1,0);
   save_volume(disp,oname+"_dispersion");
 
   // where we calculate the cone of uncertainty
@@ -188,6 +190,8 @@ int main ( int argc, char **argv ){
 
 	}
   
+    
+    cones.setDisplayMaximumMinimum(1,0);
     save_volume(cones,oname+"_cones"+num2str(acone*100));
   }
 

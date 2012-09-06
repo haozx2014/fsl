@@ -1,11 +1,7 @@
-#!/bin/sh
-
+#!/usr/bin/python
 #   imglob - expand list of image filenames
-#
-#   Stephen Smith and Mark Jenkinson, FMRIB Image Analysis Group
-#
-#   Copyright (C) 1999-2004 University of Oxford
-#
+#   Stephen Smith, Mark Jenkinson and Matthew Webster FMRIB Image Analysis Group
+#   Copyright (C) 2009 University of Oxford 
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
 #   fsl@fmrib.ox.ac.uk
@@ -17,7 +13,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
+#   FMRIB Software Library, Release 5.0 (c) 2012, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -66,58 +62,90 @@
 #   interested in using the Software commercially, please contact Isis
 #   Innovation Limited ("Isis"), the technology transfer company of the
 #   University, to negotiate a licence. Contact details are:
-#   innovation@isis.ox.ac.uk quoting reference DE/1112.
+#   innovation@isis.ox.ac.uk quoting reference DE/9564.
 
-if [ $# -lt 1 ] ; then
-  echo "Usage: $0 [-extension/extensions] <list of names>"
-  echo "       -extension for one image with full extension"
-  echo "       -extensions for image list with full extensions"
-  exit 1;
-fi
+import sys
+import os
+setAvailable=True
+if sys.version_info < (2, 4):
+   import sets
+   from sets import Set
+   setAvailable=False
 
-extension=0
-onename=1;
-if [ X"$1"X = "X-extensionsX" ] ; then
-  onename=0;
-  extension=1
-  shift;
-fi
+def usage():
+    print "Usage: $0 [-extension/extensions/missing] <list of names>"
+    print "       -extension for one image with full extension"
+    print "       -extensions for image list with full extensions"
+    print "       -missing for a list of names with no corresponding file"
+    sys.exit(1)
 
-if [ X"$1"X = "X-extensionX" ] ; then
-  extension=1;
-  shift;
-fi
+def removeExt(input):
+    output=input.replace(".nii.gz","")    
+    output=output.replace(".nii","")
+    output=output.replace(".hdr.gz","")
+    output=output.replace(".hdr","")
+    output=output.replace(".img.gz","")
+    output=output.replace(".img","")
+    return output
 
-# process each argument, removing any possible extension and
-#  then expanding for valid extensions
 
-lst="";
-for aa in $@ ; do
-  # repeat remove_ext a few times to expand out all wildmasking
-  a=`${FSLDIR}/bin/remove_ext ${aa}`;
-  # at this point variable 'a' may have been expanded into a list
-  for b in $a ; do
-    if [ $onename = 1 ] ; then
-      fn=`echo ${b}.hdr ${b}.hdr.gz ${b}.nii ${b}.nii.gz ${b}.mnc ${b}.mnc.gz`;
-    else
-      fn=`echo ${b}.hdr ${b}.hdr.gz ${b}.nii ${b}.nii.gz ${b}.mnc ${b}.mnc.gz ${b}.img ${b}.img.gz`;
-    fi
-    lst="$lst $fn";
-  done
-done
+if len(sys.argv) <= 1:
+    usage()
 
-# remove any instances of unmatched wildmasks (still with * in them)
-lst2="";
-for fn in $lst ; do
-  if [ -f $fn ] ; then
-     lst2="$lst2 $fn";
-  fi
-done
+deleteExtensions=True
+singleImage=True;
+findMissing=False;
+startingArg=1
 
-# make list unique
-lst=`echo $lst2 | tr ' ' '\n' | sort -u`;
-if [ $extension = 0 ] ; then 
-  echo `${FSLDIR}/bin/remove_ext $lst`;
-else 
-  echo $lst;
-fi
+if sys.argv[1] == "-extensions":
+   singleImage=False
+   deleteExtensions=False
+   startingArg=2
+if sys.argv[1] == "-extension":
+   deleteExtensions=False
+   startingArg=2
+if sys.argv[1] == "-missing":
+   findMissing=True
+   startingArg=2
+    
+filelist=[]
+badlist=[]
+
+for arg in range(startingArg, len(sys.argv)):
+   output=removeExt(sys.argv[arg])
+   if os.path.exists(output+".nii"):
+      filelist.append(output+".nii")
+   if os.path.exists(output+".nii.gz"):
+      filelist.append(output+".nii.gz")
+   if os.path.exists(output+".hdr"):
+      filelist.append(output+".hdr")
+   if os.path.exists(output+".hdr.gz"):
+      filelist.append(output+".hdr.gz")
+   if os.path.exists(output+".img.gz") and not singleImage:        
+      filelist.append(output+".img.gz")
+   if os.path.exists(output+".img") and not singleImage:        
+      filelist.append(output+".img")
+   if (not os.path.exists(output+".nii") and not os.path.exists(output+".nii.gz") and not os.path.exists(output+".hdr") and not os.path.exists(output+".hdr.gz") and not ( os.path.exists(output+".img.gz") and not singleImage ) and not ( os.path.exists(output+".img") and not singleImage )):
+      badlist.append(output)
+
+if findMissing:
+   filelist=badlist
+
+if deleteExtensions:
+    for file in range(0, len(filelist)):
+        filelist[file]=removeExt(filelist[file])
+if setAvailable:
+   filelist=list(set(filelist))
+else:
+   filelist=list(Set(filelist))
+filelist.sort()
+
+
+for file in range(0, len(filelist)):
+    print filelist[file],
+    if file < len(filelist)-1:
+       print " ",
+
+if len(badlist) > 0:
+   sys.exit(1)
+sys.exit(0)

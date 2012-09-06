@@ -16,7 +16,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
+#   FMRIB Software Library, Release 5.0 (c) 2012, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -65,7 +65,7 @@
 #   interested in using the Software commercially, please contact Isis
 #   Innovation Limited ("Isis"), the technology transfer company of the
 #   University, to negotiate a licence. Contact details are:
-#   innovation@isis.ox.ac.uk quoting reference DE/1112.
+#   innovation@isis.ox.ac.uk quoting reference DE/9564.
 
 source [ file dirname [ info script ] ]/fslstart.tcl
 set VARS(history) {}
@@ -165,7 +165,7 @@ prewhitening to make the statistics valid and maximally efficient. For
 other data - for example, very long TR (>30s) FMRI data, PET data or
 data with very few time points (<50) - this should be turned off."
 
-checkbutton $w.motionevs -text "Add motion parameters to model" -variable fmri(motionevs) -command "feat5:updatemotionevs $w"
+optionMenu2 $w.motionevs fmri(motionevs) -command "feat5:updatemotionevs $w" 0 "Don't Add Motion Parameters" 1 "Standard Motion Parameters" 2 "Standard + Extended Motion Parameters" 
 balloonhelp_for $w.motionevs "You may want to include the head motion parameters (as estimated by
 MCFLIRT motion correction in the Pre-stats processing) as confound EVs
 in your model. This can sometimes help remove the residual effects of
@@ -181,12 +181,19 @@ motion parameters in your model then select this option. If you do
 this, then once the motion correction has been run, the translation
 and rotation parameters are added as extra confound EVs in the model.
 
-If you select this option then only the components of the main EVs
+If you select Standard Motion Parameters then only the components of the main EVs
 that are orthogonal to the motion confound EVs will be used in
-determining significance of the effects of interest.
+determining significance of the effects of interest. These are also the 6 regressors used 
+in the motion parameter orthogonalisation in older versions of FEAT.
+
+Standard + Extended Motion Parameters will generate a further 18 regressors that have
+been shown to reduce motion problems in some analyses
 
 You cannot use this option unless you are carrying out both pre-stats
 and stats in the same FEAT run."
+
+FileEntry $w.motionevsbeta -textvariable fmri(motionevsbeta) -label "Voxelwise Confound List" -title "Select text file" -width 30 -filedialog directory
+FileEntry $w.scriptevsbeta -textvariable fmri(scriptevsbeta) -label "BETA OPTION: Apply external script" -title "Select text file" -width 30 -filedialog directory
 
 
 frame $w.confoundevs
@@ -234,7 +241,7 @@ balloonhelp_for $w.model "This allows complete control of the model-based analys
 
 set fmri(w_model) 0
 
-optionMenu2 $w.mixed fmri(mixed_yn) -command "feat5:updatestats $w 0" 3 "Fixed effects" 0 "Mixed effects: Simple OLS" 2 "Mixed effects: FLAME 1" 1 "Mixed effects: FLAME 1+2"
+optionMenu2 $w.mixed fmri(mixed_yn) -command "feat5:updatestats $w 0; feat5:setMinimumInputs" 3 "Fixed effects" 0 "Mixed effects: Simple OLS" 2 "Mixed effects: FLAME 1" 1 "Mixed effects: FLAME 1+2"
 
 balloonhelp_for $w.mixed "The main choice here is between fixed effects (FE) and mixed effects (ME) higher-level modelling. FE modelling is more \"sensitive\" to activation than ME, but is restricted in the inferences that can be made from its results; because FE ignores cross-session/subject variance, reported activation is with respect to the group of sessions or subjects present, and not representative of the wider population. ME does model the session/subject variability, and it therefore allows inference to be made about the wider population from which the sessions/subjects were drawn.
 
@@ -448,7 +455,7 @@ $w.nb raise data
 
 frame $w.btns
     
-button $w.btns.apply -command "feat5:apply $w" -text "Go"
+button $w.btns.apply -command "feat5:apply $w ; $w.btns.apply configure -state disabled ; after 30000 $w.btns.apply configure -state active" -text "Go"
 
 button $w.btns.save -command "feat_file:setup_dialog $w a a a [namespace current] *.fsf {Save Feat setup} {feat5:write $w 1 1 0} {}" -text "Save"
 
@@ -456,7 +463,7 @@ button $w.btns.load -command "feat_file:setup_dialog $w a a a [namespace current
 
 button $w.btns.cancel -command "destroy $w" -text "Exit"
 
-button $w.btns.help -command "FmribWebHelp file: ${FSLDIR}/doc/feat5/index.html" -text "Help"
+button $w.btns.help -command "FmribWebHelp file: ${FSLDIR}/doc/redirects/feat.html" -text "Help"
 
 #{{{ Utils
 

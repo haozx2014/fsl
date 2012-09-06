@@ -7,8 +7,6 @@
     
     Copyright (C) 1999-2008 University of Oxford */
 
-// {{{  includes/namespaces
-
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
     fsl@fmrib.ox.ac.uk
@@ -20,7 +18,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -69,7 +67,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include "newimage/newimageall.h"
 #include "meloptions.h"
@@ -82,8 +80,6 @@
 
 using namespace Utilities;
 using namespace NEWIMAGE;
-
-// }}}
  
 namespace Melodic{
 // {{{ Setup
@@ -202,32 +198,36 @@ namespace Melodic{
 
   void MelodicData::set_TSmode()
   {
-    Matrix tmp, tmpT, tmpS, tmpT2, tmpS2, tmpT3;
+	Matrix tmp, tmpT, tmpS, tmpT2, tmpS2, tmpT3;
+	
     tmp = expand_dimred(mixMatrix);
     tmpT = zeros(tmp.Nrows()/numfiles, tmp.Ncols());
     tmpS = zeros(numfiles, tmp.Ncols());
-    explained_var = krfact(tmp,tmpT,tmpS);
+
+	if(opts.approach.value()==string("tica")){
+    	explained_var = krfact(tmp,tmpT,tmpS);
 		outMsize("tmp",tmp);
 		outMsize("tmpT",tmpT);
 		outMsize("tmpS",tmpS);
-		
-    Tmodes.clear(); Smodes.clear();
-    for(int ctr = 1; ctr <= tmp.Ncols(); ctr++){
-			tmpT3 << reshape(tmp.Column(ctr),tmpT.Nrows(),numfiles);
-			outMsize("tmpT3", tmpT3);
-      tmpT2 << tmpT.Column(ctr);
-      tmpS2 << tmpS.Column(ctr);
-			tmpT3 << SP(tmpT3,pow(ones(tmpT3.Nrows(),1)*tmpS2.t(),-1));
-			if(numfiles>1)
-				tmpT2 |= tmpT3;
-			if(mean(tmpS2,1).AsScalar()<0){
-				tmpT2*=-1.0;
-				tmpS2*=-1.0;
-			}
-      add_Tmodes(tmpT2);
-      add_Smodes(tmpS2);
-    }
-
+		if(opts.approach.value()==string("tica")){		
+    		Tmodes.clear(); Smodes.clear();
+    		for(int ctr = 1; ctr <= tmp.Ncols(); ctr++){
+				tmpT3 << reshape(tmp.Column(ctr),tmpT.Nrows(),numfiles);
+				outMsize("tmpT3", tmpT3);
+      			tmpT2 << tmpT.Column(ctr);
+      			tmpS2 << tmpS.Column(ctr);
+				tmpT3 << SP(tmpT3,pow(ones(tmpT3.Nrows(),1)*tmpS2.t(),-1));
+				if(numfiles>1)
+					tmpT2 |= tmpT3;
+				if(mean(tmpS2,1).AsScalar()<0){
+					tmpT2*=-1.0;
+					tmpS2*=-1.0;
+				}
+      			add_Tmodes(tmpT2);
+      			add_Smodes(tmpS2);
+    		}
+		}
+	
 	//add GLM OLS fit
 	if(Tdes.Storage()){
 		Matrix alltcs = Tmodes.at(0).Column(1);
@@ -243,6 +243,14 @@ namespace Melodic{
 		if((alltcs.Nrows()==Sdes.Nrows())&&(Sdes.Nrows()>Sdes.Ncols()&&alltcs.Nrows()>2))
 			glmS.olsfit(alltcs,Sdes,Scon);
 	}
+	
+    }
+//	else{
+//		add_Tmodes(tmp);
+//	}
+	
+	dbgmsg(string("END: set_TSmode"));
+    
   }
 
   void MelodicData::setup()
@@ -274,14 +282,22 @@ namespace Melodic{
  		if(opts.debug.value())
 			save4D(alldat,string("preproc_dat") + num2str(1));   
 		for(int ctr = 1; ctr < numfiles; ctr++){
-    		tmpData = process_file(opts.inputfname.value().at(ctr), numfiles);
+    		tmpData = process_file(opts.inputfname.value().at(ctr), numfiles) / numfiles;
 			if(opts.debug.value())
-				save4D(tmpData /numfiles,string("preproc_dat") + num2str(ctr+1));
+				save4D(tmpData,string("preproc_dat") + num2str(ctr+1));
 			if(tmpData.Ncols() == alldat.Ncols() && tmpData.Nrows() == alldat.Nrows())
-      			alldat += tmpData / numfiles;	
-			else
-				message("Data dimensions do not match - ignoring "+opts.inputfname.value().at(ctr) << endl);
-   		}
+      			alldat += tmpData;	
+			else{
+					if(tmpData.Ncols() == alldat.Ncols()){
+						int mindim = min(alldat.Nrows(),tmpData.Nrows());
+						alldat = alldat.Rows(1,mindim);
+						tmpData = tmpData.Rows(1,mindim);
+						alldat += tmpData;	
+					}				
+					else 	
+					message("Data dimensions do not match - ignoring "+opts.inputfname.value().at(ctr) << endl);
+				}
+   		}	
 
     	//update mask
     	if(opts.update_mask.value()){
@@ -308,16 +324,18 @@ namespace Melodic{
     	RowVector AdjEV, PercEV;
     	Matrix Corr, tmpE;
     	int order;
-
+		//	cerr << "here1" << endl;
     	order = ppca_dim(remmean(alldat,2), RXweight, tmpPPCA, AdjEV, PercEV, Corr, pcaE, pcaD, Resels, opts.pca_est.value());	  
 		if (opts.paradigmfname.value().length()>0)
 			order += param.Ncols();
-			
+		// cerr << "here2" << endl;		
 	  	if(opts.pca_dim.value() == 0){
       		opts.pca_dim.set_T(order);
 			PPCA=tmpPPCA;
   		}
     	order = opts.pca_dim.value();
+		if(opts.debug.value())
+			message(endl << "Model order : "<<order<<endl<<endl);
 
 		if (opts.paradigmfname.value().length()>0){
 			Matrix tmpPscales;
@@ -349,7 +367,7 @@ namespace Melodic{
       		WM.push_back(tmp);
     	} 
 		else {
-	
+			cerr << "here" << endl;
       		for(int ctr = 0; ctr < numfiles; ctr++){
 				tmpData = process_file(opts.inputfname.value().at(ctr), numfiles);
 	
@@ -930,7 +948,7 @@ namespace Melodic{
 	  }
     message("Sorting IC maps" << endl);  
     Matrix tmpscales, tmpICrow, tmpMIXcol;
-	if(numfiles > 1){
+	if(numfiles > 1 && opts.approach.value()==string("tica")){
 		set_TSmode();
 		Matrix allmodes = Smodes.at(0);
 		for(int ctr = 1; ctr < (int)Smodes.size();++ctr)

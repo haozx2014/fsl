@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include "utils/options.h"
 #include "warpfns/warpfns.h"
@@ -80,7 +80,7 @@ using namespace NEWIMAGE;
 
 // COMMAND LINE OPTIONS
 
-string title="convertwarp (Version 2.1)\nCopyright(c) 2001-2008, University of Oxford";
+string title="convertwarp\nCopyright(c) 2001-2012, University of Oxford";
 string examples="convertwarp -m affine_matrix_file -r refvol -o output_warp\nconvertwarp --ref=refvol --premat=mat1 --warp1=vol1 --warp2=vol2 --postmat=mat2 --out=output_warp\nconvertwarp -r refvol -s shiftmapvol -o output_warp";
 
 Option<bool> verbose(string("-v,--verbose"), false, 
@@ -141,7 +141,7 @@ Option<string> refname(string("-r,--ref"), string(""),
 		       string("filename for reference image"),
 		       true, requires_argument);
 Option<string> outname(string("-o,--out"), string(""),
-		       string("filename for output (warp) image"),
+		       string("filename for output (warp) image - always in 'field' format"),
 		       true, requires_argument);
 
 bool abs_warp = true;

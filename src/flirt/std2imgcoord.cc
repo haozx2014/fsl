@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include <string>
 #include <iostream>
@@ -124,6 +124,8 @@ globaloptions::globaloptions()
   mm = true;
 }
 
+// HACKY GLOBAL FOR TEST - MJ
+volume4D<float> fnirt4D;
 
 ////////////////////////////////////////////////////////////////////////////
 
@@ -262,8 +264,9 @@ ColumnVector NewimageCoord2NewimageCoord(const FnirtFileReader& fnirtfile, const
   ColumnVector retvec;
   if (fnirtfile.IsValid()) {
     // in the following affmat=highres2example_func.mat, fnirtfile=highres2standard_warp.nii.gz
-    static volume4D<float> fieldVolume( fnirtfile.FieldAsNewimageVolume4D(true) );
-    retvec = NewimageCoord2NewimageCoord(fieldVolume,false,
+    // retvec = NewimageCoord2NewimageCoord(fnirtfile.FieldAsNewimageVolume4D(true),false,
+   // HACKY GLOBAL TEST - MJ
+    retvec = NewimageCoord2NewimageCoord(fnirt4D,false,
 				     affmat,srcvol,destvol,srccoord);
   } else {
     retvec = NewimageCoord2NewimageCoord(affmat,srcvol,destvol,srccoord);
@@ -333,6 +336,7 @@ int main(int argc,char *argv[])
       cerr << "An error occured while reading file: " << globalopts.warpfname << endl;
       exit(EXIT_FAILURE);
     }
+    fnirt4D = fnirtfile.FieldAsNewimageVolume4D(true);  // HACKY GLOBAL MJ
   }
 
 

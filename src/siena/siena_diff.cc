@@ -17,7 +17,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -66,7 +66,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 // }}}
 // {{{ includes and options
@@ -326,6 +326,10 @@ printf("finding flow\n");
 volume<float> flow=in1;
 flow=0;
 
+// requested addition to ouput edge points for viena
+volume<float> edgepts=in1;
+edgepts=0;
+
 count=0;
 total=0;
 
@@ -523,6 +527,10 @@ tmpf = (segvalneg-segvalpos)*tmpf; /* use segmentation info to get directionalit
 /*printf(" tmpf=%f\n",tmpf);*/ /* DEBUG */
 
 flow(x,y,z) = tmpf; /* turn off if DEBUGging */
+
+// set edge points
+edgepts(x,y,z) = 1;
+
 total += tmpf;
 count ++;
 
@@ -535,6 +543,9 @@ count ++;
 
 // }}}
   // {{{  final outputs
+
+// save edge points
+save_volume(edgepts,argv1+"_to_"+argv2+"_edgepoints");
 
 if (flow_output)
   save_volume(flow,argv1+"_to_"+argv2+"_flow");

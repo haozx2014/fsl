@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,12 +64,13 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 // Miscellaneous maths functions
 #define NOMINMAX
 #include <cstdlib>
 #include <cmath>
+#include <algorithm>
 #include "miscmaths.h"
 #include "miscprob.h"
 #include "stdlib.h"
@@ -354,10 +355,12 @@ namespace MISCMATHS {
   
   int write_ascii_matrix(const Matrix& mat, ofstream& fs, int precision)
   {
+    fs.setf(ios::floatfield);  // use fixed or scientific notation as appropriate
     if (precision>0)  { 
-      fs.setf(ios::scientific | ios::showpos); 
       fs.precision(precision); 
-    } 
+    } else {
+      fs.precision(10);    // default precision
+    }
 #ifdef PPC64	
     int n=0;
 #endif
@@ -570,10 +573,13 @@ namespace MISCMATHS {
       }
     }
 
-  ReturnMatrix pinv(const Matrix& mat)
+  ReturnMatrix pinv(const Matrix& mat2)
     {
       // calculates the psuedo-inverse using SVD
       // note that the right-pinv(x') = pinv(x).t()
+      Matrix mat(mat2);
+      if ( mat2.Ncols() > mat2.Nrows() )
+	mat=mat.t();
       Tracer tr("pinv");
       DiagonalMatrix D;
       Matrix U, V;
@@ -585,6 +591,8 @@ namespace MISCMATHS {
 	else D(n,n) = 0.0; // reduce the number of columns because too close to singular
       }
       Matrix pinv = V * D * U.t();
+      if ( mat2.Ncols() > mat2.Nrows() )
+	pinv=pinv.t();
       pinv.Release();
       return pinv;
     }
@@ -676,6 +684,53 @@ namespace MISCMATHS {
       matnew.Release();
       return matnew;
     }
+
+
+  vector<int> get_sortindex(const Matrix& vals, const string& mode, int col)
+  {
+    // mode is either "new2old" or "old2new"
+    // return the mapping of old and new indices in the *ascending* sort of vals (from column=col)
+    int length=vals.Nrows();
+    vector<pair<double, int> > sortlist(length);
+    for (int n=0; n<length; n++) {
+      sortlist[n] = pair<double, int>((double) vals(n+1,col),n+1);
+    }
+    sort(sortlist.begin(),sortlist.end());  // O(N.log(N))
+    vector<int> idx(length);
+    for (int n=0; n<length; n++) {
+      if (mode=="old2new") {
+	//  here idx[n] is the where in the ordered list the old n'th row is mapped to (i.e. idx[n] = rank)
+	idx[sortlist[n].second-1] = n+1;
+      } else if (mode=="new2old") {
+	// here idx[n] is the the old row number of the n'th ordered item (i.e. idx[n] is old row number with rank = n)
+	idx[n] = sortlist[n].second;  
+      } else {
+	cerr << "ERROR:: unknown mode in get_sortidx = " << mode << endl; 
+      }
+    }
+    return idx;
+  }
+
+  Matrix apply_sortindex(const Matrix& vals, vector<int> sidx, const string& mode)
+  {
+    // mode is either "new2old" or "old2new"
+    // apply the index mapping from get_sortindex to the whole matrix (swapping rows)
+    Matrix res(vals);
+    res=0.0;
+    int ncols=vals.Ncols();
+    for (unsigned int n=0; n<sidx.size(); n++) {
+      int row = sidx[n];
+      if (mode=="old2new") {
+	res.SubMatrix(row,row,1,ncols)=vals.SubMatrix(n+1,n+1,1,ncols);
+      } else if (mode=="new2old") {
+	res.SubMatrix(n+1,n+1,1,ncols)=vals.SubMatrix(row,row,1,ncols);
+      } else {
+	cerr << "ERROR:: unknown mode in apply_sortidx = " << mode << endl; 
+      }
+    }
+    return res;
+  }
+
 
 
   //------------------------------------------------------------------------//
@@ -1203,9 +1258,8 @@ float interp1(const ColumnVector& x, const ColumnVector& y, float xi)
     if(xi <= x.Minimum()) 
       ans = y(1); 
     else{
-      int ind=1;
-      while(xi >= x(ind))
-	ind++;      
+      int ind=2;
+      while(xi >= x(ind)) { ind++; }
       float xa = x(ind-1), xb = x(ind), ya = y(ind-1), yb = y(ind);
       ans = ya + (xi - xa)/(xb - xa) * (yb - ya);
     }
@@ -2195,9 +2249,16 @@ void ols(const Matrix& data,const Matrix& des,const Matrix& tc, Matrix& cope,Mat
 }
 
 float ols_dof(const Matrix& des){
+  if ( des.Nrows() > 4000 ) //Use the simple version as huge designs require too much RAM in the full calculation
+    return des.Nrows() - des.Ncols();
+  try {
   Matrix pdes = pinv(des);
   Matrix R=IdentityMatrix(des.Nrows())-des*pdes;
-  return R.Trace();
+  return R.Trace();}
+  catch (...) {
+    cerr << "ols_dof: Error in determining the trace, resorting to basic calculation" << endl;
+  }
+  return des.Nrows() - des.Ncols();
 }
 
 int conjgrad(ColumnVector& x, const Matrix& A, const ColumnVector& b, int maxit,

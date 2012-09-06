@@ -11,7 +11,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -60,7 +60,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #ifndef _mesh
 #define _mesh
@@ -88,6 +88,7 @@ class Mesh {
  public:
   vector<Mpoint *> _points;
   list<Triangle *> _triangles;
+  vector<Triangle*> loc_triangles; // SJ: for index access to triangles
 
   Mesh();
   ~Mesh();
@@ -98,7 +99,11 @@ class Mesh {
   void clear();                 //clear the mesh and delete its components
   const int nvertices() const;
   Mpoint * get_point(int n){return _points[n];};
+  Triangle * get_triangle(int n)const{
+    return loc_triangles[n];
+  }
   
+  void init_loc_triangles();
   double distance(const Pt& p) const; //signed distance of the point to the mesh
   void reorientate();     //puts the triangles in a coherent orientation
   void addvertex(Triangle *const t,const Pt p);
@@ -117,9 +122,10 @@ class Mesh {
   void load_fs(string s="manual_input");
   void load_fs_label(string s="manual_input",const int& value=1);
   void save(string s="manual_input",int type=1) const;
-  void save_fs_label(string s, bool RAS=false) const;//save an fs label of all points whos value greater than 0
-                                                                        //If RAS is true, then mesh points are in standard-space coords
-                                                                        // and these are saved as label coords
+  void save_fs_label(string s,bool saveall=false) const;//save an fs label of all points with non-zero value
+  void save_fs(string s) const;//save whole surface with values
+
+
   const double self_intersection(const Mesh& original) const;
   const bool real_self_intersection();
   void stream_mesh(ostream& flot, int type=1) const; //type=1 -> .off style stream. type=2 -> freesurfer style stream

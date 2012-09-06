@@ -19,11 +19,11 @@ Thanks to Robert Coghill for sponsoring the Apple port.
 <li><a href="#prereq">Prerequisites</a></li>
 <li><a href="#autoinst">FSL install script</a>
 <ul><li><a href="#autoenv">Configuring your account for FSL usage using the install script</a></li></ul></li>
-<li><a href="#maninst">Manual installation</a></li>
 <li><a href="#checkinst">Checking the installation</a></li>
 <li><a href="#gui">Running the GUIs</a></li>
 <li><a href="#matlab">Using Matlab Libraries</a></li>
 <li><a href="#fhelp">Further help</a></li>
+<li><a href="#maninst">Advanced: Manual installation</a></li>
 </ul>
 <hr /><a id="prereq"></a><h2>Prerequisites</h2>
 <p>Before you install FSL you should first ensure that you have the X11 windowing system installed. To do this, look for the X11 application in the Utilities folder within the Applications folder (switch to the Finder and hit Apple-Shift-U to open the Utilities folder); by default versions of Mac OS X prior to 10.5 doesn't normally come with this installed (you'll almost certainly need X11 later for things other than FSL anyway).
@@ -39,7 +39,7 @@ Thanks to Robert Coghill for sponsoring the Apple port.
 <hr /><a id="autoinst"></a><h2>FSL Install Script</h2>
 <p>An automated installer, <a href="fsl_installer.sh">fsl_installer.sh</a> is available to carry out the installation (or application of a patch). In addition it will install FSLView into /Applications, automatically configure your environment to enable you to run FSL and (on Mac OS X 10.4) will configure the Apple Terminal application to allow the launching of X11 applications from it. Finally, if you use <i>Matlab</i> it will configure your <i>startup.m</i> file to allow you to use the FSL Matlab functions.
 </p>
-<ul><li><a href="fsl_installer.sh">fsl_installer.sh</a> - Version 1.5 06/10/2011</li></ul>
+<ul><li><a href="fsl_installer.sh">fsl_installer.sh</a> - Version 1.6 09/02/2012</li></ul>
 <h3>Running the installer</h3>
 <p>
 Once you have downloaded the installer, open a <i>Terminal</i> (look in the <i>Utilities</i> folder in <i>Applications</i>), change to the folder containing the downloaded file (for example if you downloaded to your Desktop):</p>
@@ -55,12 +55,79 @@ Assuming that this folder also contains the FSL distribution tar file and you wi
 <p>
 For more information on controlling the installer, run it with the <i>-h</i> option.
 </p>
+<hr />
 <a id="autoenv"></a><h3>Configuring your account for FSL usage using the install script</h3>
 <p>
 In addition to installing the FSL programs, the install script is also capable of configuring your user account to enable you to run the FSL programs. If your user account was used to run the installer when installing the FSL programs, this will have already been done, but you may also want to configure additional accounts. To do this, log in as the user wishing to run FSL and execute the installer with the <i>-e</i> option, eg:
 </p>
 <pre>sh fsl_installer.sh -e</pre>
-<hr /><a id="maninst"></a><h2>Manual Installation</h2>
+<hr /><a id="checkinst"></a><h2>Checking the installation</h2>
+<p>
+  Test that the environment and command line tools are set up correctly by doing the following:
+</p>
+<ul>
+  <li> Quit the Terminal program and start it again </li>
+  <li> Check that your environment is correct by typing:
+    <pre>echo $FSLDIR</pre>
+    This should display the name of the directory that you installed FSL in.
+  </li>
+  <li> Check that your path is correct by typing:
+    <pre>flirt -version</pre>
+    which should display a line like:
+    <pre>FLIRT version 5.4.2</pre>
+    (although the version number might be different). 
+  </li>
+</ul>
+<p>
+In general, to run the FSL tools from the command line (within a terminal) you need to enter the program name in lower case (e.g. <i>bet</i>). Typing a command on its own (without any arguments or options) gives you a help message for that command.
+</p>
+<p>
+A more complete test of the FSL installation can be run at this point
+by using the testing and evaluation suite <a href="feeds.html">FEEDS</a>.
+</p>
+<hr /><a id="gui"></a><h2>Running the GUIs</h2>
+<h3>Mac OS X 10.4</h3>
+<p>
+Once you have checked the environment and command line programs, as described above, then start <i>X11</i> (click on it in the <i>Utilities</i> folder inside the <i>Applications</i> folder). All of the FSL GUIs should now work. To run a GUI version of a program you can either type its capitalised name with an additional '_gui' appended in the terminal (e.g. <i>Bet_gui</i>), or you can start the main FSL GUI by just typing <i>fsl</i>.
+</p>
+<h3>Mac OS X 10.5</h3>
+<p>
+There is no need to launch <i>X11.app</i> before starting any of the FSL GUIs, the X11 system automatically launches. To run a GUI version of a program you can either type its capitalised name with an additional '_gui' appended in the terminal (e.g. <i>Bet_gui</i>), or you can start the main FSL GUI by just typing <i>fsl</i>.
+</p>
+<p>
+If you have upgraded from 10.4, then you may have a <i>.bash_profile</i> (or <i>.tcshrc</i> or <i>.cshrc</i>) that breaks this behaviour. If you installed using the fsl_installer.sh script then download the current version, <a href="fsl_installer.sh">fsl_installer.sh</a>, and re-run using the <i>-e</i> option from a terminal:
+</p>
+<pre>
+cd ~/Downloads
+sh fsl_installer.sh -e
+</pre>
+<p>
+assuming that your web browser downloads to the folder <i>~/Downloads</i>.
+If you have manually added this to your shell setup file then look for a line that changes/sets the <i>DISPLAY</i> environment variable and remove it. New shells will then behave as expected.
+</p>
+<p>Also note that at this time, Apple's <i>X11.app</i> as shipped, has a large number of bugs and performance issues. Until such time as an offical release corrects these problems, you may see significant improvements by installing the testing release available at <a href='http://www.x.org/wiki/XDarwin'>http://www.x.org/wiki/XDarwin</a> (follow the instructions for a <i>Binary installation</i>).
+</p>
+<hr /><a id="matlab"></a><h2>Using Matlab libraries</h2>
+<p>FSL ships with several Matlab scripts for loading Analyze files. These libraries are dependant on FSL environment variables which aren't set in the Mac OS X Desktop environment, so won't run in a Matlab session started from the /Applications/MATLAB.app launcher. There are two options:
+</p>
+<ol>
+<li>Run Matlab from a correctly configured Terminal (assuming Matlab 7.4 - adjust as appropriate for your version)
+  <pre>/Applications/MATLAB74/bin/matlab</pre>
+or
+</li>
+<li>Configure the FSL environment variable in your ~/matlab/startup.m file (create it if it doesn't already exist) - add the following (assuming FSL installed in /usr/local):
+  <pre>setenv( 'FSLDIR', '/usr/local/fsl');
+fsldir = getenv('FSLDIR');
+fsldirmpath = sprintf('%s/etc/matlab',fsldir);
+path(path, fsldirmpath);
+clear fsldir fsldirmpath;</pre>
+</li>
+</ol>
+<hr /><a id="fhelp"></a><h2>Further help</h2>
+<p>If any problems occur when installing or running the FSL tools, please consult the FSL FAQ. This also contains instructions on how to join and use the FSL email list to ask specific questions which are not covered in the FAQ.
+</p>
+<hr />
+<a id="maninst"></a><h2>Manual Installation</h2>
 <ol>
   <li> <a id='md5'>Verify the download</a>
     <ul>
@@ -183,70 +250,5 @@ endif
       </ul>
     </li>
 </ol>
-<hr /><a id="checkinst"></a><h2>Checking the installation</h2>
-<p>
-  Test that the environment and command line tools are set up correctly by doing the following:
-</p>
-<ul>
-  <li> Quit the Terminal program and start it again </li>
-  <li> Check that your environment is correct by typing:
-    <pre>echo $FSLDIR</pre>
-    This should display the name of the directory that you installed FSL in.
-  </li>
-  <li> Check that your path is correct by typing:
-    <pre>flirt -version</pre>
-    which should display a line like:
-    <pre>FLIRT version 5.4.2</pre>
-    (although the version number might be different). 
-  </li>
-</ul>
-<p>
-In general, to run the FSL tools from the command line (within a terminal) you need to enter the program name in lower case (e.g. <i>bet</i>). Typing a command on its own (without any arguments or options) gives you a help message for that command.
-</p>
-<p>
-A more complete test of the FSL installation can be run at this point
-by using the testing and evaluation suite <a href="feeds.html">FEEDS</a>.
-</p>
-<hr /><a id="gui"></a><h2>Running the GUIs</h2>
-<h3>Mac OS X 10.4</h3>
-<p>
-Once you have checked the environment and command line programs, as described above, then start <i>X11</i> (click on it in the <i>Utilities</i> folder inside the <i>Applications</i> folder). All of the FSL GUIs should now work. To run a GUI version of a program you can either type its capitalised name with an additional '_gui' appended in the terminal (e.g. <i>Bet_gui</i>), or you can start the main FSL GUI by just typing <i>fsl</i>.
-</p>
-<h3>Mac OS X 10.5</h3>
-<p>
-There is no need to launch <i>X11.app</i> before starting any of the FSL GUIs, the X11 system automatically launches. To run a GUI version of a program you can either type its capitalised name with an additional '_gui' appended in the terminal (e.g. <i>Bet_gui</i>), or you can start the main FSL GUI by just typing <i>fsl</i>.
-</p>
-<p>
-If you have upgraded from 10.4, then you may have a <i>.bash_profile</i> (or <i>.tcshrc</i> or <i>.cshrc</i>) that breaks this behaviour. If you installed using the fsl_installer.sh script then download the current version, <a href="fsl_installer.sh">fsl_installer.sh</a>, and re-run using the <i>-e</i> option from a terminal:
-</p>
-<pre>
-cd ~/Downloads
-sh fsl_installer.sh -e
-</pre>
-<p>
-assuming that your web browser downloads to the folder <i>~/Downloads</i>.
-If you have manually added this to your shell setup file then look for a line that changes/sets the <i>DISPLAY</i> environment variable and remove it. New shells will then behave as expected.
-</p>
-<p>Also note that at this time, Apple's <i>X11.app</i> as shipped, has a large number of bugs and performance issues. Until such time as an offical release corrects these problems, you may see significant improvements by installing the testing release available at <a href='http://www.x.org/wiki/XDarwin'>http://www.x.org/wiki/XDarwin</a> (follow the instructions for a <i>Binary installation</i>).
-</p>
-<hr /><a id="matlab"></a><h2>Using Matlab libraries</h2>
-<p>FSL ships with several Matlab scripts for loading Analyze files. These libraries are dependant on FSL environment variables which aren't set in the Mac OS X Desktop environment, so won't run in a Matlab session started from the /Applications/MATLAB.app launcher. There are two options:
-</p>
-<ol>
-<li>Run Matlab from a correctly configured Terminal (assuming Matlab 7.4 - adjust as appropriate for your version)
-  <pre>/Applications/MATLAB74/bin/matlab</pre>
-or
-</li>
-<li>Configure the FSL environment variable in your ~/matlab/startup.m file (create it if it doesn't already exist) - add the following (assuming FSL installed in /usr/local):
-  <pre>setenv( 'FSLDIR', '/usr/local/fsl');
-fsldir = getenv('FSLDIR');
-fsldirmpath = sprintf('%s/etc/matlab',fsldir);
-path(path, fsldirmpath);
-clear fsldir fsldirmpath;</pre>
-</li>
-</ol>
-<hr /><a id="fhelp"></a><h2>Further help</h2>
-<p>If any problems occur when installing or running the FSL tools, please consult the FSL FAQ. This also contains instructions on how to join and use the FSL email list to ask specific questions which are not covered in the FAQ.
-</p>
 </body>
 </html>

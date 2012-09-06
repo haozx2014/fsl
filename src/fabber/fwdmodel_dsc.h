@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include "fwdmodel.h"
 #include "inference.h"
@@ -84,18 +84,21 @@ public:
                                 
   virtual void NameParams(vector<string>& names) const;     
   virtual int NumParams() const 
-  { return 2 + (infermtt?1:0) + (inferlambda?1:0) + (inferdelay?1:0); } 
+  { return 2 + (infermtt?1:0) + (inferlambda?1:0) + (inferdelay?1:0) + (inferart?2:0) + (inferret?1:0); } 
 
   virtual ~DSCFwdModel() { return; }
 
   virtual void HardcodedInitialDists(MVNDist& prior, MVNDist& posterior) const;
 
+ virtual void SetupARD(const MVNDist& posterior, MVNDist& prior, double& Fard);
+  virtual void UpdateARD(const MVNDist& posterior, MVNDist& prior, double& Fard) const;
+
   // Constructor
   DSCFwdModel(ArgsType& args);
 
-  virtual void pass_in_data( const ColumnVector& data ) ;
 protected: 
 
+  ColumnVector aifshift( const ColumnVector& aif, const float delta, const float hdelt ) const;
   
 // Constants
 
@@ -109,6 +112,13 @@ protected:
   int delta_index() const { return 1 + (infermtt?1:0) + (inferlambda?1:0) + (inferdelay?1:0); }
  
   int sig0_index() const { return 2 + (infermtt?1:0) + (inferlambda?1:0) + (inferdelay?1:0); }
+
+  int art_index() const { return sig0_index() + (inferart?1:0);}
+
+  int ret_index() const { return art_index() + (inferart?1:0) + (inferret?1:0); } //NB two arterial parameters
+
+  //for ARD
+  vector<int> ard_index;
 
     // scan parameters
   double te;
@@ -128,6 +138,11 @@ protected:
   bool infermtt;
   bool inferlambda;
   bool inferdelay;
+  bool inferart;
+  bool inferret;
+  bool doard;
+
+  bool imageprior;
 
   string convmtx;
 

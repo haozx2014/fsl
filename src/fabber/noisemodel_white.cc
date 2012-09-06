@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include "noisemodel_white.h"
 #include "noisemodel.h"
@@ -271,9 +271,12 @@ void WhiteNoiseModel::UpdateTheta(
   	const MVNDist& thetaPrior,
   	const LinearFwdModel& linear,
         const ColumnVector& data,
-        MVNDist* thetaWithoutPrior) const
+        MVNDist* thetaWithoutPrior,
+	float LMalpha) const
 {
   Tracer_Plus tr("WhiteNoiseModel::UpdateTheta");
+
+  //cout << "start:" << theta.means.t() << endl;
 
   //  if (thetaWithoutPrior != NULL)
   //    throw Invalid_option("This noise model doesn't yet work with "
@@ -306,8 +309,41 @@ void WhiteNoiseModel::UpdateTheta(
 
   // Update Lambda and m (including priors)
   theta.SetPrecisions(thetaPrior.GetPrecisions() + Ltmp);
+
+// Error checking
+  LogAndSign chk = theta.GetPrecisions().LogDeterminant();
+  if (chk.Sign() <= 0) {
+    LOG << "Note: In UpdateTheta, theta precisions aren't positive-definite: "
+	<< chk.Sign() << ", " << chk.LogValue() << endl;
+  }      
+
+  if (LMalpha>0.0) {
+    //we are in LM mode so use the appropriate update
+    //cout << LMalpha << endl;
+    Matrix Delta;
+    SymmetricMatrix prec;
+    DiagonalMatrix precdiag;
+    prec = theta.GetPrecisions();
+    precdiag << prec;
+
+    Delta = mTmp + thetaPrior.GetPrecisions()*thetaPrior.means - theta.GetPrecisions()*ml;
+    theta.means = ml + (prec + LMalpha*precdiag).i()*Delta;
+
+
+    //Delta = mTmp + thetaPrior.GetPrecisions()*thetaPrior.means;
+    //theta.means = ml + (prec + LMalpha*prec).i()*Delta;
+
+    //theta.means = (prec + LMalpha*precdiag).i()
+    //* ( mTmp + thetaPrior.GetPrecisions() * thetaPrior.means );
+
+    //Delta = mTmp + thetaPrior.GetPrecisions()*thetaPrior.means - theta.GetPrecisions()*ml;
+    //float step = 0.01/LMalpha;
+    //theta.means = ml + step*theta.GetCovariance()*Delta;
+  }
+  else { //normal update (NB the LM update resuces to this when alpha=0 strictly)
   theta.means = theta.GetCovariance()
     * ( mTmp + thetaPrior.GetPrecisions() * thetaPrior.means );
+  }
 
   if (thetaWithoutPrior != NULL)
     {
@@ -329,11 +365,15 @@ void WhiteNoiseModel::UpdateTheta(
       thetaWithoutPrior->means = thetaWithoutPrior->GetCovariance() * mTmp;
     }
 
+  /*
   // Error checking
   LogAndSign chk = theta.GetPrecisions().LogDeterminant();
   if (chk.Sign() <= 0)
     LOG << "Note: In UpdateTheta, theta precisions aren't positive-definite: "
 	<< chk.Sign() << ", " << chk.LogValue() << endl;
+  */
+
+  //cout << "end:" << theta.means.t() << endl;
 }
 
 

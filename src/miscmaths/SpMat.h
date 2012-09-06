@@ -89,11 +89,12 @@ template<class T>
 class SpMat
 {
 public:
-  SpMat() : _m(0), _n(0), _nz(0), _ri(0), _val(0) {}
-  SpMat(unsigned int m, unsigned int n) : _m(m), _n(n), _nz(0), _ri(n), _val(n) {}
+  SpMat() : _m(0), _n(0), _nz(0), _ri(0), _val(0), _pw(false), _ei(*this,true) {}
+  SpMat(unsigned int m, unsigned int n) : _m(m), _n(n), _nz(0), _ri(n), _val(n), _pw(false), _ei(*this,true) {}
   SpMat(unsigned int m, unsigned int n, const unsigned int *irp, const unsigned int *jcp, const double *sp);
   SpMat(const NEWMAT::GeneralMatrix& M);
   SpMat(const std::string& fname);
+  SpMat(const SpMat<T>& s) : _m(s._m), _n(s._n), _nz(s._nz), _ri(s._ri), _val(s._val), _pw(s._pw), _ei(*this,true) {}
   ~SpMat() {}
 
   unsigned int Nrows() const {return(_m);}
@@ -109,7 +110,10 @@ public:
   void Print(const std::string&  fname) const {Print(fname,8);}
   void Print(unsigned int        precision) const {Print(std::string(""),precision);}
   void Print() const {Print(8);}
+  void WarningsOn() {_pw=true;}
+  void WarningsOff() {_pw=false;}
 
+  // All access to individual elements is one-offset, i.e. same as Matlab and NEMAT
 
   T Peek(unsigned int r, unsigned int c) const;
   T operator()(unsigned int r, unsigned int c) const {return(Peek(r,c));}    // Read-only
@@ -118,6 +122,12 @@ public:
   void SetColumn(unsigned int c, const NEWMAT::ColumnVector& col, double eps=0.0);  // Set a whole column (obliterating what was there before) 
   void AddTo(unsigned int r, unsigned int c, const T& v) {here(r,c) += v;}          // Add value to a single (possibly existing) value
 
+  SpMat<T>& operator=(const SpMat& M)
+  {
+    if (this == &M) return(*this);
+    _m=M._m; _n=M._n; _nz=M._nz; _ri=M._ri; _val=M._val; _pw=M._pw; _ei=M._ei;
+    return(*this);
+  }
   SpMat<T>& operator+=(const SpMat& M) 
   {
     if (same_sparsity(M)) return(add_same_sparsity_mat_to_me(M,1));
@@ -142,6 +152,7 @@ public:
   const SpMat<T> TransMultSelf() const {return(TransMult(*this));}                 // Returns transpose(*this)*(*this)
 
   const SpMat<T> t() const;                                                        // Returns transpose(*this). Avoid, if at all possible.
+  const NEWMAT::ReturnMatrix Diag() const;                                         // Return the values on the diagonal in a columnvector
   
   friend class Accumulator<T>; 
 
@@ -167,12 +178,51 @@ public:
 				 boost::shared_ptr<Preconditioner<T> >  C,
 				 const NEWMAT::ColumnVector&            x_init) const;
 
+  // Declaration and definition of bundled Iterator class
+
+  class Iterator : public std::iterator<std::forward_iterator_tag, T> {
+  public:
+    Iterator(SpMat<T>& mat, bool oob=false) : _mat(mat), _i(0), _oob(oob)
+    {
+      _j = 0;
+      while (_j < _mat._n && !_mat._ri[_j].size()) _j++;
+      if (_j == _mat._n) _oob = true;
+    }
+    ~Iterator() {}
+    Iterator& operator=(const Iterator& I) { _i=I._i; _j=I._j; _oob=I._oob; return(*this); } // _mat deliberately not assigned
+    bool operator==(const Iterator& other) { return(&_mat==&other._mat && ((_oob && other._oob) || (_i==other._i && _j==other._j))); }
+    bool operator!=(const Iterator& other) { return(!(*this==other)); }
+    T& operator*() { return((_mat._val[_j])[_i]); }
+    Iterator& operator++() // Prefix operator
+    {
+      if (++_i < _mat._ri[_j].size()) return(*this);
+      else {
+        while (++_j < _mat._n && !_mat._ri[_j].size()) ;
+      }
+      if (_j == _mat._n) _oob = true;
+      else _i = 0;
+      return(*this); 
+    }
+    unsigned int Row() { return((_mat._ri[_j])[_i]+1); }
+    unsigned int Col() { return(_j+1); }
+  private:
+    SpMat<T>&     _mat;
+    unsigned int  _i;
+    unsigned int  _j;
+    bool          _oob;
+  };
+
+  Iterator         begin() { return(Iterator(*this)); }
+  const Iterator&  end() { return(_ei); }
+
 private:
   unsigned int                              _m;
   unsigned int                              _n;
   unsigned long                             _nz;
   std::vector<std::vector<unsigned int> >   _ri;
   std::vector<std::vector<T> >              _val;
+  bool                                      _pw;   // Print Warnings
+  Iterator                                  _ei;
 
   bool found(const std::vector<unsigned int>&  ri, unsigned int key, int& pos) const;
   T& here(unsigned int r, unsigned int c);
@@ -305,7 +355,7 @@ private:
 
 template<class T>
 SpMat<T>::SpMat(unsigned int m, unsigned int n, const unsigned int *irp, const unsigned int *jcp, const double *sp)
-: _m(m), _n(n), _nz(0), _ri(n), _val(n)
+  : _m(m), _n(n), _nz(0), _ri(n), _val(n), _pw(false), _ei(*this,true)
 {
   _nz = jcp[n];
   unsigned long nz = 0;
@@ -335,7 +385,7 @@ SpMat<T>::SpMat(unsigned int m, unsigned int n, const unsigned int *irp, const u
 
 template<class T>
 SpMat<T>::SpMat(const NEWMAT::GeneralMatrix& M)
-: _m(M.Nrows()), _n(M.Ncols()), _nz(0), _ri(M.Ncols()), _val(M.Ncols())
+  : _m(M.Nrows()), _n(M.Ncols()), _nz(0), _ri(M.Ncols()), _val(M.Ncols()), _pw(false), _ei(*this,true)
 {
   double *m = static_cast<double *>(M.Store());
 
@@ -371,7 +421,7 @@ SpMat<T>::SpMat(const NEWMAT::GeneralMatrix& M)
 
 template<class T>
 SpMat<T>::SpMat(const std::string&  fname)
-: _m(0), _n(0), _nz(0), _ri(0), _val(0)
+  : _m(0), _n(0), _nz(0), _ri(0), _val(0), _pw(false), _ei(*this,true)
 {
   // First read data into (nz+1)x3 NEWMAT matrix
   NEWMAT::Matrix rcv;
@@ -573,7 +623,7 @@ NEWMAT::ReturnMatrix SpMat<T>::SolveForx(const NEWMAT::ColumnVector&            
     throw SpMatException("SolveForx: No idea how you got here. But you shouldn't be here, punk.");
   }
 
-  if (status) {
+  if (status && _pw) {
     cout << "SpMat::SolveForx: Warning requested tolerence not obtained." << endl;
     cout << "Requested tolerance was " << ltol << ", and achieved tolerance was " << tol << endl;
     cout << "This may or may not be a problem in your application, but you should look into it" << endl;
@@ -613,6 +663,26 @@ const SpMat<T> SpMat<T>::t() const
     t_mat._nz += t_col.NO();
   }
   return(t_mat);  
+}
+
+/////////////////////////////////////////////////////////////////////
+//
+// Returns the values on the diagonal as a column vector
+//
+/////////////////////////////////////////////////////////////////////
+
+template<class T>
+const NEWMAT::ReturnMatrix SpMat<T>::Diag() const
+{
+  if (_m != _n) throw SpMatException("Diag: matrix must be square");
+
+  NEWMAT::ColumnVector  ov(_m);
+  for (unsigned int i=1; i<=_m; i++) {
+    ov(i) = Peek(i,i);
+  }
+  ov.Release();
+
+  return(ov);
 }
 
 /////////////////////////////////////////////////////////////////////

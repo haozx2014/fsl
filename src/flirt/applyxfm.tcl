@@ -17,7 +17,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
+#   FMRIB Software Library, Release 5.0 (c) 2012, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -66,7 +66,7 @@
 #   interested in using the Software commercially, please contact Isis
 #   Innovation Limited ("Isis"), the technology transfer company of the
 #   University, to negotiate a licence. Contact details are:
-#   innovation@isis.ox.ac.uk quoting reference DE/1112.
+#   innovation@isis.ox.ac.uk quoting reference DE/9564.
 
 source [ file dirname [ info script ] ]/fslstart.tcl
 
@@ -196,6 +196,8 @@ proc applyxfm { w } {
 	    -variable entries($w,interp) -value trilinear -anchor w -command "applyxfm:updateinterp $w $interplf"
     radiobutton $w.nearestneighbour -text "Nearest Neighbour" \
 	    -variable entries($w,interp) -value nearestneighbour -anchor w -command "applyxfm:updateinterp $w $interplf"
+    radiobutton $w.spline -text "Spline" \
+	    -variable entries($w,interp) -value spline -anchor w -command "applyxfm:updateinterp $w $interplf"
     radiobutton $w.sinc -text "Sinc" \
 	    -variable entries($w,interp) -value sinc -anchor w -command "applyxfm:updateinterp $w $interplf"
 
@@ -215,7 +217,7 @@ proc applyxfm { w } {
     set entries($w,sincwindow) hanning
     
     # ---- pack ----
-    pack $w.trilinear $w.nearestneighbour $w.sinc -in $interplf -side top -anchor w -padx 3
+    pack $w.trilinear $w.nearestneighbour $w.spline $w.sinc -in $interplf -side top -anchor w -padx 3
     set entries($w,interp) trilinear
 
     pack $w.swinbanner -in $w.swinopt -side top -anchor w -padx 3
@@ -260,7 +262,7 @@ proc applyxfm { w } {
     button $w.cancel    -command "destroy $w" \
 	    -text "Exit" -width 5
 
-    button $w.help -command "FmribWebHelp file: ${FSLDIR}/doc/flirt/overview.html" \
+    button $w.help -command "FmribWebHelp file: ${FSLDIR}/doc/redirects/flirt.html" \
 	    -text "Help" -width 5
 
     pack $w.btns.b -side bottom -fill x
