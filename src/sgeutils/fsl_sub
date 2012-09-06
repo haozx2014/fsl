@@ -1,7 +1,7 @@
 #!/bin/sh
 
-# Copyright (C) 2007 University of Oxford
-# Authors: Dave Flitney & Stephen Smith
+# Copyright (C) 2007-2010 University of Oxford
+# Authors: Dave Flitney, Stephen Smith and Matthew Webster
 
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -14,7 +14,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
+#   FMRIB Software Library, Release 5.0 (c) 2012, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -63,12 +63,7 @@
 #   interested in using the Software commercially, please contact Isis
 #   Innovation Limited ("Isis"), the technology transfer company of the
 #   University, to negotiate a licence. Contact details are:
-#   innovation@isis.ox.ac.uk quoting reference DE/1112.
-
-
-
-
-
+#   innovation@isis.ox.ac.uk quoting reference DE/9564.
 
 ###########################################################################
 # Edit this file in order to setup FSL to use your local compute
@@ -125,7 +120,6 @@ map_qname ()
     #echo "Estimated time was $1 mins: queue name is $queue"
 }
 
-
 ###########################################################################
 # Don't change the following (but keep scrolling down!)
 ###########################################################################
@@ -138,7 +132,7 @@ usage ()
 {
   cat <<EOF
 
-$command V1.0beta - wrapper for job control system such as SGE
+$command V1.1 - wrapper for job control system such as SGE
 
 Usage: $command [options] <command>
 
@@ -158,7 +152,11 @@ $command -a darwin regscript rawdata outputdir ...
   -N <jobname>          Specify jobname as it will appear on queue
   -l <logdirname>       Where to output logfiles
   -m <mailoptions>      Change the SGE mail options, see qsub for details
+  -z <output>           If <output> image or file already exists, do nothing and exit
   -F                    Use flags embedded in scripts to set SGE queuing options
+  -s <pename>,<threads> Submit a multi-threaded task - requires a PE (<pename>) to be
+                        configured for the requested queues.
+                        <threads> specifies the number of threads to run
   -v                    Verbose mode.
 
 Queues:
@@ -185,7 +183,7 @@ if [ $nargs -eq 0 ] ; then
   usage
 fi
 
-set -- `getopt T:q:a:p:M:j:t:N:Fvm:l: $*`
+set -- `getopt T:q:a:p:M:j:t:z:N:Fvm:l:s: $*`
 result=$?
 if [ $result != 0 ] ; then
   echo "What? Your arguments make no sense!"
@@ -195,6 +193,14 @@ if [ $nargs -eq 0 ] || [ $result != 0 ] ; then
   usage
 fi
 
+###########################################################################
+# If you have a Parallel Environment configured for OpenMP tasks then
+# the variable omp_pe should be set to the name you have defined for that
+# PE. The script will work out which queues have that PE setup on them.
+# Note, we support openmp tasks even when Grid Engine is not in use.
+###########################################################################
+
+omp_pe='openmp'
 
 ###########################################################################
 # The following sets up the default queue name, which you may want to
@@ -242,11 +248,21 @@ scriptmode=0
 
 while [ $1 != -- ] ; do
   case $1 in
+    -z)
+      if [ -e $2 -o `${FSLDIR}/bin/imtest $2` = 1 ] ; then
+        exit 0
+      fi
+      shift;;
     -T)
       map_qname $2
       shift;;
     -q)
       queue=$2
+      qconf -sql | grep ^$queue 2>&1 >/dev/null
+      if [ $? -eq 1 ]; then
+	  echo "Invalid queue specified!"
+	  exit 127
+      fi
       shift;;
     -a)
       acceptable_arch=no
@@ -296,6 +312,11 @@ while [ $1 != -- ] ; do
     -v)
       verbose=1
       ;;
+    -s)
+      pe_string=$2;
+      peName=`echo $pe_string | cut -d',' -f 1`
+      peThreads=`echo $pe_string | cut -d',' -f 2`
+      shift;;
   esac
   shift  # next flag
 done
@@ -325,6 +346,16 @@ if [ "x$tasks" != "x" ] && [ "x$@" != "x" ] ; then
     exit -1
 fi
 
+if [ "x$peName" != "x" ]; then
+    # If the PE name is 'openmp' then limit the number of threads to those specified
+    
+    if [ "X$peName" = "X$omp_pe" ]; then
+        OMP_NUM_THREADS=$peThreads
+	export OMP_NUM_THREADS
+    fi
+
+fi
+
 case $METHOD in
 
 ###########################################################################
@@ -335,9 +366,45 @@ case $METHOD in
 ###########################################################################
 
     SGE)
+       ###########################################################################
+       # Test Parallel environment options
+       ###########################################################################
+	if [ "x$peName" != x ]; then
+            # Is this a configured PE?
+
+	    qconf -spl | grep ^$peName 2>&1 >/dev/null
+
+	    if [ $? -eq 1 ]; then
+		echo $@
+		echo "$peName is not a valid PE"
+		exit -1
+	    fi
+
+            # Get a list of queues configured for this PE and confirm that the queue
+            # we have submitted to has that PE set up.
+	    qstat -g c -pe $peName 2>&1 >/dev/null
+	    if [ $? -eq 1 ]; then
+		echo "No parallel environments configured!"
+		exit -1
+	    fi
+
+	    qstat -g c -pe $peName | sed '1,2d' | awk '{ print $1 }' | grep ^$queue 2>&1 >/dev/null
+
+	    if [ $? -eq 1 ]; then
+		echo $@
+		echo "PE $peName is not configured on $queue"
+		exit -1
+	    fi
+
+	    # The -w e option will result in the job failing if there are insufficient slots
+            # on any of the cluster nodes
+	    pe_options="-pe $peName $peThreads -w e"
+
+	fi
+
 	if [ "x$tasks" = "x" ] ; then
 	    if [ $scriptmode -ne 1 ] ; then
-		sge_command="qsub -V -cwd -shell n -b y -r y -q $queue -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold"
+		sge_command="qsub -V -cwd -shell n -b y -r y -q $queue $pe_options -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold"
 	    else
 		sge_command="qsub $LogOpts $sge_arch $sge_hold"
 	    fi
@@ -347,7 +414,7 @@ case $METHOD in
 	    fi
 	    exec $sge_command $@ | awk '{print $3}'
 	else
-	    sge_command="qsub -V -cwd -q $queue -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold $sge_tasks"
+	    sge_command="qsub -V -cwd -q $queue $pe_options -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold $sge_tasks"
 	    if [ $verbose -eq 1 ] ; then 
 		echo sge_command: $sge_command >&2
 		echo control file: $taskfile >&2
@@ -378,6 +445,11 @@ EOF
 	    /bin/sh <<EOF1 > ${LogDir}${JobName}.o$$ 2> ${LogDir}${JobName}.e$$
 $@
 EOF1
+	    ERR=$?
+	    if [ $ERR -ne 0 ] ; then
+		cat ${LogDir}${JobName}.e$$ >&2
+		exit $ERR
+	    fi
 	else
 	    if [ $verbose -eq 1 ] ; then 
 		echo "Running commands in: $taskfile" >&2

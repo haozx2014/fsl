@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include <complex>
 #include <cassert>
@@ -489,6 +489,7 @@ namespace NEWIMAGE {
   void volume<T>::insert_vec(const ColumnVector&  pvec,
                              const volume<T>&     mask)
   {
+    set_whole_cache_validity(false);
     if (pvec.Nrows() != xsize()*ysize()*zsize()) {
       cout << "pvec.Nrows() = " << pvec.Nrows() << endl;
       cout << "xsize() = " << xsize() << ",  ysize() = " << ysize() << ",  zsize() = " << zsize() << endl;
@@ -510,6 +511,7 @@ namespace NEWIMAGE {
   template <class T>
   void volume<T>::insert_vec(const ColumnVector&  pvec)
   {
+    set_whole_cache_validity(false);
     if (pvec.Nrows() != xsize()*ysize()*zsize()) {
       cout << "pvec.Nrows() = " << pvec.Nrows() << endl;
       cout << "xsize() = " << xsize() << ",  ysize() = " << ysize() << ",  zsize() = " << zsize() << endl;
@@ -555,7 +557,7 @@ namespace NEWIMAGE {
   template <class T>
   void volume<T>::setROIlimits(const std::vector<int>& lims) const
       { 
-	if (lims.size()!=6) return; 
+	if (lims.size()!=6) imthrow("ROI limits the wrong size (not 6) in volume::setROIlimits",13);
 	setROIlimits(lims[0],lims[1],lims[2],lims[3],lims[4],lims[5]);
       }
  
@@ -1021,6 +1023,39 @@ namespace NEWIMAGE {
       return 0.0;  // Should never get to here
     }
 
+  template <class T>
+  ColumnVector volume<T>::ExtractRow(int j, int k) const
+  {
+    if (j<0 || j>ysize()-1 || k<0 || k>zsize()-1) imthrow("ExtractRow: index out of range",3);
+    ColumnVector rval(xsize());
+    for (int i=0; i<xsize(); i++) rval(i+1) = (*this)(i,j,k);
+    return(rval);
+  }
+
+  template <class T>
+  ColumnVector volume<T>::ExtractColumn(int i, int k) const
+  {
+    if (i<0 || i>xsize()-1 || k<0 || k>zsize()-1) imthrow("ExtractColumn: index out of range",3);
+    ColumnVector rval(ysize());
+    for (int j=0; j<ysize(); j++) rval(j+1) = (*this)(i,j,k);
+    return(rval);
+  }
+
+  template <class T>
+  void volume<T>::SetRow(int j, int k, const ColumnVector& row)
+  {
+    if (j<0 || j>ysize()-1 || k<0 || k>zsize()-1) imthrow("SetRow: index out of range",3);
+    if (row.Nrows() != xsize()) imthrow("SetRow: mismatched row vector",3);
+    for (int i=0; i<xsize(); i++) (*this)(i,j,k) = row(i+1);    
+  }
+
+  template <class T>
+  void volume<T>::SetColumn(int i, int k, const ColumnVector& col)
+  {
+    if (i<0 || i>xsize()-1 || k<0 || k>zsize()-1) imthrow("SetColumn: index out of range",3);
+    if (col.Nrows() != ysize()) imthrow("SetRow: mismatched row vector",3);
+    for (int j=0; j<ysize(); j++) (*this)(i,j,k) = col(j+1);    
+  }
 
   template <class T>
   const T& volume<T>::extrapolate(int x, int y, int z) const
@@ -3194,6 +3229,7 @@ namespace NEWIMAGE {
   void volume4D<T>::setdefaultproperties()
   {
     p_TR = 1.0;
+    dim5 = 1;
     Limits.resize(8,0);
     setdefaultlimits();
     // Default ROI is whole volume
@@ -3464,7 +3500,12 @@ namespace NEWIMAGE {
   template <class T>
   void volume4D<T>::setROIlimits(const std::vector<int>& lims) const
       { 
-	if (lims.size()!=8) return; 
+	if (lims.size()==6) {
+	  setROIlimits(lims[0],lims[1],lims[2],this->mint(),
+		       lims[3],lims[4],lims[5],this->maxt());
+	  return;
+	}
+	if (lims.size()!=8) imthrow("ROI limits the wrong size (not 6 or 8) in volume4D::setROIlimits",13);
 	setROIlimits(lims[0],lims[1],lims[2],lims[3],
 		     lims[4],lims[5],lims[6],lims[7]);
       }
@@ -3814,7 +3855,7 @@ namespace NEWIMAGE {
   }
   
   template <class T>
-  volume<int> volume4D<T>::vol2matrixkey(volume<T>& mask)
+  volume<int> volume4D<T>::vol2matrixkey(const volume<T>& mask)
   {
     int count=1;
     volume<int> tmp(this->xsize(),this->ysize(),this->zsize());

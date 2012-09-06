@@ -13,7 +13,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -62,7 +62,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #if !defined(qboot_h)
 #define qboot_h
@@ -86,7 +86,9 @@ using namespace NEWIMAGE;
 using namespace MISCMATHS;
 
 namespace ODFs{
-  
+  #define b0max 50   //b values up to b0max will be considered b0s
+  #define shellrange 50  //how much +/- b value variability in each q shell is allowed. E.g. a shell at b=1000, can range from b=950 to b=1050. 
+
   
   /////////////////////////////////////////////////////////////////////////////////
   /////////////////////////////////////////////////////////////////////////////////
@@ -364,9 +366,9 @@ namespace ODFs{
       ColumnVector d(A.Nrows()), I(A.Nrows());
       d=delta;
       
-      AM = (A | A | A | d | (A+a-b-s6*d)/3.0 | d | d | d | A | 0.2*(2*a+A-2*(s6+1)*d) | 0.2*(-2*b+A+2-2*(s6+1)*d) | d | d | d | 0.5-(1+s15)*d);
-      aM = (a | a | 1-d | a | (2*A+5*a+b+s6*d)/6.0 | a | 1-d | 0.5*(a+b)+(1+s15)*d | 1-d | 0.2*(4*a+2*A+(s6+1)*d) | 1-d | (s6+3)*d | 1-d | 1-d | 1-d);
-      bM = (b | d | b | b | (-2*A+a+5*b-s6*d)/6.0 | d | b | 0.5*(a+b)-(1+s15)*d | d | d | 0.2*(4*b-2*A+1-(s6+1)*d) | d | d | 1-(s6+3)*d | d);
+      AM = (A | A | A | d | ((A+a-b-s6*d)/3.0) | d | d | d | A | (0.2*(2*a+A-2*(s6+1)*d)) | (0.2*(-2*b+A+2-2*(s6+1)*d)) | d | d | d | (0.5-(1+s15)*d) );
+      aM = (a | a | (1-d) | a | ((2*A+5*a+b+s6*d)/6.0) | a | (1-d) | (0.5*(a+b)+(1+s15)*d) | (1-d) | (0.2*(4*a+2*A+(s6+1)*d)) | (1-d) | ((s6+3)*d) | (1-d) | (1-d) | (1-d) );
+      bM = (b | d | b | b | ((-2*A+a+5*b-s6*d)/6.0) | d | b | (0.5*(a+b)-(1+s15)*d) | d | d | (0.2*(4*b-2*A+1-(s6+1)*d)) | d | d | (1-(s6+3)*d) | d);
       
       Matrix R2(AM.Nrows(),AM.Ncols());
       
@@ -479,6 +481,57 @@ namespace ODFs{
 
 
 
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //Class that computes generalised FA value for the mean ODF obtained across N_samples of ODF coefficients.
+  //A sphere tesselation is provided to indicate points on the sphere and ODF values are computed at these points.
+  //GFA is then computed numerically as in (Tuch, 2004).
+  class ODF_GFA{
+    const Matrix& SHcoeff_samples;        //SH coefficients that describe the ODF (Num_coeff x N_samples)
+    const int& lmax;                      //maximum SH order employed
+    const int Num_of_coeff;               //number of SH coefficients 
+    const int& nsamples;                  //number of bootstrap samples
+    const Matrix& Eval_SH;                //(i,j) element: for each tesselation point i, contains the jth spherical harmonic evaluated at i (Matrix common to all voxels)
+
+    float gfa;                            //holds the generalised FA value, corresponding to the mean ODF shape 
+ 
+  public:
+    //Constructor
+    ODF_GFA(const Matrix& coeff, const int& SH_order, const int& nsamp,  const Matrix& EvalSH): SHcoeff_samples(coeff), lmax(SH_order), Num_of_coeff((SH_order+1)*(SH_order+2)/2), nsamples(nsamp), Eval_SH(EvalSH) {
+      gfa=0;
+    }
+
+    //Destructor
+    ~ODF_GFA(){}
+
+    float get_gfa(){ return gfa; }
+			  
+    //Compute numerically the generalised FA (as in Tuch,2004), using the coefficients of the mean ODF across samples
+    void compute_gfa(){
+      int num_points=Eval_SH.Nrows();
+      ColumnVector func_vals(num_points);
+      ColumnVector m_avg_coeff;
+      m_avg_coeff.ReSize(Num_of_coeff); //compute the mean SH coefficients across samples
+      for (int i=1; i<=Num_of_coeff; i++)        
+	m_avg_coeff(i)=SHcoeff_samples.Row(i).Sum()/SHcoeff_samples.Ncols(); 
+
+      func_vals=0;
+      for (int i=1; i<=num_points; i++)	      //compute the mean ODF value at each tesselation point
+	for (int j=1; j<=Num_of_coeff; j++)
+	  func_vals(i)+=m_avg_coeff(j)*Eval_SH(i,j);
+
+      float meanf=func_vals.Sum()/num_points; float sum1=0, sum2=0;
+      for (int i=1; i<=num_points; i++){	      //compute the gfa
+      	sum1+=(func_vals(i)-meanf)*(func_vals(i)-meanf);
+      	sum2+=func_vals(i)*func_vals(i);
+      }
+      gfa=sqrt(num_points*sum1/((num_points-1)*sum2));
+    }
+
+  };
+
+
 
   /////////////////////////////////////////////////////////////////////////////////
   /////////////////////////////////////////////////////////////////////////////////
@@ -496,6 +549,7 @@ namespace ODFs{
     vector<RowVector> mean_fsamples;         //max_num_of_peaks x nvoxels
     vector<Matrix> dyadic_vectors;           //max_num_of_peaks x 3 x nvoxels
     Matrix mean_SHcoeff;                     //Num_of_coeff x nvoxels, saves for each voxel the mean ODF coefficient across all ODF samples
+    RowVector gfa;                           //If requested, 1 x nvoxels vectors that contains the GFA value for each shell 
 
     const volume< float >& m_mask;           //The brain mask that will be used to create Output images 
     const int& n_samples;                    //Number of samples
@@ -503,11 +557,13 @@ namespace ODFs{
     const int& n_voxels;                     //Number of valid non-zero voxels
     const int& max_num_peaks;                //Maximum number of peaks allowed in each voxel
     const bool& m_meancoeff;                 //Flag to indicate whether the mean ODF coefficients will be saved 
+    const bool& m_gfa;                       //Flag to indicate whether the GFA for the mean ODF will be saved 
+
 
   public:
   //Constructor (for saving coefficient samples)
-  Samples(const int& ncoeff, const volume<float>& mask, const int& nvoxels, const int& nsamples, const bool& meancoeff=false):
-    m_mask(mask),n_samples(nsamples),n_coeff(ncoeff),n_voxels(nvoxels),max_num_peaks(0),m_meancoeff(meancoeff){
+  Samples(const int& ncoeff, const volume<float>& mask, const int& nvoxels, const int& nsamples, const bool& meancoeff=false, const bool& gfa_flag=false):
+    m_mask(mask),n_samples(nsamples),n_coeff(ncoeff),n_voxels(nvoxels),max_num_peaks(0),m_meancoeff(meancoeff), m_gfa(gfa_flag){
       if (m_meancoeff){
 	mean_SHcoeff.ReSize(ncoeff,nvoxels);  
 	mean_SHcoeff=0;
@@ -519,12 +575,16 @@ namespace ODFs{
 	for (int f=0; f<ncoeff; f++)
 	  coeff_samples.push_back(temp);
       }
+      if (m_gfa){
+	gfa.ReSize(nvoxels);
+	gfa=0;
+      }
     }
 
 
   //Constructor (for saving directions samples)
-  Samples(const volume<float>& mask, const int& nvoxels, const int& nsamples, const int& maxNumPeaks, const int& ncoeff, const bool& meancoeff=false):
-    m_mask(mask),n_samples(nsamples),n_coeff(ncoeff),n_voxels(nvoxels),max_num_peaks(maxNumPeaks), m_meancoeff(meancoeff){  
+  Samples(const volume<float>& mask, const int& nvoxels, const int& nsamples, const int& maxNumPeaks, const int& ncoeff, const bool& meancoeff=false, const bool& gfa_flag=false):
+    m_mask(mask),n_samples(nsamples),n_coeff(ncoeff),n_voxels(nvoxels),max_num_peaks(maxNumPeaks), m_meancoeff(meancoeff), m_gfa(gfa_flag){  
       Matrix temp; RowVector temp2;
       temp.ReSize(nsamples,nvoxels);   //Initialize structure that will hold the samples (n_samples x n_voxels)
       temp=0;
@@ -542,6 +602,10 @@ namespace ODFs{
       if (m_meancoeff){
 	mean_SHcoeff.ReSize(ncoeff,nvoxels);  
 	mean_SHcoeff=0;
+      }
+      if (m_gfa){
+	gfa.ReSize(nvoxels);
+	gfa=0;
       }
     }
 
@@ -584,6 +648,12 @@ namespace ODFs{
 	for (int n=1; n<=n_samples; n++)
 	  coeff_samples[p](n,vox)=Coeff(p+1,n);
     }
+  } 
+
+
+  //Record the GFA obtained for voxel "vox"
+  void record(const float gfaVal, const int vox){
+    gfa(vox)=gfaVal;
   } 
 
   
@@ -757,6 +827,11 @@ namespace ODFs{
 	save_volume4D(tmp,logger.appendDir(oname));
       }
     }
+    if (m_gfa){
+      tmp.setmatrix(gfa,m_mask);
+      string oname="GFA";
+      save_volume4D(tmp,logger.appendDir(oname)); 
+    }
   }  
  
 
@@ -830,17 +905,21 @@ namespace ODFs{
       tmp.setmatrix(mean_fsamples[m],m_mask);
       oname="mean_f"+num2str(m+1)+"samples";
       save_volume4D(tmp,logger.appendDir(oname)); 
-    
-      }
+    }
+
     if (m_meancoeff){                  //Save mean coefficients in a single 4D image
       tmp.setmatrix(mean_SHcoeff,m_mask);
       string oname="mean_SHcoeff";
       save_volume4D(tmp,logger.appendDir(oname)); 
     } 
 
-  }  
-
-
+    if (m_gfa){
+      tmp.setmatrix(gfa,m_mask);
+      string oname="GFA";
+      save_volume4D(tmp,logger.appendDir(oname)); 
+    }
+  }
+  
   };
 
  
@@ -874,12 +953,13 @@ namespace ODFs{
     const float m_alpha;         //Laplacian sharpening parameter for model=1
     const bool m_savecoeff;      //Flag to indicate whether the ODF SH coeff or the ODF peaks (default) will be saved
     const bool m_savemeancoeff;  //Flag to indicate whether the mean ODF SH coeff (along with the peaks) will be saved
+    const bool m_gfa_flag;       //Flag to indicate whether the GFA will be computed and saved for each voxel
 
   public:
     //constructor
   ODF_Volume_Manager():
     opts(qbootOptions::getInstance()),npeaks(opts.npeaks.value()), peak_threshold(opts.peak_threshold.value()), m_modelnum(opts.modelnum.value()), lmax(opts.lmax.value()), Num_of_coeff((lmax+1)*(lmax+2)/2), 
-      nsamples(opts.nsamples.value()), m_lambda(opts.lambda.value()), m_delta(opts.delta.value()), m_alpha(opts.alpha.value()), m_savecoeff(opts.savecoeff.value()), m_savemeancoeff(opts.savemeancoeff.value()){
+      nsamples(opts.nsamples.value()), m_lambda(opts.lambda.value()), m_delta(opts.delta.value()), m_alpha(opts.alpha.value()), m_savecoeff(opts.savecoeff.value()), m_savemeancoeff(opts.savemeancoeff.value()), m_gfa_flag(opts.gfa.value()) {
     }
 
     //destructor
@@ -916,11 +996,11 @@ namespace ODFs{
       bool multishell=false;
 
       for (int n=1; n<=m_bvals.Ncols(); n++)   //Check whether more than one non-zero b-values exist 
-	if (m_bvals(1,n)!=0)
+	if (m_bvals(1,n)>b0max)
 	  bval3=m_bvals(1,n);                  //The last b-value will be stored
       
       for (int n=1; n<=m_bvals.Ncols(); n++)
-	if (m_bvals(1,n)!=0 && m_bvals(1,n)!=bval3){
+	if (m_bvals(1,n)>b0max && fabs(m_bvals(1,n)-bval3)>2*shellrange){ //Then we have a b value from a different shell
 	  bval1=m_bvals(1,n);
 	  multishell=true;
 	  break;
@@ -943,10 +1023,34 @@ namespace ODFs{
 	cout<<"Multiple b-values have been detected. Three shells are assumed, acquired one after the other!"<<endl;
       	float bval2=0;
 	for (int n=1; n<=m_bvals.Ncols(); n++)  //Store the second b-value
-	  if (m_bvals(1,n)!=0 && m_bvals(1,n)!=bval1 && m_bvals(1,n)!=bval3){
+	  if (m_bvals(1,n)>b0max && fabs(m_bvals(1,n)-bval1)>2*shellrange && fabs(m_bvals(1,n)-bval3)>2*shellrange){
 	    bval2=m_bvals(1,n);
 	    break;
 	  } 
+
+	//Find the mean b-value per shell
+	float btemp=0; int bcnt=0;
+	for (int n=1; n<=m_bvals.Ncols(); n++) 
+	  if (m_bvals(1,n)>b0max && fabs(m_bvals(1,n)-bval1)<=2*shellrange){
+	    btemp+=m_bvals(1,n); bcnt++;
+	  } 
+	bval1=btemp/bcnt;
+
+	btemp=0; bcnt=0;
+	for (int n=1; n<=m_bvals.Ncols(); n++) 
+	  if (m_bvals(1,n)>b0max && fabs(m_bvals(1,n)-bval2)<=2*shellrange){
+	    btemp+=m_bvals(1,n); bcnt++;
+	  } 
+	bval2=btemp/bcnt;
+
+	btemp=0; bcnt=0;
+	for (int n=1; n<=m_bvals.Ncols(); n++) 
+	  if (m_bvals(1,n)>b0max && fabs(m_bvals(1,n)-bval3)<=2*shellrange){
+	    btemp+=m_bvals(1,n); bcnt++;
+	  } 
+	bval3=btemp/bcnt;
+	cout<<"Mean b-values for detected shells are "<<bval1<<", "<<bval2<<" and "<<bval3<<endl;
+      
 
 	//Assume the same number of samples in each shell. If not, need to provide a text file with the number of samples in each shell
 	vector<int> shell_num(3);  //Keep the Number of samples in each shell (including the b=0)
@@ -1058,6 +1162,7 @@ namespace ODFs{
 
     //For a set of data, remove all b=0 entries from bvals and bvecs and the data. Divide each DW signal with the mean S0 to 
     //get the signal attenuation. Return the new data, bvals and bvecs (overwrite the old) and the number of non-b=0 DW directions.
+    //b0s are detected as volumes with a low b value (smaller than b0max)
     int Sig2SigAttenuation(Matrix& data, Matrix& bvals, Matrix& bvecs) const{
       int count=0;
       RowVector S0;
@@ -1066,7 +1171,7 @@ namespace ODFs{
       int Mv=data.Ncols();   //Total number of non-background voxels
       
       for (int n=1; n<=Nd; n++)
-	if (bvals(1,n)!=0)
+	if (bvals(1,n)>b0max)
 	  count++;             //Count how many DWs have been acquired (excluding b=0's)
       
       if (count==Nd){
@@ -1083,7 +1188,7 @@ namespace ODFs{
       
       int m=1;
       for (int n=1; n<=Nd; n++){
-	if (bvals(1,n)!=0){
+	if (bvals(1,n)>b0max){
 	  bvals_new(1,m)=bvals(1,n);    //Remove all b=0 entries from bvals and bvecs
 	  bvecs_new.Column(m)=bvecs.Column(n);
 	  for(int vox=1;vox<=Mv;vox++)
@@ -1191,6 +1296,34 @@ namespace ODFs{
     }
 
 
+    //Get points evenly distributed on the sphere using icosahedral tessellation.  
+    //Also fill in structures that are common to all Peak_finder_finite_diff objects  
+    void Init_Peak_finder_finite_diff(Matrix& index, Matrix& Eval_SH, ColumnVector& p_theta, ColumnVector& p_phi, ColumnVector& p_z) const {
+      const int tessel_degree=5; //Tessellation degree for obtaining points on the sphere
+      const int num_neighbours=20; //25 for tessel_degree=5, 6 for tessel_degree=4 (angular distance of 4.5 degrees)
+ 
+      Points m_points(tessel_degree,num_neighbours);            //Get points on the sphere
+      index = m_points.get_index();
+      cart2sph(m_points.get_TessPoints_Ref(),p_theta, p_phi);   //For each point of the tesselation get spherical angles
+      p_z = m_points.get_TessPoints_coord(3);                   //Save the z coordinate of each point
+      Eval_SH=fill_SH_matrix(p_theta,p_phi,lmax);               //Compute the value of spherical harmonics for each point and store to a matrix
+      // cout<<m_points.get_ang_dist()<<" "<<m_points.get_Eucl_dist()<<endl;
+    }
+
+
+    //Get points evenly distributed on the sphere using icosahedral tessellation.  
+    //Return a Matrix that contains SHs evaluated at each point  
+    void GFA_tessel_points(Matrix& Eval_SH) const {
+      const int tessel_degree=3; //Tessellation degree for obtaining points on the sphere
+      const int num_neighbours=1; //25 for tessel_degree=5, 6 for tessel_degree=4 (angular distance of 4.5 degrees)
+      ColumnVector p_theta, p_phi;
+
+      Points m_points(tessel_degree,num_neighbours);            //Get points on the sphere
+      cart2sph(m_points.get_TessPoints_Ref(),p_theta, p_phi);   //For each point of the tesselation get spherical angles
+      Eval_SH=fill_SH_matrix(p_theta,p_phi,lmax);               //Compute the value of spherical harmonics for each point and store to a matrix
+    }
+
+
 
     //Performs ODF estimation for all voxels
     void run_all(){
@@ -1210,15 +1343,21 @@ namespace ODFs{
 
 
     void run_all_coeff(){
-      Samples samp(Num_of_coeff, m_mask, m_data.Ncols(), nsamples, m_savemeancoeff);
-      
+      Matrix Eval_SH;              //Matrix that is used for GFA calculation and holds the value of spherical harmonics at the points on the sphere
+      Samples samp(Num_of_coeff, m_mask, m_data.Ncols(), nsamples, m_savemeancoeff,m_gfa_flag);
+      float gfa;
+
       if (opts.verbose.value())
 	cout<<"running inference for each voxel"<<endl;
       if (m_savecoeff && m_savemeancoeff)
 	cout<<"--savemeancoeff has been set, only mean ODF coefficients will be saved"<<endl;
+
+      if (m_gfa_flag)
+	GFA_tessel_points(Eval_SH);
       
       for(int vox=1;vox<=m_data.Ncols();vox++){
 	cout <<vox<<"/"<<m_data.Ncols()<<endl;
+	Matrix SHcoeff;
 	if (m_modelnum==3){
 	  Matrix temp_data(m_bvecs.Ncols(),3);  //3 is the number of q-shells
 	  temp_data.Column(1)=(m_data.Column(vox)).Rows(1,m_bvecs.Ncols());  //Get multi-shell data for that voxel
@@ -1226,35 +1365,28 @@ namespace ODFs{
 	  temp_data.Column(3)=(m_data.Column(vox)).Rows(2*m_bvecs.Ncols()+1,3*m_bvecs.Ncols());
 	  ODF_voxel_biexp local_ODF(temp_data, m_SHT, m_HAT, m_scaling_factors, lmax, Num_of_coeff, nsamples, m_delta);
 	  local_ODF.bootstrapping();
-	  Matrix& SHcoeff=local_ODF.get_SHcoeff_ref();
+	  SHcoeff=local_ODF.get_SHcoeff_ref();
 	  samp.record(SHcoeff, vox);
 	}
 	else{
 	  ColumnVector temp_data=m_data.Column(vox);  //data for that voxel
 	  ODF_voxel local_ODF(temp_data, m_SHT, m_HAT, m_scaling_factors, m_modelnum, lmax, Num_of_coeff, nsamples,m_delta);
 	  local_ODF.bootstrapping();
-	  Matrix& SHcoeff=local_ODF.get_SHcoeff_ref();
+	  SHcoeff=local_ODF.get_SHcoeff_ref();
 	  samp.record(SHcoeff, vox);
 	}
+
+	if (m_gfa_flag){
+	  ODF_GFA local_vox(SHcoeff, lmax, nsamples, Eval_SH);
+	  local_vox.compute_gfa();
+	  gfa=local_vox.get_gfa();
+	  samp.record(gfa,vox);
+	}
+
       }
       if (opts.verbose.value())
 	cout<<"saving samples"<<endl;
       samp.save_coeff();
-    }
-
-
-    //Get points evenly distributed on the sphere using icosahedral tessellation.  
-    //Also fill in structures that are common to all Peak_finder_finite_diff objects  
-    void Init_Peak_finder_finite_diff(Matrix& index, Matrix& Eval_SH, ColumnVector& p_theta, ColumnVector& p_phi, ColumnVector& p_z) const {
-      const int tessel_degree=5; //Tessellation degree for obtaining points on the sphere
-      const int num_neighbours=20; //25 for tessel_degree=5, 6 for tessel_degree=4 (angular distance of 4.5 degrees)
- 
-      Points m_points(tessel_degree,num_neighbours);            //Get points on the sphere
-      index = m_points.get_index();
-      cart2sph(m_points.get_TessPoints_Ref(),p_theta, p_phi);   //For each point of the tesselation get spherical angles
-      p_z = m_points.get_TessPoints_coord(3);                   //Save the z coordinate of each point
-      Eval_SH=fill_SH_matrix(p_theta,p_phi,lmax);               //Compute the value of spherical harmonics for each point and store to a matrix
-      // cout<<m_points.get_ang_dist()<<" "<<m_points.get_Eucl_dist()<<endl;
     }
 
 
@@ -1266,8 +1398,8 @@ namespace ODFs{
       Matrix Eval_SH;              //Matrix that is used during peak finder and holds the value of spherical harmonics at the points on the sphere
       Matrix index;                //Matrix used during peak finder and stores the closest neighbours of each point on the sphere
       int peak_finder=1;           //Flag that keeps which peak finder is used
-
-      Samples samp(m_mask, m_data.Ncols(),nsamples, npeaks, Num_of_coeff, m_savemeancoeff);
+      
+      Samples samp(m_mask, m_data.Ncols(),nsamples, npeaks, Num_of_coeff, m_savemeancoeff,m_gfa_flag);
       
       if (opts.peak_finder.value()==2){
 	peak_finder=2;
@@ -1288,7 +1420,7 @@ namespace ODFs{
 
       for(int vox=1;vox<=m_data.Ncols();vox++){
 	cout <<vox<<"/"<<m_data.Ncols()<<endl;
-	Matrix SHcoeff;
+	Matrix SHcoeff; float gfa;
 	if (m_modelnum==3){
 	  Matrix temp_data(m_bvecs.Ncols(),3);  //3 is the number of q-shells
 	  temp_data.Column(1)=(m_data.Column(vox)).Rows(1,m_bvecs.Ncols());  //Get multi-shell data for that voxel
@@ -1320,6 +1452,13 @@ namespace ODFs{
 	  Matrix phi=Peaks.get_phi();
 	  Matrix funcvals=Peaks.get_funcvals();
 	  samp.record(SHcoeff,theta, phi,funcvals, vox);
+	}
+
+	if (m_gfa_flag){
+	  ODF_GFA local_vox(SHcoeff, lmax, nsamples, Eval_SH);
+	  local_vox.compute_gfa();
+	  gfa=local_vox.get_gfa();
+	  samp.record(gfa,vox);
 	}
       }
       if (opts.verbose.value())

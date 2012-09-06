@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 
 // B0 Calculation program - intended for use with the Virtual Scanner
@@ -83,7 +83,7 @@ using namespace NEWIMAGE;
 
 // Global constants
 
-string title="b0calc (Version 2.4)\nB0 field calculation program\nCopyright(c) 2001, University of Oxford (Mark Jenkinson)";
+string title="b0calc \nB0 field calculation program\nCopyright(c) 2001, University of Oxford (Mark Jenkinson)";
 string examples="b0calc -i <input> -o <output> [options]";
 
 Option<bool> verbose(string("-v,--verbose"), false, 

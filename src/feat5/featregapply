@@ -19,7 +19,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
+#   FMRIB Software Library, Release 5.0 (c) 2012, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -68,7 +68,7 @@
 #   interested in using the Software commercially, please contact Isis
 #   Innovation Limited ("Isis"), the technology transfer company of the
 #   University, to negotiate a licence. Contact details are:
-#   innovation@isis.ox.ac.uk quoting reference DE/1112.
+#   innovation@isis.ox.ac.uk quoting reference DE/9564.
 
 #}}}
 #{{{ script setup
@@ -85,6 +85,8 @@ source $env(FSLDIR)/tcl/fslstart.tcl
 
 proc runregfiles { in out } {
 
+    catch { exec sh -c "mkdir -p reg_standard/[ file dirname $out ]" } errmsg
+
     if { ! [ imtest reg_standard/$out ] } {
 	return 1
     } elseif { [ file mtime [ imglob -extension reg_standard/$out ] ] < [ file mtime [ imglob -extension $in ] ] || [ file mtime [ imglob -extension reg_standard/$out ] ] < [ file mtime reg/example_func2standard.mat ] } {
@@ -98,7 +100,7 @@ proc runregfiles { in out } {
 #{{{ proc runflirt
 
 proc runflirt { in ref out space interp datatype } {
-    global FSLDIR
+    global FSLDIR fmri
 
     if { [ runregfiles $in $out ] } {
 	set TMPNAM [ fsl:exec "${FSLDIR}/bin/tmpnam frgrot" -n ]
@@ -120,7 +122,12 @@ proc runflirt { in ref out space interp datatype } {
 	    if { $space != "standard" } {
 		set FLIRTINIT "-init reg/${space}2standard.mat"
 	    }
-	    fsl:exec "${FSLDIR}/bin/flirt -ref $ref -in $in -out $TMPNAM -applyxfm $FLIRTINIT -interp $interp -datatype $datatype"
+
+	    if { [ info exists fmri(singleSlice) ] && $fmri(singleSlice) == "1" } { 
+	       fsl:exec "${FSLDIR}/bin/flirt -2D -ref $ref -in $in -out $TMPNAM -applyxfm $FLIRTINIT -interp $interp -datatype $datatype"
+	    } else {
+	       fsl:exec "${FSLDIR}/bin/flirt -ref $ref -in $in -out $TMPNAM -applyxfm $FLIRTINIT -interp $interp -datatype $datatype"
+	    }
 
 	}
 
@@ -134,54 +141,59 @@ proc runflirt { in ref out space interp datatype } {
 
 if { [ lindex $argv 0 ] == "" } {
     puts "
-Usage: featregapply <feat_directory> \[-f\] \[-c\]
+Usage: featregapply <feat_directory> \[-f\] \[-c\] \[-l <image>\] \[-s <image>\]
   -f : force featregapply to run even if already run on this FEAT directory
   -c : cleanup, i.e. remove all featregapply output
+  -l <image> : upsample functional-space <image> to standard space using trilinear interpolation
+  -s <image> : upsample functional-space <image> to standard space using spline (like sinc) interpolation
 "
     exit 1
 }
 
 cd [ lindex $argv 0 ]
 
-# if not first-level analysis, nothing to do, so exit
 if { [ file exists design.lev ] } {
-    exit 0
+    puts "Error - [ pwd] is not a first-level FEAT/MELODIC directory"
+    exit 1
+}
+if { ! [ file exists reg/example_func2standard.mat ] } {
+    puts "Error - registration has not been run for [ pwd ]"
+    exit 1
 }
 
 feat5:setupdefaults
 feat5:load -1 1 design.fsf
+set REF reg/standard
 
 # for older first-level FEAT dirs: create mean_func if it's not already there
 if { [ imtest filtered_func_data ] && ! [ imtest mean_func ] } {
     fsl:exec "${FSLDIR}/bin/fslmaths filtered_func_data -Tmean mean_func"
 }
 
-set force 0
-set cleanup 0
+catch { exec sh -c "mkdir -p reg_standard/reg reg_standard/stats" } errmsg
+
 for { set i 1 } { $i < [ llength $argv ] } { incr i 1 } {
     if { ! [ string compare [ lindex $argv $i ] "-f" ] } {
-	set force 1
+      fsl:exec "/bin/rm -rf reg_standard"
     } elseif { ! [ string compare [ lindex $argv $i ] "-c" ] } {
-	set cleanup 1
+      fsl:exec "/bin/rm -rf reg_standard"
+      exit 0
+    } elseif { ! [ string compare [ lindex $argv $i ] "-l" ] } {
+      incr i 1
+      set theim [ lindex $argv $i ]
+      runflirt $theim $REF $theim example_func trilinear float
+    } elseif { ! [ string compare [ lindex $argv $i ] "-s" ] } {
+      incr i 1
+      set theim [ lindex $argv $i ]
+      runflirt $theim $REF $theim example_func spline float
     }
 }
 
-if { $cleanup || $force } {
-    fsl:exec "/bin/rm -rf reg_standard"
-    if { $cleanup } { exit 0 }
-}
 
-if { ! [ file exists reg/example_func2standard.mat ] } {
-    puts "Error - registration has not been run for [ pwd ]"
-    exit 1
-}
-
-catch { exec sh -c "mkdir -p reg_standard/reg reg_standard/stats" } errmsg
 
 #}}}
 #{{{ apply the registration
 
-set REF reg/standard
 
 # MELODIC upsampling
 if { [ info exists fmri(inmelodic) ] && $fmri(inmelodic) } {
@@ -198,7 +210,7 @@ if { [ info exists fmri(inmelodic) ] && $fmri(inmelodic) } {
 	4 { set BGIMAGE example_func }
     }
     if { [ imtest reg/$BGIMAGE ] } {
-	runflirt reg/$BGIMAGE $REF bg_image $BGIMAGE sinc float
+	runflirt reg/$BGIMAGE $REF bg_image $BGIMAGE spline float
     } else {
 	imcp reg_standard/standard reg_standard/bg_image
     }
@@ -207,15 +219,18 @@ if { [ info exists fmri(inmelodic) ] && $fmri(inmelodic) } {
     fsl:exec "${FSLDIR}/bin/fslmaths reg_standard/filtered_func_data -Tstd -bin reg_standard/mask -odt char"
 } else {
 
-    runflirt example_func $REF example_func example_func sinc float
-    runflirt mask $REF mask example_func nearestneighbour char
-
-    foreach input [ imglob mean_func* stats/cope* stats/varcope* stats/tdof_t* ] {
+    foreach input [ imglob example_func mean_func ] {
+	runflirt $input $REF $input example_func spline float
+    }
+    foreach input [ imglob stats/cope* stats/varcope* stats/tdof_t* ] {
 	runflirt $input $REF $input example_func trilinear float
+    }
+    foreach input [ imglob mask ] {
+	runflirt $input $REF $input example_func nearestneighbour char
     }
 
     if { [ file exists reg/highres2standard.mat ] } {
-	runflirt reg/highres $REF reg/highres highres sinc float
+	runflirt reg/highres $REF reg/highres highres spline float
     }
 }
 

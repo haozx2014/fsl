@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 // Simulator for static B0 - made specifically for HBM2004
 
@@ -82,7 +82,7 @@ using namespace Utilities;
 // The two strings below specify the title and example usage that is
 //  printed out as the help or usage message
 
-string title="b0sim (Version 1.0)\nCopyright(c) 2003, University of Oxford (Mark Jenkinson)";
+string title="b0sim \nCopyright(c) 2003, University of Oxford (Mark Jenkinson)";
 string examples="b0sim [options] -i <input model> -b <b0 input> -o <output>";
 
 

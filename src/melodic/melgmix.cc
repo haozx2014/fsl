@@ -18,7 +18,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -67,7 +67,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include "newimage/newimageall.h"
 //#include "melmmopts.h"
@@ -657,9 +657,11 @@ namespace Melodic{
 
     props = props / sum(props,2).AsScalar();
     add_params(means,vars,props,logprobY,MDL,Evi,true);
-    
+	
     probmap << SP(sum(tmp1.Rows(2,tmp1.Nrows()),1),
 		  pow(sum(tmp1,1),-1));
+
+	dbgmsg("   mu: " << means << "  sig: " << vars << " prop: " << props << endl);
 
    	if(props(1)<0.4 ){
       //set up GMM
@@ -678,11 +680,11 @@ namespace Melodic{
       IntSize = Dmax / nummix;
       means(1)=mean(data,2).AsScalar(); 
       for (int ctr=2; ctr <= means.Ncols(); ctr++){
-				means(ctr) =  Dmax - (ctr - 1.5) * IntSize; 
+		means(ctr) =  Dmax - (ctr - 1.5) * IntSize; 
       }
       means(2)=means(1)+sqrt(vars(1));
       if(nummix>2)
-				means(3)=means(1)-sqrt(vars(1));
+		means(3)=means(1)-sqrt(vars(1));
       
       fit(string("GMM"));
     }

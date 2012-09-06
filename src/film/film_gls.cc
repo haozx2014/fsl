@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include <iostream>
 #define WANT_STREAM
@@ -113,7 +113,8 @@ int main(int argc, char *argv[])
     variance.binarise(1e-10,variance.max()+1,exclusive); //variance mask needed if thresh is -ve to remove background voxels (0 variance)
     mask*=variance; //convolved mask ensures that only super-threshold non-background voxels pass
 
-    Matrix datam(input_data.matrix(mask));
+    vector<long> labels;
+    Matrix datam(input_data.matrix(mask,labels));
    
     int numTS = datam.Ncols();
     ColumnVector epivol = reference.matrix(mask).t();
@@ -154,7 +155,7 @@ int main(int argc, char *argv[])
 	cout << "Calculating residuals..." << endl; 
 	for(int i = 1; i <= numTS; i++)
 	  {						    
-            glimGls.setData(datam.Column(i), paradigm.getDesignMatrix(i), i);
+            glimGls.setData(datam.Column(i), paradigm.getDesignMatrix(i,mask,labels), i);
 	    residuals.Column(i)=glimGls.getResiduals();
 	  }
 	cout << "Completed" << endl; 
@@ -208,7 +209,7 @@ int main(int argc, char *argv[])
     mean_prewhitened_dm=0;
     for(int i = 1; i <= numTS; i++)
     {	
-      Matrix effectiveDesign(paradigm.getDesignMatrix(i));
+      Matrix effectiveDesign(paradigm.getDesignMatrix(i,mask,labels));
       if ( (100.0*i)/numTS > co )
         cout << co++ << "," << flush;	   
       if(!globalopts.noest) {
@@ -227,11 +228,31 @@ int main(int argc, char *argv[])
     if(globalopts.output_pwdata || globalopts.verbose) 
       mean_prewhitened_dm/=numTS;
      
-    cerr << "Completed" << endl << "Saving results... " << endl;
+    cout << "Completed" << endl << "Saving results... " << endl;
 
-    input_data.setmatrix(residuals,mask);
-    input_data.setDisplayMaximumMinimum(input_data.max(),input_data.min());
-    save_volume4D(input_data,logger.getDir() + "/res4d");
+    if (globalopts.meanInputFile=="" || globalopts.minimumTimepointFile=="") {
+      input_data.setmatrix(residuals,mask);
+      input_data.setDisplayMaximumMinimum(input_data.max(),input_data.min());
+      save_volume4D(input_data,logger.getDir() + "/res4d");
+    } else {
+      int minimumTimepoint(0);
+      ifstream inputTextFile(globalopts.minimumTimepointFile.c_str());
+      if(inputTextFile.is_open()) {
+	inputTextFile >> minimumTimepoint;
+	inputTextFile.close();
+      }
+      cout << "Calculating new mean functional image using timepoint " << minimumTimepoint << endl;
+      volume4D<float> residualsImage;
+      volume<float> meanInput;
+      read_volume4D(input_data,globalopts.inputfname);
+      read_volume(meanInput,globalopts.meanInputFile);
+      residualsImage.setmatrix(residuals,mask);
+      residualsImage.setDisplayMaximumMinimum(residualsImage.max(),residualsImage.min());
+      save_volume4D(residualsImage,logger.getDir() + "/res4d");
+      input_data-=residualsImage;
+      input_data-=meanInput;
+      save_volume(input_data[minimumTimepoint],"mean_func2");
+    }
 
     if(globalopts.output_pwdata || globalopts.verbose)
       {
@@ -262,7 +283,7 @@ int main(int argc, char *argv[])
     glimGls.Save(mask,reference.tdim());
     glimGls.CleanUp();
 
-    cerr << "Completed" << endl;
+    cout << "Completed" << endl;
   }  
   catch(Exception p_excp) 
   {
@@ -274,7 +295,6 @@ int main(int argc, char *argv[])
       cerr << "Uncaught exception!" << endl;
       return 1;
   }
-
   return 0;
 }
 

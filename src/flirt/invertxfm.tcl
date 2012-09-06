@@ -17,7 +17,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
+#   FMRIB Software Library, Release 5.0 (c) 2012, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -66,7 +66,7 @@
 #   interested in using the Software commercially, please contact Isis
 #   Innovation Limited ("Isis"), the technology transfer company of the
 #   University, to negotiate a licence. Contact details are:
-#   innovation@isis.ox.ac.uk quoting reference DE/1112.
+#   innovation@isis.ox.ac.uk quoting reference DE/9564.
 
 #{{{ setup
 
@@ -126,7 +126,7 @@ FileEntry  $w.f.oxfm -textvariable entries($w,4) -label  "Save Inverse Transform
     button $w.cancel    -command "destroy $w" \
 	    -text "Exit" -width 5
 
-    button $w.help -command "FmribWebHelp file: ${FSLDIR}/doc/flirt/overview.html" \
+    button $w.help -command "FmribWebHelp file: ${FSLDIR}/doc/redirects/flirt.html" \
 	    -text "Help" -width 5
 
     pack $w.btns.b -side bottom -fill x

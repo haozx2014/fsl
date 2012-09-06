@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include "inference_vb.h"
 #include "convergence.h"
@@ -122,6 +122,7 @@ void VariationalBayesInferenceTechnique::Setup(ArgsType& args)
 
   // Resume from a previous run? 
   continueFromFile = args.ReadWithDefault("continue-from-mvn", "");
+  paramFilename = args.ReadWithDefault("continue-from-params",""); // optional list of parameters in MVN
   if (continueFromFile != "")
   {
     // Won't need these any more.  They don't hurt, but why leave them around?
@@ -156,6 +157,8 @@ void VariationalBayesInferenceTechnique::Setup(ArgsType& args)
     conv = new FreduceConvergenceDetector(its, 0.01);
   else if (convergence == "trialmode")
     conv = new TrialModeConvergenceDetector(its, 10, 0.01);
+  else if (convergence == "lm")
+    conv = new LMConvergenceDetector(its,0.01);
   else
     throw Invalid_option("Unrecognized convergence detector: '" 
                            + convergence + "'");
@@ -182,6 +185,7 @@ void VariationalBayesInferenceTechnique::DoCalculations(const DataSet& allData)
   Tracer_Plus tr("VariationalBayesInferenceTechnique::DoCalculations");
   
   const Matrix& data = allData.GetVoxelData();
+  const Matrix & coords = allData.GetVoxelCoords();
   // Rows are volumes
   // Columns are (time) series
   // num Rows is size of (time) series
@@ -205,7 +209,9 @@ void VariationalBayesInferenceTechnique::DoCalculations(const DataSet& allData)
   vector<MVNDist*> continueFromDists;
   if (continuingFromFile)
   {
-    MVNDist::Load(continueFromDists, continueFromFile, allData.GetMask());
+    InitMVNFromFile(continueFromDists,continueFromFile, allData, paramFilename);
+    //MVNDist::Save(continueFromDists,"temp",allData.GetMask()); // check that the MVN created is right
+      //MVNDist::Load(continueFromDists, continueFromFile, allData.GetMask());
   } 
 
   if (lockedLinearFile != "")
@@ -221,7 +227,9 @@ void VariationalBayesInferenceTechnique::DoCalculations(const DataSet& allData)
   for (int voxel = 1; voxel <= Nvoxels; voxel++)
     {
       ColumnVector y = data.Column(voxel);
+      ColumnVector vcoords = coords.Column(voxel);
       model->pass_in_data( y );
+      model->pass_in_coords(vcoords);
       NoiseParams* noiseVox = NULL;
       
       // if (continuingFromFile)
@@ -242,7 +250,10 @@ void VariationalBayesInferenceTechnique::DoCalculations(const DataSet& allData)
       const NoiseParams* noiseVoxPrior = initialNoisePrior;
       NoiseParams* const noiseVoxSave = noiseVox->Clone();
       
-      LOG_ERR("  Voxel " << voxel << " of " << Nvoxels << endl); 
+      LOG << "  Voxel " << voxel << " of " << Nvoxels << endl;
+      if (fmod(voxel,floor(Nvoxels/10))==0) {cout << ". " << flush;}
+
+      //LOG_ERR("  Voxel " << voxel << " of " << Nvoxels << endl); 
       //  << " sumsquares = " << (y.t() * y).AsScalar() << endl;
       double F = 1234.5678;
 
@@ -257,7 +268,11 @@ void VariationalBayesInferenceTechnique::DoCalculations(const DataSet& allData)
       { 
         assert(initialFwdPosterior != NULL);
         fwdPosterior = *initialFwdPosterior;
+	// any voxelwise initialisation
+	model->Initialise(fwdPosterior);
       }
+
+
       MVNDist fwdPosteriorSave(fwdPosterior);
 
       
@@ -271,13 +286,22 @@ void VariationalBayesInferenceTechnique::DoCalculations(const DataSet& allData)
       try
 	{
 	  linear.ReCentre( fwdPosterior.means );
-	  conv->Reset();
+	  
 
 	  noise->Precalculate( *noiseVox, *noiseVoxPrior, y );
+
+	  conv->Reset();
 
 	  int iteration = 0; //count the iterations
 	  do 
 	    {
+	      if ( conv-> NeedRevert() ) //revert to previous solution if the convergence detector calls for it
+		{
+		  *noiseVox = *noiseVoxSave;  // copy values, not pointers!
+		  fwdPosterior = fwdPosteriorSave;
+		  linear.ReCentre( fwdPosterior.means );
+		}
+	      
 	      if (needF) { 
 		F = noise->CalcFreeEnergy( *noiseVox, 
 					   *noiseVoxPrior, fwdPosterior, fwdPrior, linear, y);
@@ -297,7 +321,7 @@ void VariationalBayesInferenceTechnique::DoCalculations(const DataSet& allData)
 	      if (iteration > 0) { model->UpdateARD( fwdPosterior, fwdPrior, Fard ); }
 
 	      // Theta update
-	      noise->UpdateTheta( *noiseVox, fwdPosterior, fwdPrior, linear, y );
+	      noise->UpdateTheta( *noiseVox, fwdPosterior, fwdPrior, linear, y, NULL, conv->LMalpha() );
 
 
       
@@ -333,6 +357,7 @@ void VariationalBayesInferenceTechnique::DoCalculations(const DataSet& allData)
 		F = F + Fard; }
 	      if (printF) 
 		LOG << "      Fnoise == " << F << endl;
+
 
 	      iteration++;
 	    }           

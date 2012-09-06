@@ -17,7 +17,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
+#   FMRIB Software Library, Release 5.0 (c) 2012, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -66,12 +66,12 @@
 #   interested in using the Software commercially, please contact Isis
 #   Innovation Limited ("Isis"), the technology transfer company of the
 #   University, to negotiate a licence. Contact details are:
-#   innovation@isis.ox.ac.uk quoting reference DE/1112.
+#   innovation@isis.ox.ac.uk quoting reference DE/9564.
 
 
 Usage() {
     echo ""
-    echo "Usage: slices <input> [input2] [-s scale] [-i <intmin> <intmax>]"
+    echo "Usage: slices <input> [input2] [-s scale] [-i <intmin> <intmax>] [-o <output gif>]"
     echo ""
     exit 1
 }
@@ -83,12 +83,19 @@ if [ _$FSLDIR = _ ] ; then
     export FSLDIR
 fi
 
+# NEED PARSING IN ORDER TO HAVE A -o OPTION
+outputname=""
+# if statement checks if -o option was given
+if [ `echo "$@" | grep -- -o | wc -w` -gt 0 ] ; then
+    # extract the <output gif> name if the -o option is present
+    outputname=`echo "$@" | sed 's/.*-o *\([^ ]*\).*/\1/'`;
+fi
+
 f=/tmp/`${FSLDIR}/bin/remove_ext $1 | sed "s/\//_/g"`
 touch $f > /dev/null 2>&1
 if [ ! -w $f ] ; then
     f=`${FSLDIR}/bin/tmpnam $f`
 fi
-
 
 # deal with complex images separately
 if [ X`${FSLDIR}/bin/fslval $1 datatype` = X32 ] ; then
@@ -129,7 +136,11 @@ if [ X`${FSLDIR}/bin/fslval $1 dim3` = X1 ] ; then
     fi
   fi
 
-  if ${FSLDIR}/bin/slicer $im1 $im2 $@ -z $slicenum ${f}a.png ; then 
+  # NEED PARSING IN ORDER TO HAVE A -o OPTION
+  opts="$@"
+  # remove the "-o <output gif>" from the command line list
+  opts=`echo $opts | sed 's/-o *[^ ]*//'`;
+  if ${FSLDIR}/bin/slicer $im1 $im2 $opts -z $slicenum ${f}a.png ; then 
     retval=0; # do nothing 
   else
     exit -1;
@@ -139,7 +150,12 @@ if [ X`${FSLDIR}/bin/fslval $1 dim3` = X1 ] ; then
 else
   # 3D case
 
-  if ${FSLDIR}/bin/slicer $@ -x 0.4 ${f}a.png -x 0.5 ${f}b.png -x 0.6 ${f}c.png -y 0.4 ${f}d.png -y 0.5 ${f}e.png -y 0.6 ${f}f.png -z 0.4 ${f}g.png -z 0.5 ${f}h.png -z 0.6 ${f}i.png ; then
+  # NEED PARSING IN ORDER TO HAVE A -o OPTION
+  opts="$@"
+  # remove the "-o <output gif>" from the command line list
+  opts=`echo $opts | sed 's/-o *[^ ]*//'`;
+
+  if ${FSLDIR}/bin/slicer $opts -x 0.4 ${f}a.png -x 0.5 ${f}b.png -x 0.6 ${f}c.png -y 0.4 ${f}d.png -y 0.5 ${f}e.png -y 0.6 ${f}f.png -z 0.4 ${f}g.png -z 0.5 ${f}h.png -z 0.6 ${f}i.png ; then
     retval=0; # do nothing 
   else
     exit -1;
@@ -149,14 +165,19 @@ else
 
 fi
 
-if [ X`uname | grep CYGWIN`X != XX ] ; then
-    /cygdrive/c/Program\ Files/Internet\ Explorer/IEXPLORE.EXE C:/cygwin${f} &
-elif [ X`uname | grep -i darwin`X != XX ] ; then
-    g=`${FSLDIR}/bin/tmpnam $f`.gif ;
-    cp $f $g ;
-    open ${f}.gif ;
+# if using the -o option then just copy the file, otherwise display it
+if [ X$outputname != X ] ; then
+    cp ${f}.gif $outputname
 else
-    $FSLWISH ${FSLDIR}/tcl/display.tcl $f.gif &
+    if [ X`uname | grep CYGWIN`X != XX ] ; then
+	/cygdrive/c/Program\ Files/Internet\ Explorer/IEXPLORE.EXE C:/cygwin${f} &
+    elif [ X`uname | grep -i darwin`X != XX ] ; then
+	g=`${FSLDIR}/bin/tmpnam $f`.gif ;
+	cp $f $g ;
+	open ${f}.gif ;
+    else
+	$FSLWISH ${FSLDIR}/tcl/display.tcl $f.gif &
+    fi
 fi
 
 \rm -f ${f}a.png ${f}b.png ${f}c.png ${f}d.png ${f}e.png ${f}f.png ${f}g.png ${f}h.png ${f}i.png 

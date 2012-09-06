@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #ifndef EXPOSE_TREACHEROUS
 #define EXPOSE_TREACHEROUS
@@ -89,7 +89,7 @@ using namespace Utilities;
 using namespace NEWMAT;
 using namespace MISCMATHS;
 
-string title="cluster (Version 1.3)\nCopyright(c) 2000-2008, University of Oxford (Mark Jenkinson, Matthew Webster)";
+string title="cluster \nCopyright(c) 2000-2008, University of Oxford (Mark Jenkinson, Matthew Webster)";
 string examples="cluster --in=<filename> --thresh=<value> [options]";
 
 Option<bool> verbose(string("-v,--verbose"), false, 
@@ -172,6 +172,9 @@ Option<string> stdvolname(string("--stdvol"), string(""),
 		       false, requires_argument);
 Option<string> warpname(string("--warpvol"), string(""),
 		       string("filename for warpfield"),
+		       false, requires_argument);
+Option<string> scalarname(string("--scalarname"), string(""),
+		       string("give name of scalars (e.g. Z) - to be used in printing output tables"),
 		       false, requires_argument);
 
 
@@ -437,8 +440,10 @@ void print_results(const vector<int>& idx,
   string tablehead;
   tablehead = "Cluster Index\tVoxels";
   if (pthresh.set()) tablehead += "\tP\t-log10(P)";
-  tablehead += "\tZ-MAX\tZ-MAX X" + units + "\tZ-MAX Y" + units + "\tZ-MAX Z" + units
-    + "\tZ-COG X" + units + "\tZ-COG Y" + units + "\tZ-COG Z" + units;
+  string z=scalarname.value()+"-";
+  if (z=="-") { z=""; }
+  tablehead += "\t"+z+"MAX\t"+z+"MAX X" + units + "\t"+z+"MAX Y" + units + "\t"+z+"MAX Z" + units
+    + "\t"+z+"COG X" + units + "\t"+z+"COG Y" + units + "\t"+z+"COG Z" + units;
   if (copename.set()) {
     tablehead+= "\tCOPE-MAX\tCOPE-MAX X" + units + "\tCOPE-MAX Y" + units + "\tCOPE-MAX Z" + units 
                  + "\tCOPE-MEAN";
@@ -476,7 +481,9 @@ void print_results(const vector<int>& idx,
     ofstream lmaxfile(outlmaxfile.c_str());
     if (!lmaxfile)
       cerr << "Could not open file " << outlmax.value() << " for writing" << endl;
-    lmaxfile << "Cluster Index\tZ\tx\ty\tz\t" << endl;
+    string scalarnm=scalarname.value();
+    if (scalarnm=="") { scalarnm="Value"; }
+    lmaxfile << "Cluster Index\t"+scalarnm+"\tx\ty\tz\t" << endl;
     volume<int> lmaxvol;
     copyconvert(zvol,lmaxvol);
     lmaxvol=0;
@@ -727,6 +734,7 @@ int main(int argc,char *argv[])
     options.add(minclustersize);
     options.add(transformname);
     options.add(stdvolname);
+    options.add(scalarname);
     options.add(mx_cnt);
     options.add(verbose);
     options.add(help);

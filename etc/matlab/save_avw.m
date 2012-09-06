@@ -31,7 +31,7 @@ tmpname = tempname;
    end
          
 %% Convert volume from NIFTI_PAIR format to user default
-tmp=sprintf('sh -c ". ${FSLDIR}/etc/fslconf/fsl.sh; $FSLDIR/bin/fslmaths %s %s"\n',tmpname,fname);
+tmp=sprintf('sh -c ". ${FSLDIR}/etc/fslconf/fsl.sh; LD_LIBRARY_PATH=$FSLDIR/bin $FSLDIR/bin/fslmaths %s %s"\n',tmpname,fname);
 system(tmp);
 
 % cross platform compatible deleting of files

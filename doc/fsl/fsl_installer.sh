@@ -2,7 +2,7 @@
 
 # A Simple script to install FSL and set up the environment
 
-VERSION="1.5"
+VERSION="1.6"
 POSIXLY_CORRECT=1
 
 cecho () {
@@ -631,7 +631,7 @@ check_glibc () {
  
     # This is a Linux installer so check the version of glibc
     my_LD='/lib'
-    if [ "X$my_bitdepth}" = "X64" ]; then
+    if [ "X${bitdepth}" = "X64" ]; then
 		my_LD="${my_LD}${bitdepth}"
     fi
     my_LD_v=`(cd ${my_LD}; ls ld-*.so| sed -n 's/ld-\([0-9]*\)\.\([0-9]*\)\(.[0-9]*\)*.so/\1\2/p')`

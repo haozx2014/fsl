@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #if !defined(qbootOptions_h)
 #define qbootOptions_h
@@ -98,12 +98,13 @@ class qbootOptions {
   Option<int> lmax;
   Option<int> npeaks;
   Option<float> peak_threshold;
-  Option<int> peak_finder;
+  FmribOption<int> peak_finder;
   Option<int> nsamples;
   Option<float> lambda;
   Option<float> delta;
   Option<float> alpha;
   Option<int> seed;
+  Option<bool> gfa;
   Option<bool> savecoeff;
   Option<bool> savemeancoeff;
   Option<bool> verbose;
@@ -177,7 +178,7 @@ class qbootOptions {
 	   string("Laplace-Beltrami regularization parameter (default is 0)"), 
 	   false,requires_argument),
    delta(string("--delta"),0.01, 
-	   string("\tSignal attenuation regularization parameter for model=2 (default is 0.01)"), 
+	   string("\tSignal attenuation regularization parameter for models=2,3 (default is 0.01)"), 
 	   false,requires_argument),
    alpha(string("--alpha"),0, 
 	   string("\tLaplacian sharpening parameter for model=1 (default is 0, should be smaller than 1)"), 
@@ -185,6 +186,9 @@ class qbootOptions {
    seed(string("--seed"),8665904,
 	   string("\tSeed for pseudo-random number generator"),
            false,requires_argument),
+   gfa(string("--gfa"),false,
+	   string("\tCompute a generalised FA, using the mean ODF in each voxel"),
+           false,no_argument),
    savecoeff(string("--savecoeff"),false,
 	   string("Save the ODF coefficients instead of the peaks. WARNING: These can be huge files, please use a few bootstrap samples and a low lmax!"),
            false,no_argument),
@@ -198,7 +202,7 @@ class qbootOptions {
 	string("Display this message"),
 	false, no_argument),
   
-   options("qboot v1.00", "qboot --help (for list of options)\n")
+   options("qboot", "qboot --help (for list of options)\n")
    {
     
      try {
@@ -219,6 +223,7 @@ class qbootOptions {
        options.add(delta);
        options.add(alpha);
        options.add(seed);
+       options.add(gfa);
        options.add(savecoeff);
        options.add(savemeancoeff);
        options.add(verbose);

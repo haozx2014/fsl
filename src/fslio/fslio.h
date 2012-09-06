@@ -200,7 +200,9 @@ void   FslCloneHeader(FSLIO *dest, const FSLIO *src);
 size_t FslGetVolSize(FSLIO *fslio);
 
 void FslSetDim(FSLIO *fslio, short x, short y, short z, short v);
+void FslSetDim5(FSLIO *fslio, short x, short y, short z, short v, short u);
 void FslGetDim(FSLIO *fslio, short *x, short *y, short *z, short *v);
+void FslGetDim5(FSLIO *fslio, short *x, short *y, short *z, short *v, short *u);
 void FslSetDimensionality(FSLIO *fslio, size_t dim);
 void FslGetDimensionality(FSLIO *fslio, size_t *dim);
 void FslSetVoxDim(FSLIO *fslio, float x, float y, float z, float tr);

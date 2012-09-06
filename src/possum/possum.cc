@@ -14,7 +14,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -63,7 +63,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 // POSSUM
 
@@ -95,7 +95,7 @@ using namespace MISCMATHS;
 using namespace Utilities;
 //using namespace std;
 
-string title="possum (Version 2.0)\nCopyright(c) 2007, University of Oxford (Ivana Drobnjak)";
+string title="possum \nCopyright(c) 2007, University of Oxford (Ivana Drobnjak)";
 string examples="possum -i <input phantom volume> -x <MR parameters matrix> -p <pulse> -f <RF slice profile> -m <motion file> -o <output signal matrix> [optional arguments]";
 
 Option<bool> verbose(string("-v,--verbose"), false, 

@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #if !defined(__newimage_h)
 #define __newimage_h
@@ -378,12 +378,15 @@ namespace NEWIMAGE {
     { 
       return((ep_valid[0] || (x>=0 && x<ColumnsX)) && (ep_valid[1] || (y>=0 && y<RowsY)) && (ep_valid[2] || (z>=0 && z<SlicesZ)));
     }
-    bool valid(float x, float y, float z) const
+    bool valid(float x, float y, float z, double tol=1e-8) const
     {
-      int ix=((int) floor(x)); 
-      int iy=((int) floor(y)); 
-      int iz=((int) floor(z));
-      return((ep_valid[0] || (ix>=0 && (ix+1)<ColumnsX)) && (ep_valid[1] || (iy>=0 && (iy+1)<RowsY)) && (ep_valid[2] || (iz>=0 && (iz+1)<SlicesZ)));
+      // int ix=((int) floor(x)); 
+      // int iy=((int) floor(y)); 
+      // int iz=((int) floor(z));
+      return((ep_valid[0] || (x+tol >= 0.0 && x <= ColumnsX-1+tol)) &&
+             (ep_valid[1] || (y+tol >= 0.0 && y <= RowsY-1+tol)) &&
+             (ep_valid[2] || (z+tol >= 0.0 && z <= SlicesZ-1+tol)));
+      // return((ep_valid[0] || (ix>=0 && (ix+1)<ColumnsX)) && (ep_valid[1] || (iy>=0 && (iy+1)<RowsY)) && (ep_valid[2] || (iz>=0 && (iz+1)<SlicesZ)));
     }
     inline T& operator()(int x, int y, int z)
       { set_whole_cache_validity(false); 
@@ -412,6 +415,10 @@ namespace NEWIMAGE {
     inline const T& value(int x, int y, int z) const
       { return *(basicptr(x,y,z)); }
     float interpolatevalue(float x, float y, float z) const;
+    ColumnVector ExtractRow(int j, int k) const;
+    ColumnVector ExtractColumn(int i, int k) const;
+    void SetRow(int j, int k, const ColumnVector& row);
+    void SetColumn(int j, int k, const ColumnVector& col);
 
 
     // SECONDARY FUNCTIONS
@@ -426,6 +433,7 @@ namespace NEWIMAGE {
     interpolation getinterpolationmethod() const { return p_interpmethod; }
     void setsplineorder(unsigned int order) const;
     unsigned int getsplineorder() const { return(splineorder); }
+    void forcesplinecoefcalculation() const { splint(); }
     void setextrapolationvalidity(bool xv, bool yv, bool zv) const { ep_valid[0]=xv; ep_valid[1]=yv; ep_valid[2]=zv; }
     std::vector<bool> getextrapolationvalidity() const { return(ep_valid); }
     void defineuserinterpolation(float (*interp)(
@@ -540,6 +548,7 @@ namespace NEWIMAGE {
   private:
     std::vector<volume<T> > vols;
     float p_TR;
+    int dim5;
 
     mutable std::vector<int> ROIbox;
     mutable bool activeROI;
@@ -660,7 +669,7 @@ namespace NEWIMAGE {
     void setmatrix(const Matrix& newmatrix, const volume<T>& mask, 
 		   const T pad=0);
     void setmatrix(const Matrix& newmatrix); 
-    volume<int> vol2matrixkey(volume<T>& mask); //returns a volume with numbers in relating to matrix colnumbers
+    volume<int> vol2matrixkey(const volume<T>& mask); //returns a volume with numbers in relating to matrix colnumbers
     ReturnMatrix matrix2volkey(volume<T>& mask);
 
 
@@ -672,6 +681,8 @@ namespace NEWIMAGE {
     inline int zsize() const
       { if (vols.size()>0) return vols[0].zsize(); else return 0; }
     inline int tsize() const { return (int) vols.size(); }
+    inline int size5() const { return dim5; }
+    void setsize5(int d5) { if (d5>=1) dim5 = d5; else dim5=1; }
     inline float xdim() const
       { if (vols.size()>0) return vols[0].xdim(); else return 1.0; }
     inline float ydim() const
@@ -1205,6 +1216,7 @@ namespace NEWIMAGE {
   {
     // set up properties (except lazy ones)
     dest.p_TR = source.p_TR;
+    dest.dim5 = source.dim5;
     dest.ROIbox = source.ROIbox;
     dest.enforcelimits(dest.ROIbox);
     dest.activeROI = source.activeROI;

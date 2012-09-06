@@ -16,7 +16,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -65,7 +65,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 //
 
 #ifndef splinterpolator_h
@@ -704,7 +704,7 @@ double Splinterpolator<T>::value_and_derivatives_at(const double       *coord,
 						    double             *dval) 
 const
 {
-  if (should_be_zero(coord)) { memset(dval,n_nonzero(deriv)*sizeof(double),0); return(0.0); }
+  if (should_be_zero(coord)) { memset(dval,0,n_nonzero(deriv)*sizeof(double)); return(0.0); }
 
   double       iwgt[8], jwgt[8], kwgt[8], lwgt[8], mwgt[8];
   double       *wgts[] = {iwgt, jwgt, kwgt, lwgt, mwgt};
@@ -1213,10 +1213,10 @@ inline unsigned int Splinterpolator<T>::indx2indx(int indx, unsigned int d) cons
       return(0);
       break;
     case Zeros: case Mirror:
-      return(1-indx);
+      return((indx%int(_dim[d])) ? _dim[d]-1 : -1-indx%int(_dim[d]));
       break;
     case Periodic:
-      return(_dim[d]+indx);
+      return((indx%int(_dim[d])) ? _dim[d]+indx%int(_dim[d]) : 0);
       break;
     default:
       break;
@@ -1228,10 +1228,10 @@ inline unsigned int Splinterpolator<T>::indx2indx(int indx, unsigned int d) cons
       return(_dim[d]-1);
       break;
     case Zeros: case Mirror:
-      return(2*_dim[d]-indx-1);
+      return(2*_dim[d] - (_dim[d]+indx%int(_dim[d])) - 1);
       break;
     case Periodic:
-      return(indx-_dim[d]);
+      return(indx%int(_dim[d]));
       break;
     default:
       break;

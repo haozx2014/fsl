@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #if !defined(__warpfns_h)
 #define __warpfns_h
@@ -696,7 +696,7 @@ NEWMAT::ColumnVector inv_coord(const volume4D<float>&      warp,
                              // Output
                              volume<T>&               vout,       // Output volume
                              volume4D<T>&             deriv,      // Partial derivative directions
-                             volume<char>&            invol);     // Mask indicating what voxels fell inside original volume
+                             volume<char>&            invol);     // Mask indicating what voxels fell inside original volume (or valid extrapolation)
 
   template<class T>
   void apply_warp(// Input
@@ -707,6 +707,17 @@ NEWMAT::ColumnVector inv_coord(const volume4D<float>&      warp,
                   const NEWMAT::Matrix&   M,
                   // Output
                   volume<T>&              vout);       // Resampled output volume
+
+  template<class T>
+  void apply_warp(// Input
+                  const volume<T>&        vin,         // Input volume
+                  const NEWMAT::Matrix&   A,           // 4x4 affine transform
+                  const volume4D<float>   d,           // Displacement fields
+                  const NEWMAT::Matrix&   TT,
+                  const NEWMAT::Matrix&   M,
+                  // Output
+                  volume<T>&              vout,        // Resampled output volume
+		  volume<char>&           mask);       // Set when inside original volume
 
 
 /////////////////////////////////////////////////////////////////////
@@ -746,6 +757,14 @@ NEWMAT::ColumnVector inv_coord(const volume4D<float>&      warp,
                         const NEWMAT::Matrix&    aff,
                         // Output
                         volume<T>&               vout);
+
+  template <class T>
+  void affine_transform(// Input
+                        const volume<T>&         vin,
+                        const NEWMAT::Matrix&    aff,
+                        // Output
+                        volume<T>&               vout,
+                        volume<char>&            invol);
 
   template <class T>
   void affine_transform_3partial(// Input
@@ -1258,7 +1277,7 @@ NEWMAT::ColumnVector inv_coord(const volume4D<float>&      warp,
     raw_general_transform(vin,A,d,defdir,derivdir,0,0,vout,deriv,&invol);    
   }
 
-  // This routine supplies a convenient interface for applywarp.
+  // These routines supply a convenient interface for applywarp.
 
   template<class T>
   void apply_warp(// Input
@@ -1283,9 +1302,35 @@ NEWMAT::ColumnVector inv_coord(const volume4D<float>&      warp,
     raw_general_transform(vin,A,d,defdir,derivdir,Tptr,Mptr,vout,deriv,NULL);
   }
 
+  template<class T>
+  void apply_warp(// Input
+                  const volume<T>&        vin,         // Input volume
+                  const NEWMAT::Matrix&   A,           // 4x4 affine transform
+                  const volume4D<float>   d,           // Displacement fields
+                  const NEWMAT::Matrix&   TT,
+                  const NEWMAT::Matrix&   M,
+                  // Output
+                  volume<T>&              vout,        // Resampled output volume
+		  volume<char>&           mask)        // Set when inside original volume
+  {
+    std::vector<int>  defdir(3);
+    for (int i=0; i<3; i++) defdir[i] = i;
+    std::vector<int>          derivdir;
+    volume4D<T>               deriv;
+    const NEWMAT::Matrix      *Tptr = NULL;
+    const NEWMAT::Matrix      *Mptr = NULL;
+    mask.reinitialize(vout.xsize(),vout.ysize(),vout.zsize());  // Just to be certain
+    copybasicproperties(vout,mask);
+
+    if ((TT-IdentityMatrix(4)).MaximumAbsoluteValue() > 1e-6) Tptr = &TT;
+    if ((M-IdentityMatrix(4)).MaximumAbsoluteValue() > 1e-6) Mptr = &M;
+
+    raw_general_transform(vin,A,d,defdir,derivdir,Tptr,Mptr,vout,deriv,&mask);
+  }
+
 /////////////////////////////////////////////////////////////////////
 //
-// The following three routines are interafaces to mimick the old
+// The following three routines are interfaces to mimick the old
 // functions apply_warp and raw_apply_warp. These are used mainly 
 // for resampling of images that are typically related to the
 // input to e.g. fnirt or fugue through some rigid matrix M. 
@@ -1343,7 +1388,7 @@ NEWMAT::ColumnVector inv_coord(const volume4D<float>&      warp,
 
     defdir[0] = 0; defdir[1] = 1; defdir[2] = 2;
 
-    raw_general_transform(invol,A,warpvol,defdir,derivdir,postmat,premat,outvol,deriv);
+    raw_general_transform(invol,A,warpvol,defdir,derivdir,&postmat,&premat,outvol,deriv,NULL);
 
     return(0);
   }
@@ -1366,6 +1411,21 @@ NEWMAT::ColumnVector inv_coord(const volume4D<float>&      warp,
     vector<int>      pderivdir;
 
     raw_general_transform(vin,aff,pdf,pdefdir,pderivdir,vout,deriv);
+  }
+  template <class T>
+  void affine_transform(// Input
+                        const volume<T>&         vin,
+                        const NEWMAT::Matrix&    aff,
+                        // Output
+                        volume<T>&               vout,
+                        volume<char>&            invol)
+  {
+    volume4D<float>  pdf;
+    vector<int>      pdefdir;
+    volume4D<float>  deriv;
+    vector<int>      pderivdir;
+
+    raw_general_transform(vin,aff,pdf,pdefdir,pderivdir,vout,deriv,invol);
   }
   template <class T>
   void affine_transform_3partial(// Input

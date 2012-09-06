@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include "fwdmodel_linear.h"
 #include <iostream>
@@ -76,7 +76,7 @@ using namespace NEWIMAGE;
 
 string LinearFwdModel::ModelVersion() const
 {
-  return "$Id: fwdmodel_linear.cc,v 1.17 2008/03/17 13:00:49 adriang Exp $";
+  return "$Id: fwdmodel_linear.cc,v 1.18 2011/08/04 13:36:35 chappell Exp $";
 }
 
 void LinearFwdModel::ModelUsage()
@@ -152,6 +152,11 @@ void LinearizedFwdModel::ReCentre(const ColumnVector& about)
   jacobian.ReSize(offset.Nrows(), centre.Nrows());
   // jacobian = 0.0/0.0; // fill with NaNs to check
   
+  // try and get the gradient from the model first
+  int gradfrommodel=false;
+  gradfrommodel = fcn->Gradient(centre,jacobian);
+
+  if (!gradfrommodel) {
   ColumnVector centre2, centre3;
   ColumnVector offset2, offset3;
   for (int i = 1; i <= centre.Nrows(); i++)
@@ -179,6 +184,7 @@ LOG << "Jac 33,4 == " << jacobian(33,4) << endl;
 }
 //*/
     }   
+  }
 
   if (0*jacobian != 0*jacobian) 
     {

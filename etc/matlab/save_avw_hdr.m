@@ -85,6 +85,6 @@ end
 
 % call avwcreatehd program
 
-tmp=sprintf('sh -c ". ${FSLDIR}/etc/fslconf/fsl.sh; FSLOUTPUTTYPE=NIFTI_PAIR; export FSLOUTPUTTYPE; $FSLDIR/bin/fslcreatehd %d %d %d %d %6.4f %6.4f %6.4f %6.4f 0 0 0 %d %s"',dims(1),dims(2),dims(3),dims(4),vsize(1),vsize(2),vsize(3),vsize(4),dtype,fname);
+tmp=sprintf('sh -c ". ${FSLDIR}/etc/fslconf/fsl.sh; FSLOUTPUTTYPE=NIFTI_PAIR; export FSLOUTPUTTYPE; LD_LIBRARY_PATH=$FSLDIR/bin $FSLDIR/bin/fslcreatehd %d %d %d %d %6.4f %6.4f %6.4f %6.4f 0 0 0 %d %s"',dims(1),dims(2),dims(3),dims(4),vsize(1),vsize(2),vsize(3),vsize(4),dtype,fname);
 system(tmp);
 disp(' ');

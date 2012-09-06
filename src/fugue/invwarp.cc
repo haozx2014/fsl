@@ -1,6 +1,6 @@
 /*  invwarp.cc
 
-    Mark Jenkinson, FMRIB Image Analysis Group
+    Mark Jenkinson and Matthew Webster, FMRIB Image Analysis Group
 
     Copyright (C) 2001-2006 University of Oxford  */
 
@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include "utils/options.h"
 #include "miscmaths/miscmaths.h"
@@ -88,7 +88,7 @@ bool abs_warp=true;
 
 // COMMAND LINE OPTIONS
 
-string title="invwarp (Version 1.2)\nCopyright(c) 2007, University of Oxford (Mark Jenkinson)";
+string title="invwarp \nCopyright(c) 2007, University of Oxford (Mark Jenkinson)";
 string examples="invwarp -w warpvol -o invwarpvol -r refvol";
 
 Option<bool> verbose(string("-v,--verbose"), false, 

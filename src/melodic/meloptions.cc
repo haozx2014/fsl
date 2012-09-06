@@ -1,4 +1,3 @@
-
 /*  MELODIC - Multivariate exploratory linear optimized decomposition into 
               independent components
     
@@ -19,7 +18,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -68,7 +67,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include <iostream>
 #include <iomanip>
@@ -179,9 +178,6 @@ MelodicOptions* MelodicOptions::gopt = NULL;
 					cerr << "WARNING: melodic denoising is deprecated, please use fsl_regfilt instead!" <<endl;
     		} 
   		}
-  		if (threshold.value()<=0){
-    		use_mask.set_T(false);
-  		}
   		if (output_all.value()){
     		output_unmix.set_T(true);
     		output_MMstats.set_T(true);
@@ -226,9 +222,12 @@ MelodicOptions* MelodicOptions::gopt = NULL;
     		ifstream fs(inputfname.value().at(0).c_str());
     		string cline;
     		while (!fs.eof()) {
-      		getline(fs,cline);
-      		if(cline.length()>0)
-						tmpfnames.push_back(cline);
+		  getline(fs,cline);
+		  if(cline.length()>0) {
+		    while ( cline.find(' ') != cline.npos )
+		      cline.erase( cline.find(' '),1);
+		    tmpfnames.push_back(cline);
+		  }
     		}	
     		fs.close();
     		inputfname.set_T(tmpfnames);

@@ -14,7 +14,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -63,7 +63,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 // TESTING_POSSUM
 
@@ -93,7 +93,7 @@ using namespace MISCMATHS;
 using namespace Utilities;
 //using namespace std;
 
-string title="test_possum (Version 1.0)\nCopyright(c) 2003, University of Oxford (Ivana Drobnjak)";
+string title="\nCopyright(c) 2003, University of Oxford (Ivana Drobnjak)";
 string examples="test_possum ";
 
 Option<bool>   verbose(string("-v,--verbose"), false, 

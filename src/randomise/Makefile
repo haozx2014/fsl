@@ -9,7 +9,7 @@ LIBS = -lnewimage -lmiscmaths -lutils -lm -lnewmat -lfslio -lniftiio -lznz -lpro
 
 XFILES = randomise fdr unconfound
 
-SCRIPTS = design_ttest2 randomise_parallel
+SCRIPTS = design_ttest2 randomise_parallel tfce_support randomise_combine setup_masks 
 
 R_OBJS = randomise.o ranopts.o
 

@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 // Calculates the p-threshold or minimum q rate image from an
 //  input 3D probability image (values of 0 for p are ignored)
@@ -95,7 +95,13 @@ Option<bool> debug(string("--debug"), false,
 		     string("switch on debugging output"), 
 		     false, no_argument);
 Option<bool> conservativetest(string("--conservative"), false,
-			      string("use conservative FDR correction factor"),
+			      string("use conservative FDR correction factor (allows for any correlation)"),
+			      false, no_argument);
+Option<bool> positivecorrtest(string("--positivecorr"), false,
+			      string("use FDR correction factor that assumes positive correlation (default)"),
+			      false, no_argument);
+Option<bool> independenttest(string("--independent"), false,
+			      string("use FDR correction factor that assumes independence"),
 			      false, no_argument);
 Option<bool> invertp(string("--oneminusp"), false,
 			      string("treat input as 1-p (also save output like this)"),
@@ -185,13 +191,17 @@ int do_work(int argc, char* argv[], int nonoptarg)
   // calculate FDR threshold required to make each voxel significant
   // FDR formula is: p = n*q / (N * C)  
   //   where n=order index, N=total number of p values, 
-  //         C=1 for the simple case, and 
+  //         C=1 for the simple case (including positive correlations), and 
   //         C=1/1 + 1/2 + 1/3 + ... + 1/N for the most general correlation
   // We use the inverse formula: q_{min} = N*C*p / n
 
   if (verbose.value()) { cerr << "Calculating FDR values" << endl; } 
+  bool conservativecorrection=false;  // the default
+  if (conservativetest.set()) conservativecorrection=true;  // this is overridden by any of the other options
+  if (independenttest.set())  conservativecorrection=false;
+  if (positivecorrtest.set()) conservativecorrection=false;
   float C=1.0;
-  if (conservativetest.value()) {
+  if (conservativecorrection) {
     for (int n=2; n<=Ntot; n++) { C+=1.0/((double) n); }
   }
 
@@ -259,6 +269,8 @@ int main(int argc,char *argv[])
     options.add(othresh);
     options.add(ordername);
     options.add(invertp);
+    options.add(positivecorrtest);
+    options.add(independenttest);
     options.add(conservativetest);
     options.add(debug);
     options.add(verbose);

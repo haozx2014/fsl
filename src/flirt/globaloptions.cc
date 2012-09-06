@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,11 +64,12 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include "globaloptions.h"
 
 globaloptions* globaloptions::gopt = NULL;
+
 
 void globaloptions::parse_command_line(int argc,char** argv,
 				       const string &p_version)
@@ -156,6 +157,10 @@ void globaloptions::parse_command_line(int argc,char** argv,
       nosave = false;
       n++;
       continue;
+   } else if ( arg == "-debug" ) {
+      debug = true;
+      n++;
+      continue;
    } else if ( arg == "-v" ) {
       verbose = 1;
       n++;
@@ -200,6 +205,31 @@ void globaloptions::parse_command_line(int argc,char** argv,
       useweights = true;
       n+=2;
       continue;
+    } else if ( arg == "-wmseg") {
+      wmsegfname = argv[n+1];
+      useseg = true;
+      n+=2;
+      continue;
+    } else if ( arg == "-fieldmap") {
+      fmapfname = argv[n+1];
+      n+=2;
+      continue;
+    } else if ( arg == "-fieldmapmask") {
+      fmapmaskfname = argv[n+1];
+      n+=2;
+      continue;
+    } else if ( arg == "-wmcoords") {
+      wmcoordsfname = argv[n+1];
+      useseg = true;
+      usecoords = true;
+      n+=2;
+      continue;
+    } else if ( arg == "-wmnorms") {
+      wmnormsfname = argv[n+1];
+      useseg = true;
+      usecoords = true;
+      n+=2;
+      continue;
     } else if ( arg == "-omat") {
       outputmatascii = argv[n+1];
       n+=2;
@@ -237,12 +267,37 @@ void globaloptions::parse_command_line(int argc,char** argv,
       min_sampling = atof(argv[n+1]);
       n+=2;
       continue;
+    } else if ( arg == "-setbackground") {
+      backgndval = atof(argv[n+1]);
+      forcebackgnd = true;
+      n+=2;
+      continue;
     } else if ( arg == "-coarsesearch") {
       coarsedelta = atof(argv[n+1])*M_PI/180.0;
       n+=2;
       continue;
     } else if ( arg == "-finesearch") {
       finedelta = atof(argv[n+1])*M_PI/180.0;
+      n+=2;
+      continue;
+    } else if ( arg == "-echospacing") {
+      echo_spacing = atof(argv[n+1]);
+      n+=2;
+      continue;
+    } else if ( arg == "-pedir") {
+      pe_dir = atoi(argv[n+1]);
+      if (pe_dir==0) {
+	cerr << "Unrecognised argument to pedir (" << argv[n+1] << ") - it should be a number between -3 and 3 (not 0)" << endl;
+	exit(-1);
+      }
+      n+=2;
+      continue;
+    } else if ( arg == "-bbrtype") {
+      bbr_type = argv[n+1];
+      n+=2;
+      continue;
+    } else if ( arg == "-bbrslope") {
+      bbr_slope = atof(argv[n+1]);
       n+=2;
       continue;
     } else if ( arg == "-verbose") {
@@ -273,21 +328,8 @@ void globaloptions::parse_command_line(int argc,char** argv,
     } else if ( arg == "-cost") {
       {
 	string costarg = argv[n+1];
-	if (costarg == "mutualinfo") {
-	  maincostfn = MutualInfo;
-	} else if (costarg == "corratio") {
-	  maincostfn = CorrRatio;
-	} else if (costarg == "woods") {
-	  maincostfn = Woods;
-	} else if (costarg == "normcorr") {
-	  maincostfn = NormCorr;
-	} else if (costarg == "normmi") {
-	  maincostfn = NormMI;
-	} else if (costarg == "leastsq") {
-	  maincostfn = LeastSq;
-	} else if (costarg == "labeldiff") {
-	  maincostfn = LabelDiff;
-	} else {
+	maincostfn = costfn_type(costarg);
+	if (maincostfn == Unknown) {
 	  cerr << "Unrecognised cost function type: " << costarg << endl;
 	  exit(-1);
 	}
@@ -297,21 +339,8 @@ void globaloptions::parse_command_line(int argc,char** argv,
     } else if ( arg == "-searchcost") {
       {
 	string costarg = argv[n+1];
-	if (costarg == "mutualinfo") {
-	  searchcostfn = MutualInfo;
-	} else if (costarg == "corratio") {
-	  searchcostfn = CorrRatio;
-	} else if (costarg == "woods") {
-	  searchcostfn = Woods;
-	} else if (costarg == "normcorr") {
-	  searchcostfn = NormCorr;
-	} else if (costarg == "normmi") {
-	  searchcostfn = NormMI;
-	} else if (costarg == "leastsq") {
-	  searchcostfn = LeastSq;
-	} else if (costarg == "labeldiff") {
-	  searchcostfn = LabelDiff;
-	} else {
+	searchcostfn = costfn_type(costarg);
+	if (searchcostfn == Unknown) {
 	  cerr << "Unrecognised cost function type: " << costarg << endl;
 	  exit(-1);
 	}
@@ -327,6 +356,8 @@ void globaloptions::parse_command_line(int argc,char** argv,
 	  interpmethod = NearestNeighbour;
 	} else if (interparg == "sinc") {
 	  interpmethod = NEWIMAGE::Sinc;
+	} else if (interparg == "spline") {
+	  interpmethod = NEWIMAGE::Spline;
 	} else {
 	  cerr << "Unrecognised interpolation method: " << interparg << endl;
 	  exit(-1);
@@ -425,12 +456,12 @@ void globaloptions::print_usage(int argc, char *argv[])
        << "        -omat <matrix-filename>            (output in 4x4 ascii format)\n"
        << "        -out, -o <outputvol>               (default is none)\n"
        << "        -datatype {char,short,int,float,double}                    (force output data type)\n"
-       << "        -cost {mutualinfo,corratio,normcorr,normmi,leastsq,labeldiff}        (default is corratio)\n"
-       << "        -searchcost {mutualinfo,corratio,normcorr,normmi,leastsq,labeldiff}  (default is corratio)\n"
+       << "        -cost {mutualinfo,corratio,normcorr,normmi,leastsq,labeldiff,bbr}        (default is corratio)\n"
+       << "        -searchcost {mutualinfo,corratio,normcorr,normmi,leastsq,labeldiff,bbr}  (default is corratio)\n"
        << "        -usesqform                         (initialise using appropriate sform or qform)\n"
        << "        -displayinit                       (display initial matrix)\n"
        << "        -anglerep {quaternion,euler}       (default is euler)\n"
-       << "        -interp {trilinear,nearestneighbour,sinc}  (final interpolation: def - trilinear)\n"
+       << "        -interp {trilinear,nearestneighbour,sinc,spline}  (final interpolation: def - trilinear)\n"
        << "        -sincwidth <full-width in voxels>  (default is 7)\n"
        << "        -sincwindow {rectangular,hanning,blackman}\n"
        << "        -bins <number of histogram bins>   (default is "
@@ -453,6 +484,16 @@ void globaloptions::print_usage(int argc, char *argv[])
        << "        -schedule <schedule-file>          (replaces default schedule)\n"
        << "        -refweight <volume>                (use weights for reference volume)\n"
        << "        -inweight <volume>                 (use weights for input volume)\n"
+       << "        -wmseg <volume>                    (white matter segmentation volume needed by BBR cost function)\n"
+       << "        -wmcoords <text matrix>            (white matter boundary coordinates for BBR cost function)\n"
+       << "        -wmnorms <text matrix>             (white matter boundary normals for BBR cost function)\n"
+       << "        -fieldmap <volume>                 (fieldmap image in rads/s - must be already registered to the reference image)\n"
+       << "        -fieldmapmask <volume>             (mask for fieldmap image)\n"
+       << "        -pedir <index>                     (phase encode direction of EPI - 1/2/3=x/y/z & -1/-2/-3=-x/-y/-z)\n"
+       << "        -echospacing <value>               (value of EPI echo spacing - units of seconds)\n"
+       << "        -bbrtype <value>                   (type of bbr cost function: signed [default], global_abs, local_abs)\n"
+       << "        -bbrslope <value>                  (value of bbr slope)\n"
+       << "        -setbackground <value>             (use specified background value for points outside FOV)\n"
        << "        -noclamp                           (do not use intensity clamping)\n"
        << "        -noresampblur                      (do not use blurring on downsampling)\n"
        << "        -2D                                (use 2D rigid body mode - ignores dof)\n"

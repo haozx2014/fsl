@@ -16,7 +16,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
+#   FMRIB Software Library, Release 5.0 (c) 2012, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -65,7 +65,7 @@
 #   interested in using the Software commercially, please contact Isis
 #   Innovation Limited ("Isis"), the technology transfer company of the
 #   University, to negotiate a licence. Contact details are:
-#   innovation@isis.ox.ac.uk quoting reference DE/1112.
+#   innovation@isis.ox.ac.uk quoting reference DE/9564.
 
 #{{{ setup
 
@@ -210,7 +210,7 @@ pack $w.f.statsentries(0) -anchor w -side bottom
 	[winfo toplevel %W].cancel invoke
     }
 
-    button $w.help -command "FmribWebHelp file: ${FSLDIR}/doc/renderstats/index.html" \
+    button $w.help -command "FmribWebHelp file: ${FSLDIR}/doc/redirects/miscvis.html" \
             -text "Help" -width 5
     bind $w.help <Return> {
         [winfo toplevel %W].help invoke

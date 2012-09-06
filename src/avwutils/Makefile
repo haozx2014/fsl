@@ -3,8 +3,8 @@ include ${FSLCONFDIR}/default.mk
 
 PROJNAME = avwutils
 
-USRINCFLAGS = -I${INC_NEWMAT} -I${INC_ZLIB}
-USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_ZLIB}
+USRINCFLAGS = -I${INC_NEWMAT} -I${INC_PROB} -I${INC_ZLIB}
+USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_PROB} -L${LIB_ZLIB}
 
 LIBS = -lnewimage -lmiscmaths -lprob -lfslio -lnewmat -lutils -lniftiio -lznz -lm -lz
 
@@ -14,9 +14,9 @@ XFILES = fslorient fslstats fslmerge \
          fslpspec fslroi fslnvols fsl2ascii fslascii2img  \
          fslsplit fslcc fslinterleave \
          fslhd fslcpgeom fslcreatehd fslcorrecthd fslmaths \
-         fslcomplex fslfft fslmeants fslslice fslswapdim_exe fslchfiletype_exe
+         fslcomplex fslfft fslmeants fslslice fslswapdim_exe fslchfiletype_exe fslsmoothfill
 
-SCRIPTS = fslval fslchpixdim fslanimate fslsize sliceanimate fslinfo fsledithd avw2fsl fslswapdim fslchfiletype fslreorient2std
+SCRIPTS = fslval fslchpixdim fslanimate fslsize sliceanimate fslinfo fsledithd avw2fsl fslswapdim fslchfiletype fslreorient2std fslmodhd fsladd
 
 FSCRIPTS = fmriborient 
 
@@ -95,4 +95,7 @@ fsldecorr4d: fsldecorr4d.o
 
 fslchfiletype_exe: fslchfiletype.o
 	${CXX} ${CXXFLAGS} ${LDFLAGS} -o fslchfiletype_exe fslchfiletype.o ${LIBS}
+
+fslsmoothfill: fslsmoothfill.o
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ fslsmoothfill.o ${LIBS}
 

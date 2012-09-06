@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include "fwdmodel.h"
 
@@ -79,8 +79,14 @@ string FwdModel::ModelVersion() const
   // Something like this:
   // return " $ I d $ "; // without the spaces
   // CVS will automatically replace this with version information that looks
-  // like this: $Id: fwdmodel.cc,v 1.21 2008/04/25 14:55:18 chappell Exp $
+  // like this: $Id: fwdmodel.cc,v 1.30 2011/08/24 13:11:49 chappell Exp $
   // It should probably go in your .cc file, not the header.
+}
+
+int FwdModel::Gradient(const ColumnVector& params, Matrix& grad) const
+{
+  // by default return false -> no gradient is supplied by this model
+  return false;
 }
 
 int FwdModel::NumOutputs() const
@@ -104,13 +110,46 @@ void FwdModel::DumpParameters(const ColumnVector& params,
     LOG << indent << "Total of " << NumParams() << " parameters." << endl;
 }
 
+void FwdModel::pass_in_coords( const ColumnVector& coords )
+{
+  coord_x = coords(1);
+  coord_y = coords(2);
+  coord_z = coords(3);
+}
+
 #include "fwdmodel_simple.h"
 #include "fwdmodel_quipss2.h"
+#include "fwdmodel_q2tips.h"
+#include "fwdmodel_pcASL.h"
+#include "fwdmodel_flobs.h"
+#include "fwdmodel_custom.h"
+
+#include "fwdmodel_cest.h"
+#ifdef __OXASL
+// models associated with Oxford_asl components
 #include "fwdmodel_asl_grase.h"
 #include "fwdmodel_asl_buxton.h"
-#include "fwdmodel_q2tips.h"
-#include "fwdmodel_flobs.h"
+#include "fwdmodel_asl_pvc.h"
+#include "fwdmodel_asl_satrecov.h"
+#include "fwdmodel_asl_quasar.h"
+#endif /*__OXASL */
+
+#ifdef __DEVEL
+// development models (not to be complied in FSL)
 #include "fwdmodel_dsc.h"
+#include "fwdmodel_asl_devel.h"
+//#include "fwdmodel_asl_2cpt.h"
+//#include "fwdmodel_asl_multite.h"
+//#include "fwdmodel_cest_devel.h"
+#include "fwdmodel_asl_dynangio.h"
+#include "fwdmodel_fasl.h"
+#include "fwdmodel_oef.h"
+#include "fwdmodel_biexp.h"
+#include "fwdmodel_deconv.h"
+#include "fwdmodel_flex.h"
+#include "fwdmodel_asl_samira.h"
+#endif /* __DEVEL */
+
 // Add your models here
 
 FwdModel* FwdModel::NewFromName(const string& name, ArgsType& args)
@@ -130,13 +169,9 @@ FwdModel* FwdModel::NewFromName(const string& name, ArgsType& args)
     {
         return new Q2tipsFwdModel(args);
     } 
-    else if (name == "buxton")
+    else if (name == "pcasl-dualecho")
       {
-	return new GraseFwdModel(args);
-      }
-    else if (name == "buxton_simple")
-      {
-	return new BuxtonFwdModel(args);
+	return new pcASLFwdModel(args);
       }
     else if (name == "linear")
       {
@@ -154,9 +189,93 @@ FwdModel* FwdModel::NewFromName(const string& name, ArgsType& args)
 	// flobs5 = b1X1 + b1b2X2 parameterization
         return new FlobsFwdModel(args, false);
       }
+
+    else if (name == "cest")
+      {
+	return new CESTFwdModel(args);
+      }
+	
+#ifdef __OXASL
+	//models associated with Oxford_asl components
+	else if (name == "buxton")
+	{
+		return new GraseFwdModel(args);
+	}
+    else if (name == "buxton_simple")
+	{
+		return new BuxtonFwdModel(args);
+	}
+    else if (name == "aslpvc")
+	{
+		return new ASL_PVC_FwdModel(args);
+	}
+	else if (name == "satrecov")
+	{
+		return new SatrecovFwdModel(args);
+	}
+	else if (name == "quasar")
+      {
+	return new QuasarFwdModel(args);
+      }
+#endif /* __OXASL */
+	
+#ifdef __DEVEL
+// development models (not to be complied in FSL)
     else if (name == "dsc")
       {
 	return new DSCFwdModel(args);
+      }
+    else if (name == "devel")
+      {
+	return new DevelFwdModel(args);
+      }
+    
+
+    // else if (name == "cestdevel")
+    //  {
+    //	return new CESTDevelFwdModel(args);
+    //  }
+    else if (name == "dynangio")
+      {
+	return new DynAngioFwdModel(args);
+      }
+    else if (name == "fasl")
+      {
+	return new FASLFwdModel(args);
+      }
+    else if (name == "oef")
+      {
+	return new OEFFwdModel(args);
+      }
+    else if (name == "biexp")
+      {
+	return new BiExpFwdModel(args);
+      }
+    else if (name == "deconv")
+      {
+	return new DeconvModel(args);
+      }
+    else if (name == "flex")
+      {
+	return new FLEXFwdModel(args);
+      }
+    else if (name == "samira")
+      {
+	return new SamiraFwdModel(args);
+      }
+    //    else if (name == "twocpt")
+    //  {
+    //	return new TwoCptFwdModel(args);
+    //  }
+    //else if (name == "multite")
+    //  {
+    //	return new multiTEFwdModel(args);
+    //  }
+#endif /* __DEVEL */
+    
+    else if (name == "custom")
+      {
+	return new CustomFwdModel(args);
       }
     // Your models go here!
     else
@@ -184,18 +303,39 @@ void FwdModel::ModelUsageFromName(const string& name, ArgsType& args)
         cout << "Note: --model=q2tips uses exactly the same options as --model=quipss2:\n";
 	Quipss2FwdModel::ModelUsage();
     } 
-    else if (name == "buxton")
+    if (name == "pcasl-dualecho")
       {
-	GraseFwdModel::ModelUsage();
-      }
-    else if (name == "buxton-simple")
-      {
-	BuxtonFwdModel::ModelUsage();
+	pcASLFwdModel::ModelUsage();
       }
     else if (name == "linear")
       {
 	LinearFwdModel::ModelUsage();
       }
+    else if (name == "custom")
+      {
+	CustomFwdModel::ModelUsage();
+      }
+
+#ifdef _OXASL
+	else if (name == "buxton")
+	{
+		GraseFwdModel::ModelUsage();
+	}
+    else if (name == "buxton-simple")
+	{
+		BuxtonFwdModel::ModelUsage();
+	}
+    else if (name == "asl_pvc")
+	{
+		ASL_PVC_FwdModel::ModelUsage();
+	}
+	
+#endif /* __OXASL */
+	
+#ifdef __DEVEL
+
+#endif /* __DEVEL */
+
     // Your models go here!
     else
     {

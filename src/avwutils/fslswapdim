@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 
 #   Extended syntax for fslswapdim
 #
@@ -18,7 +19,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
+#   FMRIB Software Library, Release 5.0 (c) 2012, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -67,7 +68,7 @@
 #   interested in using the Software commercially, please contact Isis
 #   Innovation Limited ("Isis"), the technology transfer company of the
 #   University, to negotiate a licence. Contact details are:
-#   innovation@isis.ox.ac.uk quoting reference DE/1112.
+#   innovation@isis.ox.ac.uk quoting reference DE/9564.
 
 
 get_axis(){
@@ -87,7 +88,6 @@ get_axis(){
     echo $ax;
 }
 
-
 if [ $# -lt 4 ] ; then
   echo "Usage: fslswapdim <input> <a> <b> <c> [output]
 
@@ -100,6 +100,7 @@ if [ $# -lt 4 ] ; then
   (to match the avg152 images)"
   exit 1;
 fi
+
 
 filetype=`$FSLDIR/bin/fslval $1 file_type`;
 if [ $filetype = "ANALYZE-7.5" ] ; then
@@ -122,7 +123,9 @@ fi
 
 uselabels=no
 
-comm="$FSLDIR/bin/fslswapdim_exe $1"
+comm1="$FSLDIR/bin/fslswapdim_exe $1"
+comm2=""
+swaplabs=""
 for fn in $2 $3 $4 ; do
     cc=`echo Q$fn | sed 's/[RLAPIS]//g'`;
     if [ $cc = "Q" ] ; then
@@ -139,14 +142,30 @@ for fn in $2 $3 $4 ; do
     else 
 	cc=$fn;
     fi
-    comm="$comm $cc";
+    comm2="$comm2 $cc";
+    swaplabs="$swaplabs $cc"
 done
+
+# check if just a simple copy is good enough (only if an output filename is specified)
+if [ "$swaplabs" = " x y z" ] ; then
+    if [ X$5 != X ] ; then
+	if [ `$FSLDIR/bin/remove_ext $1` != `$FSLDIR/bin/remove_ext $5` ] ; then
+	    comm="$FSLDIR/bin/imcp $1 $5"
+	    $comm
+	    exit 0
+	fi
+    else
+	cat $FSLDIR/etc/flirtsch/ident.mat
+	exit 0
+    fi
+fi
+
 
 # Check if the labels are used *and* it is doing a left-right inversion
 if [ $uselabels = yes ] ; then
-    tmpf=`$FSLDIR/bin/tmpnam`_sd
-    $comm > $tmpf 2>&1
-    wl=`grep WARNING $tmpf | wc -l`;
+    # the line below just checks the swapping syntax - it does not require the true image, as any will do since the arguments are now reduced to x/y/z format
+    check="`$FSLDIR/bin/fslswapdim_exe $FSLDIR/data/standard/MNI152_T1_2mm_brain $comm2 --checkLR`"
+    wl=`echo $check | grep -i changed | wc -l`;
     if [ $wl -gt 0 ] ; then
 	echo "Cannot perform requested swap (NEUROLOGICAL/RADIOLOGICAL storage inverted)"
 	echo "Try the following command instead:"
@@ -156,7 +175,7 @@ if [ $uselabels = yes ] ; then
     fi
 fi
 
-comm="$comm $5"
+comm="$comm1 $comm2 $5"
 
 # verbose?
 #echo $comm

@@ -3,10 +3,71 @@
  *  
  *
  *  Created by Brian Patenaude on 12/08/2008.
- *  Copyright 2008 __MyCompanyName__. All rights reserved.
+ *  Copyright 2008 University of Oxford. All rights reserved.
  *
  */
- 
+/*  Part of FSL - FMRIB's Software Library
+    http://www.fmrib.ox.ac.uk/fsl
+    fsl@fmrib.ox.ac.uk
+    
+    Developed at FMRIB (Oxford Centre for Functional Magnetic Resonance
+    Imaging of the Brain), Department of Clinical Neurology, Oxford
+    University, Oxford, UK
+    
+    
+    LICENCE
+    
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
+    Oxford (the "Software")
+    
+    The Software remains the property of the University of Oxford ("the
+    University").
+    
+    The Software is distributed "AS IS" under this Licence solely for
+    non-commercial use in the hope that it will be useful, but in order
+    that the University as a charitable foundation protects its assets for
+    the benefit of its educational and research purposes, the University
+    makes clear that no condition is made or to be implied, nor is any
+    warranty given or to be implied, as to the accuracy of the Software,
+    or that it will be suitable for any particular purpose or for use
+    under any specific conditions. Furthermore, the University disclaims
+    all responsibility for the use which is made of the Software. It
+    further disclaims any liability for the outcomes arising from using
+    the Software.
+    
+    The Licensee agrees to indemnify the University and hold the
+    University harmless from and against any and all claims, damages and
+    liabilities asserted by third parties (including claims for
+    negligence) which arise directly or indirectly from the use of the
+    Software or the sale of any products based on the Software.
+    
+    No part of the Software may be reproduced, modified, transmitted or
+    transferred in any form or by any means, electronic or mechanical,
+    without the express permission of the University. The permission of
+    the University is not required if the said reproduction, modification,
+    transmission or transference is done without financial return, the
+    conditions of this Licence are imposed upon the receiver of the
+    product, and all original and amended source code is included in any
+    transmitted product. You may be held legally responsible for any
+    copyright infringement that is caused or encouraged by your failure to
+    abide by these terms and conditions.
+    
+    You are not permitted under this Licence to use this Software
+    commercially. Use for which any financial return is received shall be
+    defined as commercial use, and includes (1) integration of all or part
+    of the source code or the Software into a product for sale or license
+    by or on behalf of Licensee to third parties or (2) use of the
+    Software or any derivative of it for research with the final aim of
+    developing software products for sale or license to a third party or
+    (3) use of the Software or any derivative of it for research with the
+    final aim of developing non-software products for sale or license to a
+    third party, or (4) use of the Software to provide any service to an
+    external organisation for which payment is received. If you are
+    interested in using the Software commercially, please contact Isis
+    Innovation Limited ("Isis"), the technology transfer company of the
+    University, to negotiate a licence. Contact details are:
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
+
 #include "first_mesh.h"
 using namespace std;
 using namespace NEWIMAGE;
@@ -112,17 +173,37 @@ volume<short> first_mesh::make_mask_from_mesh(const volume<float> & image, const
 	volume<short> mask;
 	copyconvert(image,mask);
 	
+	int boundsNew[6];// = *bounds;
+	for (int i=0;i<6;i++)
+		boundsNew[i]=bounds[i];
 	mask = 0;
 	mask = draw_mesh(mask, m, triangles, label);
 	
 	volume<short> otl=mask;
 	
 	vector<float> currentX,currentY,currentZ;
+	if (boundsNew[0]<0) boundsNew[0]=0;
+	if (boundsNew[2]<0) boundsNew[2]=0;
+	if (boundsNew[4]<0) boundsNew[4]=0;
 	
-	mask.value(bounds[0]-2, bounds[2]-2, bounds[4]-2) = label;
-	currentX.push_back(bounds[0]-2);
-	currentY.push_back(bounds[2]-2);
-	currentZ.push_back(bounds[4]-2);
+	if (boundsNew[1]>=image.xsize()-1) boundsNew[1]=image.xsize()-1; 
+	if (boundsNew[3]>=image.ysize()-1) boundsNew[3]=image.ysize()-1;
+	if (boundsNew[5]>=image.zsize()-1) boundsNew[5]=image.zsize()-1; 
+	
+	float start_x=boundsNew[0]-2;
+	float start_y=boundsNew[2]-2;
+	float start_z=boundsNew[4]-2;
+	
+	if (boundsNew[0]<2) start_x=0;
+	if (boundsNew[2]<2) start_y=0;
+	if (boundsNew[4]<2) start_z=0;
+	
+	
+	mask.value(start_x,start_y,start_z) = label;
+	
+	currentX.push_back(start_x);
+	currentY.push_back(start_y);
+	currentZ.push_back(start_z);
 	
 	while (!currentX.empty())
 	{
@@ -135,7 +216,7 @@ volume<short> first_mesh::make_mask_from_mesh(const volume<float> & image, const
 		currentY.pop_back();
 		currentZ.pop_back();
 
-		if (bounds[0]<=x-1 && mask.value(x-1, y, z)==0) 
+		if (boundsNew[0]<=x-1 && mask.value(x-1, y, z)==0) 
 		{
 			mask.value(x-1, y, z) = label;
 			currentX.push_back(x-1);
@@ -143,7 +224,7 @@ volume<short> first_mesh::make_mask_from_mesh(const volume<float> & image, const
 			currentZ.push_back(z);
 
 		}
-		if (bounds[2]<=y-1 && mask.value(x, y-1, z)==0) 
+		if (boundsNew[2]<=y-1 && mask.value(x, y-1, z)==0) 
 		{
 			mask.value(x, y-1, z) = label;
 			currentX.push_back(x);
@@ -151,7 +232,7 @@ volume<short> first_mesh::make_mask_from_mesh(const volume<float> & image, const
 			currentZ.push_back(z);
 
 		}
-		if (bounds[4]<=z-1 && mask.value(x, y, z-1)==0) 
+		if (boundsNew[4]<=z-1 && mask.value(x, y, z-1)==0) 
 		{
 			mask.value(x, y, z-1) = label;
 			currentX.push_back(x);
@@ -159,7 +240,7 @@ volume<short> first_mesh::make_mask_from_mesh(const volume<float> & image, const
 			currentZ.push_back(z-1);
 
 		}
-		if (bounds[1]>=x+1 && mask.value(x+1, y, z)==0)
+		if (boundsNew[1]>=x+1 && mask.value(x+1, y, z)==0)
 		{
 			mask.value(x+1, y, z) = label;
 			currentX.push_back(x+1);
@@ -167,7 +248,7 @@ volume<short> first_mesh::make_mask_from_mesh(const volume<float> & image, const
 			currentZ.push_back(z);
 
 		}
-		if (bounds[3]>=y+1 && mask.value(x, y+1, z)==0)
+		if (boundsNew[3]>=y+1 && mask.value(x, y+1, z)==0)
 		{
 			mask.value(x, y+1, z) = label;
 			currentX.push_back(x);
@@ -175,7 +256,7 @@ volume<short> first_mesh::make_mask_from_mesh(const volume<float> & image, const
 			currentZ.push_back(z);
 
 		}
-		if (bounds[5]>=z+1 && mask.value(x, y, z+1)==0)
+		if (boundsNew[5]>=z+1 && mask.value(x, y, z+1)==0)
 		{
 			mask.value(x, y, z+1) = label;
 			currentX.push_back(x); 
@@ -186,9 +267,9 @@ volume<short> first_mesh::make_mask_from_mesh(const volume<float> & image, const
 		
 	}
 
-	for (int i=bounds[0];i<bounds[1];i++)
-		for (int j=bounds[2];j<bounds[3];j++)
-			for (int k=bounds[4];k<bounds[5];k++)
+	for (int i=boundsNew[0];i<boundsNew[1];i++)
+		for (int j=boundsNew[2];j<boundsNew[3];j++)
+			for (int k=boundsNew[4];k<boundsNew[5];k++)
 				if (mask.value(i,j,k)==0)
 					otl.value(i,j,k)=label;
 

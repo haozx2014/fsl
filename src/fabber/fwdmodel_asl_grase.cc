@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include "fwdmodel_asl_grase.h"
 
@@ -72,12 +72,13 @@
 #include <newmatio.h>
 #include <stdexcept>
 #include "newimage/newimageall.h"
+#include "miscmaths/miscprob.h"
 using namespace NEWIMAGE;
 #include "easylog.h"
 
 string GraseFwdModel::ModelVersion() const
 {
-  return "$Id: fwdmodel_asl_grase.cc,v 1.14 2008/07/28 15:01:43 chappell Exp $";
+  return "$Id: fwdmodel_asl_grase.cc,v 1.19 2011/08/04 13:39:36 chappell Exp $";
 }
 
 void GraseFwdModel::HardcodedInitialDists(MVNDist& prior, 
@@ -96,7 +97,7 @@ void GraseFwdModel::HardcodedInitialDists(MVNDist& prior,
      
      if (!singleti) {
        // Tissue bolus transit delay
-       prior.means(tiss_index()+1) = 0.7;
+       prior.means(tiss_index()+1) = setdelt;
        precisions(tiss_index()+1,tiss_index()+1) = 10;
      }
     
@@ -133,15 +134,6 @@ void GraseFwdModel::HardcodedInitialDists(MVNDist& prior,
       precisions(tidx+1,tidx+1) = 100;
     }
 
-    if (inferinveff) {
-      prior.means(inveff_index()) = 0.3;
-      precisions(inveff_index(),inveff_index()) = 10;
-    }
-
-    if (infertrailing) {
-      prior.means(trailing_index()) = 0.1;
-      precisions(trailing_index(),trailing_index()) = 1;
-    }
 
     // Set precsions on priors
     prior.SetPrecisions(precisions);
@@ -184,6 +176,7 @@ void GraseFwdModel::Evaluate(const ColumnVector& params, ColumnVector& result) c
     if (params(art_index()+1)>timax-0.2) { paramcpy(art_index()+1) = timax-0.2; }
   }
 
+
   // parameters that are inferred - extract and give sensible names
   float ftiss;
   float delttiss;
@@ -193,8 +186,7 @@ void GraseFwdModel::Evaluate(const ColumnVector& params, ColumnVector& result) c
   float deltblood;
   float T_1;
   float T_1b;
-  float inveffslope;
-  float trailingperiod;
+
 
   ftiss=paramcpy(tiss_index());
   if (!singleti) {
@@ -202,7 +194,7 @@ void GraseFwdModel::Evaluate(const ColumnVector& params, ColumnVector& result) c
   }
   else {
     //only inferring on tissue perfusion, assume fixed value for tissue arrival time
-    delttiss = 0;
+    delttiss = setdelt;
   }
 
   if (infertau) { 
@@ -229,28 +221,30 @@ void GraseFwdModel::Evaluate(const ColumnVector& params, ColumnVector& result) c
   if (infert1) {
     T_1 = paramcpy(t1_index());
     T_1b = paramcpy(t1_index()+1);
+
+    //T1 cannot be zero!
+    if (T_1<1e-12) T_1=0.01;
+    if (T_1b<1e-12) T_1b=0.01;
   }
   else {
     T_1 = t1;
     T_1b = t1b;
   }
 
-  if (inferinveff) { inveffslope = paramcpy(inveff_index()); }
-  else { inveffslope = 0; }  
 
-  if (infertrailing) { trailingperiod = paramcpy(trailing_index()); }
-  else { trailingperiod = 1e-6; }
+  // float lambda = 0.9;
 
+    float f_calib;
+    // if we are using calibrated data then we can use ftiss to calculate T_1app
+    if (calib) f_calib = ftiss;
+    else       f_calib = 0.01; //otherwise assume sensible value (units of s^-1)
 
-
-    float lambda = 0.9;
-
-    float T_1app = 1/( 1/T_1 + 0.01/lambda );
+    float T_1app = 1/( 1/T_1 + f_calib/lambda );
     float R = 1/T_1app - 1/T_1b;
 
     float tau; //bolus length as seen by kintic curve
     float taub; //bolus length of blood as seen in signal
-    float bollen = delttiss+1/inveffslope;; //this is the bolus length as determined by the slope in inversion efficiency (onyl used with --inferinveff)
+    
 
     float F=0;
     float kctissue;
@@ -261,34 +255,42 @@ void GraseFwdModel::Evaluate(const ColumnVector& params, ColumnVector& result) c
     float ti;
     result.ReSize(tis.Nrows()*repeats);
 
+
     for(int it=1; it<=tis.Nrows(); it++)
       {
-	ti = tis(it);
-	F = 2*ftiss * exp(-ti/T_1app);
+	ti = tis(it) + slicedt*coord_z; //account here for an increase in the TI due to delays between slices
+	if (casl)  F = 2*ftiss;
+	else	   F = 2*ftiss * exp(-ti/T_1app);
 
 	/* According to EAGLE GRASE sequence bolus length is current TI - 0.1s (assuming infite length 'true' bolus)
 	   However, also allow here bolus length to be finite as recorded in tauset
 	   NB tauset is the 'true' bolus length, tau is what the tissue actually sees as a result of the sequence
+	   25-3-2009 now deal with this scenario via pretisat parameter
 	*/
-	if (grase)
+
+	/*	if (grase)
 	  {
-	    /* GRASE -  deal with bolus length (see above) */
-	    if(tauset < ti - 0.1)
-	      { tau = tauset; }
-	    else
-	      { tau = ti - 0.1; }
-	    
-	    if(taubset < ti - 0.1)
-	      {taub = taubset; }
-	    else
-	      {taub = ti - 0.1; }
-	  }
-	else {
+	  //GRASE -  deal with bolus length (see above) */
+
+	// Deal with saturation of the bolus before the TI - defined by pretisat
+	if(tauset < ti - pretisat)
+	  { tau = tauset; }
+	else
+	  { tau = ti -  pretisat; }
+	
+	if(taubset < ti -  pretisat)
+	  {taub = taubset; }
+	else
+	  {taub = ti -  pretisat; }
+
+	/* }
+    	else {
 	  tau = tauset;
 	  taub = taubset;
 	}
-
-		if (infertrailing)
+	*/
+    
+	/*	if (infertrailing)
 	  {
 	    ///////////////// New bolus length & trailing edge model //////////////
 	    // tau is now defined as the point where inv eff starts to drop
@@ -321,7 +323,7 @@ void GraseFwdModel::Evaluate(const ColumnVector& params, ColumnVector& result) c
 	      }
 
 	    // once the trailing edge of the bolus is past
-	    else /*(ti > delttiss + bt2)*/
+	    else //(ti > delttiss + bt2)
 	      {
 		kctissue = F/R * ( (exp(R*bt1)-exp(R*delttiss)) + (exp(R*bt2)-exp(R*bt1))*(1+inveffslope*bt1+inveffslope/R) - inveffslope*(bt2*exp(R*bt2) - bt1*exp(R*bt1)) );
 		if (kctissue<0) { kctissue = 0; } //dont allow negative values
@@ -336,7 +338,7 @@ void GraseFwdModel::Evaluate(const ColumnVector& params, ColumnVector& result) c
 	    if(ti < deltblood)
 	      { 
 		//kcblood = 0;
-		/* use a artifical lead in period for arterial bolus to improve model fitting */
+		// use a artifical lead in period for arterial bolus to improve model fitting
 		kcblood = fblood * exp(-deltblood/T_1b) * (0.98 * exp( (ti-deltblood)/0.1 ) + 0.02 * ti/deltblood );
 	      }
 
@@ -355,7 +357,7 @@ void GraseFwdModel::Evaluate(const ColumnVector& params, ColumnVector& result) c
 	      }
 
 	    // Once the trailing edge of the bolus has passed
-	    else /*(ti >  bt2) */
+	    else //(ti >  bt2) 
 	      {
 		kcblood = 0; //end of bolus
 	      }
@@ -366,49 +368,55 @@ void GraseFwdModel::Evaluate(const ColumnVector& params, ColumnVector& result) c
 
 	/////////// Older version of model (implements Inversion efficiency slope) /////////
 	else
-	  {
+	{*/
 	    //deal with the case where the inveffslope is severe and cuts off the bolus)
-	    if (tau>bollen) tau=bollen;
-	    if (taub>bollen) taub=bollen;
+	    //if (tau>bollen) tau=bollen;
+	    //if (taub>bollen) taub=bollen;
 	    
 
-	    /* tissue contribution */
+	    // --[tissue contribution]------
 	    if(ti < delttiss)
 	      { kctissue = 0;}
 	    else if(ti >= delttiss && ti <= (delttiss + tau))
 	      {
-		kctissue = F/R * ( (exp(R*ti) - exp(R*delttiss))*(1 + inveffslope*delttiss + inveffslope/R) - inveffslope*(ti*exp(R*ti) - delttiss*exp(R*delttiss)) );
 
-		if (kctissue<0) {kctissue = 0; } //dont allow negative values (should be redundant!)
+		if (casl)  kctissue = F * T_1app * exp(-delttiss/T_1b) * (1 - exp(-(ti-delttiss)/T_1app));
+		else	   kctissue = F/R * ( (exp(R*ti) - exp(R*delttiss)) ) ;
+
 	      }
-	    else /*(ti > delttiss + tau)*/
+	    else //(ti > delttiss + tau)
 	      {
-		kctissue = F/R * ( (exp(R*(delttiss+tau)) - exp(R*delttiss))*(1 + inveffslope*delttiss + inveffslope/R) - inveffslope*((delttiss+tau)*exp(R*(delttiss+tau)) - delttiss*exp(R*delttiss)) );
-		if (kctissue<0) { kctissue = 0; } //dont allow negative values (should be redundant)
+		if (casl)  kctissue = F * T_1app * exp(-delttiss/T_1b) * exp(-(ti-tau-delttiss)/T_1app) * (1 - exp(-tau/T_1app));
+		else       kctissue = F/R * ( (exp(R*(delttiss+tau)) - exp(R*delttiss))  );
+
 	      }
 	
-	    /* arterial contribution */
+	    // --[arterial contribution]------
 	    if(ti < deltblood)
 	      { 
-		//kcblood = 0;
-		/* use a artifical lead in period for arterial bolus to improve model fitting */
+		
 		kcblood = fblood * exp(-deltblood/T_1b) * (0.98 * exp( (ti-deltblood)/0.05 ) + 0.02 * ti/deltblood );
+		// use a artifical lead in period for arterial bolus to improve model fitting
+		//NB same equation for PASL and CASL
 	      }
 	    else if(ti >= deltblood && ti <= (deltblood + taub))
 	      { 
-		kcblood = fblood * exp(-ti/T_1b); 
-		kcblood = kcblood * (1 - inveffslope*(ti-deltblood)); //deals with the case where we have a slope in inversion efficency
-		if (kcblood<0) { kcblood = 0; } //dont allow negative values
+		if (casl)  kcblood = fblood * exp(-deltblood/T_1b);
+		else       kcblood = fblood * exp(-ti/T_1b); 
 	      }
-	    else /*(ti > deltblood + tau) */
+	    else //(ti > deltblood + tau)
 	      {
 		kcblood = 0; //end of bolus
-		/* artifical lead out period for taub model fitting */
-		kcblood = fblood * exp(-(deltblood+taub)/T_1b) * (1 - inveffslope*taub) * (0.98 * exp( -(ti - deltblood - taub)/0.05) + 0.02 * (1-(ti - deltblood - taub)/5));
+		if (casl)  kcblood = fblood * exp(-deltblood/T_1b);
+		else	   kcblood = fblood * exp(-(deltblood+taub)/T_1b);
+		kcblood *= (0.98 * exp( -(ti - deltblood - taub)/0.05) + 0.02 * (1-(ti - deltblood - taub)/5));
+		// artifical lead out period for taub model fitting
 		if (kcblood<0) kcblood=0; //negative values are possible with the lead out period equation
 									   
 	      }
-	  }
+
+	    if (isnan(kctissue)) { kctissue=0; LOG << "Warning NaN in tissue curve at TI:" << ti << " with f:" << ftiss << " delt:" << delttiss << " tau:" << tau << " T1:" << T_1 << " T1b:" << T_1b << endl; }
+	    //}
 
 	/* output */
 	// loop over the repeats
@@ -432,17 +440,29 @@ GraseFwdModel::GraseFwdModel(ArgsType& args)
     if (scanParams == "cmdline")
     {
       // specify command line parameters here
-      repeats = convertTo<int>(args.Read("repeats")); // number of repeats in data
+      repeats = convertTo<int>(args.ReadWithDefault("repeats","1")); // number of repeats in data
       t1 = convertTo<double>(args.ReadWithDefault("t1","1.3"));
       t1b = convertTo<double>(args.ReadWithDefault("t1b","1.5"));
-      grase = args.ReadBool("grase"); //data has come from the GRASE-ASL sequence?
+      lambda = convertTo<double>(args.ReadWithDefault("lambda","0.9"));
+
+
+      pretisat = convertTo<double>(args.ReadWithDefault("pretisat","0")); // deal with saturation of the bolus a fixed time pre TI measurement
+      grase = args.ReadBool("grase"); // DEPRECEATED data has come from the GRASE-ASL sequence - therefore apply pretisat of 0.1s
+      if (grase) pretisat=0.1;
+
+      casl = args.ReadBool("casl"); //set if the data is CASL or PASL (default)
+      slicedt = convertTo<double>(args.ReadWithDefault("slicedt","0.0")); // increase in TI per slice
+
+      calib = args.ReadBool("calib");
 
       infertau = args.ReadBool("infertau"); // infer on bolus length?
       infert1 = args.ReadBool("infert1"); //infer on T1 values?
       inferart = args.ReadBool("inferart"); //infer on arterial compartment?
-      inferinveff = args.ReadBool("inferinveff"); //infer on a linear decrease in inversion efficiency?
-      infertrailing = args.ReadBool("infertrailing"); //infers a trailing edge bolus slope using new model
+      //inferinveff = args.ReadBool("inferinveff"); //infer on a linear decrease in inversion efficiency?
+      //infertrailing = args.ReadBool("infertrailing"); //infers a trailing edge bolus slope using new model
       seqtau = convertTo<double>(args.ReadWithDefault("tau","1000")); //bolus length as set by sequence (default of 1000 is effectively infinite
+      setdelt = convertTo<double>(args.ReadWithDefault("bat","0.7"));
+
       bool ardoff = false;
       ardoff = args.ReadBool("ardoff");
       bool tauboff = false;
@@ -457,7 +477,7 @@ GraseFwdModel::GraseFwdModel(ArgsType& args)
       if (inferart==true && ardoff==false) { doard=true; }
 
       
-      if (infertrailing) {
+      /* if (infertrailing) {
 	if (!infertau) {
 	  // do not permit trailing edge inference without inferring on bolus length
 	  throw Invalid_option("--infertrailing has been set without setting --infertau");
@@ -465,11 +485,11 @@ GraseFwdModel::GraseFwdModel(ArgsType& args)
 	else if (inferinveff)
 	  //do not permit trailing edge inference and inversion efficiency inference (they are mututally exclusive)
 	  throw Invalid_option("--infertrailing and --inferinveff may not both be set");
-      }
+	  }*/
 
       // Deal with tis
       tis.ReSize(1); //will add extra values onto end as needed
-      tis(1) = atof(args.Read("ti1").c_str());
+      tis(1) = atof(args.Read("ti1","0").c_str());
       
       while (true) //get the rest of the tis
 	{
@@ -484,6 +504,11 @@ GraseFwdModel::GraseFwdModel(ArgsType& args)
 
 	}
       timax = tis.Maximum(); //dtermine the final TI
+
+      // need to set the voxel coordinates to a deafult of 0 (for the times we call the model before we start handling data)
+      coord_x = 0;
+      coord_y = 0;
+      coord_z = 0;
       
       singleti = false; //normally we do multi TI ASL
       if (tis.Nrows()==1) {
@@ -494,12 +519,16 @@ GraseFwdModel::GraseFwdModel(ArgsType& args)
 	LOG << "-----" << endl;
 	singleti = true;
 	// force other inference options to be false
-	infertau = false; infert1 = false; inferart = false; inferinveff = false;
+	//infertau = false; infert1 = false; inferart = false; //inferinveff = false;
       }
 	
       // add information about the parameters to the log
       LOG << "Inference using Buxton Kinetic Curve model" << endl;
-      if (grase) LOG << "Using modification for GRASE-ASL sequence" << endl;
+      if (!casl) LOG << "Data being analysed using PASL inversion profile" << endl;
+      if(casl) LOG << "Data being analysed using CASL inversion profile" << endl;
+      if (pretisat>0) LOG << "Saturation of" << pretisat << "s before TI has been specified" << endl;
+      if (grase) LOG << "Using pre TI saturation of 0.1 for GRASE-ASL sequence" << endl;
+      if (calib) LOG << "Input data is in physioligcal units, using estimated CBF in T_1app calculation" << endl;
       LOG << "    Data parameters: #repeats = " << repeats << ", t1 = " << t1 << ", t1b = " << t1b;
       LOG << ", bolus length (tau) = " << seqtau << endl ;
       if (infertau) {
@@ -510,10 +539,10 @@ GraseFwdModel::GraseFwdModel(ArgsType& args)
 	LOG << "ARD has been set on arterial compartment " << endl; }
       if (infert1) {
 	LOG << "Infering on T1 values " << endl; }
-      if (inferinveff) {
+      /*if (inferinveff) {
 	LOG << "Infering on Inversion Efficency slope " << endl; }
       if (infertrailing) {
-	LOG << "Infering bolus trailing edge period" << endl; }
+      LOG << "Infering bolus trailing edge period" << endl; }*/
       LOG << "TIs: ";
       for (int i=1; i <= tis.Nrows(); i++)
 	LOG << tis(i) << " ";
@@ -535,7 +564,10 @@ void GraseFwdModel::ModelUsage()
        << "--ti1=<first_inversion_time_in_seconds>\n"
        << "--ti2=<second_inversion_time>, etc...\n"
        << "Optional arguments:\n"
-       << "--grase (indicate data collected suign GRASE-ASL)"
+       << "--casl use CASL (or pCASL) preparation rather than PASL\n"
+       << "--grase *DEPRECEATAED* (data collected using GRASE-ASL: same as --pretissat=0.1)\n"
+       << "--pretisat=<presat_time> (Define that blood is saturated a specific time before TI image acquired)\n"
+       << "--calib (data has been provided in calibrated units)\n"
        << "--tau=<temporal_bolus_length> (default 10s if --infertau not set)\n"
        << "--t1=<T1_of_tissue> (default 1.3)\n"
        << "--t1b=<T1_of_blood> (default 1.5)\n"
@@ -570,15 +602,16 @@ void GraseFwdModel::NameParams(vector<string>& names) const
     names.push_back("T_1");
     names.push_back("T_1b");
   }
-  if (inferinveff) {
+  /* if (inferinveff) {
     names.push_back("Inveffslope");
   }
   if (infertrailing) {
     names.push_back("trailingperiod");
-  }
+    }*/
   if (infertaub) {
     names.push_back("taublood");
   }
+
 }
 
 void GraseFwdModel::SetupARD( const MVNDist& theta, MVNDist& thetaPrior, double& Fard) const

@@ -17,7 +17,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
+#   FMRIB Software Library, Release 5.0 (c) 2012, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -66,7 +66,7 @@
 #   interested in using the Software commercially, please contact Isis
 #   Innovation Limited ("Isis"), the technology transfer company of the
 #   University, to negotiate a licence. Contact details are:
-#   innovation@isis.ox.ac.uk quoting reference DE/1112.
+#   innovation@isis.ox.ac.uk quoting reference DE/9564.
 
 Usage() {
     cat <<EOF
@@ -81,7 +81,9 @@ Usage: siena <input1> <input2> [options]
   -m                    : use standard-space masking as well as BET
   -t <t>                : ignore from t (mm) upwards in MNI152/Talairach space
   -b <b>                : ignore from b (mm) downwards in MNI152/Talairach space (b should probably be negative)
-  -S "sienadiffopts"    : options to pass to siena_diff timepoint differencing (inside double-quotes), e.g. -S "-s -I 20"
+  -S "sienadiffopts"    : options to pass to siena_diff timepoint differencing (inside double-quotes), e.g. -S "-s -i 20"
+  -V                    : run ventricle analysis (VIENA)
+  -v <mask image>       : optional user-supplied ventricle mask (default is $FSLDIR/bin/MNI152_T1_2mm_VentricleMask)
 
 EOF
     exit 1
@@ -96,6 +98,7 @@ thecommand="siena $@"
 shift 2
 
 outdir=${Ao}_to_${Bo}_siena
+vienadir=${outdir}/viena
 debug=0
 betopts=""
 sdopts=""
@@ -105,6 +108,8 @@ stdmask=0
 stdroi=""
 origin3=37 # `fslval ${FSLDIR}/data/standard/MNI152_T1_2mm origin3`
 pixdim3=2  # `fslval ${FSLDIR}/data/standard/MNI152_T1_2mm pixdim3`
+Vmask="${FSLDIR}/data/standard/MNI152_T1_2mm_VentricleMask"
+do_viena=no
 
 while [ _$1 != _ ] ; do
 
@@ -114,6 +119,7 @@ while [ _$1 != _ ] ; do
         shift
     elif [ $1 = -o ] ; then
         outdir=$2
+	vienadir=${outdir}/viena
         shift 2
     elif [ $1 = -B ] ; then
         betopts=$2
@@ -143,15 +149,32 @@ while [ _$1 != _ ] ; do
 	stdb=`echo "10 k $stdb $pixdim3 / $origin3 + p" | dc -`
 	stdroi="$stdroi -roi 0 1000000 0 1000000 $stdb 1000000 0 1"
 	shift 2
+    elif [ $1 = -V ] ; then
+        do_viena=yes
+        shift
+    elif [ $1 = -v ] ; then
+        Vmask=$2
+        shift 2
     else
 	Usage
     fi
 
 done
 
+# ensure full path for ventriclemask (because of cd in scripts)
+if [ $do_viena = yes ] ; then
+    if [ `${FSLDIR}/bin/imtest ${Vmask}` = 0 ] ; then
+	echo "ERROR:: cannot find image ${Vmask}"
+	Usage
+    fi
+fi
+
 sdo="${sdo}${is_t2}"
 
 mkdir -p $outdir
+if [ $do_viena = yes ] ; then 
+  mkdir -p $vienadir
+fi
 ${FSLDIR}/bin/imcp $Ao ${outdir}/A
 ${FSLDIR}/bin/imcp $Bo ${outdir}/B
 cd $outdir
@@ -281,6 +304,10 @@ ${FSLDIR}/bin/pngappend gr${A}_halfwayto_${B}a.png + gr${A}_halfwayto_${B}b.png 
 /bin/cp ${FSLDIR}/etc/luts/ramp2.gif .ramp2.gif
 echo "<hr><p><b>Final brain edge movement image</b><p>atrophy <IMG SRC=\".ramp2.gif\"> 0 <IMG SRC=\".ramp.gif\"> \"growth\"<p><IMG BORDER=0 SRC=\"${A}_halfwayto_${B}_render.png\"><p><b>Estimated PBVC: $pbvc_average</b>" >> report.html
 
+if [ $do_viena = yes ] ; then
+    ${FSLDIR}/bin/viena_quant ${A} ${B} ${vienadir}
+fi
+
 if [ $debug = 0 ] ; then
     $FSLDIR/bin/imrm \
 	${A}_brain ${A}_brain_mask ${A}_brain_skull \
@@ -301,6 +328,24 @@ if [ $debug = 0 ] ; then
 	${A}_valid_mask ${B}_valid_mask ${A}_valid_mask_to_${B} ${B}_valid_mask_to_${A} \
 	${A}_valid_mask_with_$B ${B}_valid_mask_with_$A ${A}_halfwayto_${B}_valid_mask ${B}_halfwayto_${A}_valid_mask
     /bin/rm -f ${A}_to_${B}_tmp.mat ${A}_halfwayto_${B}_brain.vol ${B}_halfwayto_${A}_brain.vol ${B}_to_${A}.mat_avscale
+fi
+
+if [ $do_viena = yes ] && [ $debug = 0 ] ; then
+
+   $FSLDIR/bin/imrm \
+    ${A}_halfwayto_sc${A}_brain \
+    ${A}_to_sc${A}_flow ${A}_to_sc${A}_flow_ventricles \
+    ${A}_to_sc${A}_edgepoints ${A}_to_sc${A}_edgepoints_ventricles \
+    ${A}_halfwayto_sc${A}_brain_ventricle_region_bin \
+    ${B}_halfwayto_sc${B}_brain \
+    ${B}_to_sc${B}_flow ${B}_to_sc${B}_flow_ventricles \
+    ${B}_to_sc${B}_edgepoints ${B}_to_sc${B}_edgepoints_ventricles \
+    ${B}_halfwayto_sc${B}_brain_ventricle_region_bin \
+    ${A}_to_${B}_edgepoints ${A}_to_${B}_edgepoints_ventricles \
+    ${B}_to_${A}_edgepoints ${B}_to_${A}_edgepoints_ventricles \
+    ${A}_halfwayto_${B}_ventricle_region_bin \
+    ${B}_halfwayto_${A}_ventricle_region_bin
+
 fi
 
 echo ""

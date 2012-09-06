@@ -1,4 +1,3 @@
-
 /*  MELODIC - Multivariate exploratory linear optimized decomposition into 
               independent components
     
@@ -19,7 +18,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -68,8 +67,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
-
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #ifndef __MELODICOPTIONS_h
 #define __MELODICOPTIONS_h
@@ -272,8 +270,8 @@ class MelodicOptions {
 	   string("switch off variance normalisation"), 
 	   false, no_argument),
    pbsc(string("--pbsc"), false,
-	   string("        switch off conversion to percent BOLD signal change"), 
-	   false, no_argument),
+	   string("        switch on conversion to percent BOLD signal change"), 
+	   false, no_argument, false),
    pspec(string("--pspec"), false,
 	   string("        switch on conversion to powerspectra"), 
 	   false, no_argument, false),
@@ -413,7 +411,7 @@ class MelodicOptions {
 	   string("number of repeats (multistart)"), 
 	   false, requires_argument, false),
    seed(string("--seed"), -1,
-	   string("integer seed for melodic"), 
+	   string("integer seed for random number generator within melodic"), 
 	   false, requires_argument, false),
    nlconst1(string("--nl1,--nlconst1"),  1.0,
 	   string("nonlinear constant 1"), 
@@ -438,7 +436,7 @@ class MelodicOptions {
 	   false, no_argument,false),
    guess_remderiv(string("--remove_deriv"),  false,
 	   string("removes every second entry in paradigm file (EV derivatives)"), 
-	   false, no_argument),
+	   false, no_argument, false),
    temporal(string("--temporal"),  false,
 	   string("perform temporal ICA"), 
 	   false, no_argument, false),

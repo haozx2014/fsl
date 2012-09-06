@@ -1,0 +1,797 @@
+#!/bin/sh
+
+# OXFORD_ASL: Converts ASL images in to perfusion maps for inclusion as a confound EV in FEAT
+#
+# Michael Chappell & Brad MacIntosh, FMRIB Image Analysis & Physics Groups
+#
+# Copyright (c) 2008-2011 University of Oxford
+#
+#   Part of FSL - FMRIB's Software Library
+#   http://www.fmrib.ox.ac.uk/fsl
+#   fsl@fmrib.ox.ac.uk
+#   
+#   Developed at FMRIB (Oxford Centre for Functional Magnetic Resonance
+#   Imaging of the Brain), Department of Clinical Neurology, Oxford
+#   University, Oxford, UK
+#   
+#   
+#   LICENCE
+#   
+#   FMRIB Software Library, Release 5.0 (c) 2012, The University of
+#   Oxford (the "Software")
+#   
+#   The Software remains the property of the University of Oxford ("the
+#   University").
+#   
+#   The Software is distributed "AS IS" under this Licence solely for
+#   non-commercial use in the hope that it will be useful, but in order
+#   that the University as a charitable foundation protects its assets for
+#   the benefit of its educational and research purposes, the University
+#   makes clear that no condition is made or to be implied, nor is any
+#   warranty given or to be implied, as to the accuracy of the Software,
+#   or that it will be suitable for any particular purpose or for use
+#   under any specific conditions. Furthermore, the University disclaims
+#   all responsibility for the use which is made of the Software. It
+#   further disclaims any liability for the outcomes arising from using
+#   the Software.
+#   
+#   The Licensee agrees to indemnify the University and hold the
+#   University harmless from and against any and all claims, damages and
+#   liabilities asserted by third parties (including claims for
+#   negligence) which arise directly or indirectly from the use of the
+#   Software or the sale of any products based on the Software.
+#   
+#   No part of the Software may be reproduced, modified, transmitted or
+#   transferred in any form or by any means, electronic or mechanical,
+#   without the express permission of the University. The permission of
+#   the University is not required if the said reproduction, modification,
+#   transmission or transference is done without financial return, the
+#   conditions of this Licence are imposed upon the receiver of the
+#   product, and all original and amended source code is included in any
+#   transmitted product. You may be held legally responsible for any
+#   copyright infringement that is caused or encouraged by your failure to
+#   abide by these terms and conditions.
+#   
+#   You are not permitted under this Licence to use this Software
+#   commercially. Use for which any financial return is received shall be
+#   defined as commercial use, and includes (1) integration of all or part
+#   of the source code or the Software into a product for sale or license
+#   by or on behalf of Licensee to third parties or (2) use of the
+#   Software or any derivative of it for research with the final aim of
+#   developing software products for sale or license to a third party or
+#   (3) use of the Software or any derivative of it for research with the
+#   final aim of developing non-software products for sale or license to a
+#   third party, or (4) use of the Software to provide any service to an
+#   external organisation for which payment is received. If you are
+#   interested in using the Software commercially, please contact Isis
+#   Innovation Limited ("Isis"), the technology transfer company of the
+#   University, to negotiate a licence. Contact details are:
+#   innovation@isis.ox.ac.uk quoting reference DE/9564.
+
+Usage() {
+    echo "OXFORD_ASL"
+    echo "Version: 1.0 "
+    echo "Calculate perfusion maps from ASL data"
+    echo ""
+    echo "Usage (optional parameters in {}):"
+    echo " -i         : specify input/data file"
+    echo " --tis      : comma separated list of inversion times, e.g. --tis 0.2,0.4,0.6"
+    echo " {-o}       : specify output directory - {default: pwd}"
+    echo " {-s}       : strucutral image - {default: --nativeout, see below}"
+    echo " {-t}       : structural to standard space transformation matrix"
+    echo "              (requires structural image) - {default: --structout, see below)"
+    echo " {-S}       : standard brain image - {default: MNI152_T1_2mm}"
+    echo " {-m}       : mask (in native space of ASL data) - {default: automatically generated}"
+    echo ""
+    echo "Output options (all optional)"
+    echo " By default the perfusion and arrival time maps are saved in standard space"
+    echo "  if both structural image and transformation matrix are supplied"
+    echo " Results in native space are always saved to a sub directory."
+#    echo " --nativeout  : (also) save the maps in native space"
+    echo " --structout  : (also) save the maps in structural space"
+    echo " --vars       : also save the parameter estimated variances"
+#    echo " --zstats     : also save the parmeter estimated z-stats"
+    echo ""
+    echo "Extended options (all optional):"
+    echo " Acquisition specific"
+    echo " --casl      : ASL acquisition is CASL (or pCASL) rather than PASL"
+    echo " --bolus     : Bolus duration (as set by sequence) - {default: 1}"
+    echo " --bat       : Bolus arrival time (initial estimate) - {default: 0.7}"
+    echo " --t1        : Tissue T1 value - {default: 1.3}"
+    echo " --t1b       : Blood T1 value - {default: 1.6}"
+    echo " --slicedt   : Timing difference between slices - {default: 0}"
+    echo " --artoff    : Do not infer arterial signal - e.g. arterial suppression has been applied"
+    echo " --fixbolus  : Bolus duration is fixed, e.g. by QUIPSSII or CASL (otheriwse it will be estimated)"
+    echo " Analysis"
+    echo " --spatial   : Perform ASL analysis with automatic spatial smoothing of CBF"
+    echo " --infert1   : Incorporate uncertainty in T1 values in analysis"
+    echo " Registration"
+    echo " -r          : low resolution structural image"
+    echo " --regfrom   : alternative image to use a basis for registration"
+    echo " Calibration"
+    echo " -c          : M0 calibration image"
+    echo "  --csf      : Manually specify csf mask for calibration"
+    echo " --cgain     : Relative gain between calibration and ASL image - {default: 1}"
+    echo " --t1csf     : T1 of CSF (s) - {for default see asl_calib}"
+    echo " --te        : Echo time for the readout (to correct for T2/T2* effect in calibration)"
+    echo "  --t2star   : Correct for T2* rather than T2"
+    echo "  --t2csf    : T2 of CSF (ms) - {for default see asl_calib}"
+    echo "  --t2bl     : T2 of blood (ms) - {for default see asl_calib}"
+    echo " --cref      : Supply a reference image for sensitivity correction" 
+#    echo "Partial volume correction"
+#    echo " --pvcorr    : Do partial volume correction - requires"
+#    echo "               - structural image (-s)"
+#    echo "               - basis image for registration (--regfrom)"
+    echo ""
+    echo ""
+    echo " Notes:"
+    echo " Registration - Can be tricky, the results are saved in native space by default"
+    echo "                in case you need to revisit this."
+    echo "                By default the CBF image is used for registration"
+    echo "                An alternative base image for registration can be supplied with --regfrom"
+    echo "                More robust results may be found using:"
+    echo "                > the mean (over all mesurements) of the *undifferenced* ASL data"
+    echo "                > the mean (over all measurments) of the calibration image"
+    echo "                  assuming there was no signficant motion between main and calibration data."
+    echo "                For custom registration: use asl_reg with native space results."
+    echo " Calibration - Basic calibration performed using the default options of asl_calib in 'longtr' mode."
+    echo "               For custom calibration: do not set M0 image and then use asl_calib separately"
+    echo " Masking - for processing purposes a brain mask is applied to the data, this will be"
+    echo "            derrived from (in order of preference):"
+    echo "            > low resolution structural"
+    echo "            > calibration image"
+    echo "            > data (mean over all TIs)"
+}
+
+Output() {
+# Function that deals with creating the right output files for a given parameter
+    param=$1 #parameter as know by basil (and related scripts)
+    shift
+    parname=$1 #parameter name as called in the output directory
+    shift
+if [ ! -z $1 ]; then
+    calib=$1 #if calibration might be required then use supplied calibration flag
+fi
+
+if [ ! -z $nativeout ]; then
+    imcp $tempdir/$param $outdir/native_space/$parname
+fi
+if [ ! -z $structout ]; then
+    flirt -in $tempdir/$param -applyxfm -init $tempdir/asl2struct.mat -ref $struc -out $outdir/struct_space/$parname
+fi
+if [ ! -z $stdout ]; then
+    flirt -in $tempdir/$param -applyxfm -init $tempdir/asl2std.mat -ref $std -out $outdir/$parname
+fi
+
+}
+
+Calibrate() {
+    parname=$1
+    Moval=$2
+
+    # third argument is an extra multiplier that we might use to get CBF into physiological units
+    if [ -z $3 ]; then
+	multiplier=1
+    else
+	multiplier=$3
+    fi
+
+if [ ! -z $stdout ]; then
+    fslmaths  $outdir/$parname -div $Moval -mul $multiplier $outdir/${parname}_calib 
+fi
+if [ ! -z $nativeout ]; then
+	fslmaths $outdir/native_space/$parname -div $Moval -mul $multiplier $outdir/native_space/${parname}_calib 
+fi
+if [ ! -z $structout ]; then
+    fslmaths $outdir/struct_space/$parname -div $Moval -mul $multiplier $outdir/struct_space/${parname}_calib 
+fi
+}
+
+Registration() {
+echo "Performing registration"
+regbase=$1 #the i/p to the function is the image to use as a base for registration
+extraoptions=""
+if [ ! -z $lowstrucflag ]; then
+    extraoptions=$extraoptions"-r $tempdir/lowstruc"
+fi
+if [ ! -z $debug ]; then
+    extraoptions=$extraoptions" --debug"
+fi
+
+if [ ! -z $stdout ]; then
+# we have a struct2std transformation matrix to deal with
+transopt="-t $trans"
+fi
+
+$asl_reg -i $regbase -o $tempdir -s $tempdir/struc $transopt $extraoptions
+}
+
+# deal with options
+
+if [ -z $1 ]; then
+    Usage
+    exit 1
+fi
+
+basil=basil
+asl_reg=asl_reg
+asl_calib=asl_calib
+
+#basil=${FSLDIR}/bin/basil
+#asl_reg=${FSLDIR}/bin/asl_reg
+#asl_calib=${FSLDIR}/bin/asl_calib
+
+until [ -z $1 ]; do
+    case $1 in
+	-o) outflag=1 outdir=$2
+	    shift;;
+	-i) inflag=1 infile=$2 #input/data file
+	    shift;;
+	-c) calibflag=1 calib=$2 #calibration image
+	    shift;;
+	-s) strucflag=1 struc=$2 # strucutral image
+	    shift;;
+	-r) lowstrucflag=1 lowstruc=$2 #low resolution structural image
+	    shift;;
+	-t) transflag=1 trans=$2
+	    shift;;
+	-S) stdflag=1 std=$2
+	    shift;;
+	-m) mask=$2
+	    shift;;
+	--tis) tis=$2
+	    shift;;
+	--bolus) boluset=1 boluslen=$2
+	    shift;;
+	--bat) bat=$2
+	    shift;;
+	--slicedt) slicedt=$2
+	    shift;;
+	--t1) t1set=$2
+	    shift;;
+	--t1b) t1bset=$2
+	    shift;;
+	--csf) csfflag=1 csf=$2
+	    shift;;
+	--cref) cref=$2
+	    shift;;
+	--te) te=$2 #supply the echo time for calibration correction for T2
+	    shift;;
+	--t2star) t2star=1 #do calibration with T2* rather than T2
+	    ;;
+	--t1csf) t1csf=$2 #custom T1 for CSF
+	    shift;;
+	--t2csf) t2csf=$2 #custom T2 for CSF
+	    shift;;
+	--t2bl) t2bl=$2 #custom T2 of blood
+	    shift;;
+	--regfrom) regfromflag=1 regfrom=$2
+	    shift;;
+	--cgain) cgain=$2
+	    shift;;
+	--zblur) zblur=1
+	    ;;
+#	--nativeout) nativeout=1
+#	    ;;
+	--structout) structout=1
+	    ;;
+	--vars) varout=1
+	    ;;
+	--spatial) spatial=1
+	    ;;
+	--infert1) infert1=1
+	    ;;
+	--artoff) artoff=1
+	    ;;
+	--fixbolus) fixbolus=1
+	    ;;
+	--casl) casl=1
+	    ;;
+	--pvcorr) pvcorr=1
+	    ;;
+	--debug) debug=1
+	    ;; 
+	--devel) devel=1
+	    ;;
+	*)  Usage
+	    echo "Error! Unrecognised option on command line: $1"
+	    echo ""
+	    exit 1;;
+    esac
+    shift
+done
+
+nativeout=1 #we always keep the native space images!!
+
+# deal with the temporary directory
+tmpbase=`$FSLDIR/bin/tmpnam`
+tempdir=${tmpbase}_ox_asl
+mkdir $tempdir
+
+echo "#FABBER options created by Oxford_asl" > $tempdir/basil_options.txt
+
+if [ ! -z $devel ]; then
+    basil=~chappell/cproject/basil/basil
+    asl_reg=~chappell/cproject/oxford_asl/asl_reg
+    asl_calib=~chappell/cproject/oxford_asl/asl_calib
+
+fi
+
+# deal with default output format
+if [ ! -z $transflag ]; then
+   #if transformation matrix included then output in std space
+    stdout=1;
+    if [ -z $strucflag ]; then
+	echo "ERROR: Structural image is required along with transformation matrix to output results in standard space"
+	exit 1
+    fi
+else
+    if [ ! -z $strucflag ]; then
+	# else-if strucutral image included output in structural space
+	structout=1;
+    else
+	#else output in native space
+	nativeout=1;
+    fi
+fi
+
+echo "OXFORD_ASL - running"
+
+
+# set the output directory here if not specified
+if [ -z $outflag ]; then
+    echo "Ouput being placed in input directory"
+    outdir=`pwd`;
+fi
+
+# Start by looking for the output directory (and create if need be)
+if [ ! -d $outdir ]; then
+  echo "Creating output directory"
+  mkdir $outdir;
+fi
+
+# save command line to logfile
+log=$outdir/logfile
+echo $# > $log
+
+#check required inputs are present
+if [ -z $inflag ]; then
+    echo "ERROR: no input file specified"
+    exit 1
+else
+    if [ `${FSLDIR}/bin/imtest $infile` -eq 0 ]; then
+	echo "ERROR: $infile is not an image/has not been found"
+	exit 1
+    fi
+fi
+echo "Input file: $infile" >> $log
+
+if [ ! -z $strucflag ]; then
+    if [ ! -z $struc ]; then
+	if [ `${FSLDIR}/bin/imtest $struc` -eq 0 ]; then
+	    echo "ERROR: $struc is not an image/has not been found"
+	    exit 1
+	fi
+    fi
+    echo "Structural image: $struc" >> $log
+fi
+
+
+if [ ! -z $transflag ]; then
+    if [ ! -e $trans ]; then
+	echo "ERROR: $trans is not a file/has not been found"
+	exit 1
+    fi
+    echo "Structural to standard transformation matrix: $trans" >> $log
+fi
+if [ ! -z $lowstruc ]; then
+    if [ `${FSLDIR}/bin/imtest $lowstruc` -eq 0 ]; then
+	echo "ERROR: $lowstruc is not an image/has not been found"
+	exit 1
+    fi
+    echo "Low res. structural image: $lowstruc" >> $log
+fi
+
+# deal with Standard brain image
+if [ -z $stdflag ]; then
+    std=${FSLDIR}/data/standard/MNI152_T1_2mm
+fi
+echo "Standard brain is: $std" >> $log
+
+# general pre-processing (bet etc)
+echo "Pre-processing"
+if [ ! -z $struc ]; then
+    ${FSLDIR}/bin/imcp $struc $tempdir/struc
+    #bet the structural for calibration - but keep the non betted version for registration
+    bet $struc $tempdir/struc_bet
+    echo "BET on structural image" >> $log
+fi
+# bet the low res. struc (if present)
+if [ ! -z $lowstrucflag ]; then
+    ${FSLDIR}/bin/imcp $lowstruc $tempdir/lowstruc
+    bet $lowstruc $tempdir/lowstruc_bet
+    echo "BET on low res. structural image" >> $log
+fi
+
+# standard pre-processing of calibration image
+if [ ! -z $calibflag ]; then
+#cut - throw away first volume
+    echo $calib
+    tsize=`fslinfo $calib | grep "^dim4" | sed 's:dim4[ ]*::'`
+    tsize=`expr $tsize - 1`
+    if [ $tsize -lt 1 ]; then
+	echo "Error: Insufficient volumes in calibration image (to make a mask), please check $calib"
+	exit 1
+    fi
+    fslroi $calib $tempdir/calib 1 $tsize
+    # take the mean
+    fslmaths $tempdir/calib -Tmean $tempdir/calib
+    # bet
+    bet $tempdir/calib $tempdir/calib
+fi
+
+# sort out the mask for processing the data
+if [ -z $mask ]; then
+echo "Creating mask"
+echo "Automatic mask generation" >> $log
+ # preferred option: use the low resolution strucutral image to create mask
+if [ ! -z $lowstrucflag ]; then
+ # resample
+    flirt -in $tempdir/lowstruc_bet -applyxfm -init $FSLDIR/etc/flirtsch/ident.mat -out $tempdir/mask -paddingsize 0.0 -interp trilinear -ref $infile
+ # make binary
+    fslmaths $tempdir/mask -bin $tempdir/mask
+    echo "Mask generated from low res. structural" >> $log
+# next option is to use betted version of mean M0 calib image as mask
+elif [ ! -z $calibflag ]; then
+    fslmaths $tempdir/calib -bin $tempdir/mask
+    echo "Mask generated from calibration image (post BET)" >> $log
+# otherwise just use mean time series
+else
+    fslmaths $infile -Tmean $tempdir/meanasl
+    bet $tempdir/meanasl $tempdir/meanasl
+    fslmaths $tempdir/meanasl -bin $tempdir/mask
+    echo "Mask generated from mean time series" >> $log
+fi
+else
+# mask has been supplied
+    fslmaths $mask -bin $tempdir/mask # just to be sure binarise the mask here
+    echo "Using mask: $mask" >> $log
+fi
+
+# Registration (1/2)
+if [ ! -z $strucflag ]; then # if structural image has not been suppled then skip the registration
+# registration here if we are using an image provided (in case we need it for PV correction)
+if [ ! -z $regfromflag ]; then
+#use CBF map as base for registration
+    echo "Performing registration"
+    echo "Using $regfrom as base for registration"
+    Registration $regfrom
+fi
+fi
+
+# Partial volume correction (1/3) - setup the PV images
+if [ ! -z $pvcorr ]; then
+if [ -z $strucflag ]; then
+    echo "ERROR: PV correction cannot be performed without a structural image"
+    exit 1
+fi
+echo "Estimating partial volumes from structural image"
+fast -o $tempdir/seg -p $struc
+
+# invert the transformation matrix
+convert_xfm -omat $tempdir/struct2asl.mat -inverse $tempdir/asl2struct.mat
+
+# Gray matter - assume this will be PVE 1
+applywarp --ref=$infile --in=$tempdir/seg_pve_1 --out=$tempdir/pvgm_inasl --premat=$tempdir/struct2asl.mat --super --interp=spline --superlevel=4
+# white matter  - assume this will be PVE 2
+applywarp --ref=$infile --in=$tempdir/seg_pve_2 --out=$tempdir/pvwm_inasl --premat=$tempdir/struct2asl.mat --super --interp=spline --superlevel=4
+fslmaths $tempdir/pvgm_inasl -thr 0 -min 1 $tempdir/pvgm_inasl
+fslmaths $tempdir/pvwm_inasl -thr 0 -min 1 $tempdir/pvwm_inasl
+fi
+
+
+# write options file for BASIL
+echo "Setting up BASIL"
+echo "BASIL setup" >> $log
+#deal with TIs
+
+count=0
+tislist=""
+thetis=`echo $tis | sed 's:,: :g'`
+#echo $thetis
+for ti in $thetis; do
+    count=`expr ${count} + 1`
+    tislist=`echo $tislist --ti${count}=$ti`
+    echo "TIs list: $tislist" >> $log
+    
+done
+
+
+
+#deal with bolus
+if [ -z $boluset ]; then
+    boluslen=1;
+fi
+echo "Bolus duration: $boluslen" >> $log
+
+# deal with T1
+if [ -z $t1set ]; then
+    t1set=1.3;
+fi
+echo "T1: $t1set" >> $log
+
+if [ -z $t1bset ]; then
+    t1bset=1.6;
+fi
+echo "T1b: $t1bset" >> $log
+
+#deal with repeats
+tpoints=`fslinfo $infile | grep "^dim4" | sed 's:dim4[ ]*::'`
+repeats=`expr $tpoints / $count`
+
+echo "Number of inversion times: $count"
+echo "Number of timepoints in data: $tpoints"
+echo "Number of repeats in data: $repeats"
+
+# pre-processing for main analysis
+# the data should come in 'as acquired' which we assume is blocks of all TIs
+# However, this is not the form required by BASIL (blocks of TIs)
+if [ $repeats -gt 1 ]; then
+# use asl_file to get data into the correct format for basil/fabber
+# take the mean over the TIs for faster analysis
+asl_file --data=$infile --ntis=$count --ibf=rpt --iaf=diff --mean=$tempdir/data
+repeats=1
+datafile=$tempdir/data
+else
+# if there is only one repeat we can take the data as it comes for the full analysis
+datafile=$infile
+fi
+
+# Partial volume correction (2/3) - instructions for basil
+if [ -z $pvcorr ]; then
+#model is normal
+    basil_options=$basil_options" --model buxton "
+else
+    basil_options=$basil_options" --model aslpvc "
+    basil_options=$basil_options" --pgm $tempdir/pvgm_inasl --pwm $tempdir/pvwm_inasl "
+fi
+
+echo "--t1=$t1set --t1b=$t1bset" >> $tempdir/basil_options.txt
+
+# data acquired using CASL?
+if [ ! -z $casl ]; then
+    echo "--casl" >> $tempdir/basil_options.txt;
+    echo "cASL model" >> $log
+else
+    echo "pASL model" >> $log
+fi
+
+echo "--tau=$boluslen" >> $tempdir/basil_options.txt
+echo "--repeats=$repeats" >> $tempdir/basil_options.txt
+echo "$tislist" >> $tempdir/basil_options.txt
+
+# slice timing correction?
+if [ ! -z $slicedt ]; then
+    echo "--slicedt=$slicedt" >> $tempdir/basil_options.txt
+    echo "Slice timing correction with delta: $slicedt" >> $log
+fi
+
+# Infer arterial component?
+if [ -z $artoff ]; then
+    basil_options=$basil_options"--inferart "
+    echo "Infer arterial component" >> $log
+fi
+# fix the bolus duration?
+if [ -z $fixbolus ]; then
+    basil_options=$basil_options"--infertau "
+    echo "Varaiable bolus duration" >> $log
+else
+    echo "Fixed bolus duration" >> $log
+fi
+
+#deal with BAT
+if [ ! -z $bat ]; then
+    echo "--bat=$bat" >> $tempdir/basil_options.txt
+    echo "Setting prior/initial bolus arrival time to $bat" >> $log
+fi
+
+# Exteneded options for BASIL
+if [ ! -z $spatial ]; then
+# if we are using spatial smoothing on CBF
+    echo "Instructing BASIL to use automated spatial smoothing"
+    basil_options=$basil_options"--spatial"
+    #echo "Employing (fast) spatail VB" >> $log
+fi
+
+if [ ! -z $infert1 ]; then
+    echo "Instructing BASIL to infer variable T1 values"
+    basil_options=$basil_options"--infert1 "
+    echo "Including T1 uncertainty" >> $log
+fi
+
+if [ ! -z $devel ]; then
+    basil_options=$basil_options" --devel "
+fi
+
+# Analyse data using BASIL
+echo "Calling BASIL"
+echo "BASIL options ($tempdir/basil_options.txt):" >> $log
+echo "****" >> $log
+cat $tempdir/basil_options.txt >> $log
+echo "****" >> $log
+
+$basil -i $datafile -o $tempdir/basil -m $tempdir/mask -@ $tempdir/basil_options.txt $basil_options
+
+# work out which is the final step from BASIL
+#finalstep=`ls -d $tempdir/basil/step? | sed -e 's:[^ ]*\/::' | sed -n '$ p'`
+finalstep=`ls -d $tempdir/basil/step? | sed -n '$ p'`
+echo "Using BASIL step $finalstep" >> $log
+
+# extract image from BASIL results (and throw away values below zero)
+fslmaths ${finalstep}/mean_ftiss -thr 0 $tempdir/ftiss
+fslmaths ${finalstep}/mean_delttiss -thr 0 $tempdir/delttiss
+if [ -z $artoff ]; then
+    fslmaths ${finalstep}/mean_fblood -thr 0 $tempdir/fblood
+fi
+
+#Partial volume correction (3/3) - sort out basil results when PV corrected
+if [ ! -z $pvcorr ]; then
+# mask ftiss with the GM mask threshold at 0.1
+fslmaths $tempdir/pvgm_inasl -thr 0.1 $tempdir/gmmask
+fslmaths $tempdir/ftiss -mas $tempdir/gmmask $tempdir/ftiss
+
+fslmaths ${finalstep}/mean_fwm -thr 0 $tempdir/ftisswm
+fslmaths $tempdir/pvwm_inasl -thr 0.1 $tempdir/wmmask
+fslmaths $tempdir/ftisswm -mas $tempdir/wmmask $tempdir/ftisswm
+fi
+
+
+# Registration (2/2)
+if [ ! -z $strucflag ]; then # if structural image has not been suppled then skip the registration
+# registration if we are using the estimated CBF occurs here
+if [ -z $regfromflag ]; then
+#use CBF map as base for registration
+    echo "Performing registration"
+    echo "Using estimated CBF as base for regstration"
+    Registration $tempdir/ftiss
+fi
+fi
+
+#OUTPUTS
+# use transformation matrix to transform ftiss into standard space
+#flirt -in $tempdir/ftiss -applyxfm -init $tempdir/asl2std.mat -ref $std -out $outdir/perfusion
+#flirt -in $tempdir/delttiss -applyxfm -init $tempdir/asl2std.mat -ref $std -out $outdir/arrival_time
+
+# Optionally also provide maps in strutural space and native space
+if [ ! -z $nativeout ]; then
+    echo "Saving results in natve (ASL aquisition) space to $outdir/native_space"
+    mkdir $outdir/native_space
+    #imcp $tempdir/ftiss $outdir/native_space/perfusion
+    #imcp $tempdir/delttiss $outdir/native_space/arrival_time
+    if [ ! -z $struc ]; then
+	cp $tempdir/asl2struct.mat $outdir/native_space/asl2struct.mat #also provide the transformation matrix for reference
+    fi
+fi
+if [ ! -z $structout ]; then
+    echo "Saving results in structural space to $outdir/struct_space"
+    mkdir $outdir/struct_space
+    #flirt -in $tempdir/ftiss -applyxfm -init $tempdir/asl2struct.mat -ref $struc -out $outdir/struct_space/perfusion
+    #flirt -in $tempdir/delttiss -applyxfm -init $tempdir/asl2struct.mat -ref $struc -out $outdir/struct_space/arrival_time
+fi
+
+Output ftiss perfusion
+Output delttiss arrival
+if [ -z $artoff ]; then
+    Output fblood aCBV
+fi
+if [ ! -z $pvcorr ]; then
+    Output ftisswm perfusion_wm
+fi
+
+#Optionally provide variance results
+if [ ! -z $varout ]; then
+#get varainces out of finalMVN
+    ${FSLDIR}/bin/fabber_var -d ${finalstep} -m $tempdir/mask
+# do correction of negative values
+fslmaths ${finalstep}/var_ftiss -bin -add 1 -uthr 1 -mul 1e12 -add ${finalstep}/var_ftiss $tempdir/var_ftiss
+fslmaths ${finalstep}/var_delttiss -bin -add 1 -uthr 1 -mul 1e12 -add ${finalstep}/var_delttiss $tempdir/var_delttiss
+
+Output var_ftiss perfusion_var
+Output var_delttiss arrival_var
+
+
+fi
+
+
+# calibrate if required
+if [ ! -z $calibflag ]; then
+ echo "Calibrating perfusion image - calling ASL_CALIB"
+    extraoptions=""
+    if [ ! -z $debug ]; then
+	extraoptions=$extraoptions" --debug"
+    fi
+
+    if [ ! -z $cref ]; then
+	# pass calibration reference image to asl_calib
+	extraoptions=$extraoptions" --cref $cref --osen $outdir/calib_sensitivity"
+    fi
+
+    if [ -z $te ]; then
+	#by default assume TE is zero
+	te=0
+    fi
+
+    if [ ! -z $t2star ]; then
+	# tell asl_calib to correct for T2* rather than T2
+	extraoptions=$extraoptions" --t2star"
+    fi
+
+
+    if [ ! -z $t1csf ]; then
+	# supply the T1 of csf
+	extraoptions=$extraoptions" --t1r $t1csf"
+    fi
+
+    if [ ! -z $t2csf ]; then
+	# Supply the T2(*) of CSF
+	extraoptions=$extraoptions" --t2r $t2csf"
+    fi
+
+    if [ ! -z $t2bl ]; then
+	# Supply the T2(*) of blood
+	extraoptions=$extraoptions" --t2b $t2bl"
+    fi
+
+# calibration image gain
+    if [ -z $cgain ]; then
+	cgain=1;
+    fi
+
+    # setup the main options that we will pass to aslcalib regardless of whether we are auot generating reference mask
+    maincaliboptions="--cgain $cgain --te $te"
+
+    if [ -z $csfflag ]; then
+    # call asl_calib in normal (auto csf) mode
+
+    # use low res structural for auto generation of csf mask if availible
+    # otherwise just use structural image
+	if [ -z $lowstrucflag ]; then
+	    usestruc=$tempdir/struc_bet
+	    usetrans=$tempdir/asl2struct.mat
+	else
+	    usestruc=$tempdir/lowstruc_bet
+	    usetrans=$tempdir/asl2lowstruct.mat
+	fi
+   
+	$asl_calib -c $calib -s $usestruc -t $usetrans -o $outdir/calib $maincaliboptions $extraoptions 
+
+    else
+    # a manual csf mask has been supplied
+	$asl_calib -c $calib -m $csf -o $outdir/calib $maincaliboptions $extraoptions
+    fi
+
+    #Output
+    Mo=`cat $outdir/calib/M0.txt`
+    Calibrate perfusion $Mo 6000
+    if [ ! -z $varout ]; then
+	Mosq=`echo "$Mo * $Mo" | bc`
+	Calibrate perfusion_var $Mosq 36000000
+    fi
+
+
+fi
+
+# save the mask used to the (native space) output directory
+${FSLDIR}/bin/imcp $tempdir/mask $outdir/native_space/mask
+
+
+# clearup
+if [ ! -z $debug ]; then
+    mv $tempdir .
+else
+    rm -r $tempdir
+fi
+
+
+echo "Output is $outdir/"
+echo "OXFORD_ASL - done."

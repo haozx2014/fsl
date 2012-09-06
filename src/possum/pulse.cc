@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include <iostream>
 #include <string>
@@ -89,7 +89,7 @@ using namespace std;
 
 const double gammabar=42.58*1e06;//(in Hz/T)
 
-string title="pulse (Version 2.0)\nCopyright(c) 2003, University of Oxford (Ivana Drobnjak and Mark Jenkinson)";
+string title="pulse \nCopyright(c) 2003, University of Oxford (Ivana Drobnjak and Mark Jenkinson)";
 string examples="pulse -i <input digital brain> -o <output base name> [optional arguments]";
 
 Option<bool>   verbose(string("-v,--verbose"), false, 

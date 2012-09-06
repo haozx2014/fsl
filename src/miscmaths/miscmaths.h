@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 // Miscellaneous maths functions
 
@@ -192,6 +192,10 @@ namespace MISCMATHS {
   ReturnMatrix pinv(const Matrix& mat);
   int rank(const Matrix& X);
   ReturnMatrix sqrtaff(const Matrix& mat);
+
+  // in the following mode = "new2old" or "old2new" (see .cc for more info)
+  vector<int> get_sortindex(const Matrix& vals, const string& mode, int col=1);
+  Matrix apply_sortindex(const Matrix& vals, vector<int> sidx, const string& mode);
 
   void reshape(Matrix& r, const Matrix& m, int nrows, int ncols);
   ReturnMatrix reshape(const Matrix& m, int nrows, int ncols);

@@ -1,0 +1,124 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
+<title>eddy/UsersGuide</title>
+<link rel="stylesheet" type="text/css" media="all" charset="utf-8" href="fsl/css/common.css">
+<link rel="stylesheet" type="text/css" media="screen" charset="utf-8" href="fsl/css/screen.css">
+<link rel="stylesheet" type="text/css" media="print" charset="utf-8" href="fsl/css/print.css">
+<style type="text/css">
+ul.pagetitle{
+  display: inline;
+  margin: 0;
+  padding: 0;
+  font-size: 1.5em;
+}
+li.pagetitle{
+  display: inline;
+  margin: 0;
+}
+td.noborder {
+  border: 0;
+}
+</style>
+</head>
+<body>
+<table>
+<tr>
+<td class="noborder">
+<img src="logo.png">
+</td>
+<td class="noborder">
+<ul class="pagetitle">
+<li class="pagetitle"><a class="backlink">eddy/UsersGuide</a>
+</ul>
+<br><br>
+[<a href="FSL.html">FSL</a>]&nbsp;[<a href="TitleIndex.html">TitleIndex</a>]&nbsp;[<a href="WordIndex.html">WordIndex</a>]&nbsp;
+</td>
+</tr>
+</table>
+<hr>
+<div id="page">
+<div dir="ltr" id="content" lang="en"><span class="anchor" id="top"></span>
+<span class="anchor" id="line-1"></span><span class="anchor" id="line-2"></span><span class="anchor" id="line-3"></span><span class="anchor" id="line-4"></span><p class="line867"><div class="FslToolContents">
+<h1>Contents</h1>
+<ol><li><a href="./eddy.html">Introduction</a></li><li>Users Guide<div class="contentslist"><div class="table-of-contents"><p class="table-of-contents-heading">Contents<ol><li>
+<a href="#Running_eddy">Running eddy</a></li><li>
+<a href="#List_of_parameters">List of parameters</a></li><li>
+<a href="#Parameters_explained">Parameters explained</a><ol><li>
+<a href="#A--imain">--imain</a></li><li>
+<a href="#A--mask">--mask</a></li><li>
+<a href="#A--acqp">--acqp</a></li><li>
+<a href="#A--index">--index</a></li><li>
+<a href="#A--bvecs">--bvecs</a></li><li>
+<a href="#A--bvals">--bvals</a></li><li>
+<a href="#A--out">--out</a></li><li>
+<a href="#A--topup">--topup</a></li><li>
+<a href="#A--session">--session</a></li><li>
+<a href="#A--flm">--flm</a></li><li>
+<a href="#A--fwhm">--fwhm</a></li><li>
+<a href="#A--niter">--niter</a></li><li>
+<a href="#A--resamp">--resamp</a></li><li>
+<a href="#A--repol">--repol</a></li><li>
+<a href="#A--verbose">--verbose</a></li><li>
+<a href="#A--help">--help</a></li></ol></li></ol></div></div></li><li><a href="./eddy(2f)Faq.html">FAQ</a></li></ol></div> <span class="anchor" id="line-5"></span>
+<h1 id="Running_eddy">Running eddy</h1>
+<span class="anchor" id="line-6"></span><span class="anchor" id="line-7"></span><p class="line874">Not yet written <span class="anchor" id="line-8"></span><span class="anchor" id="line-9"></span><p class="line867">
+<h1 id="List_of_parameters">List of parameters</h1>
+<span class="anchor" id="line-10"></span><span class="anchor" id="line-11"></span><ul><li>Parameters that specify input files <span class="anchor" id="line-12"></span><span class="anchor" id="line-13"></span><ul><li style="list-style-type:none"><p class="line891"><a href="./eddy(2f)UsersGuide.html#A--imain">--imain=filename</a> <br>
+ Name of a file with input images. E.g. <tt class="backtick">all_my_images.nii</tt>. Compulsory. <span class="anchor" id="line-14"></span><span class="anchor" id="line-15"></span></li><li class="gap" style="list-style-type:none"><p class="line891"><a href="./eddy(2f)UsersGuide.html#A--mask">--mask=filename</a> <br>
+ Name of a file with mask specifying brain vs no-brain. E.g. <tt class="backtick">my_brain_mask.nii</tt>.  Compulsory. <span class="anchor" id="line-16"></span><span class="anchor" id="line-17"></span></li><li class="gap" style="list-style-type:none"><p class="line891"><a href="./eddy(2f)UsersGuide.html#A--acqp">--acqp=filename</a> <br>
+ Name of text file with information about the acquisition of the images in <tt class="backtick">--imain</tt>. E.g. <tt class="backtick">my_scan_pars.txt</tt>.  Compulsory. <span class="anchor" id="line-18"></span><span class="anchor" id="line-19"></span></li><li class="gap" style="list-style-type:none"><p class="line891"><a href="./eddy(2f)UsersGuide.html#A--index">--index=filename</a> <br>
+ Name of text file specifying the relationship between the images in --imain and the information in --acqp and --topup. E.g. <tt class="backtick">index.txt</tt>.  Compulsory. <span class="anchor" id="line-20"></span><span class="anchor" id="line-21"></span></li><li class="gap" style="list-style-type:none"><p class="line891"><a href="./eddy(2f)UsersGuide.html#A--bvecs">--bvecs=filename</a> <br>
+ Name of text-file with <a href="./FDT(2f)UserGuide.html#DTIFIT">normalised diffusion gradients</a>. Compulsory. <span class="anchor" id="line-22"></span><span class="anchor" id="line-23"></span></li><li class="gap" style="list-style-type:none"><p class="line891"><a href="./eddy(2f)UsersGuide.html#A--bvals">--bvals=filename</a> <br>
+ Name of text-file with <a href="./FDT(2f)UserGuide.html#DTIFIT">b-values</a>. Compulsory. <span class="anchor" id="line-24"></span><span class="anchor" id="line-25"></span></li><li class="gap" style="list-style-type:none"><p class="line891"><a href="./eddy(2f)UsersGuide.html#A--session">--session=filename</a> <br>
+ Name of text-file with. Optional. <span class="anchor" id="line-26"></span><span class="anchor" id="line-27"></span></li><li class="gap" style="list-style-type:none"><p class="line891"><a href="./eddy(2f)UsersGuide.html#A--topup">--topup=filename</a> <br>
+ Name of output from a previous <a href="./topup.html">topup</a> run. Should be the same as the argument given to <tt class="backtick">topup</tt>'s <a class="nonexistent" href="./topup(2f)TopupUsersGuide(2f).html#A--out">--out</a>. Optional. <span class="anchor" id="line-28"></span><span class="anchor" id="line-29"></span></li></ul></li><li class="gap">Parameters specifying names of output-files <span class="anchor" id="line-30"></span><span class="anchor" id="line-31"></span><ul><li style="list-style-type:none"><p class="line891"><a href="./eddy(2f)UsersGuide.html#A--out">--out=basename</a> <br>
+ Basename for output-files. The corrected images will be named <tt class="backtick">"basename".nii.gz</tt>. Compulsory. <span class="anchor" id="line-32"></span><span class="anchor" id="line-33"></span></li></ul></li><li class="gap"><p class="line862">Parameters specifying how <tt class="backtick">eddy</tt> should be run <span class="anchor" id="line-34"></span><span class="anchor" id="line-35"></span><ul><li style="list-style-type:none"><p class="line891"><a href="./eddy(2f)UsersGuide.html#A--flm">--flm=linear/quadratic/cubic</a> <br>
+ Spatial model for the field generated by eddy currents. Default <tt class="backtick">quadratic</tt>. <span class="anchor" id="line-36"></span><span class="anchor" id="line-37"></span></li><li class="gap" style="list-style-type:none"><p class="line891"><a href="./eddy(2f)UsersGuide.html#A--fwhm">--fwhm="fwhm in mm"</a> <br>
+ Filter width to use for pre-filtering of data for the estimation process. Default 0. <span class="anchor" id="line-38"></span><span class="anchor" id="line-39"></span></li><li class="gap" style="list-style-type:none"><p class="line891"><a href="./eddy(2f)UsersGuide.html#A--niter">--niter="required number of iterations"</a> <br>
+ Specifies how many iterations should be run. Default 5. <span class="anchor" id="line-40"></span><span class="anchor" id="line-41"></span></li><li class="gap" style="list-style-type:none"><p class="line891"><a href="./eddy(2f)UsersGuide.html#A--resamp">--resamp=jac/lsr</a> <br>
+ Currently not working. Should <strong>always</strong> be left at default (jac). <span class="anchor" id="line-42"></span><span class="anchor" id="line-43"></span></li><li class="gap" style="list-style-type:none"><p class="line891"><a href="./eddy(2f)UsersGuide.html#A--repol">--repol</a> <br>
+ Currently not working. Should <strong>never</strong> be used. <span class="anchor" id="line-44"></span><span class="anchor" id="line-45"></span></li><li class="gap" style="list-style-type:none"><p class="line891"><tt class="backtick">--verbose</tt> <br>
+ Print progress information to the screen while running. Can be useful to pipe into file before reporting problems <span class="anchor" id="line-46"></span><span class="anchor" id="line-47"></span></li><li class="gap" style="list-style-type:none"><p class="line891"><tt class="backtick">--help</tt> <br>
+ Take a wild stab. <span class="anchor" id="line-48"></span><span class="anchor" id="line-49"></span><span class="anchor" id="line-50"></span></li></ul></li></ul><p class="line867">
+<h1 id="Parameters_explained">Parameters explained</h1>
+<span class="anchor" id="line-51"></span><span class="anchor" id="line-52"></span><p class="line867">
+<h2 id="A--imain">--imain</h2>
+<span class="anchor" id="line-53"></span><span class="anchor" id="line-54"></span><p class="line862">Should specify a 4D image file with <em>all</em> your images acquired as part of a diffusion protocol. I.e. it should contain both your dwis and your <em>b</em>=0 images. If you have collected your data with reversed phase-encode blips, data for both blip-directions should be in this file. <span class="anchor" id="line-55"></span><span class="anchor" id="line-56"></span><p class="line867">
+<h2 id="A--mask">--mask</h2>
+<span class="anchor" id="line-57"></span><span class="anchor" id="line-58"></span><p class="line862">Single volume image file with ones and zeros specifying brain (one) and no-brain (zero). Typically obtained by running <a href="./BET(2f)UserGuide.html">BET</a> on the first <em>b</em>=0 image. If you have previously run <a href="./topup.html">topup</a> on your data I suggest you run <a href="./BET(2f)UserGuide.html">BET</a> on the first volume (or the average of all volumes) of the <a href="./topup(2f)TopupUsersGuide.html#A--iout">--iout</a> output and use that. <span class="anchor" id="line-59"></span><span class="anchor" id="line-60"></span><p class="line867">
+<h2 id="A--acqp">--acqp</h2>
+<span class="anchor" id="line-61"></span><span class="anchor" id="line-62"></span><p class="line862">A text-file describing the acquisition parameters for the different images in <tt class="backtick">--imain</tt>. The format of this file is identical to that used by <a class="nonexistent" href="./topup(2f)TopupUsersGuide(2f).html#A--datain">topup</a> (though the parameter is called <tt class="backtick">--datain</tt> there). <span class="anchor" id="line-63"></span><span class="anchor" id="line-64"></span><p class="line867">
+<h2 id="A--index">--index</h2>
+<span class="anchor" id="line-65"></span><span class="anchor" id="line-66"></span><p class="line862">A text-file that determines the relationship between on the one hand the images in <tt class="backtick">--imain</tt> and on the other hand the acquisition parameters in <tt class="backtick">--acqp</tt> and (optionally) the subject movement information in <tt class="backtick">--topup</tt>. It should be a single column (or row) with one entry per volume in <tt class="backtick">--imain</tt>. We will use a small (simplified) example to make it clear. <span class="anchor" id="line-67"></span><span class="anchor" id="line-68"></span><p class="line867"><img align="top" alt="eight_original_images.png" class="attachment" src="attachments/eddy(2f)UsersGuide/eight_original_images.png" title="eight_original_images.png" width="800" /> <span class="anchor" id="line-69"></span><span class="anchor" id="line-70"></span><p class="line862">The image above shows a selected slice from each of the eight volumes in <tt class="backtick">--imain</tt>. The associated <tt class="backtick">--acqp</tt> file is <span class="anchor" id="line-71"></span><span class="anchor" id="line-72"></span><p class="line867"><tt class="backtick">-1&nbsp;0&nbsp;0&nbsp;0.051</tt><br>
+ <span class="anchor" id="line-73"></span><tt class="backtick">1&nbsp;0&nbsp;0&nbsp;0.051</tt> <span class="anchor" id="line-74"></span><span class="anchor" id="line-75"></span><p class="line862">which specifies that phase-encoding is performed in the <em>x</em>-direction, sometimes traversing <em>k</em>-space left-&gt;right (-1) and sometimes right-&gt;left (1). Finally the <tt class="backtick">--index</tt> file is <span class="anchor" id="line-76"></span><span class="anchor" id="line-77"></span><p class="line867"><tt class="backtick">1&nbsp;1&nbsp;1&nbsp;1&nbsp;2&nbsp;2&nbsp;2&nbsp;2</tt> <span class="anchor" id="line-78"></span><span class="anchor" id="line-79"></span><p class="line862">which specifies that the first four volumes in <tt class="backtick">--imain</tt> were acquired using the acquisition parameters on the first row (index 1) of the <tt class="backtick">--acqp</tt> file, and that volumes 5--8 were acquired according to the second row (index 2). <span class="anchor" id="line-80"></span><span class="anchor" id="line-81"></span><p class="line867">
+<h2 id="A--bvecs">--bvecs</h2>
+<span class="anchor" id="line-82"></span><span class="anchor" id="line-83"></span><p class="line862">A text file with normalised vectors describing the direction of the diffusion weighting. This is the same file that you would use for <a href="./FDT(2f)UserGuide.html#DTIFIT">FDT</a>. <span class="anchor" id="line-84"></span><span class="anchor" id="line-85"></span><p class="line867">
+<h2 id="A--bvals">--bvals</h2>
+<span class="anchor" id="line-86"></span><span class="anchor" id="line-87"></span><p class="line862">A text file with <em>b</em>-values () describing the "amount of" diffusion weighting. This is the same file that you would use for <a href="./FDT(2f)UserGuide.html#DTIFIT">FDT</a>. <span class="anchor" id="line-88"></span><span class="anchor" id="line-89"></span><p class="line867">
+<h2 id="A--out">--out</h2>
+<span class="anchor" id="line-90"></span><span class="anchor" id="line-91"></span><p class="line862">Specifies the basename of the output. Let us say <tt class="backtick">--out="basename"</tt>. The output will then consist of a 4D image file named <tt class="backtick">&lt;basename&gt;.nii.gz</tt> containing all the corrected volumes and a text-file named <tt class="backtick">&lt;basename&gt;.eddy_parameters</tt> with parameters defining the field and movement for each scan. <span class="anchor" id="line-92"></span><span class="anchor" id="line-93"></span><p class="line867">
+<h2 id="A--topup">--topup</h2>
+<span class="anchor" id="line-94"></span><span class="anchor" id="line-95"></span><p class="line862">This should only be specified if you have previously run <a href="./topup.html">topup</a> on your data and should be the same name that you gave as an argument to the <a href="./topup(2f)TopupUsersGuide.html#A--out">--out</a> parameter when you ran <tt class="backtick">topup</tt>. <span class="anchor" id="line-96"></span><span class="anchor" id="line-97"></span><p class="line867">
+<h2 id="A--session">--session</h2>
+<span class="anchor" id="line-98"></span><span class="anchor" id="line-99"></span><p class="line862">As part of the modelling <tt class="backtick">eddy</tt> attempts to tease apart transformations caused by i) eddy currents, ii) subject movements and iii) gradient heating. As part of that <tt class="backtick">eddy</tt> needs to know when the scanner has been stopped and started, i.e. if data has been collected in a single session or not.  <span class="anchor" id="line-100"></span><span class="anchor" id="line-101"></span><p class="line862">If we take the example <a href="./eddy(2f)UsersGuide.html#A--index">above</a> (for <tt class="backtick">--index</tt>) as an example also for this you can see that the data in <tt class="backtick">--imain</tt> has been collected with two different sets of acquisition parameters (first four with one, and final four with another). <span class="anchor" id="line-102"></span><span class="anchor" id="line-103"></span><p class="line874">I happen to know that these are also two different "sessions", i.e. the scanner we stopped after the first four scans, and then started again to collect the next four. Therefore in this case the index file would look like <span class="anchor" id="line-104"></span><span class="anchor" id="line-105"></span><p class="line867"><tt class="backtick">1&nbsp;1&nbsp;1&nbsp;1&nbsp;2&nbsp;2&nbsp;2&nbsp;2</tt> <span class="anchor" id="line-106"></span><span class="anchor" id="line-107"></span><p class="line862">To indicate that the first four images were acquired in one session and the remaining four in another. It so happens that for this example the <tt class="backtick">--session</tt> file is identical to the <tt class="backtick">--index</tt> file, but this is not generally true. <span class="anchor" id="line-108"></span><span class="anchor" id="line-109"></span><p class="line867"><strong>N.B.</strong> At the moment specifying <tt class="backtick">--session</tt> will not make any difference to the corrected images (<a href="./eddy(2f)UsersGuide.html#A--out">&lt;basename&gt;.nii.gz</a>). It will only change <a href="./eddy(2f)UsersGuide.html#A--out">&lt;basename&gt;.eddy_parameters</a>, and that will be of no interest to most users. Hence you may find it more convenient to not specify <tt class="backtick">--session</tt>. <span class="anchor" id="line-110"></span><span class="anchor" id="line-111"></span><p class="line867"><strong>N.B. 2</strong> The comment above may become invalid in the future if/when we start to model the eddy currents at a "second level", in which case it will be crucial to assign the transformations to the correct cause. <span class="anchor" id="line-112"></span><span class="anchor" id="line-113"></span><p class="line867">
+<h2 id="A--flm">--flm</h2>
+<span class="anchor" id="line-114"></span><p class="line867">
+<h2 id="A--fwhm">--fwhm</h2>
+<span class="anchor" id="line-115"></span><p class="line867">
+<h2 id="A--niter">--niter</h2>
+<span class="anchor" id="line-116"></span><p class="line867">
+<h2 id="A--resamp">--resamp</h2>
+<span class="anchor" id="line-117"></span><p class="line867">
+<h2 id="A--repol">--repol</h2>
+<span class="anchor" id="line-118"></span><p class="line867">
+<h2 id="A--verbose">--verbose</h2>
+<span class="anchor" id="line-119"></span><p class="line867">
+<h2 id="A--help">--help</h2>
+<span class="anchor" id="line-120"></span><span class="anchor" id="bottom"></span></div>
+</div>
+<hr>
+2012-09-05 11:30
+</body>
+</html>

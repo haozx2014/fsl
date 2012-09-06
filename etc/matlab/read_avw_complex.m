@@ -16,7 +16,7 @@ function [img,dims,scales,bpp,endian] = read_avw_complex(fname)
 %            SAVE_AVW_IMG, SAVE_AVW_COMPLEX
 %   
 
-command=sprintf('sh -c ". ${FSLDIR}/etc/fslconf/fsl.sh; ${FSLDIR}/bin/fslcomplex -realcartesian %s %s %s "\n',fname,[fname,'R'],[fname,'I']);
+command=sprintf('sh -c ". ${FSLDIR}/etc/fslconf/fsl.sh;  LD_LIBRARY_PATH=$FSLDIR/bin ${FSLDIR}/bin/fslcomplex -realcartesian %s %s %s "\n',fname,[fname,'R'],[fname,'I']);
 system(command);
 
 [imgr,dims,scales,bpp,endian]=read_avw([fname,'R']);

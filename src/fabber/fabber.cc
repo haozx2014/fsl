@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include <iostream>
 #include <exception>
@@ -90,11 +90,12 @@ int main(int argc, char** argv)
   try
     {
       cout << "------------------\n";
-      cout << "Welcome to FABBER v1.1 (beta release)" << endl;
+      cout << "Welcome to FABBER v2.0" << endl;
+      //cout << "Welcome to FABBER development version (1.9)" << endl;
 
       EasyOptions args(argc, argv);
 
-      if (args.ReadBool("help")) 
+      if (args.ReadBool("help") || argc==1) 
         { 
             string model = args.ReadWithDefault("model","");
             if (model == "")
@@ -104,8 +105,30 @@ int main(int argc, char** argv)
                                  
             return 0; 
         }
-      EasyLog::StartLog(args.Read("output", 
-        "Must specify an output directory, for example: --output=mytestrun"));
+
+      if (args.ReadBool("params"))
+	{ 
+	  string outputDir = args.ReadWithDefault("output",".");
+	  EasyLog::StartLog(outputDir,false); 
+	  ofstream paramFile(( EasyLog::GetOutputDirectory() + "/paramnames.txt").c_str());
+	  vector<string> paramNames;
+	  FwdModel* model;
+	  model = FwdModel::NewFromName(args.Read("model"),args);
+	  model->NameParams(paramNames);
+	  for (unsigned i = 0; i < paramNames.size(); i++)
+	    {
+	      LOG << "      " << paramNames[i] << endl;
+	      paramFile << paramNames[i] << endl;
+	    }
+	  paramFile.close();
+
+	  return 0;
+	}
+
+      EasyLog::StartLog(
+        args.Read("output", "Must specify an output directory, for example: --output=mytestrun"),
+        args.ReadBool("overwrite"));
+
         
       LOG_ERR("Logfile started: " << EasyLog::GetOutputDirectory() 
 	          << "/logfile" << endl);
@@ -116,8 +139,8 @@ int main(int argc, char** argv)
 
       // Diagnostic information: software versions
       // This only versions this file... should really use all.
-//      LOG_ERR("FABBER development revision: $Id: fabber.cc,v 1.19 2008/09/26 14:59:08 mwebster Exp $\n");
-      LOG_ERR("FABBER release v1.1 (beta)\n");
+//      LOG_ERR("FABBER development revision: $Id: fabber.cc,v 1.25 2011/11/16 11:17:42 chappell Exp $\n");
+      LOG_ERR("FABBER release v2.0 \n");
       LOG << "Command line and effective options:\n" << args.Read("") << endl;
       LOG << "--output='" << EasyLog::GetOutputDirectory() << "'" << endl;
       LOG << args << "--------------------" << endl;

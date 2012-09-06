@@ -11,7 +11,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -60,7 +60,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #ifndef __FIBRE_H_
 #define __FIBRE_H_
@@ -801,7 +801,7 @@ namespace FIBRE{
 
     inline bool compute_d_prior(){
       m_d_old_prior=m_d_prior;
-      if(m_d<0)
+      if(m_d<0 || m_d>0.008)
 	return true;
       else{
 	m_d_prior=0;

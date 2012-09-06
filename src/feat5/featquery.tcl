@@ -17,7 +17,7 @@
 #   
 #   LICENCE
 #   
-#   FMRIB Software Library, Release 4.0 (c) 2007, The University of
+#   FMRIB Software Library, Release 5.0 (c) 2012, The University of
 #   Oxford (the "Software")
 #   
 #   The Software remains the property of the University of Oxford ("the
@@ -66,7 +66,7 @@
 #   interested in using the Software commercially, please contact Isis
 #   Innovation Limited ("Isis"), the technology transfer company of the
 #   University, to negotiate a licence. Contact details are:
-#   innovation@isis.ox.ac.uk quoting reference DE/1112.
+#   innovation@isis.ox.ac.uk quoting reference DE/9564.
 
 source [ file dirname [ info script ] ]/fslstart.tcl
 
@@ -310,7 +310,7 @@ frame $w.btns -borderwidth 1
 
 button $w.btns.apply  -text "Go"   -command "featquery_proc $w"
 button $w.btns.cancel -text "Exit" -command "destroy $w"
-button $w.btns.help   -text "Help" -command "FmribWebHelp file: ${FSLDIR}/doc/feat5/featquery.html"
+button $w.btns.help   -text "Help" -command "FmribWebHelp file: ${FSLDIR}/doc/redirects/featquery.html"
 
 pack $w.btns.apply $w.btns.cancel $w.btns.help -in $w.btns -padx 5 -pady 5 -side left -expand yes
 

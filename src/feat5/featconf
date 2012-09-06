@@ -54,6 +54,9 @@ set fmri(mc) 1
 # B1 unwarping
 set fmri(regunwarp_yn) 0
 
+# Alternate reference
+set fmri(alternateReference_yn) 0
+
 # EPI dwell time (ms)
 set fmri(dwell) 0.7
 
@@ -111,6 +114,7 @@ set fmri(prewhiten_yn) 1
 # 0 : No
 # 1 : Yes
 set fmri(motionevs) 0
+set fmri(motionevsbeta) ""
 
 # General confound matrix (any number of EVs)
 set fmri(confoundevs) 0
@@ -229,7 +233,7 @@ set fmri(reginitial_highres_dof) 3
 set fmri(reghighres_search) 90
 
 # Degrees of Freedom for registration to main structural
-set fmri(reghighres_dof) 6
+set fmri(reghighres_dof) BBR
 
 # Standard image
 set fmri(regstandard) "${FSLDIR}/data/standard/MNI152_T1_2mm_brain"

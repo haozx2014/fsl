@@ -3,6 +3,7 @@
 //     Steve Smith, David Flitney, Mark Jenkinson, Stuart Clare, Thomas Nichols and Matthew Webster, FMRIB Image Analysis Group
 //     Copyright (C) 2000-2008 University of Oxford  
 //     
+
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
     fsl@fmrib.ox.ac.uk
@@ -14,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -63,7 +64,8 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
+
 //     
 #define EXPOSE_TREACHEROUS
 #include "newimage/newimageall.h"
@@ -83,9 +85,9 @@ int printUsage(const string& programName)
 
   cout << "\nDatatype information:" << endl;
   cout << " -dt sets the datatype used internally for calculations (default float for all except double images)" << endl;
-  cout << " -odt sets the output datatype (default as original image)" << endl;
-  cout << " Possible datatypes are: char short int float double" << endl;
-  cout << " Additionally \"-dt input\" will set the internal datatype to that of the original image" << endl;
+  cout << " -odt sets the output datatype ( default is float )" << endl;
+  cout << " Possible datatypes are: char short int float double input" << endl;
+  cout << " \"input\" will set the datatype to that of the original image" << endl;
 
   cout << "\nBinary operations:" << endl;
   cout << "  (some inputs can be either an image or a number)" << endl;
@@ -112,11 +114,17 @@ int printUsage(const string& programName)
   cout << " -log   : natural logarithm" << endl;
   cout << " -sin   : sine function" << endl;
   cout << " -cos   : cosine function" << endl;
+  cout << " -tan   : tangent function" << endl;
+  cout << " -asin  : arc sine function" << endl;
+  cout << " -acos  : arc cosine function" << endl;
+  cout << " -atan  : arc tangent function" << endl;
   cout << " -sqr   : square" << endl;
   cout << " -sqrt  : square root" << endl;
   cout << " -recip : reciprocal (1/current image)" << endl;
   cout << " -abs   : absolute value" << endl;
   cout << " -bin   : use (current image>0) to binarise" << endl;
+  cout << " -binv  : binarise and invert (binarisation and logical inversion)" << endl;
+  cout << " -fillh : fill holes in a binary mask (holes are internal - i.e. do not touch the edge of the FOV)" << endl;
   cout << " -index : replace each nonzero voxel with a unique (subject to wrapping) index number" << endl;
   cout << " -grid <value> <spacing> : add a 3D grid of intensity <value> with grid spacing <spacing>" << endl;
   cout << " -edge  : edge strength" << endl;
@@ -133,7 +141,7 @@ int printUsage(const string& programName)
   cout << "\nMatrix operations:" << endl;
   cout << " -tensor_decomp : convert a 4D (6-timepoint )tensor image into L1,2,3,FA,MD,MO,V1,2,3 (remaining image in pipeline is FA)" << endl;
 
-  cout << "\nKernel operations (set BEFORE filtering operation):" << endl;
+  cout << "\nKernel operations (set BEFORE filtering operation if desired):" << endl;
   cout << " -kernel 3D : 3x3x3 box centered on target voxel (set as default kernel)" << endl;
   cout << " -kernel 2D : 3x3x1 box centered on target voxel" << endl;
   cout << " -kernel box    <size>     : all voxels in a box of width <size> centered on target voxel" << endl;
@@ -142,10 +150,11 @@ int printUsage(const string& programName)
   cout << " -kernel sphere <size>     : all voxels in a sphere of radius <size> mm centered on target voxel" << endl;
   cout << " -kernel file   <filename> : use external file as kernel" << endl;
 
-  cout << "\nSpatial Filtering operations: N.B. all options apart from -s use the kernel _previously_ specified by -kernel" << endl;
+  cout << "\nSpatial Filtering operations: N.B. all options apart from -s use the default kernel or that _previously_ specified by -kernel" << endl;
   cout << " -dilM    : Mean Dilation of non-zero voxels" << endl;
   cout << " -dilD    : Modal Dilation of non-zero voxels" << endl;
   cout << " -dilF    : Maximum filtering of all voxels" << endl;
+  cout << " -dilall  : Apply -dilM repeatedly until the entire FOV is covered" << endl;
   cout << " -ero     : Erode by zeroing non-zero voxels when zero voxels found in kernel" << endl;
   cout << " -eroF    : Minimum filtering of all voxels" << endl;
   cout << " -fmedian : Median Filtering " << endl;
@@ -227,7 +236,7 @@ int check_for_output_name(int i, int argc_1)
 
 
 template <class T>
-int inputParser(int argc, char *argv[], short output_dt, bool forceOutputType=false)
+int inputParser(int argc, char *argv[], short output_dt)
 {
   volume4D<T> inputVolume;
   volume<float> kernel(box_kernel(3,3,3));
@@ -644,13 +653,19 @@ if (!separatenoise)
     /***************************************************************/
     else if (string(argv[i])=="-subsamp2"){
       temp_volume.clear();
+      extrapolation oldex = inputVolume.getextrapolationmethod();
+      inputVolume.setextrapolationmethod(extraslice);
       temp_volume = subsample_by_2(inputVolume,true);
+      temp_volume.setextrapolationmethod(oldex);
       inputVolume = temp_volume;
     }
     /***************************************************************/
     else if (string(argv[i])=="-subsamp2offc"){
       temp_volume.clear();
+      extrapolation oldex = inputVolume.getextrapolationmethod();
+      inputVolume.setextrapolationmethod(extraslice);
       temp_volume = subsample_by_2(inputVolume,false);
+      temp_volume.setextrapolationmethod(oldex);
       inputVolume = temp_volume;
     }
     /***************************************************************/
@@ -730,6 +745,43 @@ if (!separatenoise)
 	    for(int x=0;x<inputVolume.xsize();x++)
               inputVolume.value(x,y,z,t)=(T)sin((double)inputVolume.value(x,y,z,t));
     }
+    /***************************************************************/
+    else if (string(argv[i])=="-tan")
+    {
+      for(int t=0;t<inputVolume.tsize();t++)           
+        for(int z=0;z<inputVolume.zsize();z++)
+          for(int y=0;y<inputVolume.ysize();y++)	    
+	    for(int x=0;x<inputVolume.xsize();x++)
+              inputVolume.value(x,y,z,t)=(T)tan((double)inputVolume.value(x,y,z,t));
+    }
+    /***************************************************************/
+    else if (string(argv[i])=="-asin")
+    {
+      for(int t=0;t<inputVolume.tsize();t++)           
+        for(int z=0;z<inputVolume.zsize();z++)
+          for(int y=0;y<inputVolume.ysize();y++)	    
+	    for(int x=0;x<inputVolume.xsize();x++)
+              inputVolume.value(x,y,z,t)=(T)asin((double)inputVolume.value(x,y,z,t));
+    }
+    /***************************************************************/
+    else if (string(argv[i])=="-acos")
+    {
+      for(int t=0;t<inputVolume.tsize();t++)           
+        for(int z=0;z<inputVolume.zsize();z++)
+          for(int y=0;y<inputVolume.ysize();y++)	    
+	    for(int x=0;x<inputVolume.xsize();x++)
+              inputVolume.value(x,y,z,t)=(T)acos((double)inputVolume.value(x,y,z,t));
+    }
+    /***************************************************************/
+    else if (string(argv[i])=="-atan")
+    {
+      for(int t=0;t<inputVolume.tsize();t++)           
+        for(int z=0;z<inputVolume.zsize();z++)
+          for(int y=0;y<inputVolume.ysize();y++)	    
+	    for(int x=0;x<inputVolume.xsize();x++)
+              inputVolume.value(x,y,z,t)=(T)atan((double)inputVolume.value(x,y,z,t));
+    }
+    /***************************************************************/
     /* Uncorrected nonparametric P-value, assuming t-dim is perm-dim */
     else if (string(argv[i])=="-pval" || string(argv[i])=="-pval0")
     {
@@ -890,6 +942,23 @@ if (!separatenoise)
     /***************************************************************/
     else if (string(argv[i])=="-bin") inputVolume.binarise(0,inputVolume.max()+1,exclusive); 
     /***************************************************************/
+    else if (string(argv[i])=="-binv") 
+      {
+	inputVolume.binarise(0,inputVolume.max()+1,exclusive);
+	inputVolume*=(T)(-1);
+	inputVolume+=(T)1;
+	inputVolume.binarise((T)0.5,inputVolume.max()+1,exclusive);  // do this to cope with a bit of rounding error
+      }
+    /***************************************************************/
+    else if (string(argv[i])=="-fillh") 
+      {
+	inputVolume.binarise(0,inputVolume.max()+1,exclusive);
+	for (int t=0; t<=inputVolume.maxt(); t++) {
+	  inputVolume[t] = fill_holes(inputVolume[t]);
+	}
+	inputVolume.binarise(0,inputVolume.max()+1,exclusive);
+      }
+    /***************************************************************/
     else if (string(argv[i])=="-index")
     {
       int indexval=0;
@@ -916,6 +985,13 @@ if (!separatenoise)
 		inputVolume.value(x,y,z,t)=(T)gridvalue;
     }
     /*****************SPATIAL FILTERING OPTIONS*********************/
+    /***********************All Dilation***************************/
+    else if (string(argv[i])=="-dilall") {
+        volume4D<T> mask(inputVolume);   
+        mask.binarise(0,0,inclusive); // get a zero mask
+	mask=(T)1-mask;  // convert to a non-zero mask
+	for(int t=0;t<inputVolume.tsize();t++) dilall(inputVolume[t],mask[t]);
+    }
     /***********************Mean Dilation***************************/
     else if (string(argv[i])=="-dilM")
 	for(int t=0;t<inputVolume.tsize();t++) inputVolume[t]=morphfilter(inputVolume[t],kernel,"dilateM");
@@ -972,7 +1048,7 @@ if (!separatenoise)
 	float tfce_thresh = atof(argv[++i]);
 	
 	for(int t=0;t<inputVolume.tsize();t++)
-	  tfce_support(inputVolume[t], height_power, size_power, connectivity, 0, inputVolume[t].max(), X, Y, Z, tfce_thresh);
+	  tfce_support(inputVolume[t], height_power, size_power, connectivity, 0, 0, X, Y, Z, tfce_thresh);
       }
 
 // }}}
@@ -1205,11 +1281,6 @@ if (!separatenoise)
   // if i>argc-1 then can save (otherwise it is a syntax error with no specific output specified)
   check_for_output_name(i,argc-1);
 
-  double max(inputVolume.max()),min(inputVolume.min());
-  if ( !forceOutputType && ((int)max-(int)min)==0 && (max-min)!=0 && (output_dt<DT_FLOAT))
-    output_dt=DT_FLOAT;
-  
-
   if (dtype(inputVolume)>=DT_FLOAT && output_dt < DT_FLOAT)
   {
     for(int t=0;t<inputVolume.tsize();t++)           
@@ -1235,36 +1306,38 @@ int main(int argc,char *argv[])
   if (argc < 2)  
     return printUsage(string(argv[0])); 
   
-  bool forceOutputType(false);
   short inputType;
   if(string(argv[1]) == "-h" || string(argv[1]) == "--help") { printUsage(string(argv[0])); exit(0); }
   if(string(argv[1]) =="-datatype" || string(argv[1])== "-dt")  inputType = dtype(string(argv[3]));
   else inputType = dtype(string(argv[1]));
-  short outputType=inputType;
+  short outputType = DT_FLOAT;
+  if ( inputType == DT_DOUBLE )
+    outputType = DT_DOUBLE; 
+
   if(string(argv[argc-2])=="-output_datatype" || string(argv[argc-2])== "-odt") //output datatype
   {
-    if(string(argv[argc-1])=="char")        outputType =  DT_UNSIGNED_CHAR;  
+    if ( string(argv[argc-1]) == "input" )   outputType =  inputType;
+    else if(string(argv[argc-1])=="char")   outputType =  DT_UNSIGNED_CHAR;  
     else if(string(argv[argc-1])=="short")  outputType =  DT_SIGNED_SHORT;
     else if(string(argv[argc-1])=="int")    outputType =  DT_SIGNED_INT;
     else if(string(argv[argc-1])=="float")  outputType =  DT_FLOAT;
     else if(string(argv[argc-1])=="double") outputType =  DT_DOUBLE;
-    else {cout << "Error: Unknown datatype \"" << argv[argc-1] << "\" - Possible datatypes are: char short int float double" << endl; return 1;}
+    else {cout << "Error: Unknown datatype \"" << argv[argc-1] << "\" - Possible datatypes are: char short int float double input" << endl; return 1;}
     argc-=2;
-    forceOutputType=true;
   }
   if(string(argv[1])=="-datatype" || string(argv[1])== "-dt") //input datatype
   {
     if(string(argv[2])!="input") inputType=-1;
-    if(string(argv[2])=="char" || inputType == DT_UNSIGNED_CHAR)      return inputParser<char>(argc-2, argv+2,outputType,forceOutputType);
-    else if(string(argv[2])=="short" || inputType == DT_SIGNED_SHORT) return inputParser<short>(argc-2, argv+2,outputType,forceOutputType);
-    else if(string(argv[2])=="int"   || inputType == DT_SIGNED_INT)   return inputParser<int>(argc-2, argv+2,outputType,forceOutputType);
-    else if(string(argv[2])=="float" || inputType == DT_FLOAT)        return inputParser<float>(argc-2, argv+2,outputType,forceOutputType); 
-    else if(string(argv[2])=="double"|| inputType == DT_DOUBLE)       return inputParser<double>(argc-2, argv+2,outputType,forceOutputType); 
+    if(string(argv[2])=="char" || inputType == DT_UNSIGNED_CHAR)      return inputParser<char>(argc-2, argv+2,outputType);
+    else if(string(argv[2])=="short" || inputType == DT_SIGNED_SHORT) return inputParser<short>(argc-2, argv+2,outputType);
+    else if(string(argv[2])=="int"   || inputType == DT_SIGNED_INT)   return inputParser<int>(argc-2, argv+2,outputType);
+    else if(string(argv[2])=="float" || inputType == DT_FLOAT)        return inputParser<float>(argc-2, argv+2,outputType); 
+    else if(string(argv[2])=="double"|| inputType == DT_DOUBLE)       return inputParser<double>(argc-2, argv+2,outputType); 
     else if (inputType==-1)
       { cout << "Error: Unknown datatype \"" << argv[2] <<  "\" - Possible datatypes are: char short int float double input" << endl; return 1;}
   }
-  else if (dtype(string(argv[1]))==DT_DOUBLE) return inputParser<double>(argc,argv,outputType,forceOutputType);
-  else return inputParser<float>(argc,argv,outputType,forceOutputType);
+  else if (dtype(string(argv[1]))==DT_DOUBLE) return inputParser<double>(argc,argv,outputType);
+  else return inputParser<float>(argc,argv,outputType);
 }
 
 

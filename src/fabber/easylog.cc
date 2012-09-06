@@ -15,7 +15,7 @@
     
     LICENCE
     
-    FMRIB Software Library, Release 4.0 (c) 2007, The University of
+    FMRIB Software Library, Release 5.0 (c) 2012, The University of
     Oxford (the "Software")
     
     The Software remains the property of the University of Oxford ("the
@@ -64,7 +64,7 @@
     interested in using the Software commercially, please contact Isis
     Innovation Limited ("Isis"), the technology transfer company of the
     University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/1112. */
+    innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include "easylog.h"
 #include "easyoptions.h"
@@ -73,11 +73,12 @@
 #include <fstream>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <errno.h>
 
 ostream* EasyLog::filestream = NULL;
 string EasyLog::outDir = "";
 
-void EasyLog::StartLog(const string& basename)
+void EasyLog::StartLog(const string& basename, bool overwrite)
 {
   assert(filestream == NULL);
   assert(basename != "");
@@ -95,17 +96,24 @@ void EasyLog::StartLog(const string& basename)
       // not portable!
       //int ret = system(("mkdir "+ outDir + " 2>/dev/null").c_str());
 
-      // Portable?
+      // Is this portable?
+      errno = 0; // Clear errno so it can be inspected later; result is only meaningful if mkdir fails.
       int ret = mkdir(outDir.c_str(), 0777);
 
-      if(ret == 0)
-	{
+      if(ret == 0) // Success, directory created
 	  break;
-	}
+      else if (overwrite)
+        {
+          if (errno == EEXIST) // Directory already exists -- that's fine.  Although note it might not be a directory.
+            break;
+          else // Other error -- might be a problem!
+            throw Runtime_error(("Unexpected problem creating directory in --overwrite mode:\n    " + outDir).c_str());
+        }
+
       outDir += "+";
       count++;
     }
-  
+
   filestream = new ofstream( (outDir + "/logfile").c_str() );
 
   if (!filestream->good())
@@ -181,7 +189,7 @@ void Warning::ReissueAll()
        it != issueCount.end(); it++)
     LOG_ERR_SAFE("Issued " << 
 	    ( (it->second==1)?
-	      " once: " :
+	      "once: " :
 	      stringify(it->second)+" times: "
 	      ) << it->first << endl);
 }
