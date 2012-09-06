@@ -1,8 +1,11 @@
 fsl (5.0.0-1) UNRELEASED; urgency=low
 
-  * New upstream major release.
+  * New upstream major release. Various new tools, bugfixes and speed
+    improvements, as well as new wiki-based documentation.
   * Enable compilation and installation of previously missing and new
     components (Closes: #685486).
+  * Added build-dependency on libglu1-mesa-dev and mesa-common-dev for
+    fslsurface, as well as libexpatexpat-dev for other new code.
 
  -- Michael Hanke <mih@debian.org>  Thu, 06 Sep 2012 09:10:33 +0200
 

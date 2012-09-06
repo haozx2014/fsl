@@ -333,3 +333,21 @@ index e0728b1..a6672cf 100644
  }
  
  
+diff --git a/src/fslvtkio/Makefile b/src/fslvtkio/Makefile
+index 7d9f97c..fe01ff4 100644
+--- a/src/fslvtkio/Makefile
++++ b/src/fslvtkio/Makefile
+@@ -12,10 +12,10 @@ SHAPEOBJS=fslvtkio.o
+  
+ MODELOBJS=fslvtkio.o
+ 
+-all: fslvtkio.a 
++all: fslvtkio
+ 
+-fslvtkio.a: ${SHAPEOBJS}
+-	${AR} -r libfslvtkio.a ${SHAPEOBJS}
++fslvtkio: ${SHAPEOBJS}
++	${CXX} -shared -o libfslvtkio.so $(SHAPEOBJS) -fPIC ${LDFLAGS} ${LIBS}
+ 
+ 
+ 
