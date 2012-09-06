@@ -9,6 +9,7 @@ src/fslio/*.tcl usr/share/fsl/#FSLMVERSION#/tcl
 
 lib/*.so usr/lib/fsl/#FSLMVERSION#
 doc/images usr/share/fsl/#FSLMVERSION#/doc
+doc/fsl.css usr/share/fsl/#FSLMVERSION#/doc
 
 debian/fsl.sh etc/fsl/#FSLMVERSION#
 debian/*.desktop usr/share/applications

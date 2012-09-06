@@ -16,20 +16,20 @@
 cmd=${0##*/}
 
 if [ "${cmd}" = "fsl_app_wrapper" ]; then
-    echo 'fsl_app_wrapper: This script should not be run like this, see fsl-4.1(1) for details' 1>&2
+    echo 'fsl_app_wrapper: This script should not be run like this, see fsl-5.0(1) for details' 1>&2
     exit 1
 fi
 
 # Set up the FSL paths if necessary (if the user hasn't overriden them
 
 if [ -z "${FSLDIR}" ]; then
-    . /etc/fsl/4.1/fsl.sh
+    . /etc/fsl/5.0/fsl.sh
 fi
 
 abs_cmd=${FSLDIR}/bin/${cmd}
 if [ ! -x $abs_cmd ]; then
 	# try stripping major version prefix
-	abs_cmd=${FSLDIR}/bin/${cmd#fsl4.1-*}
+	abs_cmd=${FSLDIR}/bin/${cmd#fsl5.0-*}
 fi
 
 exec ${abs_cmd} $@

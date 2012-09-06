@@ -42,11 +42,11 @@ case "$1" in
         # from an old unversioned installation
         if dpkg --compare-versions "$2" le "4.1.6-2~"; then
             if [ -e /etc/fsl/fsl.sh ]; then
-                echo "Moving FSL config file to /etc/fsl/4.1."
-                if [ ! -d /etc/fsl/4.1 ]; then
-                    mkdir /etc/fsl/4.1
+                echo "Moving FSL config file to /etc/fsl/5.0."
+                if [ ! -d /etc/fsl/5.0 ]; then
+                    mkdir /etc/fsl/5.0
                 fi
-                mv_conffile_oldfsl "/etc/fsl/fsl.sh" "/etc/fsl/4.1/fsl.sh"
+                mv_conffile_oldfsl "/etc/fsl/fsl.sh" "/etc/fsl/5.0/fsl.sh"
                 mv_conffile_oldfsl "/etc/fsl/feat.tcl" "/etc/fsl/#FSLMVERSION/feat.tcl"
             fi
         fi

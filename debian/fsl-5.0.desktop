@@ -2,10 +2,10 @@
 Encoding=UTF-8
 GenericName=Software Collection for (f)MRI Data Analysis
 GenericName[de]=Software-Kollektion zur (f)MRT-Daten Analyse
-Name=FSL 4.1
-Exec=fsl4.1-fsl
-TryExec=fsl4.1-fsl
-Icon=fsl-4.1.xpm
+Name=FSL 5.0
+Exec=fsl5.0-fsl
+TryExec=fsl5.0-fsl
+Icon=fsl-5.0.xpm
 Type=Application
 Terminal=false
 Categories=Education;Science;DataVisualization;MedicalSoftware;

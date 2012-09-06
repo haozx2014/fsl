@@ -1,15 +1,16 @@
-debian/tmp/bin/* usr/lib/fsl/4.1
-debian/tmp/tcl usr/share/fsl/4.1
-debian/tmp/etc usr/share/fsl/4.1
-debian/tmp/etc/fslconf/feat.tcl etc/fsl/4.1
-debian/tmp/fsl-4.1.xpm usr/share/pixmaps
-debian/tmp/etc usr/share/fsl/4.1
+debian/tmp/bin/* usr/lib/fsl/5.0
+debian/tmp/tcl usr/share/fsl/5.0
+debian/tmp/etc usr/share/fsl/5.0
+debian/tmp/etc/fslconf/feat.tcl etc/fsl/5.0
+debian/tmp/fsl-5.0.xpm usr/share/pixmaps
+debian/tmp/etc usr/share/fsl/5.0
 
-src/fslio/*.tcl usr/share/fsl/4.1/tcl
+src/fslio/*.tcl usr/share/fsl/5.0/tcl
 
-lib/*.so usr/lib/fsl/4.1
-doc/images usr/share/fsl/4.1/doc
+lib/*.so usr/lib/fsl/5.0
+doc/images usr/share/fsl/5.0/doc
+doc/fsl.css usr/share/fsl/5.0/doc
 
-debian/fsl.sh etc/fsl/4.1
+debian/fsl.sh etc/fsl/5.0
 debian/*.desktop usr/share/applications
-debian/fsl_app_wrapper usr/lib/fsl/4.1
+debian/fsl_app_wrapper usr/lib/fsl/5.0

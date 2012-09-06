@@ -1,8 +1,8 @@
-?package(fsl-4.1):\
+?package(fsl-5.0):\
     needs="X11" \
     section="Applications/Science/Medicine" \
-    title="FSL 4.1" \
+    title="FSL 5.0" \
     longtitle="FMRIB Software Library" \
-    command="/usr/bin/fsl4.1-fsl" \
-    icon="fsl-4.1.xpm" \
+    command="/usr/bin/fsl5.0-fsl" \
+    icon="fsl-5.0.xpm" \
     hints="MRI,fMRI,FSL"

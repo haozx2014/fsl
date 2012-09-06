@@ -7,7 +7,7 @@ set -e
 
 case "$1" in
 	configure)
-		( cd /usr/share/fsl/4.1/tcl && echo 'auto_mkindex . *.tcl' | tclsh )
+		( cd /usr/share/fsl/5.0/tcl && echo 'auto_mkindex . *.tcl' | tclsh )
 	;;
 
 	abort-upgrade|abort-remove|abort-deconfigure)

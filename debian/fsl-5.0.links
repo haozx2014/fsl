@@ -1,7 +1,8 @@
-/etc/fsl/4.1/fsl.sh /usr/share/fsl/4.1/etc/fslconf/fsl.sh
-/etc/fsl/4.1/feat.tcl /usr/share/fsl/4.1/etc/fslconf/feat.tcl
-/usr/share/fsl/4.1/etc/matlab /usr/share/octave/site/m/fsl-4.1
-/usr/lib/fsl/4.1 /usr/share/fsl/4.1/bin
-/usr/lib/fsl/4.1/fsl_app_wrapper /usr/bin/fsl4.1-fsl
-/usr/bin/fslview /usr/lib/fsl/4.1/fslview
-/usr/bin/atlasquery /usr/lib/fsl/4.1/atlasquery
+/etc/fsl/5.0/fsl.sh /usr/share/fsl/5.0/etc/fslconf/fsl.sh
+/etc/fsl/5.0/feat.tcl /usr/share/fsl/5.0/etc/fslconf/feat.tcl
+/usr/share/fsl/5.0/etc/matlab /usr/share/octave/site/m/fsl-5.0
+/usr/share/fsl/data /usr/share/fsl/5.0/data
+/usr/lib/fsl/5.0 /usr/share/fsl/5.0/bin
+/usr/lib/fsl/5.0/fsl_app_wrapper /usr/bin/fsl5.0-fsl
+#/usr/bin/fslview /usr/lib/fsl/5.0/fslview
+#/usr/bin/atlasquery /usr/lib/fsl/5.0/atlasquery

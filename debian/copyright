@@ -9,321 +9,322 @@ imposes no restrictions on reproduction, modification, transmission or
 transference as long as there is no financial return (see license below).
 
 
-FSL license
------------
-
-FMRIB Software Library, Release 4.1 (c) 1999-2011, The University of Oxford
-(the "Software")
-
-The Software remains the property of the University of Oxford ("the
-University").
-
-The Software is distributed "AS IS" under this Licence solely for
-non-commercial use in the hope that it will be useful, but in order
-that the University as a charitable foundation protects its assets for
-the benefit of its educational and research purposes, the University
-makes clear that no condition is made or to be implied, nor is any
-warranty given or to be implied, as to the accuracy of the Software,
-or that it will be suitable for any particular purpose or for use
-under any specific conditions. Furthermore, the University disclaims
-all responsibility for the use which is made of the Software. It
-further disclaims any liability for the outcomes arising from using
-the Software.
-
-The Licensee agrees to indemnify the University and hold the
-University harmless from and against any and all claims, damages and
-liabilities asserted by third parties (including claims for
-negligence) which arise directly or indirectly from the use of the
-Software or the sale of any products based on the Software.
-
-No part of the Software may be reproduced, modified, transmitted or
-transferred in any form or by any means, electronic or mechanical,
-without the express permission of the University. The permission of
-the University is not required if the said reproduction, modification,
-transmission or transference is done without financial return, the
-conditions of this Licence are imposed upon the receiver of the
-product, and all original and amended source code is included in any
-transmitted product. You may be held legally responsible for any
-copyright infringement that is caused or encouraged by your failure to
-abide by these terms and conditions.
-
-You are not permitted under this Licence to use this Software
-commercially. Use for which any financial return is received shall be
-defined as commercial use, and includes (1) integration of all or part
-of the source code or the Software into a product for sale or license
-by or on behalf of Licensee to third parties or (2) use of the
-Software or any derivative of it for research with the final aim of
-developing software products for sale or license to a third party or
-(3) use of the Software or any derivative of it for research with the
-final aim of developing non-software products for sale or license to a
-third party, or (4) use of the Software to provide any service to an
-external organisation for which payment is received. If you are
-interested in using the Software commercially, please contact Isis
-Innovation Limited ("Isis"), the technology transfer company of the
-University, to negotiate a licence. Contact details are:
-innovation@isis.ox.ac.uk quoting reference DE/1112.
-
-
-
-src/misc_tcl/collapsible.tcl
-----------------------------
-
-Copyright (C) 1993 by General Electric company.  All rights reserved.
-Permission to use, copy, modify, and distribute this
-software and its documentation for any purpose and without
-fee is hereby granted, provided that the above copyright
-notice appear in all copies and that both that copyright
-notice and this permission notice appear in supporting
-documentation, and that the name of General Electric not be used in
-advertising or publicity pertaining to distribution of the
-software without specific, written prior permission.
-
-General Electric makes no representations about the suitability of
-this software for any purpose.  It is provided ``as is''
-without express or implied warranty.
+Files: *
+Copyright: 2012, The University of Oxford
+License:
+ FMRIB Software Library, Release 5.0 (c) 2012, The University of Oxford
+ (the "Software")
+ .
+ The Software remains the property of the University of Oxford ("the
+ University").
+ .
+ The Software is distributed "AS IS" under this Licence solely for
+ non-commercial use in the hope that it will be useful, but in order
+ that the University as a charitable foundation protects its assets for
+ the benefit of its educational and research purposes, the University
+ makes clear that no condition is made or to be implied, nor is any
+ warranty given or to be implied, as to the accuracy of the Software,
+ or that it will be suitable for any particular purpose or for use
+ under any specific conditions. Furthermore, the University disclaims
+ all responsibility for the use which is made of the Software. It
+ further disclaims any liability for the outcomes arising from using
+ the Software.
+ .
+ The Licensee agrees to indemnify the University and hold the
+ University harmless from and against any and all claims, damages and
+ liabilities asserted by third parties (including claims for
+ negligence) which arise directly or indirectly from the use of the
+ Software or the sale of any products based on the Software.
+ .
+ No part of the Software may be reproduced, modified, transmitted or
+ transferred in any form or by any means, electronic or mechanical,
+ without the express permission of the University. The permission of
+ the University is not required if the said reproduction, modification,
+ transmission or transference is done without financial return, the
+ conditions of this Licence are imposed upon the receiver of the
+ product, and all original and amended source code is included in any
+ transmitted product. You may be held legally responsible for any
+ copyright infringement that is caused or encouraged by your failure to
+ abide by these terms and conditions.
+ .
+ You are not permitted under this Licence to use this Software
+ commercially. Use for which any financial return is received shall be
+ defined as commercial use, and includes (1) integration of all or part
+ of the source code or the Software into a product for sale or license
+ by or on behalf of Licensee to third parties or (2) use of the
+ Software or any derivative of it for research with the final aim of
+ developing software products for sale or license to a third party or
+ (3) use of the Software or any derivative of it for research with the
+ final aim of developing non-software products for sale or license to a
+ third party, or (4) use of the Software to provide any service to an
+ external organisation for which payment is received. If you are
+ interested in using the Software commercially, please contact Isis
+ Innovation Limited ("Isis"), the technology transfer company of the
+ University, to negotiate a licence. Contact details are:
+ innovation@isis.ox.ac.uk quoting reference BS/9564.
 
 
-
-src/miscvis/readpng.(h|c)
-src/miscvis/writepng.(h|c)
-src/miscvis/(d|w)png.c
----------------------------------
-
-Copyright (c) 1998-2001 Greg Roelofs.  All rights reserved.
-
-This software is provided "as is," without warranty of any kind,
-express or implied.  In no event shall the author or contributors
-be held liable for any damages arising in any way from the use of
-this software.
-
-Permission is granted to anyone to use this software for any purpose,
-including commercial applications, and to alter it and redistribute
-it freely, subject to the following restrictions:
-
-1. Redistributions of source code must retain the above copyright
-   notice, disclaimer, and this list of conditions.
-2. Redistributions in binary form must reproduce the above copyright
-   notice, disclaimer, and this list of conditions in the documenta-
-   tion and/or other materials provided with the distribution.
-3. All advertising materials mentioning features or use of this
-   software must display the following acknowledgment:
-
-This product includes software developed by Greg Roelofs
-and contributors for the book, "PNG: The Definitive Guide,"
-published by O'Reilly and Associates.
+Files: src/misc_tcl/collapsible.tcl
+Copyright: 1993, General Electric company
+License:
+ Permission to use, copy, modify, and distribute this
+ software and its documentation for any purpose and without
+ fee is hereby granted, provided that the above copyright
+ notice appear in all copies and that both that copyright
+ notice and this permission notice appear in supporting
+ documentation, and that the name of General Electric not be used in
+ advertising or publicity pertaining to distribution of the
+ software without specific, written prior permission.
+ .
+ General Electric makes no representations about the suitability of
+ this software for any purpose.  It is provided ``as is''
+ without express or implied warranty.
 
 
-
-src/misc_tcl/BWidget/*
-----------------------
-
-BWidget ToolKit
-Copyright (c) 1998-1999 UNIFIX.
-Copyright (c) 2001-2002 ActiveState Corp.
-
-The following terms apply to all files associated with the software
-unless explicitly disclaimed in individual files.
-
-The authors hereby grant permission to use, copy, modify, distribute,
-and license this software and its documentation for any purpose, provided
-that existing copyright notices are retained in all copies and that this
-notice is included verbatim in any distributions. No written agreement,
-license, or royalty fee is required for any of the authorized uses.
-Modifications to this software may be copyrighted by their authors
-and need not follow the licensing terms described here, provided that
-the new terms are clearly indicated on the first page of each file where
-they apply.
-
-IN NO EVENT SHALL THE AUTHORS OR DISTRIBUTORS BE LIABLE TO ANY PARTY
-FOR DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES
-ARISING OUT OF THE USE OF THIS SOFTWARE, ITS DOCUMENTATION, OR ANY
-DERIVATIVES THEREOF, EVEN IF THE AUTHORS HAVE BEEN ADVISED OF THE
-POSSIBILITY OF SUCH DAMAGE.
-
-THE AUTHORS AND DISTRIBUTORS SPECIFICALLY DISCLAIM ANY WARRANTIES,
-INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.  THIS SOFTWARE
-IS PROVIDED ON AN "AS IS" BASIS, AND THE AUTHORS AND DISTRIBUTORS HAVE
-NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR
-MODIFICATIONS.
-
-GOVERNMENT USE: If you are acquiring this software on behalf of the
-U.S. government, the Government shall have only "Restricted Rights"
-in the software and related documentation as defined in the Federal
-Acquisition Regulations (FARs) in Clause 52.227.19 (c) (2).  If you
-are acquiring the software on behalf of the Department of Defense, the
-software shall be classified as "Commercial Computer Software" and the
-Government shall have only "Restricted Rights" as defined in Clause
-252.227-7013 (c) (1) of DFARs.  Notwithstanding the foregoing, the
-authors grant the U.S. Government and others acting in its behalf
-permission to use and distribute the software in accordance with the
-terms specified in this license.
+Files: src/miscvis/readpng.(h|c)
+ src/miscvis/writepng.(h|c)
+ src/miscvis/(d|w)png.c
+Copyright: 1998-2001, Greg Roelofs
+License:
+ This software is provided "as is," without warranty of any kind,
+ express or implied.  In no event shall the author or contributors
+ be held liable for any damages arising in any way from the use of
+ this software.
+ .
+ Permission is granted to anyone to use this software for any purpose,
+ including commercial applications, and to alter it and redistribute
+ it freely, subject to the following restrictions:
+ .
+ 1. Redistributions of source code must retain the above copyright
+    notice, disclaimer, and this list of conditions.
+ 2. Redistributions in binary form must reproduce the above copyright
+    notice, disclaimer, and this list of conditions in the documenta-
+    tion and/or other materials provided with the distribution.
+ 3. All advertising materials mentioning features or use of this
+    software must display the following acknowledgment:
+ .
+ This product includes software developed by Greg Roelofs
+ and contributors for the book, "PNG: The Definitive Guide,"
+ published by O'Reilly and Associates.
 
 
+Files: src/misc_tcl/BWidget/*
+Copyright: 1998-1999 UNIFIX
+  2001-2002 ActiveState Corp.
+License:
+ The following terms apply to all files associated with the software
+ unless explicitly disclaimed in individual files.
+ .
+ The authors hereby grant permission to use, copy, modify, distribute,
+ and license this software and its documentation for any purpose, provided
+ that existing copyright notices are retained in all copies and that this
+ notice is included verbatim in any distributions. No written agreement,
+ license, or royalty fee is required for any of the authorized uses.
+ Modifications to this software may be copyrighted by their authors
+ and need not follow the licensing terms described here, provided that
+ the new terms are clearly indicated on the first page of each file where
+ they apply.
+ .
+ IN NO EVENT SHALL THE AUTHORS OR DISTRIBUTORS BE LIABLE TO ANY PARTY
+ FOR DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES
+ ARISING OUT OF THE USE OF THIS SOFTWARE, ITS DOCUMENTATION, OR ANY
+ DERIVATIVES THEREOF, EVEN IF THE AUTHORS HAVE BEEN ADVISED OF THE
+ POSSIBILITY OF SUCH DAMAGE.
+ .
+ THE AUTHORS AND DISTRIBUTORS SPECIFICALLY DISCLAIM ANY WARRANTIES,
+ INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.  THIS SOFTWARE
+ IS PROVIDED ON AN "AS IS" BASIS, AND THE AUTHORS AND DISTRIBUTORS HAVE
+ NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR
+ MODIFICATIONS.
+ .
+ GOVERNMENT USE: If you are acquiring this software on behalf of the
+ U.S. government, the Government shall have only "Restricted Rights"
+ in the software and related documentation as defined in the Federal
+ Acquisition Regulations (FARs) in Clause 52.227.19 (c) (2).  If you
+ are acquiring the software on behalf of the Department of Defense, the
+ software shall be classified as "Commercial Computer Software" and the
+ Government shall have only "Restricted Rights" as defined in Clause
+ 252.227-7013 (c) (1) of DFARs.  Notwithstanding the foregoing, the
+ authors grant the U.S. Government and others acting in its behalf
+ permission to use and distribute the software in accordance with the
+ terms specified in this license.
 
-src/misc_tcl/BWidget/BWExtras-1.0.0/{labelspinbox,fileentry}.tcl
-----------------------------------------------------------------
 
-Copyright (c) 2006, Robert Heller
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above copyright
-      notice, this list of conditions and the following disclaimer in the
-      documentation and/or other materials provided with the distribution.
-    * Neither the name of the Deepwoods Software nor the names of its
-      contributors may be used to endorse or promote products derived from
-      this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
-IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
-TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
-PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+Files: src/misc_tcl/BWidget/BWExtras-1.0.0/{labelspinbox,fileentry}.tcl
+Copyright: 2006, Robert Heller
+License:
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are
+ met:
+ .
+     * Redistributions of source code must retain the above copyright
+       notice, this list of conditions and the following disclaimer.
+     * Redistributions in binary form must reproduce the above copyright
+       notice, this list of conditions and the following disclaimer in the
+       documentation and/or other materials provided with the distribution.
+     * Neither the name of the Deepwoods Software nor the names of its
+       contributors may be used to endorse or promote products derived from
+       this software without specific prior written permission.
+ .
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-
-src/misc_tcl/BWidget/BWExtras-1.0.0/labelcombobox.tcl
------------------------------------------------------
-
-Copyright (C) 2005  Robert Heller D/B/A Deepwoods Software
+Files: src/misc_tcl/BWidget/BWExtras-1.0.0/labelcombobox.tcl
+Copyright: 2005  Robert Heller D/B/A Deepwoods Software
                  51 Locke Hill Road
                  Wendell, MA 01379-9728
+License:
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or
+ (at your option) any later version.
+ .
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-
-
-src/misc_tcl/balloon.tcl
-------------------------
-
-Copyright (c) 1996-1997  Lucent Technologies Inc. and Mark Harrison
-
-This code stems from the book 'Effective Tcl/Tk Programming' by
-  Mark Harrison, AsiaInfo Software Research and Development
-  Michael McLennan, Bell Labs Innovations for Lucent Technologies
-  Addison-Wesley Professional Computing Series
-
-In the book the authors give permission to use this code in applications.
-The code is available from the 'efftcl' project on sourceforge.net:
-
+Files: src/misc_tcl/balloon.tcl
+Copyright: 1996-1997  Lucent Technologies Inc. and Mark Harrison
+License:
+ This code stems from the book 'Effective Tcl/Tk Programming' by
+ Mark Harrison, AsiaInfo Software Research and Development
+ Michael McLennan, Bell Labs Innovations for Lucent Technologies
+ Addison-Wesley Professional Computing Series
+ .
+ In the book the authors give permission to use this code in applications.
+ The code is available from the 'efftcl' project on sourceforge.net:
+ .
     http://sourceforge.net/projects/efftcl
 
 
-
-extras/src/cprob
-----------------
-
-This code comes from the CEPHES library. Although the library sources itself
-contains no proper license statement, the copyright holder previously agreed
-to release it under the terms of the GPL. This is documented in the Debian
-packaging of the labplot package. Please see
-
-http://packages.debian.org/changelogs/pool/main/l/labplot/labplot_1.5.1-1/labplot.copyright
-
-for references.
-
-Here is a verbatim copy of the statement:
-
-  This email from Steve Moshier, the copyright owner of cephes, to Helen
-  Faulkner (Debian maintainer of labplot), and other interested parties
-  (labplot and grace authors, grace maintainer and labplot sponsor), confirms
-  that we may release labplot with cephes licensed under the GPL.
-
-
-  -------- Original Message --------
-  Subject: Re: licensing of cephes
-  Date: Sun, 2 Jan 2005 21:48:02 -0500 (EST)
-  From: Steve Moshier <steve@moshier.net>
-  To: Helen Faulkner <helen_ml_faulkner@yahoo.co.uk>
-  CC: twerner@debian.org, Ben Burton <bab@debian.org>, evgeny@stambulchik.net,
-  Stefan Gerlach <gerlach@mbi-berlin.de>
-  References: <41D14354.4040506@yahoo.co.uk>
-  <Pine.LNX.4.58.0412280836250.9987@moshier.net>
-  <41D17BE3.3020708@yahoo.co.uk>
-  <Pine.LNX.4.58.0412281219420.10873@moshier.net>
-  <41D1FB8D.6030002@yahoo.co.uk>
-  <Pine.LNX.4.58.0412291032190.15474@moshier.net>
-  <41D2D8EF.9010702@yahoo.co.uk>
-  <Pine.LNX.4.58.0412291632540.17032@moshier.net>
-  <41D41B2E.80508@yahoo.co.uk>
-
-
-
-  On Thu, 30 Dec 2004, Helen Faulkner wrote:
-
-  >   http://www.debian.org/social_contract#guidelines
-
-  This is fine with me.  To acknowedge your terms explicily,
-  how about augmenting the permission to read something like
-  the following --
-
-    This software is derived from the Cephes Math Library. It is
-    incorporated herein, and licensed in accordance with DFSG,
-    by permission of the author.
-
-
-  If you are trying to get me to suggest a specific form for your
-  license, then from looking at Debian programs such as dpkg it seems to
-  me that you would find the GPL to be appropriate and the permission
-  statement could reference one of the GPL documents instead of DFSG.
-  Alternatively, the packages you have been talking about distributing
-  with Debian presumably come with some sort of licenses and it would
-  make sense to propose those licenses.
-
+Files: extras/src/cprob
+Copyright Steve Moshier
+License:
+ This code comes from the CEPHES library. Although the library sources itself
+ contains no proper license statement, the copyright holder previously agreed
+ to release it under the terms of the GPL. This is documented in the Debian
+ packaging of the labplot package. Please see
+ .
+ http://packages.debian.org/changelogs/pool/main/l/labplot/labplot_1.5.1-1/labplot.copyright
+ .
+ for references.
+ .
+ Here is a verbatim copy of the statement:
+ .
+   This email from Steve Moshier, the copyright owner of cephes, to Helen
+   Faulkner (Debian maintainer of labplot), and other interested parties
+   (labplot and grace authors, grace maintainer and labplot sponsor), confirms
+   that we may release labplot with cephes licensed under the GPL.
+ .
+ .
+   -------- Original Message --------
+   Subject: Re: licensing of cephes
+   Date: Sun, 2 Jan 2005 21:48:02 -0500 (EST)
+   From: Steve Moshier <steve@moshier.net>
+   To: Helen Faulkner <helen_ml_faulkner@yahoo.co.uk>
+   CC: twerner@debian.org, Ben Burton <bab@debian.org>, evgeny@stambulchik.net,
+   Stefan Gerlach <gerlach@mbi-berlin.de>
+   References: <41D14354.4040506@yahoo.co.uk>
+   <Pine.LNX.4.58.0412280836250.9987@moshier.net>
+   <41D17BE3.3020708@yahoo.co.uk>
+   <Pine.LNX.4.58.0412281219420.10873@moshier.net>
+   <41D1FB8D.6030002@yahoo.co.uk>
+   <Pine.LNX.4.58.0412291032190.15474@moshier.net>
+   <41D2D8EF.9010702@yahoo.co.uk>
+   <Pine.LNX.4.58.0412291632540.17032@moshier.net>
+   <41D41B2E.80508@yahoo.co.uk>
+ .
+ .
+ .
+   On Thu, 30 Dec 2004, Helen Faulkner wrote:
+ .
+   >   http://www.debian.org/social_contract#guidelines
+ .
+   This is fine with me.  To acknowedge your terms explicily,
+   how about augmenting the permission to read something like
+   the following --
+ .
+     This software is derived from the Cephes Math Library. It is
+     incorporated herein, and licensed in accordance with DFSG,
+     by permission of the author.
+ .
+ .
+   If you are trying to get me to suggest a specific form for your
+   license, then from looking at Debian programs such as dpkg it seems to
+   me that you would find the GPL to be appropriate and the permission
+   statement could reference one of the GPL documents instead of DFSG.
+   Alternatively, the packages you have been talking about distributing
+   with Debian presumably come with some sort of licenses and it would
+   make sense to propose those licenses.
 
 
-src/libhfunc/dbh.h
-------------------
-The ANALYZE 7.5 file header (fsliolib/dbh.h) is (c) Copyright 1986-1995,
-Biomedical Imaging Resource, Mayo Foundation. Incorporation of components
-of dbh.h are by permission of the Mayo Foundation. Changes from the
-ANALYZE 7.5 file header in this file are released to the public domain,
-including the functional comments and any amusing asides.
 
-Debian maintainer comment:
+Files: src/libhfunc/dbh.h
+Copyright: 1986-1995, Biomedical Imaging Resource, Mayo Foundation
+License:
+ Incorporation of components of dbh.h are by permission of the Mayo Foundation.
+ Changes from the ANALYZE 7.5 file header in this file are released to the
+ public domain, including the functional comments and any amusing asides.
+ .
+ Debian maintainer comment:
     This file is also part of the nifticlibs source package (and associated
     -dev package) in Debian main.
 
 
+Files: etc/js/*
+Copyright: 2009 Dan Vanderkam
+License:
+ Permission is hereby granted, free of charge, to any person
+ obtaining a copy of this software and associated documentation
+ files (the "Software"), to deal in the Software without
+ restriction, including without limitation the rights to use,
+ copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the
+ Software is furnished to do so, subject to the following
+ conditions:
+ .
+ The above copyright notice and this permission notice shall be
+ included in all copies or substantial portions of the Software.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ OTHER DEALINGS IN THE SOFTWARE.
 
-Debian packaging
-----------------
-The Debian packaging is (C) 2005-2010, Michael Hanke <michael.hanke@gmail.com>
-
-   The Debian packaging is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 2 of the License, or
-   (at your option) any later version.
-
-   This package is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this package; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
-   02110-1301  USA.
-
-On Debian systems, the complete text of the GNU General
-Public License can be found in `/usr/share/common-licenses/GPL-2'.
+Files: debian/*
+Copyright: 2005-2012 Michael Hanke <michael.hanke@gmail.com
+License: GPL-2+
+ The Debian packaging is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or
+ (at your option) any later version.
+ .
+ This package is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ .
+ You should have received a copy of the GNU General Public License
+ along with this package; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ 02110-1301  USA.
+ .
+ On Debian systems, the complete text of the GNU General
+ Public License can be found in `/usr/share/common-licenses/GPL-2'.

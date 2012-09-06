@@ -9,7 +9,7 @@ Configuration
 -------------
 
 FSL requires a number of environment variables to be set properly.  To achieve
-this, please source the configuration script from /etc/fsl/4.1/fsl.sh.
+this, please source the configuration script from /etc/fsl/5.0/fsl.sh.
 Please note that FSL packages prior version 4.1.6-2 installed the configuration
 script at /etc/fsl/fsl.sh. Since version 4.1.6-2, the 'fsl' package only
 installs a symlink to the configuration script of the default FSL version at
@@ -27,7 +27,7 @@ that employ FSL commands and are intended to be shared with others should rely
 on unprefixed command names and the FSL environment variable setup.
 
 The FSL user interface sometimes refers to an 'FSLDIR'. On Debian systems this
-is /usr/share/fsl/4.1 for FSL version 4.1.
+is /usr/share/fsl/5.0 for FSL version 5.0.
 
 
 User interface
@@ -44,7 +44,7 @@ Octave
   Octave users can read and write 3d and 4d datasets by using the `read_avw*`
   and `save_avw*` functions. No further configuration is necessary, as the FSL
   package installs the necessary modules into the appropriate locations.
-  Matlab users have to include /usr/share/fsl/4.1/etc/matlab into their search
+  Matlab users have to include /usr/share/fsl/5.0/etc/matlab into their search
   path (see the 'addpath' command).
 
 Sun Gridengine
@@ -55,7 +55,7 @@ Sun Gridengine
   rely on a fixed set of queue names. By default no jobs are submitted and all
   processing is done locally, even if a Gridengine is running.  Cluster
   computing is enabled by setting the environment variable FSLPARALLEL=1. This
-  can be done on a case-by-case basis, or system-wide in /etc/fsl/4.1/fsl.sh.
+  can be done on a case-by-case basis, or system-wide in /etc/fsl/5.0/fsl.sh.
   Please see this file for more configuration options, including the cluster
   email setup.  If FSL is used in conjunction with a Sun Gridengine installed by
   the corresponding Debian package, no further configuration should be

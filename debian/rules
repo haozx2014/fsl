@@ -1,7 +1,7 @@
 #!/usr/bin/make -f
 # -*- makefile -*-
 
-FSLMAJORVERSION = 4.1
+FSLMAJORVERSION = 5.0
 
 # enable exented globbing in the shell to be able to use more
 # sophisticated stuff in dh_install files
@@ -15,11 +15,12 @@ export DH_OPTIONS
 
 # specify all FSL projects that shall be built
 PROJECTS = \
-  utils fslio miscmaths newimage libhfunc libvis first_lib meshclass fslvtkio \
-  misc_tcl basisfield warpfns bint shapeModel MVdisc libmeshutils \
-  avwutils bet2 cluster fast4 feat5 film filmbabe flirt fabber fslpres fslvbm \
+  utils fslio miscmaths newimage libvis first_lib meshclass fslvtkio \
+  misc_tcl basisfield warpfns bint shapeModel MVdisc fslsurface libmeshutils \
+  avwutils basil bet2 cluster fast4 feat5 film filmbabe flirt fabber fslvbm \
   mcflirt melodic misc_c miscvis mm randomise siena slicetimer susan tbss \
-  fnirt fugue misc_scripts fdt first possum sgeutils flameo
+  fnirt fugue asl_mfree misc_scripts fdt first possum sgeutils flameo \
+  oxford_asl qboot topup ptx2 lesions eddy
 
 # specify FSL extras to be built
 EXTRAS = libprob libcprob cprob
@@ -40,6 +41,7 @@ endif
 # apply to FSL as 'ANSI_FLAGS'
 CFLAGS = -Wall -g -DHAVE_LIBFREETYPE -fPIC \
          -I/usr/include/nifti \
+         -I/usr/include/gifti \
          -I/usr/include/newmat \
          -I$(FSLDIR)/extras/src/libprob -I$(FSLDIR)/extras/src/libcprob \
          -I$(FSLDIR)/src
@@ -146,18 +148,11 @@ build-stamp: instdir biextras biprojs
 	# fix permissions
 	find debian/tmp/tcl/BWidget -type f -exec chmod -x {} \;
 	chmod 644 debian/tmp/tcl/*.{tcl,xbm,ppm,ico}
-	chmod -x debian/tmp/etc/{flirtsch,fslpres}/*
+	chmod -x debian/tmp/etc/flirtsch/*
 
 	# cleanup TCL stuff
 	rm -r debian/tmp/tcl/BWidget/BWMan/
 	find debian/tmp/tcl/BWidget/ -name '*.txt' -delete
-
-	# remove FSL internal binary and scripts
-	rm debian/tmp/bin/{fslpres,eqn2gif,makehtmeqns}
-
-	# silence lintian warning about a script which is actually documentation
-	let "RES = $$(wc -l < src/possum/doc/readme) -1" \
-		&& tail -n$${RES} src/possum/doc/readme > debian/tmp/doc/possum/readme
 
 	# generate debhelper file to create /usr/bin symlinks and manpage links
 	# for all relevant binaries installed by the versioned FSL package
@@ -175,7 +170,7 @@ clean: cleancontrolfiles controlfiles cextras cprojs
 
 	# remove leftovers
 	find $(CURDIR) -name '*.so' -delete
-	-rm src/fdt/{xfibres,fdt_matrix_ops,indexer,replacevols,probtrackx,reord_OM,sausages,probtrack_old}
+	-rm src/fdt/{xfibres,fdt_matrix_ops,indexer,replacevols,probtrackx,reord_OM,sausages,probtrack_old,xfibres_pred,rearrange}
 	-rm src/feat5/doc/{top.html,feat.tcl}
 	-rm -r etc/standard lib
 
@@ -207,6 +202,9 @@ install: build
 	cp -r -t debian/tmp etc
 	# clean useless pieces
 	rm debian/tmp/etc/fslconf/fslmachtype.sh
+	# do not install license files
+	rm debian/tmp/etc/js/LICENSE.txt
+
 
 
 # Must not depend on anything. This is to be called by
@@ -240,19 +238,8 @@ binary-common:
 binary-indep: install
 	dh_installdirs -i
 
-	# install docs (except images and stylesheet, which are in fsl package)
-	cp -r doc/!(images) debian/fsl-doc-$(FSLMAJORVERSION)/usr/share/fsl/$(FSLMAJORVERSION)/doc
-	rm -f debian/fsl-doc-$(FSLMAJORVERSION)/usr/share/fsl/$(FSLMAJORVERSION)/doc/fsl.css
-	# wipe installer script - useless on Debian
-	rm debian/fsl-doc-$(FSLMAJORVERSION)/usr/share/fsl/$(FSLMAJORVERSION)/doc/fsl/fsl_installer.sh
-
 	# cleanup doc path
-	rm debian/tmp/doc/feat5/DO
 	-rm debian/tmp/doc/fsl/fsl_installer.sh
-
-	# clean empty dirs from doc package
-	find debian/fsl-doc-$(FSLMAJORVERSION)/usr/share/fsl/$(FSLMAJORVERSION)/doc -depth -type d -empty -exec rmdir {} \;
-	find debian/tmp/doc -depth -type d -empty -exec rmdir {} \;
 
 	$(MAKE) -f debian/rules DH_OPTIONS=-i binary-common
 
@@ -269,10 +256,6 @@ binary-arch: install
 
 	# set execute permission for GUI application wrapper
 	chmod +x debian/fsl_app_wrapper
-
-	# install a symlink to the main data. directory -- later on we might want to
-	# have more fine-grained linking and abandon the global link
-	ln -sf ../data debian/fsl-$(FSLMAJORVERSION)/usr/share/fsl/$(FSLMAJORVERSION)/data
 
 	$(MAKE) -f debian/rules DH_OPTIONS=-a binary-common
 

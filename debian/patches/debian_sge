@@ -4,9 +4,9 @@ Description: out-of-the-box compatibility with Debian's SGE
  SGE, if not, not.
 --- a/src/fdt/bedpostx
 +++ b/src/fdt/bedpostx
-@@ -4,13 +4,15 @@
- #
- #   SHCOPYRIGHT
+@@ -64,13 +64,15 @@
+ #   University, to negotiate a licence. Contact details are:
+ #   innovation@isis.ox.ac.uk quoting reference DE/9564.
  
 -if [ "x$SGE_ROOT" = "x" ] ; then
 -    if [ -f /usr/local/share/sge/default/common/settings.sh ] ; then
@@ -27,7 +27,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  
  Usage() {
      echo ""
-@@ -129,14 +131,20 @@
+@@ -189,14 +191,20 @@
  mkdir -p ${subjdir}.bedpostX/logs/pid_${$}
  mkdir -p ${subjdir}.bedpostX/xfms
  
@@ -51,7 +51,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  
  # 
  # Need to set off a backgrounded monitoring task
-@@ -211,14 +219,20 @@
+@@ -271,14 +279,20 @@
      fi
      slice=$(($slice + 1))
  done
@@ -80,7 +80,7 @@ Description: out-of-the-box compatibility with Debian's SGE
      cat <<EOM > ${subjdir}.bedpostX/monitor
 --- a/src/fdt/fdt.tcl
 +++ b/src/fdt/fdt.tcl
-@@ -694,8 +694,11 @@
+@@ -858,8 +858,11 @@
  	probtrackx {
  	    global probtrack env
  	    set errorStr ""
@@ -94,7 +94,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  	    if { $probtrack(bedpost_dir) == ""  } { set errorStr "You must specify the bedpostX directory!" }
  	    if { $probtrack(mode) == "simple" && $probtrack(usereference_yn) && $probtrack(reference) == "" } { set errorStr "$errorStr You must specify a reference image" } 
  	    if { $probtrack(mode) == "seedmask" && $probtrack(reference) == "" } { set errorStr "$errorStr You must specify a mask image" } 
-@@ -856,7 +859,11 @@
+@@ -1025,7 +1028,11 @@
                      puts $script "mv $logfile $copylog"
                      puts $script "rm ${filebase}_script.sh"
  		    close $script
@@ -106,7 +106,7 @@ Description: out-of-the-box compatibility with Debian's SGE
 +		    exec $FSLDIR/bin/fsl_sub -T 1200 ${filebase}_script.sh
  		} else {
  
- 		    fdt_monitor_short $w "$FSLDIR/bin/probtrackx $flags"
+ 		    fdt_monitor_short $w "$FSLDIR/bin/probtrackx2 $flags"
 --- a/src/misc_tcl/fslstart.tcl
 +++ b/src/misc_tcl/fslstart.tcl
 @@ -55,7 +55,12 @@
@@ -125,7 +125,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  set OSFLAVOUR unix
 --- a/src/possum/possumX
 +++ b/src/possum/possumX
-@@ -171,7 +171,9 @@
+@@ -231,7 +231,9 @@
  mkdir -p ${subjdir}/diff_proc
  mkdir -p ${subjdir}/logs
  mkdir -p ${subjdir}/logs/pid_${$}
@@ -136,7 +136,7 @@ Description: out-of-the-box compatibility with Debian's SGE
      
  echo Processing stage 
  date
-@@ -184,9 +186,12 @@
+@@ -244,9 +246,12 @@
      procnum=$(($procnum + 1))
  done
  
@@ -153,7 +153,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  date
 --- a/src/sgeutils/fsl_sub
 +++ b/src/sgeutils/fsl_sub
-@@ -10,6 +10,15 @@
+@@ -70,6 +70,15 @@
  # cluster.
  ###########################################################################
  
@@ -169,7 +169,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  
  ###########################################################################
  # The following section determines what to do when fsl_sub is called
-@@ -24,10 +33,11 @@
+@@ -84,10 +93,11 @@
  # cluster to be used.
  ###########################################################################
  
@@ -183,7 +183,7 @@ Description: out-of-the-box compatibility with Debian's SGE
      elif [ -f /usr/local/sge/default/common/settings.sh ] ; then
  	. /usr/local/sge/default/common/settings.sh
      else
-@@ -35,30 +45,26 @@
+@@ -95,30 +105,26 @@
      fi
  fi
  
@@ -232,7 +232,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  
  ###########################################################################
  # Don't change the following (but keep scrolling down!)
-@@ -80,13 +86,13 @@
+@@ -140,13 +146,13 @@
  $command -q short.q gzip *.img *.hdr
  $command -a darwin regscript rawdata outputdir ...
  
@@ -251,7 +251,7 @@ Description: out-of-the-box compatibility with Debian's SGE
    -j <jid>              Place a hold on this task until job jid has completed
    -t <filename>         Specify a task file of commands to execute in parallel
    -N <jobname>          Specify jobname as it will appear on queue
-@@ -98,21 +104,6 @@
+@@ -158,21 +164,6 @@
                          configured for the requested queues.
                          <threads> specifies the number of threads to run
    -v                    Verbose mode.
@@ -273,7 +273,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  EOF
  
    exit 1
-@@ -147,9 +138,10 @@
+@@ -207,9 +198,10 @@
  # change. It also sets up the basic emailing control.
  ###########################################################################
  
@@ -287,7 +287,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  
  
  ###########################################################################
-@@ -194,10 +186,11 @@
+@@ -254,10 +246,11 @@
        fi
        shift;;
      -T)
@@ -301,7 +301,7 @@ Description: out-of-the-box compatibility with Debian's SGE
        qconf -sql | grep ^$queue 2>&1 >/dev/null
        if [ $? -eq 1 ]; then
  	  echo "Invalid queue specified!"
-@@ -344,9 +337,9 @@
+@@ -404,9 +397,9 @@
  
  	if [ "x$tasks" = "x" ] ; then
  	    if [ $scriptmode -ne 1 ] ; then
@@ -313,7 +313,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  	    fi
  	    if [ $verbose -eq 1 ] ; then 
  		echo sge_command: $sge_command >&2
-@@ -354,7 +347,7 @@
+@@ -414,7 +407,7 @@
  	    fi
  	    exec $sge_command $@ | awk '{print $3}'
  	else

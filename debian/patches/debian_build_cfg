@@ -85,22 +85,6 @@ Description: Debian build setup and shared libraries
 +	${CXX} -shared -o libprob.so $(OBJS) -fPIC ${LDFLAGS}
 +	rm -f libcprob.so
 +	ln -s libprob.so libcprob.so
---- a/src/bint/Makefile
-+++ b/src/bint/Makefile
-@@ -13,10 +13,10 @@
- 
- #OPTFLAGS =
- 
--all:	${XFILES} libbint.a
-+all:	${XFILES} libbint
- 
--libbint.a: ${OBJS}
--	${AR} -r libbint.a ${OBJS}
-+libbint: ${OBJS}
-+	${CXX} -shared -o libbint.so ${OBJS} ${LDFLAGS} -fPIC -lutils -lnewmat -lnewimage -lmiscmaths -lprob
- 
- mean:${OBJS} mean.o
- 	${CXX}  ${CXXFLAGS} ${LDFLAGS} -o $@ ${OBJS} mean.o ${LIBS}
 --- a/src/fdt/Makefile
 +++ b/src/fdt/Makefile
 @@ -5,7 +5,7 @@
@@ -141,26 +125,6 @@ Description: Debian build setup and shared libraries
  #include "dbh.h"
  
  #ifdef __cplusplus
---- a/src/libhfunc/Makefile
-+++ b/src/libhfunc/Makefile
-@@ -2,13 +2,13 @@
- 
- PROJNAME = libhfunc
- 
--AFILES = libhfunc.a
-+AFILES = libhfunc.so
- HFILES = libhfunc.h dbh.h
- XFILES = 
- 
- OBJS = libhfunc.o
- 
--all: libhfunc.a
-+all: libhfunc
- 
--libhfunc.a: ${OBJS}
--	${AR} -r libhfunc.a ${OBJS}
-+libhfunc: ${OBJS}
-+	${CXX} -shared -o libhfunc.so ${OBJS} ${LDFLAGS} -fPIC
 --- a/src/libvis/Makefile
 +++ b/src/libvis/Makefile
 @@ -6,7 +6,7 @@
@@ -263,7 +227,7 @@ Description: Debian build setup and shared libraries
  	$(CXX)  ${CXXFLAGS} ${LDFLAGS} -o $@ ${SOBJS} ${LIBS}
 --- a/src/newimage/newimage.h
 +++ b/src/newimage/newimage.h
-@@ -20,7 +20,7 @@
+@@ -80,7 +80,7 @@
  #include "positerators.h"
  #include "miscmaths/miscmaths.h"
  #include "miscmaths/kernel.h"
@@ -284,7 +248,7 @@ Description: Debian build setup and shared libraries
 -shapeModel.a: ${SHAPEOBJS}
 -	${AR} -r libshapeModel.a ${SHAPEOBJS}
 +shapeModel: ${SHAPEOBJS}
-+	${CXX} -shared -o libshapeModel.so ${SHAPEOBJS} ${LDFLAGS} -fPIC -lmeshclass -lnewimage -lnewmat -lfirst_lib
++	${CXX} -shared -o libshapeModel.so ${SHAPEOBJS} ${LDFLAGS} -fPIC -lmeshclass -lnewimage -lnewmat -lfirst_lib -lfslvtkio -lmiscmaths
  
  
  
@@ -310,3 +274,62 @@ Description: Debian build setup and shared libraries
  
  XFILES = 
  AFILES = ${LibraryTarget}
+diff --git a/src/ptx2/Makefile b/src/ptx2/Makefile
+index 010f6a1..762c203 100644
+--- a/src/ptx2/Makefile
++++ b/src/ptx2/Makefile
+@@ -16,7 +16,7 @@ endif
+ USRINCFLAGS = -I${INC_NEWMAT} -I${INC_NEWRAN} -I${INC_CPROB} -I${INC_PROB} -I${INC_BOOST} -I${INC_ZLIB}
+ USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_NEWRAN} -L${LIB_CPROB} -L${LIB_PROB} -L${LIB_ZLIB}
+ 
+-DLIBS = -lwarpfns -lbasisfield -lfslsurface  -lfslvtkio -lmeshclass -lnewimage -lutils -lmiscmaths -lnewmat -lnewran -lfslio -lgiftiio -lexpat -lfirst_lib -lniftiio -lznz -lcprob -lutils -lprob -lm -lz
++DLIBS = -lwarpfns -lbasisfield -lfslsurface  -lfslvtkio -lmeshclass -lnewimage -lutils -lmiscmaths -lnewmat -lfslio -lgiftiio -lexpat -lfirst_lib -lniftiio -lznz -lcprob -lutils -lprob -lm -lz
+ 
+ 
+ CCOPS=ccops
+diff --git a/src/qboot/Makefile b/src/qboot/Makefile
+index 98960e6..8b9ac3f 100755
+--- a/src/qboot/Makefile
++++ b/src/qboot/Makefile
+@@ -5,7 +5,7 @@ PROJNAME = qboot
+ USRINCFLAGS = -I${INC_NEWMAT} -I${INC_NEWRAN} -I${INC_CPROB} -I${INC_PROB} -I${INC_BOOST} -I${INC_ZLIB}
+ USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_NEWRAN} -L${LIB_CPROB} -L${LIB_PROB} -L${LIB_ZLIB}
+ 
+-DLIBS = -lnewimage -lutils -lmiscmaths -lnewmat -lnewran -lfslio -lniftiio -lznz -lcprob -lprob -lm -lz
++DLIBS = -lnewimage -lutils -lmiscmaths -lnewmat -lfslio -lniftiio -lznz -lcprob -lprob -lm -lz
+ 
+ QBOOT=qboot
+ 
+@@ -19,4 +19,4 @@ XFILES = qboot
+ 
+ all: qboot
+ ${QBOOT}:	   ${QBOOTOBJS}
+-		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${QBOOTOBJS} ${DLIBS}
+\ No newline at end of file
++		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${QBOOTOBJS} ${DLIBS}
+diff --git a/src/fslsurface/fslsurfaceio.cc b/src/fslsurface/fslsurfaceio.cc
+index ec2bb32..a80c62f 100644
+--- a/src/fslsurface/fslsurfaceio.cc
++++ b/src/fslsurface/fslsurfaceio.cc
+@@ -68,7 +68,7 @@
+ #include <fslvtkio/fslvtkio.h>
+ 
+ extern "C" {
+-#include <giftiio/gifti_io.h>
++#include <gifti_io.h>
+ }
+ 
+ using namespace fslvtkio;
+diff --git a/src/fslsurface/fslsurfaceio.h b/src/fslsurface/fslsurfaceio.h
+index e0728b1..a6672cf 100644
+--- a/src/fslsurface/fslsurfaceio.h
++++ b/src/fslsurface/fslsurfaceio.h
+@@ -71,7 +71,7 @@
+ #include <vector>
+ 
+ extern "C" {
+-#include <giftiio/gifti_io.h>
++#include <gifti_io.h>
+ }
+ 
+ 

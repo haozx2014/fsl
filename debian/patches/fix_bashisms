@@ -1,7 +1,7 @@
 Description: Fix bashisms in the code.
 --- a/src/possum/possumX
 +++ b/src/possum/possumX
-@@ -38,7 +38,7 @@
+@@ -98,7 +98,7 @@
  fi
  
  echo "POSSUMDIR (before)" $POSSUMDIR
@@ -12,7 +12,7 @@ Description: Fix bashisms in the code.
      export POSSUMDIR=$FSLDIR
 --- a/src/possum/possumX_postproc.sh
 +++ b/src/possum/possumX_postproc.sh
-@@ -17,7 +17,7 @@
+@@ -77,7 +77,7 @@
  #$ -m ae
  
  echo "POSSUMDIR (before)" $POSSUMDIR
@@ -21,3 +21,49 @@ Description: Fix bashisms in the code.
     echo "POSSUMDIR (during)" $POSSUMDIR
  else
      export POSSUMDIR=$FSLDIR
+--- a/src/feat5/mainfeatreg
++++ b/src/feat5/mainfeatreg
+@@ -1,4 +1,4 @@
+-#!/bin/sh
++#!/bin/bash
+ 
+ #   dofeatreg
+ #
+--- a/src/oxford_asl/quasil
++++ b/src/oxford_asl/quasil
+@@ -1,4 +1,4 @@
+-#!/bin/sh
++#!/bin/bash
+ 
+ # QuASIL: QUASAR Bayesian Arterial SpIn Labeling parameter estimation
+ #
+@@ -377,4 +377,4 @@
+ mv $tempdir .
+ fi
+ 
+-echo "QUASIL done"
+\ No newline at end of file
++echo "QUASIL done"
+--- a/src/siena/viena_quant
++++ b/src/siena/viena_quant
+@@ -1,4 +1,4 @@
+-#!/bin/sh
++#!/bin/bash
+ 
+ #   viena_quant
+ #
+--- a/src/tbss/tbss_x
++++ b/src/tbss/tbss_x
+@@ -1,4 +1,4 @@
+-#!/bin/sh
++#!/bin/bash
+ #   Copyright (C) 2012 University of Oxford
+ #
+ #   Part of FSL - FMRIB's Software Library
+@@ -294,4 +294,4 @@
+ rm initmask????.*
+ 
+ cd ..
+-echo "Now run randomise on the newly created files: all_F1_x_skeletonised etc."
+\ No newline at end of file
++echo "Now run randomise on the newly created files: all_F1_x_skeletonised etc."
