@@ -14,14 +14,14 @@
 
     if (xmlhttp.readyState==4 && xmlhttp.status != 200 && redirecting==0)
     {
-       window.location.href = "../wiki/MELODIC";
+       window.location.href = "../wiki/MELODIC.html";
     }
   }
 
  xmlhttp.open("GET","http://fsl.fmrib.ox.ac.uk/fsldownloads/latest-version.txt?var=" + Math.floor(Math.random() * 1000),true);
  xmlhttp.send(); 
 
- setTimeout( function(){window.location.href = "../wiki/MELODIC"}, 10000 );
+ setTimeout( function(){window.location.href = "../wiki/MELODIC.html"}, 10000 );
     
 
 
