@@ -20,11 +20,10 @@ if [ "${cmd}" = "fsl_app_wrapper" ]; then
     exit 1
 fi
 
-# Set up the FSL paths if necessary (if the user hasn't overriden them
-
-if [ -z "${FSLDIR}" ]; then
-    . /etc/fsl/5.0/fsl.sh
-fi
+# Set up the FSL paths if necessary
+# do not allows user-override, as this wrapper is used via
+# versioned symlinks
+. /etc/fsl/5.0/fsl.sh
 
 abs_cmd=${FSLDIR}/bin/${cmd}
 if [ ! -x $abs_cmd ]; then
