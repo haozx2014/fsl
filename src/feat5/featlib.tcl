@@ -1175,7 +1175,7 @@ pack $w0.btns -expand yes -fill x
 #}}}
 #{{{ feat5:multiple_check
 
-proc feat5:multiple_check { w which_files load updateimageinfo dummy } {
+proc feat5:multiple_check { w which_files load updateimageinfo { dummy dummy } } {
     global FSLDIR fmri feat_files unwarp_files unwarp_files_mag initial_highres_files highres_files confoundev_files alt_ex_func
     if { $which_files < 0 } {
 	set load 0
@@ -6050,7 +6050,7 @@ if { [ file exists $fmri(init_standard) ] } {
 }
 
 if { $fmri(reginitial_highres_yn) } {
-    set flirtOptions "$flirtOptions -j \"initial_highres_files($session)\" -u $fmri(reginitial_highres_dof) -v $fmri(reginitial_highres_search)"
+    set flirtOptions "$flirtOptions -j \"$initial_highres_files($session)\" -u $fmri(reginitial_highres_dof) -v $fmri(reginitial_highres_search)"
 }
 
 if { $fmri(reghighres_yn) } {

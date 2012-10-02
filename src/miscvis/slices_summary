@@ -126,7 +126,7 @@ if [ `${FSLDIR}/bin/imtest $1` = 1 ] ; then
   cd $out
   for grot in `${FSLDIR}/bin/imglob vol*` ; do
     DD=`echo $grot | awk -F vol '{print $2}'`
-    echo "[$DD \c"
+    fslecho  "[$DD \c"
     ${FSLDIR}/bin/fslsplit $grot grot_ -z
     /bin/rm -f grot.txt
     for g in `${FSLDIR}/bin/imglob grot_*` ; do
@@ -154,7 +154,7 @@ if [ `${FSLDIR}/bin/imtest $1` = 1 ] ; then
     ${FSLDIR}/bin/fslroi BG grot 0 $bgdimx 0 $bgdimy $nubest 1
     ${FSLDIR}/bin/overlay 0 0 grot $bgrange $ubest $lthresh $uthresh grotA
 
-    echo "$nlbest,$nbest,$nubest] \c"
+    fslecho  "$nlbest,$nbest,$nubest] \c"
     fslmerge -y grot grotA grotB grotC
     ${FSLDIR}/bin/slicer grot -u -z 0 `zeropad $DD 4`.png
   done
