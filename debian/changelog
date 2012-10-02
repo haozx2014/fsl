@@ -1,3 +1,13 @@
+fsl (5.0.1-1) UNRELEASED; urgency=low
+
+  * New upstream bugfix release. It fixes some critical issues with FEAT
+    (was crashing) and post-hoc output timecourses in MELODIC.
+  * Stop regenerating tclIndex during postinst. This is no longer necessary
+    since libfslio and its TCL scripts are built from the FSL source package
+    -- which is since 4.1.1 or four years (Closes: #689166).
+
+ -- Michael Hanke <mih@debian.org>  Thu, 06 Sep 2012 09:10:33 +0200
+
 fsl (5.0.0-1) UNRELEASED; urgency=low
 
   * New upstream major release. Various new tools, bugfixes and speed
