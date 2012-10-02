@@ -1,3 +1,11 @@
+fsl (4.1.9-7) unstable; urgency=low
+
+  * Stop regenerating tclIndex during postinst. This is no longer necessary
+    since libfslio and its TCL scripts are built from the FSL source package
+    -- which is since 4.1.1 or four years (Closes: #689166).
+
+ -- Michael Hanke <mih@debian.org>  Thu, 06 Sep 2012 09:10:33 +0200
+
 fsl (4.1.9-6) unstable; urgency=low
 
   * Declare a conflict to pre-4.1.9-5 fsl4.1-doc packages. Otherwise,
