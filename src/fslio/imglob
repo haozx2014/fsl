@@ -73,10 +73,9 @@ if sys.version_info < (2, 4):
    setAvailable=False
 
 def usage():
-    print "Usage: $0 [-extension/extensions/missing] <list of names>"
+    print "Usage: $0 [-extension/extensions] <list of names>"
     print "       -extension for one image with full extension"
     print "       -extensions for image list with full extensions"
-    print "       -missing for a list of names with no corresponding file"
     sys.exit(1)
 
 def removeExt(input):
@@ -94,7 +93,6 @@ if len(sys.argv) <= 1:
 
 deleteExtensions=True
 singleImage=True;
-findMissing=False;
 startingArg=1
 
 if sys.argv[1] == "-extensions":
@@ -104,32 +102,22 @@ if sys.argv[1] == "-extensions":
 if sys.argv[1] == "-extension":
    deleteExtensions=False
    startingArg=2
-if sys.argv[1] == "-missing":
-   findMissing=True
-   startingArg=2
     
 filelist=[]
-badlist=[]
-
 for arg in range(startingArg, len(sys.argv)):
-   output=removeExt(sys.argv[arg])
-   if os.path.exists(output+".nii"):
-      filelist.append(output+".nii")
-   if os.path.exists(output+".nii.gz"):
-      filelist.append(output+".nii.gz")
-   if os.path.exists(output+".hdr"):
-      filelist.append(output+".hdr")
-   if os.path.exists(output+".hdr.gz"):
-      filelist.append(output+".hdr.gz")
-   if os.path.exists(output+".img.gz") and not singleImage:        
-      filelist.append(output+".img.gz")
-   if os.path.exists(output+".img") and not singleImage:        
-      filelist.append(output+".img")
-   if (not os.path.exists(output+".nii") and not os.path.exists(output+".nii.gz") and not os.path.exists(output+".hdr") and not os.path.exists(output+".hdr.gz") and not ( os.path.exists(output+".img.gz") and not singleImage ) and not ( os.path.exists(output+".img") and not singleImage )):
-      badlist.append(output)
-
-if findMissing:
-   filelist=badlist
+    output=removeExt(sys.argv[arg])
+    if os.path.exists(output+".nii"):
+        filelist.append(output+".nii")
+    if os.path.exists(output+".nii.gz"):
+        filelist.append(output+".nii.gz")
+    if os.path.exists(output+".hdr"):
+        filelist.append(output+".hdr")
+    if os.path.exists(output+".hdr.gz"):
+        filelist.append(output+".hdr.gz")
+    if os.path.exists(output+".img.gz") and not singleImage:        
+        filelist.append(output+".img.gz")
+    if os.path.exists(output+".img")and not singleImage:        
+        filelist.append(output+".img")
 
 if deleteExtensions:
     for file in range(0, len(filelist)):
@@ -145,7 +133,3 @@ for file in range(0, len(filelist)):
     print filelist[file],
     if file < len(filelist)-1:
        print " ",
-
-if len(badlist) > 0:
-   sys.exit(1)
-sys.exit(0)

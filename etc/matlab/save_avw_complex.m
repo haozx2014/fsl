@@ -14,8 +14,8 @@ function save_avw_complex(img,fname,vsize)
 
 save_avw(real(img),[fname,'R'],'f',vsize);
 save_avw(imag(img),[fname,'I'],'f',vsize);
-command=sprintf('sh -c ". $FSLDIR/etc/fslconf/fsl.sh; LD_LIBRARY_PATH=$FSLDIR/bin $FSLDIR/bin/fslcomplex -complex %s %s %s \n"',[fname,'R'],[fname,'I'],fname);
-system(command);
+command=sprintf('$FSLDIR/bin/fslcomplex -complex %s %s %s',[fname,'R'],[fname,'I'],fname);
+call_fsl(command);
 
 % cross platform compatible deleting of files
 delete([fname,'R','.hdr']);

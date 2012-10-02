@@ -1953,8 +1953,9 @@ void do_work_bvars(){
     int nverts=MeshVerts.Nrows()/3;
     if (!surfaceVAout.value()) {
       // do not output on the surface, instead do the new default of outputting a volume with the scalar normal dot product values (for use with randomise)
-      volume<float> refim(t1im);
+      volume<float> refim;
       if (useReconMNI.value()) { read_volume(refim,string(getenv("FSLDIR")) + "/data/standard/MNI152_T1_1mm"); } 
+      else { read_volume(refim,string(getenv("FSLDIR")) + "/data/standard/MNI152_T1_1mm"); } 
       volume<float> maskvol(refim);
       maskvol=0.0f;
       volume4D<float> volnormals;

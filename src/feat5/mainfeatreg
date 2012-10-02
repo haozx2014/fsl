@@ -126,7 +126,7 @@ if [ x$1 != x ]
       printf  "$4\n" > $1
    fi
 fi
-if [ $3 == 1 -a -d logs ]
+if [ $3 = 1 -a -d logs ]
    then
    cat logs/* > report_log.html
 fi
@@ -158,7 +158,7 @@ runCommand $3 "${FSLDIR}/bin/slicer $1 -s 3 -x 0.35 sla.png -x 0.45 slb.png -x 0
 writeToFile ${2} 0 0 "${4}"
 }
 
-function preprocessFieldmaps { # $1 logfile $2 htmlReport
+preprocessFieldmaps() { # $1 logfile $2 htmlReport
 # generate mask for fmap_mag (accounting for the fact that either mag or phase might have been masked in some pre-processing before being enter to FEAT)
 runCommand $1 "${FSLDIR}/bin/fslmaths FM_UD_fmap_mag_brain -bin FM_UD_fmap_mag_brain_mask -odt short"
 # remask by the non-zero voxel mask of the fmap_rads image (as prelude may have masked this differently before)
@@ -214,19 +214,19 @@ createSmallSliceReport FM_UD_sigloss+mag $2 $1  "<p>Thresholded signal loss weig
 
 
 
-function runFlirt { # $1 in $2 ref $3 dof $4 search $5 interp $6 report $7 in_weighting $8 nonlinearwarpres $9 logfile ${10} fnirt config
+runFlirt() { # $1 in $2 ref $3 dof $4 search $5 interp $6 report $7 in_weighting $8 nonlinearwarpres $9 logfile ${10} fnirt config
     out=${1}2${2}
     dof=$3
-    if [ "$dof" == 3 ]
+    if [ "$dof" = 3 ]
        then dof="6 -schedule ${FSLDIR}/etc/flirtsch/sch3Dtrans_3dof"
     fi
     doBBR=0;
-    if [ "$dof" == "BBR" ]
+    if [ "$dof" = "BBR" ]
     then
        doBBR=1
     fi
 #Check for existing registrations
-    if [ `${FSLDIR}/bin/imtest ${1}2${2}_warp` == 1 ]
+    if [ `${FSLDIR}/bin/imtest ${1}2${2}_warp` = 1 ]
 	then runCommand $9 "${FSLDIR}/bin/applywarp --ref=$2 --in=$1 --out=$out --warp=${1}2${2}_warp"
     elif [ -f  ${1}2${2}.mat ]
              then 
@@ -235,10 +235,10 @@ function runFlirt { # $1 in $2 ref $3 dof $4 search $5 interp $6 report $7 in_we
     else #We need to generate transforms
 	     writeToFile $logFile 0 1 "did not find file: ${1}2${2}.mat. Generating transform."
            
-	if [ $doBBR == 0 ]
+	if [ $doBBR = 0 ]
 	    then 
 	    runCommand $9 "${FSLDIR}/bin/flirt -in $1 -ref $2 -out $out -omat ${out}.mat -cost corratio -dof $dof -searchrx -$4 $4 -searchry -$4 $4 -searchrz -$4 $4 -interp $5 $7"
-	elif [ $doUnwarping == 1 ]
+	elif [ $doUnwarping = 1 ]
 	    then
 	    echoSpacingSeconds=`awk "BEGIN {print $echoSpacing / 1000}"`
 	    runCommand $9 "${FSLDIR}/bin/epi_reg --epi=$1 --t1=$2_head --t1brain=$2 --out=$out --fmap=unwarp/FM_UD_fmap --fmapmag=unwarp/FM_UD_fmap_mag --fmapmagbrain=unwarp/FM_UD_fmap_mag_brain --echospacing=$echoSpacingSeconds --pedir=$phaseEncodingDirection"
@@ -381,7 +381,7 @@ do
 	  ;;
     j     ) 
 	  echo "Option -j ( initial high-res image ) input with argument \"$OPTARG\""       #initial high-res structural image
-	  initalHighresImage=$OPTARG
+	  initialHighresImage=$OPTARG
 	  ;;
     l     ) 
 	  echo "Option -l ( logfile )input with argument \"$OPTARG\""       #log file
@@ -446,7 +446,7 @@ writeToFile $logFile 1 0 "</pre><hr>Registration<br><pre>"
 writeToFile $htmlReport 1 0 "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
 <TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"report.html\"></OBJECT>"
 
-if [ $doUnwarping == 1 ] #Initialise files
+if [ $doUnwarping = 1 ] #Initialise files
     then
     writeToFile $htmlReport 0 0 "<A HREF=\"report_unwarp.html\" target=\"_top\">Unwarping</A><hr>"
 fi
@@ -486,11 +486,11 @@ if [ $onlyUpdate != 1 ]
 fi
 cd ${outputDirectory}/reg
 
-if [ `${FSLDIR}/bin/imtest example_func` == 0 ]
+if [ `${FSLDIR}/bin/imtest example_func` = 0 ]
     then ${FSLDIR}/bin/imcp $inputImage example_func
 fi
 
-if [ $doUnwarping == 1 ] #Initialise files
+if [ $doUnwarping = 1 ] #Initialise files
     then
 
     writeToFile $htmlReport2 1 0 "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
@@ -509,7 +509,7 @@ if [ $doUnwarping == 1 ] #Initialise files
     runCommand $logFile "${FSLDIR}/bin/fslmaths $magnitudeImage FM_UD_fmap_mag"
 
 
-    if [ `${FSLDIR}/bin/imtest $magnitudeImage` == 1 ]
+    if [ `${FSLDIR}/bin/imtest $magnitudeImage` = 1 ]
     then
     runCommand $logFile "${FSLDIR}/bin/fslmaths `${FSLDIR}/bin/remove_ext $magnitudeImage` FM_UD_fmap_mag_brain"
 
@@ -522,7 +522,7 @@ if [ $doUnwarping == 1 ] #Initialise files
 	runCommand $logFile "${FSLDIR}/bin/fslstats FM_UD_fmap_mag_brain -v | awk '{ print \$1 }'" nvox
 	frac_nzvox=`awk "BEGIN {print $nzvox / $nvox}"`
 	writeToFile $logFile 0 1 "$frac_nzvox"
-        if [ `expr $frac_nzvox \> 0.9` == 1 ]
+        if [ `expr $frac_nzvox \> 0.9` = 1 ]
 	    then
             writeToFile $logFile 0 1 "Error: Brain-extracted fieldmap appears to still contain non-brain voxels. Aborting unwarping"
 	    exit 1
@@ -533,14 +533,17 @@ fi
 
 cd ${outputDirectory}/reg
 
-if [ `${FSLDIR}/bin/imtest ./unwarp/EF_UD_fmap_sigloss` == 1 ] # test for weighting image from fieldmap unwarping to use with example_func
+if [ `${FSLDIR}/bin/imtest ./unwarp/EF_UD_fmap_sigloss` = 1 ] # test for weighting image from fieldmap unwarping to use with example_func
     then
     ef_weighting_flag="-inweight unwarp/EF_UD_fmap_sigloss"
 fi
 
 
 #{{{ setup flirt files
-if [ `${FSLDIR}/bin/imtest $initialHighresImage` == 1 ]
+echo "intial HighresImage"
+echo $initialHighresImage
+
+if [ `${FSLDIR}/bin/imtest $initialHighresImage` = 1 ]
     then
     runCommand $logFile "${FSLDIR}/bin/fslmaths `${FSLDIR}/bin/remove_ext $initialHighresImage` initial_highres"
     else if [ "$initialHighresImage" != "" ]
@@ -552,10 +555,10 @@ FEAT directory! Will not register to initial_highres."
 	 fi
 fi 
 
-if [ `${FSLDIR}/bin/imtest $highresImage` == 1 ]
+if [ `${FSLDIR}/bin/imtest $highresImage` = 1 ]
     then
     runCommand $logFile "${FSLDIR}/bin/fslmaths `${FSLDIR}/bin/remove_ext $highresImage` highres"
-    if [ "$nonLinearResolution" != "" -o $highresDof == "BBR" ]
+    if [ "$nonLinearResolution" != "" -o $highresDof = "BBR" ]
 	then
 	highresHead=${highresImage/_brain/}
 	if [ `${FSLDIR}/bin/imtest $highresHead` != 1 ] 
@@ -563,7 +566,7 @@ if [ `${FSLDIR}/bin/imtest $highresImage` == 1 ]
 	fi
 	runCommand $logFile "${FSLDIR}/bin/fslmaths $highresHead  highres_head"
 	highresSegmentation=${highresImage/_brain/}_wmseg
-	if [ `${FSLDIR}/bin/imtest $highresSegmentation` == 1 ]
+	if [ `${FSLDIR}/bin/imtest $highresSegmentation` = 1 ]
         then
 	runCommand $logFile "${FSLDIR}/bin/fslmaths $highresSegmentation highres_wmseg"
 	fi
@@ -577,7 +580,7 @@ FEAT directory! Will not register to highres."
 	 fi
 fi 
 
-if [ `${FSLDIR}/bin/imtest $standardImage` == 1 ]
+if [ `${FSLDIR}/bin/imtest $standardImage` = 1 ]
     then
     runCommand $logFile "${FSLDIR}/bin/fslmaths `${FSLDIR}/bin/remove_ext $standardImage` standard"
     if [ "$nonLinearResolution" != "" ]
@@ -587,11 +590,12 @@ if [ `${FSLDIR}/bin/imtest $standardImage` == 1 ]
 	    then standardHead=$standardImage
 	fi
 	runCommand $logFile "${FSLDIR}/bin/fslmaths $standardHead standard_head"
-	if [ `${FSLDIR}/bin/imtest ${standardImage}_mask_dil` == 1 ] 
+	standardMaskName=`${FSLDIR}/bin/remove_ext $standardImage`_mask_dil
+	if [ `${FSLDIR}/bin/imtest $standardMaskName` = 1 ] 
 	    then
-	    runCommand $logFile "${FSLDIR}/bin/fslmaths ${standardImage}_mask_dil standard_mask"
+	    runCommand $logFile "${FSLDIR}/bin/fslmaths $standardMaskName standard_mask"
 	else 
-	    runCommand $logFile "${FSLDIR}/bin/fslmaths ${standardImage}_mask_dil -bin -dilF -dilF standard_mask -odt char"	
+	    runCommand $logFile "${FSLDIR}/bin/fslmaths ${standardImage} -bin -dilF -dilF standard_mask -odt char"	
 	fi
     fi
 fi
@@ -614,15 +618,15 @@ if  [ -f highres.nii.gz -a -f standard.nii.gz ]
 fi
 
 #Do missing upscales
-if [ `${FSLDIR}/bin/imtest highres` == 1 -a `${FSLDIR}/bin/imtest initial_highres` == 1 ] #Then we must have an initialHighresImage present
+if [ `${FSLDIR}/bin/imtest highres` = 1 -a `${FSLDIR}/bin/imtest initial_highres` = 1 ] #Then we must have an initialHighresImage present
     then
     runCommand $logFile "${FSLDIR}/bin/convert_xfm -omat example_func2highres.mat -concat initial_highres2highres.mat example_func2initial_highres.mat"
     runFlirt example_func highres "" "" trilinear $htmlReport "" "" $logFile ""
 fi
-if [ `${FSLDIR}/bin/imtest standard` == 1 -a `${FSLDIR}/bin/imtest highres` == 1 ] #Then we must have an highresImage present
+if [ `${FSLDIR}/bin/imtest standard` = 1 -a `${FSLDIR}/bin/imtest highres` = 1 ] #Then we must have an highresImage present
     then
     runCommand $logFile "${FSLDIR}/bin/convert_xfm -omat example_func2standard.mat -concat highres2standard.mat example_func2highres.mat"
-    if [ `${FSLDIR}/bin/imtest highres2standard_warp` == 1 ] #Nonlinear registation occured
+    if [ `${FSLDIR}/bin/imtest highres2standard_warp` = 1 ] #Nonlinear registation occured
 	then runCommand $logFile "${FSLDIR}/bin/convertwarp --ref=standard --premat=example_func2highres.mat --warp1=highres2standard_warp --out=example_func2standard_warp"
     fi
     runFlirt example_func standard "" "" trilinear $htmlReport "" "" $logFile ""

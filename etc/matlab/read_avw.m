@@ -19,8 +19,9 @@ function [img,dims,scales,bpp,endian] = read_avw(fname)
 
 %% convert to uncompressed nifti pair (using FSL)
 tmpname = tempname;
-command = sprintf('sh -c ". ${FSLDIR}/etc/fslconf/fsl.sh; FSLOUTPUTTYPE=NIFTI_PAIR; export FSLOUTPUTTYPE; LD_LIBRARY_PATH=$FSLDIR/bin $FSLDIR/bin/fslmaths %s %s"\n', fname, tmpname);
-system(command);
+
+command = sprintf('FSLOUTPUTTYPE=NIFTI_PAIR; export FSLOUTPUTTYPE; $FSLDIR/bin/fslmaths %s %s', fname, tmpname);
+call_fsl(command);
 
   [dims,scales,bpp,endian,datatype]= read_avw_hdr(tmpname);
   if (datatype==32),

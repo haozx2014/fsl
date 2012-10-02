@@ -536,7 +536,7 @@ namespace Melodic {
       melodat.set_ICstats(scales);
       melodat.sort();
 
-	  message("Calculating T- and S-modes " << endl);
+	  //message("Calculating T- and S-modes " << endl);
       melodat.set_TSmode();
 		
     }

@@ -94,6 +94,12 @@ using namespace std;
 	Option<int> help(string("-h,--help"), 0,
 		string("display this help text"),
 		false,no_argument);
+	Option<int> xdim(string("-x,--xdim"), 10,
+		string("xdim"),
+		false,requires_argument);
+	Option<int> ydim(string("-y,--ydim"), 10,
+		string("ydim"),
+		false,requires_argument);
 		/*
 }
 */
@@ -102,7 +108,12 @@ using namespace std;
 // Local functions
 
 int do_work(int argc, char* argv[]) {
-
+    
+	Matrix test;
+	
+	cerr << " X: "<< xdim.value() << ", Y: "<< ydim.value() << endl;
+	test = zeros(xdim.value(),ydim.value());
+	cerr << "Created matrix of size " << test.Nrows() << " x " << test.Ncols() << endl;
 	return 0;
 }
 
@@ -115,17 +126,10 @@ int do_work(int argc, char* argv[]) {
 	    // must include all wanted options here (the order determines how
 	    //  the help message is printed)
 	
-		  double tmptime = time(NULL);
-		  srand((unsigned int) tmptime);
-
-		cerr << (unsigned int) tmptime << endl << endl;
-
-		cerr << unifrnd(2,2) << endl;
-		exit(1);
-	/*
 			options.add(fnin);		
 			options.add(help);
-		
+			options.add(xdim);
+			options.add(ydim);
 	    options.parse_command_line(argc, argv);
 
 	    // line below stops the program if the help was requested or 
@@ -136,7 +140,7 @@ int do_work(int argc, char* argv[]) {
 	    }else{
 	  		// Call the local functions
 	  		return do_work(argc,argv);
-			}*/
+			}
 		}catch(X_OptionError& e) {
 			options.usage();
 	  	cerr << endl << e.what() << endl;

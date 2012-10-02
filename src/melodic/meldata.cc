@@ -198,59 +198,75 @@ namespace Melodic{
 
   void MelodicData::set_TSmode()
   {
+   	dbgmsg(string("START: set_TSmode"));	
+	
 	Matrix tmp, tmpT, tmpS, tmpT2, tmpS2, tmpT3;
 	
     tmp = expand_dimred(mixMatrix);
     tmpT = zeros(tmp.Nrows()/numfiles, tmp.Ncols());
-    tmpS = zeros(numfiles, tmp.Ncols());
+    tmpS = ones(numfiles, tmp.Ncols());
 
-	if(opts.approach.value()==string("tica")){
-    	explained_var = krfact(tmp,tmpT,tmpS);
-		outMsize("tmp",tmp);
-		outMsize("tmpT",tmpT);
-		outMsize("tmpS",tmpS);
-		if(opts.approach.value()==string("tica")){		
-    		Tmodes.clear(); Smodes.clear();
-    		for(int ctr = 1; ctr <= tmp.Ncols(); ctr++){
-				tmpT3 << reshape(tmp.Column(ctr),tmpT.Nrows(),numfiles);
-				outMsize("tmpT3", tmpT3);
-      			tmpT2 << tmpT.Column(ctr);
-      			tmpS2 << tmpS.Column(ctr);
-				tmpT3 << SP(tmpT3,pow(ones(tmpT3.Nrows(),1)*tmpS2.t(),-1));
-				if(numfiles>1)
-					tmpT2 |= tmpT3;
-				if(mean(tmpS2,1).AsScalar()<0){
-					tmpT2*=-1.0;
-					tmpS2*=-1.0;
-				}
-      			add_Tmodes(tmpT2);
-      			add_Smodes(tmpS2);
-    		}
+	outMsize("tmp",tmp);
+	outMsize("tmpT",tmpT);
+	outMsize("tmpS",tmpS);
+
+  	dbgmsg(string("   approach ") << opts.approach.value() << endl);	
+
+	if(opts.approach.value()!=string("concat")){
+      message("Calculating T- and S-modes " << endl);
+      explained_var = krfact(tmp,tmpT,tmpS);
+      Tmodes.clear(); Smodes.clear();
+      for(int ctr = 1; ctr <= tmp.Ncols(); ctr++){
+	    tmpT3 << reshape(tmp.Column(ctr),tmpT.Nrows(),numfiles);
+		outMsize("tmpT3", tmpT3);
+      	tmpT2 << tmpT.Column(ctr);
+      	tmpS2 << tmpS.Column(ctr);
+		tmpT3 << SP(tmpT3,pow(ones(tmpT3.Nrows(),1)*tmpS2.t(),-1));
+		if(numfiles>1)
+	      tmpT2 |= tmpT3;
+		if(mean(tmpS2,1).AsScalar()<0){
+		  tmpT2*=-1.0;
+		  tmpS2*=-1.0;
 		}
-	
-	//add GLM OLS fit
-	if(Tdes.Storage()){
-		Matrix alltcs = Tmodes.at(0).Column(1);
-		for(int ctr=1; ctr < (int)Tmodes.size();ctr++)
-			alltcs|=Tmodes.at(ctr).Column(1);
-		if((alltcs.Nrows()==Tdes.Nrows())&&(Tdes.Nrows()>Tdes.Ncols()))
-			glmT.olsfit(alltcs,Tdes,Tcon);
+      	add_Tmodes(tmpT2);
+      	add_Smodes(tmpS2);
+	  }
 	}
-	if(Sdes.Storage()){
-		Matrix alltcs = Smodes.at(0);
-		for(int ctr=1; ctr < (int)Smodes.size();ctr++)
-			alltcs|=Smodes.at(ctr);
-		if((alltcs.Nrows()==Sdes.Nrows())&&(Sdes.Nrows()>Sdes.Ncols()&&alltcs.Nrows()>2))
-			glmS.olsfit(alltcs,Sdes,Scon);
+	else{
+		Tmodes.clear();
+		Smodes.clear();
+		for(int ctr = 1; ctr <= tmp.Ncols(); ctr++){
+			tmpT3 << tmp.Column(ctr);
+			add_Tmodes(tmpT3);
+		}
 	}
-	
+    if(opts.approach.value()!=string("concat")){
+	  //add GLM OLS fit
+	  dbgmsg(string(" GLM fitting ") << endl);
+
+	  if(Tdes.Storage()){
+	    Matrix alltcs = Tmodes.at(0).Column(1);
+	    for(int ctr=1; ctr < (int)Tmodes.size();ctr++)
+		  alltcs|=Tmodes.at(ctr).Column(1);
+	    if((alltcs.Nrows()==Tdes.Nrows())&&(Tdes.Nrows()>Tdes.Ncols()))
+		  glmT.olsfit(alltcs,Tdes,Tcon);
+	  }
+	  if(Sdes.Storage()){
+	    Matrix alltcs = Smodes.at(0);
+	    for(int ctr=1; ctr < (int)Smodes.size();ctr++)
+	  	  alltcs|=Smodes.at(ctr);
+	    if((alltcs.Nrows()==Sdes.Nrows())&&(Sdes.Nrows()>Sdes.Ncols()&&alltcs.Nrows()>2))
+		  glmS.olsfit(alltcs,Sdes,Scon);
+	  }
+		
     }
-//	else{
-//		add_Tmodes(tmp);
-//	}
+  //    else{
+//		dbgmsg(string(" Bypassing krfac ") << endl);
+//        add_Tmodes(tmp);
+//		add_Smodes(tmpS);
+//      }
 	
-	dbgmsg(string("END: set_TSmode"));
-    
+	dbgmsg(string("END: set_TSmode"));	
   }
 
   void MelodicData::setup()
@@ -288,6 +304,11 @@ namespace Melodic{
 			if(tmpData.Ncols() == alldat.Ncols() && tmpData.Nrows() == alldat.Nrows())
       			alldat += tmpData;	
 			else{
+				    if(opts.approach.value()==string("tica")){
+						cerr << "ERROR:: data dimensions do not match, TICA not possible \n\n";
+						exit(2); 
+					}
+					
 					if(tmpData.Ncols() == alldat.Ncols()){
 						int mindim = min(alldat.Nrows(),tmpData.Nrows());
 						alldat = alldat.Rows(1,mindim);
@@ -333,6 +354,10 @@ namespace Melodic{
       		opts.pca_dim.set_T(order);
 			PPCA=tmpPPCA;
   		}
+	  	if(opts.pca_dim.value() < 0){
+      		opts.pca_dim.set_T(min(order,-1*opts.pca_dim.value()));
+			PPCA=tmpPPCA;
+  		}
     	order = opts.pca_dim.value();
 		if(opts.debug.value())
 			message(endl << "Model order : "<<order<<endl<<endl);
@@ -367,7 +392,7 @@ namespace Melodic{
       		WM.push_back(tmp);
     	} 
 		else {
-			cerr << "here" << endl;
+			//cerr << "here" << endl;
       		for(int ctr = 0; ctr < numfiles; ctr++){
 				tmpData = process_file(opts.inputfname.value().at(ctr), numfiles);
 	
@@ -566,6 +591,7 @@ namespace Melodic{
       }
      
     //Output T- & S-modes
+ 
     save_Tmodes();
     save_Smodes();
 

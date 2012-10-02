@@ -17,6 +17,6 @@ function tmpfname = prepare_read_avw_img_slice(fname)
 %
 
 tmpfname = tempname;
-command = sprintf('sh -c ". ${FSLDIR}/etc/fslconf/fsl.sh; FSLOUTPUTTYPE=NIFTI_PAIR; export FSLOUTPUTTYPE; LD_LIBRARY_PATH=$FSLDIR/bin $FSLDIR/bin/fslmaths %s %s"\n', fname, tmpfname);
-system(command);
+command = sprintf('FSLOUTPUTTYPE=NIFTI_PAIR; export FSLOUTPUTTYPE; $FSLDIR/bin/fslmaths %s %s', fname, tmpfname);
+call_fsl(command);
 
