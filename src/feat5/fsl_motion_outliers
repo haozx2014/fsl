@@ -77,6 +77,7 @@ usage()
     echo "Options: -m <mask image>      use supplied mask image for calculating metric"
     echo "         -s <filename>        save metric values (e.g. DVARS) as text into specified file"
     echo "         -p <filename>        save metric values (e.g. DVARS) as a graphical plot (png format)"
+    echo "         -t <path>            [Optional] Path to the location where temporary files should be created. Defaults to /tmp"
     echo "         --refrms             use RMS intensity difference to reference volume as metric [default metric]"
     echo "         --dvars              use DVARS as metric"
     echo "         --refmse             Mean Square Error version of --refrms (used in original version of fsl_motion_outliers)"
@@ -133,6 +134,7 @@ cleanup=yes;
 sqrtcom="-sqrt";
 savefile="";
 plotfile="";
+tmppath=""
 
 if [ $# -eq 0 ] ; then usage; exit 0; fi
 if [ $# -lt 3 ] ; then usage; exit 1; fi
@@ -157,6 +159,9 @@ while [ $# -ge 1 ] ; do
 	    shift 2;;
 	-p)
 	    plotfile=`get_arg2 $1 $2`;
+	    shift 2;;
+	-t)
+	    tmppath=`get_arg2 $1 $2`;
 	    shift 2;;
 	--nomoco)
 	    do_moco=no;
@@ -230,6 +235,12 @@ fi
 
 # output dir creation
 outdir=`$FSLDIR/bin/tmpnam`;
+
+# If there is a preferred location for temporary files, use that, else default to /tmp (set by tmpnam)
+if [ X${tmppath} != X ] ; then
+  outdir=${tmppath}/`basename ${outdir}` 
+fi
+
 if [ X${outdir} = X ] ; then
   echo "Could not create tmp directory"
   exit 2;
@@ -277,13 +288,18 @@ brainmed=`$FSLDIR/bin/fslstats ${mcf} -k ${mask} -P 50`;
 maskmean=`$FSLDIR/bin/fslstats ${mask} -m`;
 if [ $verbose = yes ] ; then echo "brainmed = $brainmed ; maskmean = $maskmean" ; fi
 
-#### CALCULATE METRIC
+
+#### CALCULATE METRIC 
+#  The output is a 1x1x1x(N-1) nifti image called res_mse_diff
+#  The jth point represents motion changes between timepoints j and (j+1)
+#  After this the code will add a point at the start
 if [ $metric = dvars ] ; then
     # generate DVARS
     $FSLDIR/bin/fslroi $mcf ${mcf}1 0 $tmax1
     $FSLDIR/bin/fslroi $mcf ${mcf}2 1 $tmax1
     $FSLDIR/bin/fslmaths ${mcf}2 -sub ${mcf}1 -mas ${mask} -sqr -Xmean -Ymean -Zmean -div $maskmean $sqrtcom ${outdir}_mc/res_mse_diff -odt float
     $FSLDIR/bin/fslmaths ${outdir}_mc/res_mse_diff -div $brainmed -mul 1000 ${outdir}_mc/res_mse_diff
+
 elif [ $metric = refrms ] ; then
     # generate example functional image
     $FSLDIR/bin/fslroi $mcf ${outdir}_mc/exf $refnum 1
@@ -295,6 +311,7 @@ elif [ $metric = refrms ] ; then
     $FSLDIR/bin/fslroi ${outdir}_mc/res_mse ${outdir}_mc/res_mse0 0 1 0 1 0 1 0 $tmax1
     $FSLDIR/bin/fslroi ${outdir}_mc/res_mse ${outdir}_mc/res_mse1 0 1 0 1 0 1 1 $tmax1
     $FSLDIR/bin/fslmaths ${outdir}_mc/res_mse1 -sub ${outdir}_mc/res_mse0 -abs ${outdir}_mc/res_mse_diff
+
 elif [ $metric = fd ] ; then
     ${FSLDIR}/bin/fslascii2img ${outdir}_mc/fmri_mcf.par 1 1 $tmax 6 1 1 1 1 ${outdir}_mc/res_mse_par
     ${FSLDIR}/bin/fslroi ${outdir}_mc/res_mse_par ${outdir}_mc/res_mse_par_rot_full 0 3 
@@ -314,16 +331,10 @@ elif [ $metric = fd ] ; then
     ${FSLDIR}/bin/fsl2ascii ${outdir}_mc/res_mse_diffZ ${outdir}_mc/res_mse_diff.txt
     grep [0-9] ${outdir}_mc/res_mse_diff.txt0* > ${outdir}_mc/res_mse_diff.txt
     ${FSLDIR}/bin/fslascii2img ${outdir}_mc/res_mse_diff.txt 1 1 1 $tmax1 1 1 1 1 ${outdir}_mc/res_mse_diff
-    # stick a zero at the front
-    ${FSLDIR}/bin/fslroi ${outdir}_mc/res_mse_diff ${outdir}_mc/zerovol 0 1 
-    ${FSLDIR}/bin/fslmaths ${outdir}_mc/zerovol -mul 0 ${outdir}_mc/zerovol
-    ${FSLDIR}/bin/fslmerge -t ${outdir}_mc/res_mse_diff ${outdir}_mc/zerovol ${outdir}_mc/res_mse_diff
+
 elif [ $metric = fdrms ] ; then
     ${FSLDIR}/bin/fslascii2img ${outdir}_mc/fmri_mcf_rel.rms 1 1 1 $tmax1 1 1 1 1 ${outdir}_mc/res_mse_diff
-    # stick a zero at the front
-    ${FSLDIR}/bin/fslroi ${outdir}_mc/res_mse_diff ${outdir}_mc/zerovol 0 1 
-    ${FSLDIR}/bin/fslmaths ${outdir}_mc/zerovol -mul 0 ${outdir}_mc/zerovol
-    ${FSLDIR}/bin/fslmerge -t ${outdir}_mc/res_mse_diff ${outdir}_mc/zerovol ${outdir}_mc/res_mse_diff
+
 else
     echo "Metric $metric is not supported"
     exit 1;
@@ -331,14 +342,17 @@ fi
 
 
 ### SAVE VALUES AND/OR PLOT
+# Need to add a zero at the start in each case (see full explanation below)
 if [ X${savefile} != X ] ; then
     $FSLDIR/bin/fsl2ascii ${outdir}_mc/res_mse_diff ${outdir}_mc/vals.txt
-    cat ${outdir}_mc/vals.txt[0-9]* | grep [0-9] > ${savefile}
+    echo "0" > ${savefile}
+    cat ${outdir}_mc/vals.txt[0-9]* | grep [0-9] >> ${savefile}
     rm ${outdir}_mc/vals.txt[0-9]*
 fi
 if [ X${plotfile} != X ] ; then
     $FSLDIR/bin/fsl2ascii ${outdir}_mc/res_mse_diff ${outdir}_mc/vals.txt
-    cat ${outdir}_mc/vals.txt[0-9]* | grep [0-9] > ${outdir}_mc/vals.txt
+    echo "0" > ${outdir}_mc/vals.txt
+    cat ${outdir}_mc/vals.txt[0-9]* | grep [0-9] >> ${outdir}_mc/vals.txt
     rm ${outdir}_mc/vals.txt[0-9]*
     $FSLDIR/bin/fsl_tsplot -i ${outdir}_mc/vals.txt -t "Motion outlier metric: $metric" -x "time" -y "metric value" -o ${plotfile}
 fi
@@ -358,8 +372,8 @@ fi
 if [ $verbose = yes ] ; then echo "Range of metric values: `$FSLDIR/bin/fslstats ${outdir}_mc/res_mse_diff -R`" ; fi
 
 $FSLDIR/bin/fslmaths ${outdir}_mc/res_mse_diff -thr $threshv -bin ${outdir}_mc/outliers
-# Put a point at the start to fix timing
-#  NB: timing is currently st spike occurs 1 time point *AFTER* it's detected
+# Add a point at the start to fix timing (as inputs from previous section contain forward diffs)
+# If there is a step change then the induced intensity artefact will be associated with the first timepoint _after_ the change, so a change between timepoints j and (j+1) should create a confound spike at timepoint j+1
 #      e.g.  3 1 2 696 1  =>  0 0 1 1 for res_mse 
 #              => 0 0 0 1 0  and   0 0 0 0 1  as EVs 
 # the following lines put a zero at the start of outliers
@@ -403,7 +417,9 @@ if [ $cleanup = yes ] ; then
 	    rm -rf ${outdir}_mc
 	fi
 	if [ X${outdir} != X ] ; then
-	    rm ${outdir}
+           if [ -e ${outdir} ] ; then
+ 	     rm ${outdir}
+ 	   fi  
 	fi
     fi
 fi

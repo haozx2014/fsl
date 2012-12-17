@@ -78,7 +78,7 @@ using namespace NEWIMAGE;
 
 string ASL_PVC_FwdModel::ModelVersion() const
 {
-  return "$Id: fwdmodel_asl_pvc.cc,v 1.4 2011/08/24 10:28:36 chappell Exp $";
+  return "$Id: fwdmodel_asl_pvc.cc,v 1.5 2012/10/19 14:52:35 chappell Exp $";
 }
 
 void ASL_PVC_FwdModel::HardcodedInitialDists(MVNDist& prior, 
@@ -344,7 +344,7 @@ void ASL_PVC_FwdModel::Evaluate(const ColumnVector& params, ColumnVector& result
     float lambdawm = 0.82;
 
     float T_1app = 1/( 1/T_1 + 0.01/lambdagm );
-    float T_1appwm = 1/( 1/T_1wm + 0.01/lambdawm );
+    float T_1appwm = 1/( 1/T_1wm + 0.003/lambdawm );
     float R = 1/T_1app - 1/T_1b;
     float Rwm = 1/T_1appwm - 1/T_1b;
 
@@ -397,14 +397,15 @@ void ASL_PVC_FwdModel::Evaluate(const ColumnVector& params, ColumnVector& result
 	      { kctissue = 0;}
 	    else if(ti >= delttiss && ti <= (delttiss + tau))
 	      {
-		kctissue = F/R * ( (exp(R*ti) - exp(R*delttiss)) ) ;
-	  
-		if (kctissue<0) {kctissue = 0; } //dont allow negative values (should be redundant!)
+		
+		if (casl)  kctissue = F * T_1app * exp(-delttiss/T_1b) * (1 - exp(-(ti-delttiss)/T_1app));
+		else	   kctissue = F/R * ( (exp(R*ti) - exp(R*delttiss)) ) ;
+
 	      }
 	    else //(ti > delttiss + tau)
 	      {
-		kctissue = F/R * ( (exp(R*(delttiss+tau)) - exp(R*delttiss))  );
-		if (kctissue<0) { kctissue = 0; } //dont allow negative values (should be redundant)
+		if (casl)  kctissue = F * T_1app * exp(-delttiss/T_1b) * exp(-(ti-tau-delttiss)/T_1app) * (1 - exp(-tau/T_1app));
+		else       kctissue = F/R * ( (exp(R*(delttiss+tau)) - exp(R*delttiss))  );
 			      }
 	
 	    // (2) arterial contribution
@@ -416,13 +417,16 @@ void ASL_PVC_FwdModel::Evaluate(const ColumnVector& params, ColumnVector& result
 	      }
 	    else if(ti >= deltblood && ti <= (deltblood + taub))
 	      { 
-		kcblood = fblood * exp(-ti/T_1b); 
-		if (kcblood<0) { kcblood = 0; } //dont allow negative values
+		if (casl)  kcblood = fblood * exp(-deltblood/T_1b);
+		else       kcblood = fblood * exp(-ti/T_1b); 
 	      }
 	    else //(ti > deltblood + tau)
 	      {
-		// artifical lead out period for taub model fitting 
-		kcblood = fblood * exp(-(deltblood+taub)/T_1b)  * (0.98 * exp( -(ti - deltblood - taub)/0.05) + 0.02 * (1-(ti - deltblood - taub)/5));
+		kcblood = 0; //end of bolus
+		if (casl)  kcblood = fblood * exp(-deltblood/T_1b);
+		else	   kcblood = fblood * exp(-(deltblood+taub)/T_1b);
+		kcblood *= (0.98 * exp( -(ti - deltblood - taub)/0.05) + 0.02 * (1-(ti - deltblood - taub)/5));
+		// artifical lead out period for taub model fitting
 		if (kcblood<0) kcblood=0; //negative values are possible with the lead out period equation
 									   
 	      }
@@ -449,14 +453,15 @@ void ASL_PVC_FwdModel::Evaluate(const ColumnVector& params, ColumnVector& result
 	      { kcwm = 0;}
 	    else if(ti >= deltwm && ti <= (deltwm + tauwm))
 	      {
-		kcwm = Fwm/Rwm * ( (exp(Rwm*ti) - exp(Rwm*deltwm)) ) ;
-	  
-		if (kcwm<0) {kcwm = 0; } //dont allow negative values (should be redundant!)
+		if (casl)  kcwm = Fwm * T_1appwm * exp(-deltwm/T_1b) * (1 - exp(-(ti-deltwm)/T_1appwm));
+		else	   kcwm = Fwm/Rwm * ( (exp(Rwm*ti) - exp(Rwm*deltwm)) ) ;
+
 	      }
 	    else //(ti > delttiss + tau)
 	      {
-		kcwm = Fwm/Rwm * ( (exp(Rwm*(deltwm+tauwm)) - exp(Rwm*deltwm))  );
-		if (kcwm<0) { kcwm = 0; } //dont allow negative values (should be redundant)
+		if (casl)  kcwm = Fwm * T_1appwm * exp(-deltwm/T_1b) * exp(-(ti-tauwm-deltwm)/T_1appwm) * (1 - exp(-tauwm/T_1appwm));
+		else       kcwm = Fwm/Rwm * ( (exp(Rwm*(deltwm+tauwm)) - exp(Rwm*deltwm))  );
+		
 	      }
 
 
@@ -498,6 +503,7 @@ ASL_PVC_FwdModel::ASL_PVC_FwdModel(ArgsType& args)
       grase = args.ReadBool("grase"); // DEPRECEATED data has come from the GRASE-ASL sequence - therefore apply pretisat of 0.1s
       if (grase) pretisat=0.1;
 
+      casl = args.ReadBool("casl"); //set if the data is CASL or PASL (default)
       slicedt = convertTo<double>(args.ReadWithDefault("slicedt","0.0")); // increase in TI per slice
 
       infertau = args.ReadBool("infertau"); // infer on bolus length?

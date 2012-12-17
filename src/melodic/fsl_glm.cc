@@ -331,7 +331,6 @@ int setup(int &dof){
 		}
 	}else{
 		contrasts = IdentityMatrix(design.Ncols());
-		contrasts &= -1.0 * contrasts;
 	}
 	return 0;	
 }

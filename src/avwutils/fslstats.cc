@@ -99,6 +99,7 @@ void print_usage(const string& progname) {
   cout << "-a           : use absolute values of all image intensities"<< endl;
   cout << "-n           : treat NaN or Inf as zero for subsequent stats" << endl;
   cout << "-k <mask>    : use the specified image (filename) for masking - overrides lower and upper thresholds" << endl;
+  cout << "-d <image>   : take the difference between the base image and the image specified here" << endl;
   cout << "-h <nbins>   : output a histogram (for the thresholded/masked voxels only) with nbins" << endl; 
   cout << "-H <nbins> <min> <max>   : output a histogram (for the thresholded/masked voxels only) with nbins and histogram limits of min and max" << endl << endl;
   cout << "Note - thresholds are not inclusive ie lthresh<allowed<uthresh" << endl;
@@ -339,30 +340,57 @@ int fmrib_main_float(int argc, char* argv[],const bool timeseriesMode)
       cout << entropy << " ";
     } else if (sarg=="-k") {
       narg++;
+      volume4D<float> mask2;
       if (narg>=argc) {
-	cerr << "Must specify an argument to -k" << endl;
-	exit(2);
+        cerr << "Must specify an argument to -k" << endl;
+        exit(2);
       }
       read_volume4D(mask,argv[narg]);
       if (!samesize(mask[0],vol[0])) {
-	cerr << "Mask and image must be the same size" << endl;
-	exit(3);
+        cerr << "Mask and image must be the same size" << endl;
+        exit(3);
       }
+      if (timeseriesMode) { mask2=mask[timepoint]; mask=mask2; }
       if ( mask.tsize() > vol.tsize() ) {
-	cerr << "Mask and image must be the same size" << endl;
-	exit(3);
+        cerr << "Mask and image must be the same size" << endl;
+        exit(3);
       }
       if ( mask.tsize() != vol.tsize() && mask.tsize() != 1) {
-	// copy the last max volume until the correct size is reached
-	while (mask.tsize() < vol.tsize() ) {
-   	  mask.addvolume(mask[mask.maxt()]);
+        // copy the last max volume until the correct size is reached
+        while (mask.tsize() < vol.tsize() ) {
+          mask.addvolume(mask[mask.maxt()]);
         }
       }
-      
+
       mask.binarise(0.5);
       generateNonZeroMask(mask,masknz,vol);
-        if (mask.tsize()!=1) vol*=mask; 
-	else vol*=mask[0];
+        if (mask.tsize()!=1) vol*=mask;
+        else vol*=mask[0];
+    } else if (sarg=="-d") {
+      narg++;
+      if (narg>=argc) {
+	cerr << "Must specify an argument to -d" << endl;
+	exit(2);
+      }
+      volume4D<float> image2,image3;
+      read_volume4D(image2,argv[narg]);
+      if (!samesize(image2[0],vol[0])) {
+	cerr << "Image used with -d must be the same size as the base image" << endl;
+	exit(3);
+      }
+      if (timeseriesMode) { image3=image2[timepoint]; image2=image3; }
+      if ( image2.tsize() > vol.tsize() ) {
+	cerr << "Image must be the same size as the base image" << endl;
+	exit(3);
+      }
+      if ( image2.tsize() != vol.tsize() && image2.tsize() != 1) {
+	// copy the last max volume until the correct size is reached
+	while (image2.tsize() < vol.tsize() ) {
+   	  image2.addvolume(image2[image2.maxt()]);
+        }
+      }
+      // now substract the new image from the base image 
+      vol -= image2;
     } else if (sarg=="-l") {
       narg++;
       if (narg<argc) {
@@ -403,8 +431,8 @@ int fmrib_main_float(int argc, char* argv[],const bool timeseriesMode)
 	cout << nzvox << " " 
 	     << nzvox * vol.xdim() * vol.ydim() * vol.zdim() << " ";
       }
-    } else if (sarg=="-d") {
-	// hidden debug option!
+    } else if (sarg=="-D") {
+	// hidden debug option!  // now -D not -d
       cout << vol.sum() << " ";
     } else if (sarg=="-s") {
 	if (mask.nvoxels()>0) cout << vol.stddev(mask) << " ";

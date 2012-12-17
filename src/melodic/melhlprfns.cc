@@ -82,7 +82,6 @@ namespace Melodic{
     Matrix DStDev=stdev(Data);
     volume4D<float> tmpMask, RawData;
     tmpMask.setmatrix(DStDev,mask);
-    RawData.setmatrix(Data,mask);
 
     float tMmax;
     volume<float> tmpMask2;
@@ -92,9 +91,23 @@ namespace Melodic{
     double st_mean = DStDev.Sum()/DStDev.Ncols();
     double st_std  = stdev(DStDev.t()).AsScalar();
       
-    mask = binarise(tmpMask2,(float) max((float) st_mean-3*st_std,(float) 0.01*st_mean),tMmax);
+	volume4D<float> newmask;
+    newmask = binarise(tmpMask2,(float) max((float) st_mean-3*st_std,(float) 0.01*st_mean),tMmax);
 
-    Data = RawData.matrix(mask);
+	Matrix newmaskM,newData;
+	newmaskM = newmask.matrix(mask);
+	int N = Data.Nrows();
+	
+	if(int(newmaskM.Row(1).SumAbsoluteValue() + 0.3) < newmaskM.Ncols()){
+		RawData.setmatrix(Data.Row(1),mask);
+		newData = RawData.matrix(newmask[0]);
+		for(int r=2; r <= N; r++){
+			RawData.setmatrix(Data.Row(r),mask);
+			newData &= RawData.matrix(newmask[0]);
+		}
+		Data = newData;
+		mask = newmask[0];  
+	}
   }
 
   void del_vols(volume4D<float>& in, int howmany)
@@ -183,12 +196,14 @@ namespace Melodic{
 
 	void varnorm(Matrix& in, const RowVector& vars)
 	{
-		Matrix tmp = vars;
-		in = SP(in,pow(ones(in.Nrows(),1) * tmp,-1));
+		for(int ctr=1; ctr <=in.Nrows();ctr++){
+			in.Row(ctr) = SD(in.Row(ctr),vars);
+		}
 	}
 	
   RowVector varnorm(Matrix& in, Matrix& Corr, int dim, float level)
   { 
+	
     Matrix tmpE, white, dewhite;
     RowVector tmpD, tmpD2;
 
@@ -207,6 +222,7 @@ namespace Melodic{
 				in.Column(ctr1) = 0.0*in.Column(ctr1);
       }
 	  varnorm(in,tmpD);
+
     return tmpD;
   }  //RowVector varnorm
 
@@ -227,7 +243,14 @@ namespace Melodic{
       Res = SP(in,Res);
     }
     return Res;
-  }  //Matrix SP
+  }  //Matrix SP2
+
+  void SP3(Matrix& in, const Matrix& weights)
+  {
+	for(int ctr=1; ctr <= in.Nrows(); ctr++){
+		in.Row(ctr) << SP(in.Row(ctr),weights.AsRow());
+	} 
+  }
 
   Matrix corrcoef(const Matrix& in1, const Matrix& in2){
 		Matrix tmp = in1;

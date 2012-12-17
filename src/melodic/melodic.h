@@ -74,6 +74,25 @@
 
 #include <strstream>
 
+#ifdef __APPLE__
+#include <mach/mach.h>
+#define memmsg(msg) { \
+  struct task_basic_info t_info; \
+  mach_msg_type_number_t t_info_count = TASK_BASIC_INFO_COUNT; \
+  if (KERN_SUCCESS == task_info(mach_task_self(), TASK_BASIC_INFO, (task_info_t) &t_info, &t_info_count)) \
+	{ \
+		cout << " MEM: " << msg << " res: " << t_info.resident_size/1000000 << " virt: " << t_info.virtual_size/1000000 << "\n"; \
+		cout.flush(); \
+	} \
+}
+#else
+#define memmsg(msg) { \
+   cout << msg; \
+}
+#endif
+
+
+
 // a simple message macro that takes care of cout and log
 #define message(msg) { \
   MelodicOptions& opt = MelodicOptions::getInstance(); \
@@ -100,7 +119,7 @@
 
 namespace Melodic{
 
-const string version = "3.10";  
+const string version = "3.12";  
 
 // The two strings below specify the title and example usage that is	
 // printed out as the help or usage message

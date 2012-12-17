@@ -101,6 +101,8 @@ namespace TRACTVOLSX{
       int            fibst;
       bool           usef;
       
+      volume<int>    locfibchoice;
+
     public:
       //constructors::
       Tractvolsx(const bool& usefin=false):opts(probtrackxOptions::getInstance()),
@@ -192,8 +194,8 @@ namespace TRACTVOLSX{
       //Initialise
       void initialise(const string& basename,const volume<float>& mask){
 	volume4D<float> tmpvol;
-	Matrix          tmpmat;
-	
+	Matrix          tmpmat;		
+
 	cout<<"Load bedpostx samples"<<endl;
 	if(fsl_imageexists(basename+"_thsamples")){
 	  cout<<"1"<<endl;
@@ -251,6 +253,10 @@ namespace TRACTVOLSX{
 	cout<<"nsamples : "<<nsamples<<endl;
 	cout<<endl;
 	cout<<"Done loading samples."<<endl;
+
+	if(opts.locfibchoice.value()!=""){
+	  read_volume(locfibchoice,opts.locfibchoice.value());	  
+	}
       }
       
       
@@ -297,49 +303,41 @@ namespace TRACTVOLSX{
 	    init_sample=false;
 	  }
 	  else{
-	    if(sample_fib>0){
+	    if(sample_fib>0){ // pick specified fibre
 	      fibind=sample_fibre(col,samp,sample_fib);	      
 	      theta=thsamples[fibind](samp,col);
 	      phi=phsamples[fibind](samp,col);
 	    }
-	    else{
+	    else{ 
 	      if((fabs(prefer_x)+fabs(prefer_y)+fabs(prefer_z))==0){
 		prefer_x=r_x;prefer_y=r_y;prefer_z=r_z;
 	      }
-	      vector<float> angprob(nfibres,0);
-	      for(int fib=0;fib<nfibres;fib++){
-		if(fsamples[fib](samp,col)>opts.fibthresh.value()){
-		  float phtmp=phsamples[fib](samp,col);
-		  float thtmp=thsamples[fib](samp,col);
-		  dottmp=fabs(sin(thtmp)*cos(phtmp)*prefer_x + sin(thtmp)*sin(phtmp)*prefer_y + cos(thtmp)*prefer_z);
-		  angprob[fib]=acos(dottmp);
-		  if(dottmp>dotmax){
-		    dotmax=dottmp;
-		    theta=thtmp;
-		    phi=phtmp;
-		    fibind=fib;
+	      int locrule=0;
+	      if(opts.locfibchoice.value()!=""){locrule=locfibchoice(newx,newy,newz);}
+	      if(locrule>0){
+		fibind=sample_fibre(col,samp,1);
+		theta=thsamples[fibind](samp,col);
+		phi=phsamples[fibind](samp,col);
+	      }
+	      else{
+		for(int fib=0;fib<nfibres;fib++){
+		  if(fsamples[fib](samp,col)>opts.fibthresh.value()){
+		    float phtmp=phsamples[fib](samp,col);
+		    float thtmp=thsamples[fib](samp,col);
+		    dottmp=fabs(sin(thtmp)*cos(phtmp)*prefer_x + sin(thtmp)*sin(phtmp)*prefer_y + cos(thtmp)*prefer_z);
+		    if(dottmp>dotmax){
+		      dotmax=dottmp;
+		      theta=thtmp;
+		      phi=phtmp;
+		      fibind=fib;
+		    }
 		  }
 		}
-	      }
-	      //cout<<"Fibind MAX = "<<fibind<<endl;
-// 	      if(fibind>0){
-// 		ColumnVector test(1000);
-// 		for (int ii=1;ii<=test.Nrows();ii++)
-// 		  test(ii)=sample_ang_prob(angprob);
-// 		OUT(test.t());
-// 		for (unsigned int ii=0;ii<angprob.size();ii++)
-// 		  OUT(angprob[ii]);
-// 		exit(1);
-// 	      }
-	      //fibind=sample_ang_prob(angprob);
-	      //cout<<"Fibind PRB = "<<fibind<<endl;
-	      //theta=thsamples[fibind](samp,col);
-	      //phi=phsamples[fibind](samp,col);
-
-	      if(dotmax==0){
-		theta=thsamples[0](samp,col);
-		phi=phsamples[0](samp,col);
-		fibind=0;
+		if(dotmax==0){
+		  theta=thsamples[0](samp,col);
+		  phi=phsamples[0](samp,col);
+		  fibind=0;
+		}
 	      }
 	    }
 	  }

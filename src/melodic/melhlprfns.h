@@ -76,6 +76,22 @@
 #include "newmatap.h"
 #include "newmatio.h"
 
+	#ifdef __APPLE__
+	#include <mach/mach.h>
+	#define mmsg(msg) { \
+	  struct task_basic_info t_info; \
+	  mach_msg_type_number_t t_info_count = TASK_BASIC_INFO_COUNT; \
+	  if (KERN_SUCCESS == task_info(mach_task_self(), TASK_BASIC_INFO, (task_info_t) &t_info, &t_info_count)) \
+		{ \
+			cout << " MEM: " << msg << " res: " << t_info.resident_size/1000000 << " virt: " << t_info.virtual_size/1000000 << "\n"; \
+			} \
+	}
+	#else
+	#define mmsg(msg) { \
+	   cout << msg; \
+	}
+	#endif
+
 using namespace NEWIMAGE;
 
 namespace Melodic{
@@ -93,14 +109,15 @@ namespace Melodic{
   RowVector varnorm(Matrix& in, Matrix& Corr, int dim = 30, float level = 1.6);
 
   Matrix SP2(const Matrix& in, const Matrix& weights, bool econ = 0);
+  void SP3(Matrix& in, const Matrix& weights);
 
   RowVector Feta(int n1,int n2);
   RowVector cumsum(const RowVector& Inp);
 
   Matrix corrcoef(const Matrix& in1, const Matrix& in2);
   Matrix corrcoef(const Matrix& in1, const Matrix& in2, const Matrix& part);
-  Matrix calc_corr(const Matrix& in, bool econ = 0);
-  Matrix calc_corr(const Matrix& in, const Matrix& weights, bool econ = 0);
+  Matrix calc_corr(const Matrix& in, bool econ = 1);
+  Matrix calc_corr(const Matrix& in, const Matrix& weights, bool econ = 1);
 
   float calc_white(const Matrix& tmpE, const RowVector& tmpD, const RowVector& PercEV, int dim, Matrix& param, Matrix& paramS, Matrix& white, Matrix& dewhite);
   float calc_white(const Matrix& tmpE, const RowVector& tmpD, const RowVector& PercEV, int dim, Matrix& white, Matrix& dewhite);

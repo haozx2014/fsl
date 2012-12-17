@@ -277,13 +277,19 @@ namespace MISCMATHS {
   ReturnMatrix repmat(const Matrix& mat, const int rows = 1, const int cols = 1);
   ReturnMatrix dist2(const Matrix& mat1, const Matrix& mat2);
   ReturnMatrix abs(const Matrix& mat);
+  void abs_econ(Matrix& mat);
   ReturnMatrix sqrt(const Matrix& mat);
+  void sqrt_econ(Matrix& mat);
   ReturnMatrix sqrtm(const Matrix& mat);
   ReturnMatrix log(const Matrix& mat);
+  void log_econ(Matrix& mat);
   ReturnMatrix exp(const Matrix& mat);
+  void exp_econ(Matrix& mat);
   ReturnMatrix expm(const Matrix& mat);
   ReturnMatrix tanh(const Matrix& mat);
+  void tanh_econ(Matrix& mat);
   ReturnMatrix pow(const Matrix& mat, const double exp);
+  void pow_econ(Matrix& mat, const double exp);
   ReturnMatrix sum(const Matrix& mat, const int dim = 1);
   ReturnMatrix mean(const Matrix& mat, const int dim = 1);
   ReturnMatrix var(const Matrix& mat, const int dim = 1);
@@ -298,10 +304,17 @@ namespace MISCMATHS {
   ReturnMatrix eq(const Matrix& mat1,const Matrix& mat2); 
   ReturnMatrix neq(const Matrix& mat1,const Matrix& mat2); 
   ReturnMatrix SD(const Matrix& mat1,const Matrix& mat2); // Schur (element-wise) divide
+  void SD_econ(Matrix& mat1,const Matrix& mat2); // Schur (element-wise) divide
+  void SP_econ(Matrix& mat1,const Matrix& mat2); // Schur (element-wise) divide
+
   ReturnMatrix vox_to_vox(const ColumnVector& xyz1,const ColumnVector& dims1,const ColumnVector& dims2,const Matrix& xfm);
   ReturnMatrix mni_to_imgvox(const ColumnVector& mni,const ColumnVector& mni_origin,const Matrix& mni2img, const ColumnVector& img_dims);
+
+  void remmean_econ(Matrix& mat, const int dim = 1);
+  void remmean(Matrix& mat, Matrix& Mean, const int dim = 1);
   void remmean(const Matrix& mat, Matrix& demeanedmat, Matrix& Mean,  const int dim = 1);
   ReturnMatrix remmean(const Matrix& mat, const int dim = 1);
+
   ReturnMatrix stdev(const Matrix& mat, const int dim = 1);
   ReturnMatrix cov(const Matrix& mat, const int norm = 0);
   ReturnMatrix corrcoef(const Matrix& mat, const int norm = 0);

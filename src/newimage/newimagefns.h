@@ -387,7 +387,7 @@ namespace NEWIMAGE {
   template <class T>
   int dilall(volume<T>& im, volume<T>& mask);
   template <class T>
-  volume<T> fill_holes(const volume<T>& im);
+  volume<T> fill_holes(const volume<T>& im, int connectivity=6);
 
   template <class T>
   volume<T> isotropic_resample(const volume<T>& aniso, float scale);
@@ -1399,7 +1399,7 @@ template <class T, class S>
   ///////////////////////////////////////////////////////////////////////////
   // CONVOLVE
     template <class T, class S>
-    volume<T> susan_convolve(const volume<T> source, const volume<S>& kernel, const float sigmabsq, const bool use_median, int num_usan,volume<T>* usan_area = new volume<T>(1,1,1),volume<T> usan_vol1=volume<T>(1,1,1),const float sigmab1sq=0,volume<T> usan_vol2 = volume<T>(1,1,1),const float sigmab2sq=0)
+    volume<T> susan_convolve(const volume<T> source, const volume<S>& kernel, const float sigmabsq, const bool use_median, int num_usan,volume<T>* usan_area,volume<T> usan_vol1,const float sigmab1sq,volume<T> usan_vol2,const float sigmab2sq)
     //template <class T, class S, class U, class V, class W>
     //volume<T> susan_convolve(const volume<T>& source, const volume<S>& kernel, const float sigmabsq, const bool use_median, int num_usan,volume<U>* usan_area = new volume<T>(1,1,1),const volume<V>& usan_vol1=volume<T>(1,1,1),const float sigmab1sq=0,const volume<W>& usan_vol2 = volume<T>(1,1,1),const float sigmab2sq=0)
     //Note that the commented out declaration won't work with the optional arguements (since U,V,W need to be defined in call...). Code is provided for possible
@@ -1796,11 +1796,11 @@ int dilall(volume<T>& im, volume<T>& mask)
 
 
 template <class T>
-volume<T> fill_holes(const volume<T>& im)
+volume<T> fill_holes(const volume<T>& im, int connectivity)
 {
   volume<int> mask;
   set<int> edgelabs;
-  mask = connected_components((T)1-im);
+  mask = connected_components((T)1-im,connectivity);
   // go over edge of FOV and for each each non-zero value there store this
   // The loops below go over the yz, xz and xy faces of the FOV and double count edges and corners, but this doesn't matter here
   for (int z=0; z<=im.maxz(); z++) {

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #   fsl_abspath - return true file path
 #   Matthew Webster FMRIB Image Analysis Group
 #   Copyright (C) 2009 University of Oxford 

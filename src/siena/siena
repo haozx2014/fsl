@@ -83,7 +83,7 @@ Usage: siena <input1> <input2> [options]
   -b <b>                : ignore from b (mm) downwards in MNI152/Talairach space (b should probably be negative)
   -S "sienadiffopts"    : options to pass to siena_diff timepoint differencing (inside double-quotes), e.g. -S "-s -i 20"
   -V                    : run ventricle analysis (VIENA)
-  -v <mask image>       : optional user-supplied ventricle mask (default is $FSLDIR/bin/MNI152_T1_2mm_VentricleMask)
+  -v <mask image>       : optional user-supplied ventricle mask (default is ${FSLDIR}/data/standard/MNI152_T1_2mm_VentricleMask)
 
 EOF
     exit 1
@@ -305,7 +305,7 @@ ${FSLDIR}/bin/pngappend gr${A}_halfwayto_${B}a.png + gr${A}_halfwayto_${B}b.png 
 echo "<hr><p><b>Final brain edge movement image</b><p>atrophy <IMG SRC=\".ramp2.gif\"> 0 <IMG SRC=\".ramp.gif\"> \"growth\"<p><IMG BORDER=0 SRC=\"${A}_halfwayto_${B}_render.png\"><p><b>Estimated PBVC: $pbvc_average</b>" >> report.html
 
 if [ $do_viena = yes ] ; then
-    ${FSLDIR}/bin/viena_quant ${A} ${B} ${vienadir}
+    ${FSLDIR}/bin/viena_quant ${A} ${B} ${Vmask}
 fi
 
 if [ $debug = 0 ] ; then
