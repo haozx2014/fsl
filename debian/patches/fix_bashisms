@@ -21,14 +21,6 @@ Description: Fix bashisms in the code.
     echo "POSSUMDIR (during)" $POSSUMDIR
  else
      export POSSUMDIR=$FSLDIR
---- a/src/feat5/mainfeatreg
-+++ b/src/feat5/mainfeatreg
-@@ -1,4 +1,4 @@
--#!/bin/sh
-+#!/bin/bash
- 
- #   dofeatreg
- #
 --- a/src/oxford_asl/quasil
 +++ b/src/oxford_asl/quasil
 @@ -1,4 +1,4 @@

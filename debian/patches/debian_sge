@@ -2,8 +2,10 @@ Description: out-of-the-box compatibility with Debian's SGE
  Moreover, the patch established the env variable FSLPARALLEL as a uniform
  trigger for cluster-based processing in FSL. If set, jobs are submitted to
  SGE, if not, not.
---- a/src/fdt/bedpostx
-+++ b/src/fdt/bedpostx
+Index: fsl/src/fdt/bedpostx
+===================================================================
+--- fsl.orig/src/fdt/bedpostx	2012-10-02 08:12:30.000000000 +0200
++++ fsl/src/fdt/bedpostx	2012-12-17 17:24:26.000000000 +0100
 @@ -64,13 +64,15 @@
  #   University, to negotiate a licence. Contact details are:
  #   innovation@isis.ox.ac.uk quoting reference DE/9564.
@@ -78,8 +80,10 @@ Description: out-of-the-box compatibility with Debian's SGE
      echo
      echo Type ${subjdir}.bedpostX/monitor to show progress.
      cat <<EOM > ${subjdir}.bedpostX/monitor
---- a/src/fdt/fdt.tcl
-+++ b/src/fdt/fdt.tcl
+Index: fsl/src/fdt/fdt.tcl
+===================================================================
+--- fsl.orig/src/fdt/fdt.tcl	2012-12-17 17:02:22.000000000 +0100
++++ fsl/src/fdt/fdt.tcl	2012-12-17 17:24:26.000000000 +0100
 @@ -858,8 +858,11 @@
  	probtrackx {
  	    global probtrack env
@@ -107,8 +111,10 @@ Description: out-of-the-box compatibility with Debian's SGE
  		} else {
  
  		    fdt_monitor_short $w "$FSLDIR/bin/probtrackx2 $flags"
---- a/src/misc_tcl/fslstart.tcl
-+++ b/src/misc_tcl/fslstart.tcl
+Index: fsl/src/misc_tcl/fslstart.tcl
+===================================================================
+--- fsl.orig/src/misc_tcl/fslstart.tcl	2012-10-02 08:12:30.000000000 +0200
++++ fsl/src/misc_tcl/fslstart.tcl	2012-12-17 17:24:26.000000000 +0100
 @@ -55,7 +55,12 @@
  
  #Choose load_varian specific OR FSLPARALLEL
@@ -123,8 +129,10 @@ Description: out-of-the-box compatibility with Debian's SGE
  
  # what type of OS?
  set OSFLAVOUR unix
---- a/src/possum/possumX
-+++ b/src/possum/possumX
+Index: fsl/src/possum/possumX
+===================================================================
+--- fsl.orig/src/possum/possumX	2012-12-17 17:11:02.000000000 +0100
++++ fsl/src/possum/possumX	2012-12-17 17:24:26.000000000 +0100
 @@ -231,7 +231,9 @@
  mkdir -p ${subjdir}/diff_proc
  mkdir -p ${subjdir}/logs
@@ -151,8 +159,10 @@ Description: out-of-the-box compatibility with Debian's SGE
  
  echo Post processing stage
  date
---- a/src/sgeutils/fsl_sub
-+++ b/src/sgeutils/fsl_sub
+Index: fsl/src/sgeutils/fsl_sub
+===================================================================
+--- fsl.orig/src/sgeutils/fsl_sub	2012-12-17 17:02:22.000000000 +0100
++++ fsl/src/sgeutils/fsl_sub	2012-12-17 17:24:26.000000000 +0100
 @@ -70,6 +70,15 @@
  # cluster.
  ###########################################################################
@@ -183,12 +193,9 @@ Description: out-of-the-box compatibility with Debian's SGE
      elif [ -f /usr/local/sge/default/common/settings.sh ] ; then
  	. /usr/local/sge/default/common/settings.sh
      else
-@@ -95,30 +105,26 @@
-     fi
- fi
- 
-+# define the default 'qsub' implementation to be used for cluster submission
-+qsub_cmd="qsub"
+@@ -104,29 +114,26 @@
+ FSLSUBALREADYRUN=true
+ export FSLSUBALREADYRUN
  
 -###########################################################################
 -# The following auto-decides what cluster queue to use. The calling
@@ -199,7 +206,9 @@ Description: out-of-the-box compatibility with Debian's SGE
 -# list to map ranges of timings into your cluster queues - it doesn't
 -# matter how many you setup, that's up to you.
 -###########################################################################
--
++# define the default 'qsub' implementation to be used for cluster submission
++qsub_cmd="qsub"
+ 
 -map_qname ()
 -{
 -    if [ $1 -le 20 ] ; then
@@ -232,7 +241,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  
  ###########################################################################
  # Don't change the following (but keep scrolling down!)
-@@ -140,13 +146,13 @@
+@@ -149,13 +156,13 @@
  $command -q short.q gzip *.img *.hdr
  $command -a darwin regscript rawdata outputdir ...
  
@@ -251,7 +260,7 @@ Description: out-of-the-box compatibility with Debian's SGE
    -j <jid>              Place a hold on this task until job jid has completed
    -t <filename>         Specify a task file of commands to execute in parallel
    -N <jobname>          Specify jobname as it will appear on queue
-@@ -158,21 +164,6 @@
+@@ -167,21 +174,6 @@
                          configured for the requested queues.
                          <threads> specifies the number of threads to run
    -v                    Verbose mode.
@@ -273,7 +282,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  EOF
  
    exit 1
-@@ -207,9 +198,10 @@
+@@ -220,9 +212,10 @@
  # change. It also sets up the basic emailing control.
  ###########################################################################
  
@@ -287,7 +296,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  
  
  ###########################################################################
-@@ -254,10 +246,11 @@
+@@ -267,7 +260,8 @@
        fi
        shift;;
      -T)
@@ -296,29 +305,25 @@ Description: out-of-the-box compatibility with Debian's SGE
 +      job_timelimit="-l h_rt=$(echo "$2 * 60" | bc)"
        shift;;
      -q)
--      queue=$2
-+      queue="-q $2"
-       qconf -sql | grep ^$queue 2>&1 >/dev/null
-       if [ $? -eq 1 ]; then
- 	  echo "Invalid queue specified!"
-@@ -404,9 +397,9 @@
+       queue=$2
+@@ -417,9 +411,9 @@
  
  	if [ "x$tasks" = "x" ] ; then
  	    if [ $scriptmode -ne 1 ] ; then
 -		sge_command="qsub -V -cwd -shell n -b y -r y -q $queue $pe_options -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold"
-+		sge_command="$qsub_cmd -V -cwd -shell n -b y -r y $job_timelimit $queue $pe_options -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold"
++		sge_command="$qsub_cmd -V -cwd -shell n -b y -r y $job_timelimit -q $queue $pe_options -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold"
  	    else
 -		sge_command="qsub $LogOpts $sge_arch $sge_hold"
 +		sge_command="$qsub_cmd $LogOpts $sge_arch $sge_hold"
  	    fi
  	    if [ $verbose -eq 1 ] ; then 
  		echo sge_command: $sge_command >&2
-@@ -414,7 +407,7 @@
+@@ -427,7 +421,7 @@
  	    fi
  	    exec $sge_command $@ | awk '{print $3}'
  	else
 -	    sge_command="qsub -V -cwd -q $queue $pe_options -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold $sge_tasks"
-+	    sge_command="$qsub_cmd -V -cwd $job_timelimit $queue $pe_options -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold $sge_tasks"
++	    sge_command="$qsub_cmd -V -cwd $job_timelimit -q $queue $pe_options -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold $sge_tasks"
  	    if [ $verbose -eq 1 ] ; then 
  		echo sge_command: $sge_command >&2
  		echo control file: $taskfile >&2
