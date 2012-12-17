@@ -209,7 +209,7 @@ int do_work(int argc, char* argv[])
 	int binno=0;
 	// look up cummulative dist and interp
 	for (int midx=maxcidx; midx>=1; midx--) { if (cumnb(midx)>idx(mm)) binno=midx; }  // find least index
-	if (binno==0) { binno=nin; }
+	if (binno==0) { binno=maxcidx; }
 	float minv=borders(Max(1,binno-1));
 	float maxv=borders(binno);
 	newvals(mm)=(urand(0,100)/100.0f)*(maxv-minv) + minv;  

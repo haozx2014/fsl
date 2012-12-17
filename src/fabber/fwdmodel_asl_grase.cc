@@ -78,7 +78,7 @@ using namespace NEWIMAGE;
 
 string GraseFwdModel::ModelVersion() const
 {
-  return "$Id: fwdmodel_asl_grase.cc,v 1.19 2011/08/04 13:39:36 chappell Exp $";
+  return "$Id: fwdmodel_asl_grase.cc,v 1.20 2012/10/19 14:54:17 chappell Exp $";
 }
 
 void GraseFwdModel::HardcodedInitialDists(MVNDist& prior, 
@@ -259,6 +259,7 @@ void GraseFwdModel::Evaluate(const ColumnVector& params, ColumnVector& result) c
     for(int it=1; it<=tis.Nrows(); it++)
       {
 	ti = tis(it) + slicedt*coord_z; //account here for an increase in the TI due to delays between slices
+	//cout << coord_z << " : " << ti << endl;
 	if (casl)  F = 2*ftiss;
 	else	   F = 2*ftiss * exp(-ti/T_1app);
 
@@ -511,6 +512,7 @@ GraseFwdModel::GraseFwdModel(ArgsType& args)
       coord_z = 0;
       
       singleti = false; //normally we do multi TI ASL
+      /* This option is currently disabled since it is not compatible with basil
       if (tis.Nrows()==1) {
 	//only one TI therefore only infer on CBF and ignore other inference options
 	LOG << "--Single inversion time mode--" << endl;
@@ -521,6 +523,7 @@ GraseFwdModel::GraseFwdModel(ArgsType& args)
 	// force other inference options to be false
 	//infertau = false; infert1 = false; inferart = false; //inferinveff = false;
       }
+      */
 	
       // add information about the parameters to the log
       LOG << "Inference using Buxton Kinetic Curve model" << endl;

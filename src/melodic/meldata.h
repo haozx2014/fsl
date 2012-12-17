@@ -96,7 +96,7 @@ namespace Melodic{
  
       void save();
 
-      Matrix process_file(string fname, int numfiles = 1);
+      ReturnMatrix process_file(string fname, int numfiles = 1);
 
       inline void save4D(Matrix what, string fname){
 	 			volume4D<float> tempVol;

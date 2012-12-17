@@ -73,6 +73,31 @@
 #include "newimage/newimageall.h"
 #include "melhlprfns.h"
 
+#ifdef __APPLE__
+#include <mach/mach.h>
+#define memmsg(msg) { \
+  struct task_basic_info t_info; \
+  mach_msg_type_number_t t_info_count = TASK_BASIC_INFO_COUNT; \
+  if (KERN_SUCCESS == task_info(mach_task_self(), TASK_BASIC_INFO, (task_info_t) &t_info, &t_info_count)) \
+	{ \
+		cout << msg << " res: " << t_info.resident_size/1000000 << " virt: " << t_info.virtual_size/1000000 << "\n"; \
+		cout.flush(); \
+	} \
+}
+#else
+#define memmsg(msg) { \
+   cout << msg; \
+}
+#endif
+
+
+// a simple message macro that takes care of cout
+#define message(msg) { \
+  cout << msg; \
+  cout.flush(); \
+}
+
+
 using namespace MISCPLOT;
 using namespace MISCMATHS;
 using namespace Utilities;
@@ -109,11 +134,36 @@ using namespace std;
 
 int do_work(int argc, char* argv[]) {
     
-	Matrix test;
+	Matrix MatrixData;
+	volume<float> Mean;
+
+   	{
+	volume4D<float> RawData;
+
+    //read data
+    message("Reading data file " << (string)fnin.value() << "  ... ");
+    read_volume4D(RawData,fnin.value());
+    message(" done" << endl);
+  
+	Mean = meanvol(RawData);
+  
+	memmsg(" Before reshape ");
+    MatrixData = RawData.matrix();
+    }
+	memmsg(" after reshape ");
+	message(" Data size " << MatrixData.Nrows() << " x " << MatrixData.Ncols() << endl);
 	
-	cerr << " X: "<< xdim.value() << ", Y: "<< ydim.value() << endl;
-	test = zeros(xdim.value(),ydim.value());
-	cerr << "Created matrix of size " << test.Nrows() << " x " << test.Ncols() << endl;
+	memmsg(" before remmean_econ ");
+	remmean_econ(MatrixData);
+	memmsg("after remmean_econ / before remmean")
+	
+	MatrixData = remmean(MatrixData);
+	
+	memmsg(" after remmean ");
+	message(" Mean size " << MatrixData.Nrows() << " x " << MatrixData.Ncols() << endl);
+	
+	message(" Mean size " << MatrixData.Nrows() << " x " << MatrixData.Ncols() << endl);
+	
 	return 0;
 }
 

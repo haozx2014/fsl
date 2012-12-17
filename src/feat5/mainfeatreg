@@ -1,6 +1,6 @@
-#!/bin/sh
+#!/bin/bash
 
-#   dofeatreg
+#   mainfeatreg
 #
 #   Matthew Webster, FMRIB Image Analysis Group
 #
@@ -243,7 +243,7 @@ runFlirt() { # $1 in $2 ref $3 dof $4 search $5 interp $6 report $7 in_weighting
 	    echoSpacingSeconds=`awk "BEGIN {print $echoSpacing / 1000}"`
 	    runCommand $9 "${FSLDIR}/bin/epi_reg --epi=$1 --t1=$2_head --t1brain=$2 --out=$out --fmap=unwarp/FM_UD_fmap --fmapmag=unwarp/FM_UD_fmap_mag --fmapmagbrain=unwarp/FM_UD_fmap_mag_brain --echospacing=$echoSpacingSeconds --pedir=$phaseEncodingDirection"
 	    runCommand $9 "mv ${out}_fieldmap2str.mat unwarp/FM_UD_fmap_mag_brain2str.mat"
-	    runCommand $9 "mv ${out}_fieldmaprads2epi.mat unwarp/FM_UD_fmap2epi.mat"
+            runCommand $9 "mv ${out}_fieldmaprads2epi.mat unwarp/FM_UD_fmap2epi.mat"
 	    runCommand $9 "${FSLDIR}/bin/immv ${out}_fieldmaprads2epi_shift unwarp/FM_UD_fmap2epi_shift"
 	    runCommand $9 "${FSLDIR}/bin/immv ${out}_fieldmap2str unwarp/FM_UD_fmap_mag_brain2str"
 	    cd unwarp
@@ -254,7 +254,7 @@ runFlirt() { # $1 in $2 ref $3 dof $4 search $5 interp $6 report $7 in_weighting
             shiftminr=`awk "BEGIN {print $shiftminr * -1.0}"`
             shiftmaxr=`echo $shiftminmax | awk {'print $4'}`
 	    
-	    runCommand $9 "${FSLDIR}/bin/flirt -ref ../example_func -in FM_UD_fmap_mag_brain -applyxfm -init FM_UD_fmap2epi.mat -out EF_UD_fmap_mag_brain" 
+	    runCommand $9 "${FSLDIR}/bin/flirt -ref ../$1 -in FM_UD_fmap_mag_brain -applyxfm -init FM_UD_fmap2epi.mat -out EF_UD_fmap_mag_brain" 
             runCommand $9 "${FSLDIR}/bin/fslmaths FM_UD_fmap2epi_shift -mul -1 grot"
             runCommand $9 "${FSLDIR}/bin/overlay 1 0 EF_UD_fmap_mag_brain -a FM_UD_fmap2epi_shift 0.0001 $shiftmaxr grot 0.0001 $shiftminr EF_UD_shift+mag"
 	    createSmallSliceReport EF_UD_shift+mag $htmlReport2 $9 "<p>Unwarping shift map, in voxels &nbsp;&nbsp;&nbsp; ${shiftminR} <IMG BORDER=0 SRC=\"reg/unwarp/.ramp2.gif\"> 0 <IMG BORDER=0 SRC=\"reg/unwarp/.ramp.gif\"> ${shiftmaxR}<br>
@@ -271,25 +271,23 @@ runFlirt() { # $1 in $2 ref $3 dof $4 search $5 interp $6 report $7 in_weighting
 	    #Compare fieldmap against highres and vice versa
 	    createSliceReport FM_UD_fmap_mag_brain2str ../highres $htmlReport2 "reg/unwarp/" "<p>Registration of fieldmap to highres" $9
 	    #Compare example func distorted and undistorted to highres
-	    runCommand $9 "${FSLDIR}/bin/flirt -ref ../highres -in ../example_func -out example_func_distorted2highres -applyxfm -init ../example_func2highres.mat -interp $5"
-	    createSliceReport example_func_distorted2highres ../highres $htmlReport2 "reg/unwarp/" "<p>Registration of example_func to highres without fieldmap correction"  $9
-	    createSliceReport ../example_func2highres ../highres $htmlReport2 "reg/unwarp/" "<p>Registration of example_func to highres with fieldmap correction" $9
-	    runCommand $9 "${FSLDIR}/bin/convert_xfm -inverse -omat highres2example_func.mat ../example_func2highres.mat "
-	    runCommand $9 "${FSLDIR}/bin/applywarp -i ../example_func2highres -r ../example_func --premat=highres2example_func.mat -o example_func_undistorted" 
+	    runCommand $9 "${FSLDIR}/bin/flirt -ref ../highres -in ../$1 -out ${1}_distorted2highres -applyxfm -init ../${1}2highres.mat -interp $5"
+	    createSliceReport ${1}_distorted2highres ../highres $htmlReport2 "reg/unwarp/" "<p>Registration of $1 to highres without fieldmap correction"  $9
+	    createSliceReport ../${1}2highres ../highres $htmlReport2 "reg/unwarp/" "<p>Registration of $1 to highres with fieldmap correction" $9
+	    runCommand $9 "${FSLDIR}/bin/convert_xfm -inverse -omat highres2${1}.mat ../${1}2highres.mat "
+	    runCommand $9 "${FSLDIR}/bin/applywarp -i ../${1}2highres -r ../${1} --premat=highres2${1}.mat -o ${1}_undistorted" 
 
 
-	    runCommand $9 "${FSLDIR}/bin/overlay  0 0 example_func_distorted2highres -a ../${out}_fast_wmedge 0.001 10 grot"
+	    runCommand $9 "${FSLDIR}/bin/overlay  0 0 ${1}_distorted2highres -a ../${out}_fast_wmedge 0.001 10 grot"
 	    runCommand $9 "${FSLDIR}/bin/slicer grot   -s 3 -x 0.35 sla.png -x 0.45 slb.png -x 0.55 slc.png -x 0.65 sld.png -y 0.35 sle.png -y 0.45 slf.png -y 0.55 slg.png -y 0.65 slh.png -z 0.35 sli.png -z 0.45 slj.png -z 0.55 slk.png -z 0.65 sll.png ; ${FSLDIR}/bin/pngappend sla.png + slb.png + slc.png + sld.png + sle.png + slf.png + slg.png + slh.png + sli.png + slj.png + slk.png + sll.png EF_D_edges.gif"
-	    runCommand $9 "${FSLDIR}/bin/overlay  0 0 ../example_func2highres -a ../${out}_fast_wmedge 0.001 10 grot"
+	    runCommand $9 "${FSLDIR}/bin/overlay  0 0 ../${1}2highres -a ../${out}_fast_wmedge 0.001 10 grot"
 	    runCommand $9 "${FSLDIR}/bin/slicer grot    -s 3 -x 0.35 sla.png -x 0.45 slb.png -x 0.55 slc.png -x 0.65 sld.png -y 0.35 sle.png -y 0.45 slf.png -y 0.55 slg.png -y 0.65 slh.png -z 0.35 sli.png -z 0.45 slj.png -z 0.55 slk.png -z 0.65 sll.png ; ${FSLDIR}/bin/pngappend sla.png + slb.png + slc.png + sld.png + sle.png + slf.png + slg.png + slh.png + sli.png + slj.png + slk.png + sll.png EF_U_edges.gif"
 	    runCommand $9 "${FSLDIR}/bin/whirlgif -o EF_UD_movie.gif -time 50 -loop 0 EF_D_edges.gif EF_U_edges.gif; /bin/rm -f sla* slb* slc* sld* sle* slf* slg* slh* sli* slj* slk* sll* grot*"
-	    writeToFile $htmlReport2 0 0 "<p>Movie of distorted and undistorted example_func images<br>
+	    writeToFile $htmlReport2 0 0 "<p>Movie of distorted and undistorted ${1} images<br>
 <a href=\"reg/unwarp/EF_UD_movie.gif\"><IMG BORDER=0 SRC=\"reg/unwarp/EF_UD_movie.gif\" WIDTH=1200></a>
 <br>"
-	     runCommand $9 "${FSLDIR}/bin/imcp example_func_undistorted ../example_func"  #replace the old example_func with the fieldmap corrected version
-	    cd ${outputDirectory}/reg
-	    runCommand $9 "${FSLDIR}/bin/imcp ../example_func ../example_func_distorted"  
-	    runCommand $9 "${FSLDIR}/bin/imcp example_func ../example_func" 
+	     runCommand $9 "${FSLDIR}/bin/imcp ${1}_undistorted ../$1"  #replace the old fieldmap distorted low_res with the fieldmap corrected version
+	     cd ${outputDirectory}/reg
 	else
 	    runCommand $9 "${FSLDIR}/bin/epi_reg --epi=$1 --t1=$2_head --t1brain=$2 --out=$out"
 	fi
@@ -540,8 +538,6 @@ fi
 
 
 #{{{ setup flirt files
-echo "intial HighresImage"
-echo $initialHighresImage
 
 if [ `${FSLDIR}/bin/imtest $initialHighresImage` = 1 ]
     then
@@ -621,6 +617,12 @@ fi
 if [ `${FSLDIR}/bin/imtest highres` = 1 -a `${FSLDIR}/bin/imtest initial_highres` = 1 ] #Then we must have an initialHighresImage present
     then
     runCommand $logFile "${FSLDIR}/bin/convert_xfm -omat example_func2highres.mat -concat initial_highres2highres.mat example_func2initial_highres.mat"
+    if [ `${FSLDIR}/bin/imtest initial_highres2highres_warp` = 1 ]
+    then
+	runCommand $logFile "${FSLDIR}/bin/convert_xfm -inverse -omat highres2example_func.mat example_func2highres.mat"
+	runCommand $logFile "${FSLDIR}/bin/convertwarp --ref=highres --premat=example_func2initial_highres.mat --warp1=initial_highres2highres_warp --out=example_func2highres_warp"
+	runCommand $logFile "${FSLDIR}/bin/applywarp -i example_func -r example_func -o example_func -w example_func2highres_warp.nii.gz --postmat=highres2example_func.mat"
+    fi
     runFlirt example_func highres "" "" trilinear $htmlReport "" "" $logFile ""
 fi
 if [ `${FSLDIR}/bin/imtest standard` = 1 -a `${FSLDIR}/bin/imtest highres` = 1 ] #Then we must have an highresImage present
@@ -630,6 +632,12 @@ if [ `${FSLDIR}/bin/imtest standard` = 1 -a `${FSLDIR}/bin/imtest highres` = 1 ]
 	then runCommand $logFile "${FSLDIR}/bin/convertwarp --ref=standard --premat=example_func2highres.mat --warp1=highres2standard_warp --out=example_func2standard_warp"
     fi
     runFlirt example_func standard "" "" trilinear $htmlReport "" "" $logFile ""
+fi
+#Now replace the original TOP level example func with the undistorted version, and save the original distorted version
+if [ `${FSLDIR}/bin/imtest example_func2highres_warp` = 1 ] 
+   then
+   runCommand $logFile "${FSLDIR}/bin/imcp ../example_func ../example_func_distorted" 
+   runCommand $logFile "${FSLDIR}/bin/imcp example_func ../example_func" 
 fi
 
 writeToFile $htmlReport 0 0 "</BODY></HTML>"

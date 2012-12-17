@@ -101,7 +101,7 @@ void track(){
   counter.initialise();
   Seedmanager   seedmanager(counter);
 
-  
+  srand(opts.rseed.value()); // need to reinitialise random seed because of GIFTI!!
   
   // convert coordinates from nifti (external) to newimage (internal)
   //   conventions - Note: for radiological files this should do nothing

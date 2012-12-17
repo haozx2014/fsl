@@ -8,7 +8,7 @@ meshclass fslvtkio misc_tcl basisfield warpfns bint shapeModel MVdisc fslvtkconv
 avwutils basil bet2 cluster dpm copain tissue fast4 feat5 film filmbabe flirt fabber  \
 fslpres fslvbm mcflirt melodic misc_c miscvis mm nma \
 randomise siena slicetimer susan tbss fnirt fugue asl_mfree \
-ifit load_varian load_dicom misc_scripts fdt first possum sgeutils flameo oxford_asl relax qboot topup ptx2 lesions eddy";
+ifit load_varian load_dicom misc_scripts fdt first possum sgeutils flameo oxford_asl relax qboot topup ptx2 lesions eddy dwssfp";
 fi
 
 echo "Building projects - see build.log file for progress..."

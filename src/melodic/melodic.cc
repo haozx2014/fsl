@@ -371,7 +371,7 @@ Matrix mmall(Log& logger, MelodicOptions& opts,MelodicData& melodat, MelodicRepo
     if(opts.varnorm.value()&&melodat.get_stdNoisei().Storage()>0){
       ICmap = SP(melodat.get_IC().Row(ctr),diagvals(ctr)*melodat.get_stdNoisei());
     }else{
-    	ICmap = melodat.get_IC().Row(ctr);
+      ICmap = melodat.get_IC().Row(ctr);
 	}
     string wherelog;
     if(opts.genreport.value())

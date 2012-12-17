@@ -140,6 +140,7 @@ protected: // Constants
   double pretisat;
   bool grase; //to indicate data was collected with GRASE-ASL
  double slicedt;
+ bool casl;
 
   bool infertiss;
   bool singleti; //specifies that only tissue perfusion should be inferred

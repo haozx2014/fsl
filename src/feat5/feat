@@ -397,9 +397,9 @@ if { $fmri(featwatcher_yn) } {
 	set jobHalt ""
 	if { $haltForModel != 0 } {
 		    set jobHalt "-h $featModelID"
-	}
+	}                         
  	if { $fmri(totalVoxels) > 80000000 } {
- 	   set howlong [ expr int( $fmri(npts) / 4 ) ]
+ 	   set howlong [ expr int( $fmri(totalVoxels) / 1000000 ) ]
 	}
 	
 

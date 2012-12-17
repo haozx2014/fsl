@@ -167,9 +167,11 @@ namespace Melodic{
       }		
 			
       {//plot time course
-    	IChtml << "<H3> Temporal mode </H3><p>" << endl <<endl;
-    	miscplot newplot;
+    	IChtml << "<H3> Temporal mode </H3><p>" << endl <<endl;     	
+		miscplot newplot;
+		
 			Matrix tmptc = melodat.get_Tmodes(cnum-1).Column(1).t();
+
 			newplot.col_replace(0,0xFF0000);
 
 			newplot.add_label(string("IC ")+num2str(cnum)+" time course");
@@ -201,7 +203,8 @@ namespace Melodic{
 				tmptc.Row(1).Minimum()),tmptc.Row(1).Maximum()+
 				0.05*(tmptc.Row(1).Maximum()-tmptc.Row(1).Minimum()));
 			newplot.grid_swapdefault();
-	    newplot.timeseries(tmptc,
+			
+	        newplot.timeseries(tmptc,
 			  report.appendDir(string("t")+num2str(cnum)+".png"),
 			  string("Timecourse No. ")+num2str(cnum), 
 			  opts.tr.value(),150,12,1,false);

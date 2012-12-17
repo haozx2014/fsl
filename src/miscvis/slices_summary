@@ -72,10 +72,12 @@
 Usage() {
     echo ""
     echo "Usage:"
-    echo "slices_summary <4D_input> <threshold> <background_image> <pictures.sum>"
+    echo "slices_summary <4D_input> <threshold> <background_image> <pictures.sum> [-1]"
     echo "slices_summary <pictures.sum> <output.png> <space-separated list of timepoints to use; first timepoint is 0>"
     echo ""
     echo "The first usage creates the full set of summary PNG images, into a new directory <pictures.sum>"
+    echo "  [-1] option: generate single-slice summary images instead of 3-slice"
+    echo ""
     echo "The second usage processes the timepoint list, combining summary slices across all timepoints into a single PNG image."
     echo ""
     echo "E.g."
@@ -111,6 +113,12 @@ if [ `${FSLDIR}/bin/imtest $1` = 1 ] ; then
   fi
   out=$4
 
+  allthree=1
+  if [ _$5 = _-1 ] ; then
+    echo "Generating single-slice summary images instead of 3-slice"
+    allthree=0
+  fi
+
   mkdir -p $out
   ${FSLDIR}/bin/imcp $bg ${out}/BG
 
@@ -139,24 +147,29 @@ if [ `${FSLDIR}/bin/imtest $1` = 1 ] ; then
     nbest=`${FSLDIR}/bin/remove_ext $best | awk -F _ '{print $2}'`
     ${FSLDIR}/bin/fslroi BG grot 0 $bgdimx 0 $bgdimy $nbest 1
     ${FSLDIR}/bin/overlay 0 0 grot $bgrange $best $lthresh $uthresh grotB
+    fslecho "$nbest\c"
 
-    lbest=`echo "$nbest 4 - p" | dc -`
-    if [ $lbest -lt 1 ] ; then lbest=1; fi;
-    lbest=`cat grot.txt | head -n $lbest | sort -k 2 -n | tail -n 1 | awk '{print $1}'`
-    nlbest=`${FSLDIR}/bin/remove_ext $lbest | awk -F _ '{print $2}'`
-    ${FSLDIR}/bin/fslroi BG grot 0 $bgdimx 0 $bgdimy $nlbest 1
-    ${FSLDIR}/bin/overlay 0 0 grot $bgrange $lbest $lthresh $uthresh grotC
+    if [ $allthree = 1 ] ; then
+      lbest=`echo "$nbest 4 - p" | dc -`
+      if [ $lbest -lt 1 ] ; then lbest=1; fi;
+      lbest=`cat grot.txt | head -n $lbest | sort -k 2 -n | tail -n 1 | awk '{print $1}'`
+      nlbest=`${FSLDIR}/bin/remove_ext $lbest | awk -F _ '{print $2}'`
+      ${FSLDIR}/bin/fslroi BG grot 0 $bgdimx 0 $bgdimy $nlbest 1
+      ${FSLDIR}/bin/overlay 0 0 grot $bgrange $lbest $lthresh $uthresh grotC
   
-    ubest=`echo "$nbest 6 + p" | dc -`
-    if [ $ubest -gt `cat grot.txt | wc -l` ] ; then ubest=`cat grot.txt | wc -l`; fi;
-    ubest=`cat grot.txt | tail -n +$ubest | sort -k 2 -n | tail -n 1 | awk '{print $1}'`
-    nubest=`${FSLDIR}/bin/remove_ext $ubest | awk -F _ '{print $2}'`
-    ${FSLDIR}/bin/fslroi BG grot 0 $bgdimx 0 $bgdimy $nubest 1
-    ${FSLDIR}/bin/overlay 0 0 grot $bgrange $ubest $lthresh $uthresh grotA
+      ubest=`echo "$nbest 6 + p" | dc -`
+      if [ $ubest -gt `cat grot.txt | wc -l` ] ; then ubest=`cat grot.txt | wc -l`; fi;
+      ubest=`cat grot.txt | tail -n +$ubest | sort -k 2 -n | tail -n 1 | awk '{print $1}'`
+      nubest=`${FSLDIR}/bin/remove_ext $ubest | awk -F _ '{print $2}'`
+      ${FSLDIR}/bin/fslroi BG grot 0 $bgdimx 0 $bgdimy $nubest 1
+      ${FSLDIR}/bin/overlay 0 0 grot $bgrange $ubest $lthresh $uthresh grotA
 
-    fslecho  "$nlbest,$nbest,$nubest] \c"
-    fslmerge -y grot grotA grotB grotC
-    ${FSLDIR}/bin/slicer grot -u -z 0 `zeropad $DD 4`.png
+      fslecho  ",$nlbest,$nubest\c"
+      fslmerge -y grotB grotA grotB grotC
+    fi
+    fslecho  "] \c"
+
+    ${FSLDIR}/bin/slicer grotB -u -z 0 `zeropad $DD 4`.png
   done
   /bin/rm -f grot* vol* BG*
   echo ""

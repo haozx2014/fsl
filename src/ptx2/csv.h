@@ -107,7 +107,7 @@ using namespace Utilities;
 // useful routines for collision detection
 bool triBoxOverlap(float boxcenter[3],float boxhalfsize[3],float triverts[3][3]);
 bool rayBoxIntersection(float origin[3],float direction[3],float vminmax[2][3]);
-bool segTriangleIntersection(float seg[2][3],float tri[3][3]);
+bool segTriangleIntersection(float seg[2][3],float tri[3][3],bool verb=false);
 float triDistPoint(const Triangle& t,const ColumnVector pos);
 
 
@@ -373,6 +373,7 @@ public:
   void reload_rois  (const string& filename);
   void save_roi     (const int& roiind,const string& prefix);
   void save_rois    (const string& prefix);
+  //void save_as_volume (const string& prefix);
   void fill_volume  (volume<float>& vol,const int& ind);
   void cleanup();
 
@@ -405,6 +406,7 @@ public:
   void  reset_maps(){maps.clear();}
   void  add_map(){
     ColumnVector map(nlocs);
+    map=0.0;
     maps.push_back(map);
   }
   void  add_map(const ColumnVector& map){
@@ -455,7 +457,6 @@ public:
     isinroi=rhs.isinroi;
     mat2vol=rhs.mat2vol;
     vol2mat=rhs.vol2mat;
-    vol2loc=rhs.vol2loc;
     surfvol=rhs.surfvol;
     triangles=rhs.triangles;
     mm2vox=rhs.mm2vox;
