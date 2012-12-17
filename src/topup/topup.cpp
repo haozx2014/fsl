@@ -149,6 +149,7 @@ int main(int   argc,
     cf->SetVerbose(clp->Verbose());
     cf->SetDebug(clp->DebugLevel());
     cf->SetLevel(1);
+    cf->SetInterpolationModel(clp->InterpolationModel());
     cf->SetRegridding(clp->Regridding(in));
     cf->SubSample(clp->SubSampling(1));
     cf->Smooth(clp->FWHM(1));
@@ -156,7 +157,6 @@ int main(int   argc,
     cf->SetRegularisation(clp->Lambda(1),clp->RegularisationModel());
     cf->SetSSQLambda(clp->SSQLambda());
     cf->SetHessianPrecision(clp->HessianPrecision());
-    cf->SetInterpolationModel(clp->InterpolationModel());
 
     // Create non-linear parameters object
     ColumnVector spar(cf->NPar());
@@ -193,8 +193,8 @@ int main(int   argc,
       if (clp->Verbose()) cout << "***Going to next resolution level***" << endl;
       // Change settings for cost-function object
       cf->SetLevel(l);
-      cf->Smooth(clp->FWHM(l));
       cf->SubSample(clp->SubSampling(l));
+      cf->Smooth(clp->FWHM(l));
       cf->SetWarpResolution(clp->WarpRes(l));
       cf->SetMovementsFixed(!clp->EstimateMovements(l));
       cf->SetRegularisation(clp->Lambda(l),clp->RegularisationModel());

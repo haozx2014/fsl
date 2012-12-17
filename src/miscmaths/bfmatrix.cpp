@@ -85,9 +85,9 @@ NEWMAT::Matrix BFMatrix::SubMatrix(unsigned int fr, unsigned int lr, unsigned in
 {
   if (fr<1 || fc<1 || lr>Nrows() || lc>Ncols() || fr>lr || fc>lc) throw BFMatrixException("BFMatrix::SubMatrix: index out of range");
   NEWMAT::Matrix omat(lr-fr+1,lc-fc+1);
-  for (unsigned int r=fr; r<=lr; r++) {
-    for (unsigned int c=fc; c<lc; c++) {
-      omat(r,c) = this->Peek(r,c);
+  for (unsigned int r=fr, ri=1; r<=lr; r++, ri++) {
+    for (unsigned int c=fc, ci=1; c<=lc; c++, ci++) {
+      omat(ri,ci) = this->Peek(r,c);
     }
   }
   return(omat);

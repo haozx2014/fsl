@@ -68,6 +68,7 @@
 #include "utils/log.h"
 #include "probtrackx.h"
 #include "utils/tracer_plus.h"
+#include "stdlib.h"
 
 using namespace std;
 using namespace NEWIMAGE;

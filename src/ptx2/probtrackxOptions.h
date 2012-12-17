@@ -122,7 +122,9 @@ class probtrackxOptions {
   Option<string>           mask3;
   Option<string>           lrmask3;
   Option<float>            distthresh3;  
-  
+  Option<bool>             matrix4out;
+  Option<string>           dtimask;
+
   Option<string>           seeds_to_dti;
   Option<string>           dti_to_seeds;
   Option<string>           seedref;
@@ -153,6 +155,7 @@ class probtrackxOptions {
   FmribOption<bool>        onewayonly;       // in surface mode, track towards the brain (assumes surface normal points towards the brain)
   FmribOption<bool>        opathdir;         // like fdt_paths but with average local tract orientation
   FmribOption<bool>        save_paths;       // save paths to ascii file
+  FmribOption<string>      locfibchoice;     // inside this mask, define local rules for fibre picking
 
   void parse_command_line(int argc, char** argv,Log& logger);
   void modecheck();
@@ -274,8 +277,14 @@ class probtrackxOptions {
 	 string("Column-space mask used for Nxn connectivity matrix"),
 	 false, requires_argument), 
    distthresh3(string("--distthresh3"), 0,
-	       string("Discards samples (in matrix3) shorter than this threshold (in mm - default=0)\n\n"),
+	       string("Discards samples (in matrix3) shorter than this threshold (in mm - default=0)"),
 	       false, requires_argument),
+   matrix4out(string("--omatrix4"), false,
+	      string("Output matrix4 - DtiMaskToSeed (special Oxford Sparse Format)"),
+	      false, no_argument), 
+   dtimask(string("--target4"), string(""),
+	  string("Brain mask in DTI space\n\n"),
+	  false, requires_argument),
 
    seeds_to_dti(string("--xfm"),"",
 		string("\tTransform taking seed space to DTI space (either FLIRT matrix or FNIRT warpfield) - default is identity"),
@@ -355,6 +364,9 @@ class probtrackxOptions {
    save_paths(string("--savepaths"),false,
 	      string("Save path coordinates to ascii file"),
 	      false, no_argument),
+   locfibchoice(string("--locfibchoice"),string(""),
+	      string("Local rules for fibre choice - 0=closest direction(default), 1=equal prob (f>thr)"),
+	      false, requires_argument),
 
    options("probtrackx","probtrackx2 -s <basename> -m <maskname> -x <seedfile> -o <output> --targetmasks=<textfile>\n probtrackx2 --help\n")
    {
@@ -396,6 +408,8 @@ class probtrackxOptions {
        options.add(mask3);
        options.add(lrmask3);
        options.add(distthresh3);
+       options.add(matrix4out);
+       options.add(dtimask);
 
        options.add(seeds_to_dti);
        options.add(dti_to_seeds);
@@ -426,6 +440,7 @@ class probtrackxOptions {
        options.add(onewayonly);
        options.add(opathdir);
        options.add(save_paths);
+       options.add(locfibchoice);
 
      }
      catch(X_OptionError& e) {

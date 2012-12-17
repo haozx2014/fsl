@@ -155,7 +155,7 @@ ${FSLDIR}/bin/flirt -in ${ventriclemask} -ref ${scfollowhalf} -applyxfm -init av
 ${FSLDIR}/bin/fslmaths ${scfollowhalf}_ventricle_region -thr ${thresh} -bin ${scfollowhalf}_ventricle_region_bin
 ${FSLDIR}/bin/fslmaths ${scfollowedge} -mas ${scfollowhalf}_ventricle_region_bin ${scfollowedge}_ventricles
 ${FSLDIR}/bin/fslmaths ${scfollowflow} -mas ${scfollowhalf}_ventricle_region_bin ${scfollowflow}_ventricles
-edgepointsfollow=`${FSLDIR}/bin/fslstats ${scfollowedge}_ventricles -V|cut --fields=1 --delimiter=" "`
+edgepointsfollow=`${FSLDIR}/bin/fslstats ${scfollowedge}_ventricles -V|cut -f 1 -d " "`
 infofollowflow=`${FSLDIR}/bin/fslstats ${scfollowflow}_ventricles -V -M`
 nonzeroflowfollow=`echo ${infofollowflow} | cut -d' ' -f1`
 tempmeanflowfollow=`echo ${infofollowflow} | cut -d' ' -f3`
@@ -203,17 +203,17 @@ ${FSLDIR}/bin/fslmaths ${base2followflow} -mas ${base}_halfwayto_${follow}_ventr
 ${FSLDIR}/bin/fslmaths ${follow2baseedge} -mas ${follow}_halfwayto_${base}_ventricle_region_bin ${follow}_to_${base}_edgepoints_ventricles
 ${FSLDIR}/bin/fslmaths ${follow2baseflow} -mas ${follow}_halfwayto_${base}_ventricle_region_bin ${follow}_to_${base}_flow_ventricles
 
-edgepointsbase=`${FSLDIR}/bin/fslstats ${base}_to_${follow}_edgepoints_ventricles -V|cut --fields=1 --delimiter=" "`
+edgepointsbase=`${FSLDIR}/bin/fslstats ${base}_to_${follow}_edgepoints_ventricles -V|cut -f 1 -d " "`
 infobaseflow=`${FSLDIR}/bin/fslstats ${base}_to_${follow}_flow_ventricles -V -M`
-nonzeroflowbase=`echo ${infobaseflow}|cut --fields=1 --delimiter=" "`
-tempmeanflowbase=`echo ${infobaseflow}|cut --fields=3 --delimiter=" "`
+nonzeroflowbase=`echo ${infobaseflow}|cut -f 1 -d " "`
+tempmeanflowbase=`echo ${infobaseflow}|cut -f 3 -d " "`
 meanflowbase=`echo "10 k ${tempmeanflowbase} ${nonzeroflowbase} * ${edgepointsbase} / p" | sed 's/-/_/g' | dc -`
 pixdimbase=`${FSLDIR}/bin/fslval ${base}_halfwayto_${follow} pixdim1`
 
-edgepointsfollow=`${FSLDIR}/bin/fslstats ${follow}_to_${base}_edgepoints_ventricles -V|cut --fields=1 --delimiter=" "`
+edgepointsfollow=`${FSLDIR}/bin/fslstats ${follow}_to_${base}_edgepoints_ventricles -V|cut -f 1 -d " "`
 infofollowflow=`${FSLDIR}/bin/fslstats ${follow}_to_${base}_flow_ventricles -V -M`
-nonzeroflowfollow=`echo ${infofollowflow} | cut --fields=1 --delimiter=" "`
-tempmeanflowfollow=`echo ${infofollowflow} | cut --fields=3 --delimiter=" "`
+nonzeroflowfollow=`echo ${infofollowflow} | cut -f 1 -d " "`
+tempmeanflowfollow=`echo ${infofollowflow} | cut -f 3 -d " "`
 meanflowfollow=`echo "10 k ${tempmeanflowfollow} ${nonzeroflowfollow} * ${edgepointsfollow} / p" | sed 's/-/_/g' | dc -`
 pixdimfollow=`${FSLDIR}/bin/fslval ${follow}_halfwayto_${base} pixdim1`
 
@@ -265,7 +265,7 @@ echo ""
 #----------------------------------------------------------------------------
 
 # Create images for the HTML report
-${VIENADIR}/viena_createpng
+${FSLDIR}/bin/viena_createpng
 cp ${FSLDIR}/etc/luts/ramp.gif .ramp.gif
 cp ${FSLDIR}/etc/luts/ramp2.gif .ramp2.gif
 

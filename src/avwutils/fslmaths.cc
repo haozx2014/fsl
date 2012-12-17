@@ -125,6 +125,7 @@ int printUsage(const string& programName)
   cout << " -bin   : use (current image>0) to binarise" << endl;
   cout << " -binv  : binarise and invert (binarisation and logical inversion)" << endl;
   cout << " -fillh : fill holes in a binary mask (holes are internal - i.e. do not touch the edge of the FOV)" << endl;
+  cout << " -fillh26 : fill holes using 26 connectivity" << endl;
   cout << " -index : replace each nonzero voxel with a unique (subject to wrapping) index number" << endl;
   cout << " -grid <value> <spacing> : add a 3D grid of intensity <value> with grid spacing <spacing>" << endl;
   cout << " -edge  : edge strength" << endl;
@@ -954,7 +955,16 @@ if (!separatenoise)
       {
 	inputVolume.binarise(0,inputVolume.max()+1,exclusive);
 	for (int t=0; t<=inputVolume.maxt(); t++) {
-	  inputVolume[t] = fill_holes(inputVolume[t]);
+	  inputVolume[t] = fill_holes(inputVolume[t],6);
+	}
+	inputVolume.binarise(0,inputVolume.max()+1,exclusive);
+      }
+    /***************************************************************/
+    else if (string(argv[i])=="-fillh26") 
+      {
+	inputVolume.binarise(0,inputVolume.max()+1,exclusive);
+	for (int t=0; t<=inputVolume.maxt(); t++) {
+	  inputVolume[t] = fill_holes(inputVolume[t],26);
 	}
 	inputVolume.binarise(0,inputVolume.max()+1,exclusive);
       }
@@ -1187,7 +1197,7 @@ if (!separatenoise)
 	 dti_V3(inputVolume.xsize(),inputVolume.ysize(),inputVolume.zsize(),3);
 
        dti_L1=0; dti_L2=0; dti_L3=0; dti_FA=0; dti_MD=0; dti_MO=0; dti_V1=0; dti_V2=0; dti_V3=0;
-
+       
        copybasicproperties(inputVolume,dti_L1);
        copybasicproperties(inputVolume,dti_L2);
        copybasicproperties(inputVolume,dti_L3);
@@ -1257,14 +1267,23 @@ if (!separatenoise)
 
        // if i+1>argc-1 then can save (otherwise it is a syntax error with no specific output specified)
        check_for_output_name(i+1,argc-1);
+       dti_L1.setDisplayMaximumMinimum(dti_L1.max(),dti_L1.min());
        save_volume(dti_L1,string(argv[argc-1])+"_L1");
+       dti_L2.setDisplayMaximumMinimum(dti_L2.max(),dti_L2.min());
        save_volume(dti_L2,string(argv[argc-1])+"_L2");
+       dti_L3.setDisplayMaximumMinimum(dti_L3.max(),dti_L3.min());
        save_volume(dti_L3,string(argv[argc-1])+"_L3");
+       dti_FA.setDisplayMaximumMinimum(1,0);
        save_volume(dti_FA,string(argv[argc-1])+"_FA");
+       dti_MD.setDisplayMaximumMinimum(dti_MD.max(),dti_MD.min());
        save_volume(dti_MD,string(argv[argc-1])+"_MD");
+       dti_MO.setDisplayMaximumMinimum(1,-1);
        save_volume(dti_MO,string(argv[argc-1])+"_MO");
+       dti_V1.setDisplayMaximumMinimum(1,-1);
        save_volume4D(dti_V1,string(argv[argc-1])+"_V1");
+       dti_V2.setDisplayMaximumMinimum(1,-1);
        save_volume4D(dti_V2,string(argv[argc-1])+"_V2");
+       dti_V3.setDisplayMaximumMinimum(1,-1);
        save_volume4D(dti_V3,string(argv[argc-1])+"_V3");
 
 // }}}

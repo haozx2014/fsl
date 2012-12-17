@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
   if (clo.NIter() && clo.Registerb0()) ReplacementManager b0_rm = Register(clo,B0,sm,clo.NIter(),b0_mss,b0_ph);
 
   // Separate field offset from subject movement in PE direction
-  if (clo.RegisterDWI()) sm.SeparateFieldOffsetFromMovement();
+  // if (clo.RegisterDWI()) sm.SeparateFieldOffsetFromMovement();
 
   // Set reference for location
   if (clo.RegisterDWI()) sm.SetDWIReference();

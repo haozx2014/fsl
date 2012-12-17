@@ -153,8 +153,7 @@ Usage: featregapply <feat_directory> \[-f\] \[-c\] \[-l <image>\] \[-s <image>\]
 cd [ lindex $argv 0 ]
 
 if { [ file exists design.lev ] } {
-    puts "Error - [ pwd] is not a first-level FEAT/MELODIC directory"
-    exit 1
+    exit 0
 }
 if { ! [ file exists reg/example_func2standard.mat ] } {
     puts "Error - registration has not been run for [ pwd ]"

@@ -96,7 +96,7 @@ namespace Melodic{
  
       void save();
 
-      Matrix process_file(string fname, int numfiles = 1);
+      ReturnMatrix process_file(string fname, int numfiles = 1);
 
       inline void save4D(Matrix what, string fname){
 	 			volume4D<float> tempVol;
@@ -150,8 +150,11 @@ namespace Melodic{
       inline void save_Tmodes(){
 			if(Tmodes.size()>0){
 				Matrix tmp = Tmodes.at(0); 
-				for(unsigned int ctr = 1; ctr < Tmodes.size(); ctr++)
-	  			tmp |= Tmodes.at(ctr);
+				outMsize("tmp",tmp);
+				for(unsigned int ctr = 1; ctr < Tmodes.size(); ctr++){
+					outMsize("Tmodes ",Tmodes.at(ctr));
+     	  			tmp |= Tmodes.at(ctr);
+				}
 				saveascii(tmp,opts.outputfname.value() + "_Tmodes");
 			}
       }

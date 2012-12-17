@@ -82,7 +82,7 @@ using namespace std;
 // The two strings below specify the title and example usage that is
 // printed out as the help or usage message
 
-  string title=string("fsl_glm (Version 1.1)")+
+  string title=string("fsl_glm")+
 		string("\nCopyright(c) 2004-2009, University of Oxford (Christian F. Beckmann)\n")+
     string(" \n Simple GLM allowing temporal or spatial regression on either text data or images\n");
   string examples="fsl_glm -i <input> -d <design> -o <output> [options]";
@@ -331,7 +331,6 @@ int setup(int &dof){
 		}
 	}else{
 		contrasts = IdentityMatrix(design.Ncols());
-		contrasts &= -1.0 * contrasts;
 	}
 	return 0;	
 }

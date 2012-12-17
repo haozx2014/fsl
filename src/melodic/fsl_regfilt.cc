@@ -81,7 +81,7 @@ using namespace std;
 // The two strings below specify the title and example usage that is
 // printed out as the help or usage message
 
-  string title=string("fsl_regfilt (Version 1.2)")+
+  string title=string("fsl_regfilt")+
 		string("\n\n Copyright(c) 2011, University of Oxford (Christian F. Beckmann)\n")+
 		string(" Data de-noising by regressing out part of a design matrix\n")+
 		string(" using simple OLS regression on 4D images");

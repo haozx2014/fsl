@@ -73,6 +73,7 @@ Usage() {
     echo "  --echospacing=<val>    : Effective EPI echo spacing (sometimes called dwell time) - in seconds"
     echo "  --pedir=<dir>          : phase encoding direction, dir = x/y/z/-x/-y/-z"
     echo "  --weight=<image>       : weighting image (in T1 space)"
+    echo "  --nofmapreg            : do not perform registration of fmap to T1 (use if fmap already registered) "
     echo "  --noclean              : do not clean up intermediate files"
     echo "  -v                     : verbose output"
     echo "  -h                     : display this help message"
@@ -93,12 +94,12 @@ get_opt1() {
 
 
 get_arg1() {
-    if [ X`echo $1 | grep '='` == X ] ; then 
+    if [ X`echo $1 | grep '='` = X ] ; then 
 	echo "Option $1 requires an argument" 1>&2
 	exit 1
     else 
 	arg=`echo $1 | sed 's/.*=//'`
-	if [ X$arg == X ] ; then
+	if [ X$arg = X ] ; then
 	    echo "Option $1 requires an argument" 1>&2
 	    exit 1
 	fi
@@ -113,7 +114,7 @@ get_imarg1() {
 }
 
 get_arg2() {
-    if [ X$2 == X ] ; then
+    if [ X$2 = X ] ; then
 	echo "Option $1 requires an argument" 1>&2
 	exit 1
     fi
@@ -136,6 +137,7 @@ fmapmagbrain="";
 dwell="";
 pe_dir="";
 fdir="y";
+fmapreg=yes;
 
 
 # Parse them baby
@@ -169,7 +171,7 @@ while [ $# -ge 1 ] ; do
 	    shift;;
 	--echospacing)
 	    dwell=`get_arg1 $1`;
-	    if [ `echo "if ( $dwell > 0.2 ) {1}; if ( $dwell <= 0.2 ) {0}" | bc -l` == 1 ] ; then 
+	    if [ `echo "if ( $dwell > 0.2 ) {1}; if ( $dwell <= 0.2 ) {0}" | bc -l` = 1 ] ; then 
 		msdwell=`echo "scale=6; $dwell / 1000.0" | bc -l`;
 		echo "Echo spacing should be specified in seconds, not milliseconds.  Value of $dwell appears to be incorrectly specified in milliseconds.  Try using the value $msdwell instead."; 
 		exit 1; 
@@ -178,16 +180,16 @@ while [ $# -ge 1 ] ; do
 	--pedir)
 	    pearg=`get_arg1 $1`;
             # These are consistent with the ones used in FUGUE (this has been checked)
-	    if [ $pearg == "x" ] ; then pe_dir=1; fdir="x"; fi
-	    if [ $pearg == "y" ] ; then pe_dir=2; fdir="y"; fi
-	    if [ $pearg == "z" ] ; then pe_dir=3; fdir="z"; fi
-	    if [ $pearg == "-x" ] ; then pe_dir=-1; fdir="x-"; fi
-	    if [ $pearg == "-y" ] ; then pe_dir=-2; fdir="y-"; fi
-	    if [ $pearg == "-z" ] ; then pe_dir=-3; fdir="z-"; fi
-	    if [ $pearg == "x-" ] ; then pe_dir=-1; fdir="x-"; fi
-	    if [ $pearg == "y-" ] ; then pe_dir=-2; fdir="y-"; fi
-	    if [ $pearg == "z-" ] ; then pe_dir=-3; fdir="z-"; fi
-	    if [ X${pe_dir} == X ] ; then
+	    if [ $pearg = "x" ] ; then pe_dir=1; fdir="x"; fi
+	    if [ $pearg = "y" ] ; then pe_dir=2; fdir="y"; fi
+	    if [ $pearg = "z" ] ; then pe_dir=3; fdir="z"; fi
+	    if [ $pearg = "-x" ] ; then pe_dir=-1; fdir="x-"; fi
+	    if [ $pearg = "-y" ] ; then pe_dir=-2; fdir="y-"; fi
+	    if [ $pearg = "-z" ] ; then pe_dir=-3; fdir="z-"; fi
+	    if [ $pearg = "x-" ] ; then pe_dir=-1; fdir="x-"; fi
+	    if [ $pearg = "y-" ] ; then pe_dir=-2; fdir="y-"; fi
+	    if [ $pearg = "z-" ] ; then pe_dir=-3; fdir="z-"; fi
+	    if [ X${pe_dir} = X ] ; then
 		echo "Error: invalid phase encode direction specified";
 		exit 2;
 	    fi
@@ -196,6 +198,9 @@ while [ $# -ge 1 ] ; do
 	    refweight=`get_imarg1 $1`;
 	    use_weighting=yes; 
 	    echo REFWEIGHT = $refweight;
+	    shift;;
+	--nofmapreg)
+	    fmapreg=no; 
 	    shift;;
 	--noclean)
 	    cleanup=no; 
@@ -217,28 +222,28 @@ done
 
 ### Sanity checking of arguments
 
-if [ X$vout == X ] ; then
+if [ X$vout = X ] ; then
   echo "The compulsory argument --out MUST be used"
   exit 1;
 fi
 
-if [ X$vepi == X ] ; then
+if [ X$vepi = X ] ; then
   echo "The compulsory argument --epi MUST be used"
   exit 1;
 fi
 
-if [ X$vrefhead == X ] ; then
+if [ X$vrefhead = X ] ; then
   echo "The compulsory argument --t1 MUST be used"
   exit 1;
 fi
 
-if [ X$vrefbrain == X ] ; then
+if [ X$vrefbrain = X ] ; then
   echo "The compulsory argument --t1brain MUST be used"
   exit 1;
 fi
 
-if [ $use_fmap == yes ] ; then
-    if [ X$fmaprads == X ] ; then
+if [ $use_fmap = yes ] ; then
+    if [ X$fmaprads = X ] ; then
 	echo "The argument --fmap MUST be usspecifieded if using fieldmaps"
 	exit 1;
     fi
@@ -246,21 +251,21 @@ if [ $use_fmap == yes ] ; then
 	echo "The argument --fmapmag MUST be specified if using fieldmaps"
 	exit 1;
     fi
-    if [ X$fmapmagbrain == X ] ; then
+    if [ X$fmapmagbrain = X ] ; then
 	echo "The argument --fmapmagbrain MUST be specified if using fieldmaps"
 	exit 1;
     fi
-    if [ X$pe_dir == X ] ; then
+    if [ X$pe_dir = X ] ; then
 	echo "The argument --pedir MUST be specified if using fieldmaps"
 	exit 1;
     fi
-    if [ X$dwell == X ] ; then
+    if [ X$dwell = X ] ; then
 	echo "The argument --echospacing MUST be specified if using fieldmaps"
 	exit 1;
     fi
 fi
 
-if [ $verbose == yes ] ; then
+if [ $verbose = yes ] ; then
     echo "Arguments are:"
     echo "  vepi = $vepi"
     echo "  vrefhead = $vrefhead"
@@ -287,18 +292,19 @@ if [ `$FSLDIR/bin/imtest ${vrefbrain}_wmseg` = 0 ] ; then
 else
     for file in ${vrefbrain}_wmseg*; do
 	absfile=`$FSLDIR/bin/fsl_abspath $file`;
-	ln -s $file ${vout}_fast_wmseg${absfile/${vrefbrain}_wmseg/} #To link the correct files with extensions
+	ln -s ${absfile} ${file/${vrefbrain}_wmseg/${vout}_fast_wmseg} #To link the correct files with extensions
     done
 fi
 # make a WM edge map for visualisation (good to overlay in FSLView)
-if [ `$FSLDIR/bin/imtest ${vrefbrain}_wmedge` == 0 ] ; then
+if [ `$FSLDIR/bin/imtest ${vrefbrain}_wmedge` = 0 ] ; then
   $FSLDIR/bin/fslmaths ${vout}_fast_wmseg -edge -bin -mas ${vout}_fast_wmseg ${vout}_fast_wmedge
 else
     for file in ${vrefbrain}_wmedge*; do
 	absfile=`$FSLDIR/bin/fsl_abspath $file`;
-	ln -s ${vout}_fast_wmedge${absfile/${vrefbrain}_wmedge/} #To link the correct files with extensions
+	ln -s ${absfile} ${file/${vrefbrain}_wmedge/${vout}_fast_wmedge} #To link the correct files with extensions
     done
 fi
+
 
 # do a standard flirt pre-alignment
 echo "FLIRT pre-alignment"
@@ -320,14 +326,19 @@ else
 
 # WITH FIELDMAP
     echo "Registering fieldmap to structural"
-    # register fmap to structural image
-    $FSLDIR/bin/flirt -in ${fmapmagbrain} -ref ${vrefbrain} -dof 6 -omat ${vout}_fieldmap2str_init.mat
-    $FSLDIR/bin/flirt -in ${fmapmaghead} -ref ${vrefhead} -dof 6 -init ${vout}_fieldmap2str_init.mat -omat ${vout}_fieldmap2str.mat -out ${vout}_fieldmap2str -nosearch
+    if [ $fmapreg = yes ] ; then
+        # register fmap to structural image
+	$FSLDIR/bin/flirt -in ${fmapmagbrain} -ref ${vrefbrain} -dof 6 -omat ${vout}_fieldmap2str_init.mat
+	$FSLDIR/bin/flirt -in ${fmapmaghead} -ref ${vrefhead} -dof 6 -init ${vout}_fieldmap2str_init.mat -omat ${vout}_fieldmap2str.mat -out ${vout}_fieldmap2str -nosearch
+    else
+	$FSLDIR/bin/imcp ${fmapmaghead} ${vout}_fieldmap2str
+	cp $FSLDIR/etc/flirtsch/ident.mat ${vout}_fieldmap2str.mat
+    fi
     # unmask the fieldmap (necessary to avoid edge effects)
     $FSLDIR/bin/fslmaths ${fmapmagbrain} -abs -bin ${vout}_fieldmaprads_mask
     $FSLDIR/bin/fslmaths ${fmaprads} -abs -bin -mul ${vout}_fieldmaprads_mask ${vout}_fieldmaprads_mask
     $FSLDIR/bin/fugue --loadfmap=${fmaprads} --mask=${vout}_fieldmaprads_mask --unmaskfmap --savefmap=${vout}_fieldmaprads_unmasked --unwarpdir=${fdir}   # the direction here should take into account the initial affine (it needs to be the direction in the EPI)
-
+	
     # the following is a NEW HACK to fix extrapolation when fieldmap is too small
     $FSLDIR/bin/applywarp -i ${vout}_fieldmaprads_unmasked -r ${vrefhead} --premat=${vout}_fieldmap2str.mat -o ${vout}_fieldmaprads2str_pad0
     $FSLDIR/bin/fslmaths ${vout}_fieldmaprads2str_pad0 -abs -bin ${vout}_fieldmaprads2str_innermask

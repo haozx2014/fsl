@@ -89,17 +89,17 @@ img=`$FSLDIR/bin/remove_ext $1`;
 outimg=$2;
 
 if [ `$FSLDIR/bin/imtest $img` = 0 ] ; then
-  echo "ERROR: Could not find image $1"
+  echo "ERROR: Could not find image $1" 1>&2
   exit 2
 fi
 
 scode=`$FSLDIR/bin/fslval $img sform_code`;
 qcode=`$FSLDIR/bin/fslval $img qform_code`;
 if [ $scode = 0 -a $qcode = 0 ] ; then
-  echo "ERROR: Orientation information not stored in ${1}!"
-  echo "Cannot reslice without orientation information (i.e. need valid labels in FSLView)"
-  echo "The NIfTI image must contain a non-zero code for either the sform or the qform"
-  echo " - check your reconstruction/conversion software to try and fix this"
+  echo "ERROR: Orientation information not stored in ${1}!" 1>&2
+  echo "Cannot reslice without orientation information (i.e. need valid labels in FSLView)" 1>&2
+  echo "The NIfTI image must contain a non-zero code for either the sform or the qform" 1>&2
+  echo " - check your reconstruction/conversion software to try and fix this" 1>&2
   exit 3
 fi
 

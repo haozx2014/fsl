@@ -99,14 +99,17 @@ Option<bool> verbose(string("-v,--verbose"), false,
 Option<bool> help(string("-h,--help"), false,
 		  string("display this message"),
 		  false, no_argument);
-Option<float> brainsize(string("-b"), 150.0f,
-		  string("size of brain in z-dimension (default 150mm)"),
+Option<bool> debug(string("--debug"), false,
+		  string("turn on debugging output"),
+		  false, no_argument);
+Option<float> brainsize(string("-b"), 170.0f,
+		  string("size of brain in z-dimension (default 170mm)"),
 		  false, requires_argument);
 Option<string> roivol(string("-r"), string(""),
 		  string("ROI volume output name"),
 		  false, requires_argument);
 Option<string> matname(string("-m"), string(""),
-		  string("matrix output name"),
+		  string("matrix output name (roi to full fov)"),
 		  false, requires_argument);
 Option<string> inname(string("-i"), string(""),
 		  string("input filename"),
@@ -134,7 +137,7 @@ ColumnVector calc_FOV(int q, int brainlen, int xmax, int ymax, int zmax, int dim
   if (dim==-1) { FOV(1) = xmax-q; FOV(2) = brainlen-adjust; }
   if (dim==-2) { FOV(3) = ymax-q; FOV(4) = brainlen-adjust; }
   if (dim==-3) { FOV(5) = zmax-q; FOV(6) = brainlen-adjust; }
-  cout << "Internal FOV is: " << FOV.t() << endl;
+  if (debug.value()) { cout << "Internal FOV is: " << FOV.t() << endl; }
   return FOV;
 }
 
@@ -197,7 +200,7 @@ int do_work(int argc, char* argv[])
 
   // save thresholded voxel counts for slices - done from upper end of array (as dim=3 is "natural" counting)
   int rowmax=abs(qend-qstart)+1;
-  ColumnVector frac(rowmax), nzsum(rowmax);
+  ColumnVector frac(rowmax), nzsum(rowmax), threshvals(rowmax);
   { 
     volume<float> copyv;
     for (int loopnum=1; loopnum<=2; loopnum++) {
@@ -221,6 +224,7 @@ int do_work(int argc, char* argv[])
 	  thresh=0.1*(p99-p1)+p1;  // 10% of the value from 1st percentile to 99th percentile
 	  copyv.binarise(thresh);
 	  frac(row)=copyv.sum()/Max(nzsum(row),1);
+	  threshvals(row)=thresh;
 	  if (verbose.value()) { cout << "At q="<<q<<" : frac = " << frac(row) << endl; }
 	}
       }
@@ -231,11 +235,11 @@ int do_work(int argc, char* argv[])
   //   contain a large number of super-threshold voxels but slices near the top of the brain contain
   //   far fewer  (if no dip is found then assume the top of the head/brain was already in the top slice)
   ColumnVector fov(6);
-  float minchange=0.3;  // TODO - calculate this from a mm^2 area of the top of the brain
-  int gap=MISCMATHS::round(3.0/qdim+0.5);  // 3mm gap
+  float minchange=0.3;  // pick 30% : TODO - calculate this from a mm^2 area of the top of the brain
+  int gap=MISCMATHS::round(3.0/qdim+0.5);  // 3mm gap  (distance between baseline slice and slice being tested)
   int minlen=gap;
   int brainlen=MISCMATHS::round(brainsize.value()/qdim);  // 150mm of brain + top scalp
-  int minvox=0;    // only start counting slices with at least 10% non-zero voxels
+  int minvox=0;    // only start counting slices with at least 10% non-zero voxels (avoids blank areas due to gradient unwarping or similar)
   if (abs(dim)==1) minvox=MISCMATHS::round(ymax*zmax*0.1);
   if (abs(dim)==2) minvox=MISCMATHS::round(xmax*zmax*0.1);
   if (abs(dim)==3) minvox=MISCMATHS::round(xmax*ymax*0.1);
@@ -245,7 +249,9 @@ int do_work(int argc, char* argv[])
   for (int q=qmax-gap; q>=brainlen*2/3; q--) {
     if (!foundbest) {
       baseval=frac(q+gap+1);
-      if ( (nzsum(q+gap+1)>minvox) && (nzsum(q+1)>minvox) && (frac(q+1)<baseval-minchange) ) {
+      if ( (nzsum(q+gap+1)>minvox) && (nzsum(q+1)>minvox) && (frac(q+1)<baseval-minchange) ) { 
+	// TODO add a test for threshold values? (avoid artefact being identified as brain in superior slices ala Marco's data)
+	//   something like threshold must be > 0.5 * max threshold found   (but don't want bias field to stop proper slices being found!)
 	bool stable=true;
 	for (int q0=q; q0>=q-minlen; q0--) {
 	  if (frac(q0+1)>=baseval-minchange) stable=false;
@@ -314,6 +320,7 @@ int main(int argc,char *argv[])
     options.add(brainsize);
     options.add(matname);
     options.add(roivol);
+    options.add(debug);
     options.add(verbose);
     options.add(help);
     

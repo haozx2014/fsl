@@ -1,14 +1,21 @@
-# $Id: Makefile,v 1.16 2012/07/25 15:56:33 cowboy Exp $
+# $Id: Makefile,v 1.17 2012/09/07 13:32:47 duncan Exp $
 include ${FSLCONFDIR}/default.mk
 
 PROJNAME = fslsurface
 
 LINUX_LIBS=-lGL -lGLU 
+isapple = $(findstring apple, $(FSLMACHTYPE))
+applebitness = -arch i386 -arch x86_64
 
 ifeq ($(FSLMACHTYPE),apple-darwin8-gcc4.0)
-        ARCHFLAGS =  -arch i386 -isysroot /Developer/SDKs/MacOSX10.4u.sdk -I/usr/X11R6/include/
-        ARCHLDFLAGS = -Wl,-search_paths_first -arch i386 -isysroot /Developer/SDKs/MacOSX10.4u.sdk -L/Developer/SDKs/MacOSX10.4u.sdk/usr/X11R6/lib/ -framework OpenGL -framework GLUT
-	LINUX_LIBS=""
+        SYSROOT = -isysroot /Developer/SDKs/MacOSX10.4u.sdk -I/usr/X11R6/include/
+        SYSROOTL = -L/Developer/SDKs/MacOSX10.4u.sdk/usr/X11R6/lib/ 
+        applebitness = -arch i386
+endif
+ifeq ($(isapple),apple)
+        ARCHFLAGS =  $(applebitness) $(SYSROOT) 
+        ARCHLDFLAGS = -Wl,-search_paths_first -arch i386 -arch x86_64 $(SYSROOT) $(SYSROOTL) -framework OpenGL -framework GLUT
+	LINUX_LIBS=
 endif 
 
 USRINCFLAGS = -I${INC_NEWMAT} -I${INC_PROB} -I${INC_ZLIB} -I${FSLDIR}/include/niftiio 

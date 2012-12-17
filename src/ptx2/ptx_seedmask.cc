@@ -102,6 +102,7 @@ void seedmask()
   counter.initialise();
   Seedmanager  seedmanager (counter);
 
+  srand(opts.rseed.value()); // need to reinitialise random seed because of GIFTI!!
   
   int keeptotal=0;
 
@@ -155,9 +156,7 @@ void seedmask()
 	
 	counter.updateSeedLocation(seeds.get_surfloc(i,p));
 	pos=seeds.get_vertex_as_vox(i,p);
-// 	 if( (int)round((float)pos(1))!=131 ||
-//  	    (int)round((float)pos(2))!=134 ||
-//  	    (int)round((float)pos(3))!=95) continue;
+
 
 	ColumnVector dir(3);
 	dir=seeds.get_normal_as_vox(i,p);
@@ -169,14 +168,9 @@ void seedmask()
 	  cout <<"run"<<endl;
 	  cout <<pos(1)<<" "<<pos(2)<<" "<<pos(3)<<endl;
 	}
-	if(!opts.onewayonly.value()){
 	  keeptotal += seedmanager.run(pos(1),pos(2),pos(3),
 				       false,-1,opts.sampvox.value());
-	}
-	else{
-	  keeptotal += seedmanager.run(pos(1),pos(2),pos(3),
-				       false,-1,opts.sampvox.value(),seeds.get_surfloc(i,p));
-	}
+	
 
       }
     }

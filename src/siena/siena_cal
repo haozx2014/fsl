@@ -128,14 +128,11 @@ echo $corr
 
 $FSLDIR/bin/imrm sc${input}.* \
         sc${input}_brain_mask.* \
-	${input}_halfwayto_sc${input}.* \
-	${input}_halfwayto_sc${input}_brain.* \
 	${input}_halfwayto_sc${input}_brain_seg.* \
 	${input}_halfwayto_sc${input}_mask.* \
 	${input}_halfwayto_sc${input}_stdmask.* \
 	sc${input}_halfwayto_${input}.* \
 	sc${input}_halfwayto_${input}_mask.* \
-	${input}_to_sc${input}_flow.* \
 	${input}_valid_mask_with_sc${input}.* \
 	${input}_halfwayto_sc${input}_valid_mask.*
 

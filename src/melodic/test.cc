@@ -73,6 +73,31 @@
 #include "newimage/newimageall.h"
 #include "melhlprfns.h"
 
+#ifdef __APPLE__
+#include <mach/mach.h>
+#define memmsg(msg) { \
+  struct task_basic_info t_info; \
+  mach_msg_type_number_t t_info_count = TASK_BASIC_INFO_COUNT; \
+  if (KERN_SUCCESS == task_info(mach_task_self(), TASK_BASIC_INFO, (task_info_t) &t_info, &t_info_count)) \
+	{ \
+		cout << msg << " res: " << t_info.resident_size/1000000 << " virt: " << t_info.virtual_size/1000000 << "\n"; \
+		cout.flush(); \
+	} \
+}
+#else
+#define memmsg(msg) { \
+   cout << msg; \
+}
+#endif
+
+
+// a simple message macro that takes care of cout
+#define message(msg) { \
+  cout << msg; \
+  cout.flush(); \
+}
+
+
 using namespace MISCPLOT;
 using namespace MISCMATHS;
 using namespace Utilities;
@@ -94,6 +119,12 @@ using namespace std;
 	Option<int> help(string("-h,--help"), 0,
 		string("display this help text"),
 		false,no_argument);
+	Option<int> xdim(string("-x,--xdim"), 10,
+		string("xdim"),
+		false,requires_argument);
+	Option<int> ydim(string("-y,--ydim"), 10,
+		string("ydim"),
+		false,requires_argument);
 		/*
 }
 */
@@ -102,7 +133,37 @@ using namespace std;
 // Local functions
 
 int do_work(int argc, char* argv[]) {
+    
+	Matrix MatrixData;
+	volume<float> Mean;
 
+   	{
+	volume4D<float> RawData;
+
+    //read data
+    message("Reading data file " << (string)fnin.value() << "  ... ");
+    read_volume4D(RawData,fnin.value());
+    message(" done" << endl);
+  
+	Mean = meanvol(RawData);
+  
+	memmsg(" Before reshape ");
+    MatrixData = RawData.matrix();
+    }
+	memmsg(" after reshape ");
+	message(" Data size " << MatrixData.Nrows() << " x " << MatrixData.Ncols() << endl);
+	
+	memmsg(" before remmean_econ ");
+	remmean_econ(MatrixData);
+	memmsg("after remmean_econ / before remmean")
+	
+	MatrixData = remmean(MatrixData);
+	
+	memmsg(" after remmean ");
+	message(" Mean size " << MatrixData.Nrows() << " x " << MatrixData.Ncols() << endl);
+	
+	message(" Mean size " << MatrixData.Nrows() << " x " << MatrixData.Ncols() << endl);
+	
 	return 0;
 }
 
@@ -115,17 +176,10 @@ int do_work(int argc, char* argv[]) {
 	    // must include all wanted options here (the order determines how
 	    //  the help message is printed)
 	
-		  double tmptime = time(NULL);
-		  srand((unsigned int) tmptime);
-
-		cerr << (unsigned int) tmptime << endl << endl;
-
-		cerr << unifrnd(2,2) << endl;
-		exit(1);
-	/*
 			options.add(fnin);		
 			options.add(help);
-		
+			options.add(xdim);
+			options.add(ydim);
 	    options.parse_command_line(argc, argv);
 
 	    // line below stops the program if the help was requested or 
@@ -136,7 +190,7 @@ int do_work(int argc, char* argv[]) {
 	    }else{
 	  		// Call the local functions
 	  		return do_work(argc,argv);
-			}*/
+			}
 		}catch(X_OptionError& e) {
 			options.usage();
 	  	cerr << endl << e.what() << endl;

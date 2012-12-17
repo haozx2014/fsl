@@ -244,7 +244,7 @@ NEWIMAGE::volume<float> TopupScan::GetBeta(const BASISFIELD::splinefield& field)
 
   if (_pevec(1)) rval = float(_rotime / ss * _pevec(1)) * _resampled;
   else {
-    copybasicproperties(_resampled,rval);
+    rval = _resampled;
     rval = 0.0;
   }
 
@@ -270,7 +270,7 @@ NEWIMAGE::volume<float> TopupScan::GetGamma(const BASISFIELD::splinefield& field
 
   if (_pevec(2)) rval = float(_rotime / ss * _pevec(2)) * _resampled;
   else {
-    copybasicproperties(_resampled,rval);
+    rval = _resampled;
     rval = 0.0;
   }
 
@@ -395,6 +395,7 @@ void TopupScan::SetInterpolationModel(TopupInterpolationType it) const
   if (TracePrint()) cout << "Entering TopupScan::SetInterpolationModel" << endl;
 
   _orig->setinterpolationmethod(translate_interp_type(it));
+  _regrid->setinterpolationmethod(translate_interp_type(it));
   _subsamp->setinterpolationmethod(translate_interp_type(it));
   _smooth->setinterpolationmethod(translate_interp_type(it));
   _uptodate = false;
@@ -432,6 +433,7 @@ void TopupScan::SubSample(unsigned int ss)
   else {
     _subsamp = boost::shared_ptr<NEWIMAGE::volume<float> >(new NEWIMAGE::volume<float>(_regrid->xsize()/ss,_regrid->ysize()/ss,_regrid->zsize()/ss));
     _subsamp->setdims(ss*_regrid->xdim(),ss*_regrid->ydim(),ss*_regrid->zdim());
+    _subsamp->setinterpolationmethod(_regrid->getinterpolationmethod());
     _subsamp->setextrapolationmethod(_regrid->getextrapolationmethod());
     std::vector<bool> epval = _regrid->getextrapolationvalidity();
     _subsamp->setextrapolationvalidity(epval[0],epval[1],epval[2]);
@@ -470,6 +472,7 @@ void TopupScan::ReGrid(int xsz, int ysz, int zsz)
     double yfov = (_orig->ysize()-1)*_orig->ydim() - 1e-6;
     double zfov = (_orig->zsize()-1)*_orig->zdim() - 1e-6;
     _regrid->setdims(xfov/double(xsz),yfov/double(ysz),zfov/double(zsz));
+    _regrid->setinterpolationmethod(_orig->getinterpolationmethod());
     _regrid->setextrapolationmethod(_orig->getextrapolationmethod());
     std::vector<bool> epval = _orig->getextrapolationvalidity();
     _regrid->setextrapolationvalidity(epval[0],epval[1],epval[2]);
