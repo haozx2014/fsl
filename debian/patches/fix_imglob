@@ -1,0 +1,78 @@
+diff --git a/src/fslio/imglob b/src/fslio/imglob
+index 982d57a..543e2d2 100755
+--- a/src/fslio/imglob
++++ b/src/fslio/imglob
+@@ -80,25 +80,27 @@ def usage():
+     print "       -extensions for image list with full extensions"
+     sys.exit(1)
+ 
+-def removeExt(input):
+-    output=input.replace(".nii.gz","")    
+-    output=output.replace(".nii","")
+-    output=output.replace(".hdr.gz","")
+-    output=output.replace(".hdr","")
+-    output=output.replace(".img.gz","")
+-    output=output.replace(".img","")
+-    return output
++def isImage(input,allExtensions):       #Returns whether an input filename has an image extension ( and the basename and extension pair )
++    for extension in allExtensions:
++       if input[-len(extension):] == extension:
++          return True, input[:-len(extension)], extension
++    return False, input, ''
+ 
++def removeImageExtension(input,allExtensions):
++    return isImage(input,allExtensions)[1]
+ 
+ if len(sys.argv) <= 1:
+     usage()
+ 
+ deleteExtensions=True
+-singleImage=True;
++primaryExtensions=['.nii.gz', '.nii', '.hdr.gz', '.hdr']
++secondaryExtensions=['.img.gz', '.img']
++allExtensions=primaryExtensions+secondaryExtensions
++validExtensions=primaryExtensions
+ startingArg=1
+ 
+ if sys.argv[1] == "-extensions":
+-   singleImage=False
++   validExtensions=allExtensions
+    deleteExtensions=False
+    startingArg=2
+ if sys.argv[1] == "-extension":
+@@ -107,27 +109,23 @@ if sys.argv[1] == "-extension":
+     
+ filelist=[]
+ for arg in range(startingArg, len(sys.argv)):
+-   for output in glob.glob(sys.argv[arg]): #expand any remaining wildcards ( if not invoked from shell etc )
+-      output=removeExt(output)
+-      filelist.extend(glob.glob(output+".nii.gz"))
+-      filelist.extend(glob.glob(output+".nii"))
+-      filelist.extend(glob.glob(output+".hdr"))
+-      filelist.extend(glob.glob(output+".hdr.gz"))
+-      if not singleImage:        
+-         filelist.extend(glob.glob(output+".img.gz"))
+-         if not singleImage:        
+-            filelist.extend(glob.glob(output+".img"))
++#      if isImage(sys.argv[arg],allExtensions)[0]:          #These enable a "pedantic" style mode currently not used
++#         filelist.extend(glob.glob(sys.argv[arg]))
++#      else:
++#         for currentExtension in validExtensions:
++#            filelist.extend(glob.glob(sys.argv[arg]+currentExtension))
++    for currentExtension in validExtensions:
++       filelist.extend(glob.glob(removeImageExtension(sys.argv[arg],allExtensions)+currentExtension))
+ 
+ if deleteExtensions:
+     for file in range(0, len(filelist)):
+-        filelist[file]=removeExt(filelist[file])
++        filelist[file]=removeImageExtension(filelist[file],allExtensions)
+ if setAvailable:
+    filelist=list(set(filelist))
+ else:
+    filelist=list(Set(filelist))
+ filelist.sort()
+ 
+-
+ for file in range(0, len(filelist)):
+     print filelist[file],
+     if file < len(filelist)-1:
