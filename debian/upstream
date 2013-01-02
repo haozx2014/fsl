@@ -1,5 +1,8 @@
+FAQ: http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FSL%20FAQ
+Contact: http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/Support
+Other-References: http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/
 Reference:
-  Author: Mark Jenkinson and Christian F. Beckmann and Timothy E. J. Behrens and Mark W. Woolrich and Stephen M. Smith
+- Author: Mark Jenkinson and Christian F. Beckmann and Timothy E. J. Behrens and Mark W. Woolrich and Stephen M. Smith
   Title: FSL
   Journal: NeuroImage
   Year: 2012
@@ -7,5 +10,25 @@ Reference:
   Number: 2
   Pages: 782-790
   DOI: 10.1016/j.neuroimage.2011.09.015
+  PMID: 21979382
+- Author: M.W. Woolrich and S. Jbabdi and B. Patenaude and M. Chappell and S. Makni and T. Behrens and C. Beckmann and M. Jenkinson and S.M. Smith
+  Title: Bayesian analysis of neuroimaging data in FSL
+  Journal: NeuroImage
+  Volume: 45
+  Year: 2009
+  Pages: 73-86
+  PMID: 19059349
+- Author: S.M. Smith and M. Jenkinson and M.W. Woolrich and C.F. Beckmann and T.E.J. Behrens and H. Johansen-Berg and P.R. Bannister and M. De Luca and I. Drobnjak and D.E. Flitney and R. Niazy and J. Saunders and J. Vickers and Y. Zhang and N. De Stefano and J.M. Brady and P.M. Matthews
+  Title: Advances in functional and structural MR image analysis and implementation as FSL
+  Journal: NeuroImage
+  Volume: 23
+  Pages: 208-219
+  Year: 2004
+  PMID: 15501092
 Registration: http://www.fmrib.ox.ac.uk/fsldownloads/
-
+Tags:
+  - field::medicine:imaging
+  - field::neuroscience:imaging
+Also-Known-As:
+  NITRC: 25
+  NeuroLex: birnlex_2067
