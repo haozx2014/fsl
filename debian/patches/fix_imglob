@@ -1,8 +1,6 @@
-diff --git a/src/fslio/imglob b/src/fslio/imglob
-index 982d57a..543e2d2 100755
 --- a/src/fslio/imglob
 +++ b/src/fslio/imglob
-@@ -80,25 +80,27 @@ def usage():
+@@ -80,25 +80,27 @@
      print "       -extensions for image list with full extensions"
      sys.exit(1)
  
@@ -40,7 +38,7 @@ index 982d57a..543e2d2 100755
     deleteExtensions=False
     startingArg=2
  if sys.argv[1] == "-extension":
-@@ -107,27 +109,23 @@ if sys.argv[1] == "-extension":
+@@ -107,27 +109,23 @@
      
  filelist=[]
  for arg in range(startingArg, len(sys.argv)):

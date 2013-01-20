@@ -1,3 +1,17 @@
+fsl (5.0.2-3) UNRELEASED; urgency=low
+
+  * Modifications of fsl_sub behavior and configuration:
+    - Add a configuration option to fsl.sh (FSLCLUSTER_DEFAULT_QUEUE) to
+      specify a default queue for job submissions. This can be used to amend
+      the default queue selection by resource demands.
+    - Fix a bug in the Debian patch where job submission fails when fsl_sub is
+      called without -q.
+    - Fix a bug to actually honor the FSLCUSTER_MAILOPTS variable when set.
+    - Restructure and minimize the upstream diff in fsl_sub to make it less
+      likely to break again with future upstream changes.
+
+ -- Michael Hanke <mih@debian.org>  Sun, 20 Jan 2012 15:26:26 +0100
+
 fsl (5.0.2-2) UNRELEASED; urgency=low
 
   * Fix 'imglob' script (courtesy of Matthew Webster) that caused FEAT

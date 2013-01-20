@@ -2,10 +2,8 @@ Description: out-of-the-box compatibility with Debian's SGE
  Moreover, the patch established the env variable FSLPARALLEL as a uniform
  trigger for cluster-based processing in FSL. If set, jobs are submitted to
  SGE, if not, not.
-Index: fsl/src/fdt/bedpostx
-===================================================================
---- fsl.orig/src/fdt/bedpostx	2012-10-02 08:12:30.000000000 +0200
-+++ fsl/src/fdt/bedpostx	2012-12-17 17:24:26.000000000 +0100
+--- a/src/fdt/bedpostx
++++ b/src/fdt/bedpostx
 @@ -64,13 +64,15 @@
  #   University, to negotiate a licence. Contact details are:
  #   innovation@isis.ox.ac.uk quoting reference DE/9564.
@@ -80,10 +78,8 @@ Index: fsl/src/fdt/bedpostx
      echo
      echo Type ${subjdir}.bedpostX/monitor to show progress.
      cat <<EOM > ${subjdir}.bedpostX/monitor
-Index: fsl/src/fdt/fdt.tcl
-===================================================================
---- fsl.orig/src/fdt/fdt.tcl	2012-12-17 17:02:22.000000000 +0100
-+++ fsl/src/fdt/fdt.tcl	2012-12-17 17:24:26.000000000 +0100
+--- a/src/fdt/fdt.tcl
++++ b/src/fdt/fdt.tcl
 @@ -858,8 +858,11 @@
  	probtrackx {
  	    global probtrack env
@@ -111,10 +107,8 @@ Index: fsl/src/fdt/fdt.tcl
  		} else {
  
  		    fdt_monitor_short $w "$FSLDIR/bin/probtrackx2 $flags"
-Index: fsl/src/misc_tcl/fslstart.tcl
-===================================================================
---- fsl.orig/src/misc_tcl/fslstart.tcl	2012-10-02 08:12:30.000000000 +0200
-+++ fsl/src/misc_tcl/fslstart.tcl	2012-12-17 17:24:26.000000000 +0100
+--- a/src/misc_tcl/fslstart.tcl
++++ b/src/misc_tcl/fslstart.tcl
 @@ -55,7 +55,12 @@
  
  #Choose load_varian specific OR FSLPARALLEL
@@ -129,10 +123,8 @@ Index: fsl/src/misc_tcl/fslstart.tcl
  
  # what type of OS?
  set OSFLAVOUR unix
-Index: fsl/src/possum/possumX
-===================================================================
---- fsl.orig/src/possum/possumX	2012-12-17 17:11:02.000000000 +0100
-+++ fsl/src/possum/possumX	2012-12-17 17:24:26.000000000 +0100
+--- a/src/possum/possumX
++++ b/src/possum/possumX
 @@ -231,7 +231,9 @@
  mkdir -p ${subjdir}/diff_proc
  mkdir -p ${subjdir}/logs
@@ -159,11 +151,9 @@ Index: fsl/src/possum/possumX
  
  echo Post processing stage
  date
-Index: fsl/src/sgeutils/fsl_sub
-===================================================================
---- fsl.orig/src/sgeutils/fsl_sub	2012-12-17 17:02:22.000000000 +0100
-+++ fsl/src/sgeutils/fsl_sub	2012-12-17 17:24:26.000000000 +0100
-@@ -70,6 +70,15 @@
+--- a/src/sgeutils/fsl_sub
++++ b/src/sgeutils/fsl_sub
+@@ -70,6 +70,14 @@
  # cluster.
  ###########################################################################
  
@@ -174,12 +164,11 @@ Index: fsl/src/sgeutils/fsl_sub
 +# When should the cluster engine send status email (see qsub -m ... docs)
 +# Don't send email by default; can be overidden by FSLCLUSTER_MAILOPTS
 +# environment variable
-+fslcluster_mailopts="n"
-+
++fslcluster_mailopts="${FSLCLUSTER_MAILOPTS:-n}"
  
  ###########################################################################
  # The following section determines what to do when fsl_sub is called
-@@ -84,10 +93,11 @@
+@@ -84,10 +92,11 @@
  # cluster to be used.
  ###########################################################################
  
@@ -193,32 +182,13 @@ Index: fsl/src/sgeutils/fsl_sub
      elif [ -f /usr/local/sge/default/common/settings.sh ] ; then
  	. /usr/local/sge/default/common/settings.sh
      else
-@@ -104,29 +114,26 @@
- FSLSUBALREADYRUN=true
- export FSLSUBALREADYRUN
+@@ -95,6 +104,22 @@
+     fi
+ fi
  
--###########################################################################
--# The following auto-decides what cluster queue to use. The calling
--# FSL program will probably use the -T option when calling fsl_sub,
--# which tells fsl_sub how long (in minutes) the process is expected to
--# take (in the case of the -t option, how long each line in the
--# supplied file is expected to take). You need to setup the following
--# list to map ranges of timings into your cluster queues - it doesn't
--# matter how many you setup, that's up to you.
--###########################################################################
 +# define the default 'qsub' implementation to be used for cluster submission
 +qsub_cmd="qsub"
- 
--map_qname ()
--{
--    if [ $1 -le 20 ] ; then
--	queue=veryshort.q
--    elif [ $1 -le 120 ] ; then
--	queue=short.q
--    elif [ $1 -le 1440 ] ; then
--	queue=long.q
--    else
--	queue=verylong.q
++
 +# Allow to override the above automatic detection result with FSLPARALLEL
 +if [ -n "$FSLPARALLEL" ] ; then
 +    # Whenever FSLPARALLEL is set enfore using SGE even if no SGE_ROOT is set
@@ -229,19 +199,44 @@ Index: fsl/src/sgeutils/fsl_sub
 +    if [ "$FSLPARALLEL" = "condor" ] ; then
 +        # if condor shall be used, simply switch to Condor's qsub emulation
 +        qsub_cmd="condor_qsub"
-     fi
--    #echo "Estimated time was $1 mins: queue name is $queue"
--}
++    fi
 +fi
 +
-+# Allow overriding mail settings
-+if [ "x$FSLCLUSTER_MAILOPTS" != "x" ] ; then
-+    fslcluster_mailopts=${FSLCLUSTER_MAILOPTS}
-+fi
+ # stop submitted scripts from submitting jobs themselves
+ if [ "X$FSLSUBALREADYRUN" = "Xtrue" ] ; then
+     METHOD=NONE
+@@ -116,15 +141,21 @@
  
- ###########################################################################
- # Don't change the following (but keep scrolling down!)
-@@ -149,13 +156,13 @@
+ map_qname ()
+ {
+-    if [ $1 -le 20 ] ; then
+-	queue=veryshort.q
+-    elif [ $1 -le 120 ] ; then
+-	queue=short.q
+-    elif [ $1 -le 1440 ] ; then
+-	queue=long.q
+-    else
+-	queue=verylong.q
+-    fi
++	# for Debian we can't do the stuff below, because it would be hard
++	# to determine how particular queues are meant to be used on any given
++	# system. Instead of translating into a queue name we specify proper
++	# resource limits, and let SGE decide what queue matches
++	# (qsub wants the time limit in seconds)
++	queue_opts="$queue_opts -l h_rt=$(echo "$1 * 60" | bc)"
++    #if [ $1 -le 20 ] ; then
++	#queue=veryshort.q
++    #elif [ $1 -le 120 ] ; then
++	#queue=short.q
++    #elif [ $1 -le 1440 ] ; then
++	#queue=long.q
++    #else
++	#queue=verylong.q
++    #fi
+     #echo "Estimated time was $1 mins: queue name is $queue"
+ }
+ 
+@@ -149,13 +180,13 @@
  $command -q short.q gzip *.img *.hdr
  $command -a darwin regscript rawdata outputdir ...
  
@@ -260,11 +255,10 @@ Index: fsl/src/sgeutils/fsl_sub
    -j <jid>              Place a hold on this task until job jid has completed
    -t <filename>         Specify a task file of commands to execute in parallel
    -N <jobname>          Specify jobname as it will appear on queue
-@@ -167,21 +174,6 @@
-                         configured for the requested queues.
+@@ -168,24 +199,26 @@
                          <threads> specifies the number of threads to run
    -v                    Verbose mode.
--
+ 
 -Queues:
 -
 -There are several batch queues configured on the cluster, each with defined CPU
@@ -282,48 +276,85 @@ Index: fsl/src/sgeutils/fsl_sub
  EOF
  
    exit 1
-@@ -220,9 +212,10 @@
+ }
++# This part of the help is not applicable anymore
++#
++#Queues:
++#
++#There are several batch queues configured on the cluster, each with defined CPU
++#time limits. All queues, except bigmem.q, have a 8GB memory limit.
++#
++#veryshort.q:This queue is for jobs which last under 30mins.
++#short.q:    This queue is for jobs which last up to 4h. 
++#long.q:     This queue is for jobs which last less than 24h. Jobs run with a
++#            nice value of 10.
++#verylong.q: This queue is for jobs which will take longer than 24h CPU time.
++#            There is one slot per node, and jobs on this queue have a nice value
++#            of 15.
++#bigmem.q:   This queue is like the verylong.q but has no memory limits.
++
+ 
+ nargs=$#
+ if [ $nargs -eq 0 ] ; then
+@@ -220,9 +253,11 @@
  # change. It also sets up the basic emailing control.
  ###########################################################################
  
 -queue=long.q
 -mailto=`whoami`@fmrib.ox.ac.uk
 -MailOpts="n"
-+# SGE should already have a default queue
-+#queue=long.q
++# SGE should already have a default queue, but allow for overwrite
++queue=${FSLCLUSTER_DEFAULT_QUEUE:-}
++queue_opts=""
 +mailto=`whoami`@${fslcluster_mailto_domain}
 +MailOpts=${fslcluster_mailopts}
  
  
  ###########################################################################
-@@ -267,7 +260,8 @@
-       fi
-       shift;;
-     -T)
--      map_qname $2
-+      # qsub wants the time limit in seconds
-+      job_timelimit="-l h_rt=$(echo "$2 * 60" | bc)"
-       shift;;
-     -q)
-       queue=$2
-@@ -417,9 +411,9 @@
+@@ -335,6 +370,13 @@
+ done
+ shift
+ 
++echo "default queue: \"$queue\""
++
++# if there is a queue specified, set up corresponding option
++if [ "x$queue" != "x" ] ; then
++	queue_opts="$queue_opts -q $queue"
++fi
++
+ ###########################################################################
+ # Don't change the following (but keep scrolling down!)
+ ###########################################################################
+@@ -393,6 +435,11 @@
+ 		exit -1
+ 	    fi
+ 
++		if [ "x$queue" = "x" ] ; then
++		echo $@
++		echo "No queue specified."
++		exit -1
++	    fi
+             # Get a list of queues configured for this PE and confirm that the queue
+             # we have submitted to has that PE set up.
+ 	    qstat -g c -pe $peName 2>&1 >/dev/null
+@@ -417,9 +464,9 @@
  
  	if [ "x$tasks" = "x" ] ; then
  	    if [ $scriptmode -ne 1 ] ; then
 -		sge_command="qsub -V -cwd -shell n -b y -r y -q $queue $pe_options -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold"
-+		sge_command="$qsub_cmd -V -cwd -shell n -b y -r y $job_timelimit -q $queue $pe_options -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold"
++		sge_command="$qsub_cmd -V -cwd -shell n -b y -r y $queue_opts $pe_options -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold"
  	    else
 -		sge_command="qsub $LogOpts $sge_arch $sge_hold"
 +		sge_command="$qsub_cmd $LogOpts $sge_arch $sge_hold"
  	    fi
  	    if [ $verbose -eq 1 ] ; then 
  		echo sge_command: $sge_command >&2
-@@ -427,7 +421,7 @@
+@@ -427,7 +474,7 @@
  	    fi
  	    exec $sge_command $@ | awk '{print $3}'
  	else
 -	    sge_command="qsub -V -cwd -q $queue $pe_options -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold $sge_tasks"
-+	    sge_command="$qsub_cmd -V -cwd $job_timelimit -q $queue $pe_options -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold $sge_tasks"
++	    sge_command="$qsub_cmd -V -cwd $queue_opts $pe_options -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold $sge_tasks"
  	    if [ $verbose -eq 1 ] ; then 
  		echo sge_command: $sge_command >&2
  		echo control file: $taskfile >&2

@@ -52,6 +52,9 @@ FSLREMOTECALL=
 # settings. By default no email is sent.
 FSLCLUSTER_MAILOPTS="n"
 
+# default queue for job submissions
+#FSLCLUSTER_DEFAULT_QUEUE="all.q"
+
 
 
 ###################################################
