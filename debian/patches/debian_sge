@@ -311,12 +311,10 @@ Description: out-of-the-box compatibility with Debian's SGE
  
  
  ###########################################################################
-@@ -335,6 +370,13 @@
+@@ -335,6 +370,11 @@
  done
  shift
  
-+echo "default queue: \"$queue\""
-+
 +# if there is a queue specified, set up corresponding option
 +if [ "x$queue" != "x" ] ; then
 +	queue_opts="$queue_opts -q $queue"

@@ -1,3 +1,9 @@
+fsl (5.0.2-4) UNRELEASED; urgency=low
+
+  * Removed left-over debug statement that broke fsl_sub again.
+
+ -- Michael Hanke <mih@debian.org>  Sun, 20 Jan 2012 15:26:26 +0100
+
 fsl (5.0.2-3) UNRELEASED; urgency=low
 
   * Modifications of fsl_sub behavior and configuration:
