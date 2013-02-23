@@ -37,6 +37,11 @@ Description: metapackage for the latest version of FSL
  Among others, FSL offers implementations of standard GLM analysis,
  white matter tractography, tissue segmentation, affine and non-linear
  co-registration, and independent component analysis.
+ .
+ Some FSL components require additional data packages (fsl-atlases,
+ fsl-first-data, fsl-possum-data) that are currently available from the
+ NeuroDebian repository only. For more information on how to obtain these
+ data packages visit http://neuro.debian.net.
 
 Package: fsl-#FSLMVERSION#
 Architecture: any
