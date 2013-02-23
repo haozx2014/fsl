@@ -1,3 +1,10 @@
+fsl (5.0.2.2-1) UNRELEASED; urgency=low
+
+  * New upstream release.
+  * Removed fix_imglob patch -- now included upstream.
+
+ -- Michael Hanke <mih@debian.org>  Sat, 23 Feb 2013 09:40:13 +0100
+
 fsl (5.0.2-4) UNRELEASED; urgency=low
 
   * Removed left-over debug statement that broke fsl_sub again.

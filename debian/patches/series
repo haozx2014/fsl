@@ -4,4 +4,3 @@ fix_bashisms
 missing_includes
 debian_sge
 debian_build_cfg
-fix_imglob
