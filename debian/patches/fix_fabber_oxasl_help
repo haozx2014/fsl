@@ -1,0 +1,23 @@
+From: Mark White <mark.white@ucl.ac.uk>
+Subject: fabber "--model=xxx --help" doesn't work
+
+because the #ifdef tests _OXASL rather than __OXASL; and
+also a typo in the buxton_simple model string.
+
+--- a/src/fabber/fwdmodel.cc	2012-12-10 16:23:19.000000000 +0000
++++ b/src/fabber/fwdmodel.cc	2013-03-11 17:24:09.876802400 +0000
+@@ -316,12 +316,12 @@
+ 	CustomFwdModel::ModelUsage();
+       }
+ 
+-#ifdef _OXASL
++#ifdef __OXASL
+ 	else if (name == "buxton")
+ 	{
+ 		GraseFwdModel::ModelUsage();
+ 	}
+-    else if (name == "buxton-simple")
++    else if (name == "buxton_simple")
+ 	{
+ 		BuxtonFwdModel::ModelUsage();
+ 	}

@@ -1,3 +1,12 @@
+fsl (5.0.2.2-2) neurodebian; urgency=low
+
+  * Add patches to fix problems with the fabber component -- courtesy of
+    Mark White <mark.white@ucl.ac.uk>
+    - was buily without the Oxford ASL forward models
+    - --model=xxx --help was broken due to a typo in an #ifdef
+
+ -- Michael Hanke <mih@debian.org>  Mon, 18 Mar 2013 12:44:10 +0100
+
 fsl (5.0.2.2-1) neurodebian; urgency=low
 
   * New upstream release.

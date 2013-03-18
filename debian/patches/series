@@ -4,3 +4,5 @@ fix_bashisms
 missing_includes
 debian_sge
 debian_build_cfg
+fix_fabber_boost
+fix_fabber_oxasl_help
