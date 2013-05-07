@@ -2,7 +2,7 @@
 
 include ${FSLCONFDIR}/default.mk
 
-OPTFLAGS = -O3 -Wno-deprecated 
+OPTFLAGS = -O3 -Wno-deprecated -ggdb
 OPTFLAGS_alphaev6-dec-osf5.0-gcc2.95.2 = -O3 -mieee -mfp-trap-mode=sui
 
 PROJNAME = melodic

@@ -2112,7 +2112,7 @@ proc feat5:cutoffcalc { } {
 	MxPause "Error: Please press Done in Full Model Setup to regenerate files needed for estimation"
 	return 1
     }
-    set fmri(paradigm_hp) [ exec sh -c "${FSLDIR}/bin/cutoffcalc -i [ file rootname $fmri(feat_filename)].mat " ]
+    set fmri(paradigm_hp) [ exec sh -c "${FSLDIR}/bin/cutoffcalc -t $fmri(tr) -i [ file rootname $fmri(feat_filename)].mat " ]
 }
 
 #}}}
@@ -4671,15 +4671,15 @@ frame $f.initial_highres
 
 checkbutton $f.initial_highres.yn -variable fmri(reginitial_highres_yn) -command "feat5:updatereg_hr_init $w"
 
-label $f.initial_highres.label -text "Initial structural image"
+label $f.initial_highres.label -text "Expanded structural image"
 
-TitleFrame $f.initial_highres.lf -text "Initial structural image" -relief groove 
+TitleFrame $f.initial_highres.lf -text "Expanded structural image" -relief groove 
 set fmri(initial_highresf) [ $f.initial_highres.lf getframe ]
 
-FileEntry $fmri(initial_highresf).initial_highressingle -textvariable initial_highres_files(1) -label "" -title "Select initial structural image" -width 45 -filedialog directory  -filetypes IMAGE -command "feat5:multiple_check $w 3 1 0"
+FileEntry $fmri(initial_highresf).initial_highressingle -textvariable initial_highres_files(1) -label "" -title "Select expanded structural image" -width 45 -filedialog directory  -filetypes IMAGE -command "feat5:multiple_check $w 3 1 0"
 
-button $fmri(initial_highresf).initial_highresmultiple -text "Select initial structural images" \
-	-command "feat5:multiple_select $w 3 \"Select initial structural images\" "
+button $fmri(initial_highresf).initial_highresmultiple -text "Select expanded structural images" \
+	-command "feat5:multiple_select $w 3 \"Select expanded structural images\" "
 
 frame $fmri(initial_highresf).opts
 
@@ -4691,13 +4691,13 @@ pack  $fmri(initial_highresf).opts.label $fmri(initial_highresf).opts.search $fm
 
 pack $fmri(initial_highresf).initial_highressingle $fmri(initial_highresf).opts -in $fmri(initial_highresf) -anchor w -side top -pady 2 -padx 3
 pack $f.initial_highres.yn $f.initial_highres.label -in $f.initial_highres -side left
-balloonhelp_for $f.initial_highres "This is the initial high resolution structural image which the low
+balloonhelp_for $f.initial_highres "This is the expanded structural image which the low
 resolution functional data will be registered to, and this in turn
 will be registered to the main highres image. It only makes sense to
-have this initial highres image if a main highres image is also
+have an expanded image if a main highres image is also
 specified and used in the registration. 
 
-One example of an initial highres structural image might be a
+One example of an expanded structural image might be a
 medium-quality structural scan taken during a day's scanning, if a
 higher-quality image has been previously taken for the subject. A
 second example might be a full-brain image with the same MR sequence
@@ -4744,7 +4744,7 @@ pack $fmri(highresf).opts.label $fmri(highresf).opts.search $fmri(highresf).opts
 pack $fmri(highresf).highressingle $fmri(highresf).opts -in $fmri(highresf) -anchor w -side top -pady 2 -padx 3
 pack $f.highres.yn $f.highres.label -in $f.highres -side left
 balloonhelp_for $f.highres "This is the main high resolution structural image which the low resolution
-functional data will be registered to (optionally via the \"initial
+functional data will be registered to (optionally via the \"expanded
 structural image\"), and this in turn will be registered to the
 standard brain. It is strongly recommended that this image have
 non-brain structures already removed, for example by using BET.
@@ -5190,7 +5190,7 @@ if { $fmri(regunwarp_yn) } {
 
     cd $FD
 
-    fsl:exec "${FSLDIR}/bin/applywarp -i reg/unwarp/FM_UD_fmap_mag_brain_mask -r example_func --abs --premat=reg/unwarp/FM_UD_fmap_mag_brain2str.mat --postmat=reg/highres2example_func.mat -o reg/unwarp/EF_UD_fmap_mag_brain_mask"
+    fsl:exec "${FSLDIR}/bin/applywarp -i reg/unwarp/FM_UD_fmap_mag_brain_mask -r example_func --rel --premat=reg/unwarp/FM_UD_fmap_mag_brain2str.mat --postmat=reg/highres2example_func.mat -o reg/unwarp/EF_UD_fmap_mag_brain_mask"
 
 # now either apply unwarping one vol at a time (including applying individual mcflirt transforms at same time),
 # or if mcflirt transforms don't exist, just apply warp to 4D $funcdata
@@ -5198,12 +5198,12 @@ if { [ file exists mc/prefiltered_func_data_mcf.mat/MAT_0000 ] } {
     fsl:exec "${FSLDIR}/bin/fslsplit $funcdata grot"
     for { set i 0 } { $i < $total_volumes } { incr i 1 } {
 	set pad [format %04d $i]
-	fsl:exec "${FSLDIR}/bin/applywarp -i grot$pad -o grot$pad --premat=mc/prefiltered_func_data_mcf.mat/MAT_$pad -w reg/example_func2highres_warp.nii.gz -r example_func --abs --postmat=reg/highres2example_func.mat"
+	fsl:exec "${FSLDIR}/bin/applywarp -i grot$pad -o grot$pad --premat=mc/prefiltered_func_data_mcf.mat/MAT_$pad -w reg/example_func2highres_warp.nii.gz -r example_func --rel --postmat=reg/highres2example_func.mat"
     }
     fsl:exec "${FSLDIR}/bin/fslmerge -t prefiltered_func_data_unwarp [ imglob grot* ]"
     fsl:exec "/bin/rm -f grot*"
 } else {
-    fsl:exec "${FSLDIR}/bin/applywarp -i $funcdata -r example_func -o prefiltered_func_data_unwarp -w reg/example_func2highres_warp.nii.gz --postmat=reg/highres2example_func.mat --abs"
+    fsl:exec "${FSLDIR}/bin/applywarp -i $funcdata -r example_func -o prefiltered_func_data_unwarp -w reg/example_func2highres_warp.nii.gz --postmat=reg/highres2example_func.mat --rel"
 }
 
 set funcdata prefiltered_func_data_unwarp
@@ -6065,7 +6065,7 @@ if { $fmri(regunwarp_yn) } { #override highres DOF
     set fugueOptions "-a $unwarp_files($session) -b $unwarp_files_mag($session) -e $fmri(te) -f $fmri(signallossthresh) -g $fmri(dwell) -p $fmri(unwarp_dir) -w BBR"
 }
 
-fsl:exec "$FSLDIR/bin/mainfeatreg -d ${FD} -l ${FD}/logs/feat5_reg -R ${FD}/report_unwarp.html -r ${FD}/report_reg.html  -i ${FD}/example_func.nii.gz $flirtOptions $fugueOptions"
+fsl:exec "$FSLDIR/bin/mainfeatreg -F $fmri(version) -d ${FD} -l ${FD}/logs/feat5_reg -R ${FD}/report_unwarp.html -r ${FD}/report_reg.html  -i ${FD}/example_func.nii.gz $flirtOptions $fugueOptions"
 
 #{{{ put biblio stuff & unwarp pic & reg link etc. into original report
 cd $FD

@@ -64,11 +64,5 @@
 #   innovation@isis.ox.ac.uk quoting reference DE/9564.
 POSIXLY_CORRECT=1
 
-string=$@
-my_os=`uname -s`
+printf %b "$@\n"
 
-if [ "X${my_os}" = "XLinux" ]; then
-    /bin/echo -e "$string "
-else
-    /bin/echo "$string"
-fi

@@ -141,8 +141,9 @@ protected: // Constants
   double t1b;
   double t1wm;
   double lambda;
+  double slicedt;
   double pretisat;
-  bool grase; //to indicate data was collected with GRASE-ASL
+  //  bool grase; //to indicate data was collected with GRASE-ASL
   float dti; //TI interval
   float FA; //flip angle
 

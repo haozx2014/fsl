@@ -116,7 +116,11 @@ namespace Melodic{
       }
 
       int  remove_components();
+
+      void setup_classic();
+      void setup_migp();
       void setup();
+
       void status(const string &txt);
 
       inline Matrix& get_pcaE() {return pcaE;}
@@ -159,6 +163,7 @@ namespace Melodic{
 			}
       }
 
+      void set_TSmode_depr();	
       void set_TSmode();
 
       inline Matrix& get_param() {return param;} 
@@ -262,7 +267,7 @@ namespace Melodic{
       }
       
       void sort();
-	  void reregress();
+	  void dual_regression();
 
       vector<Matrix> DWM, WM;
 			basicGLM glmT, glmS;

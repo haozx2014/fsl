@@ -77,17 +77,24 @@
 #ifdef __APPLE__
 #include <mach/mach.h>
 #define memmsg(msg) { \
+  MelodicOptions&opt = MelodicOptions::getInstance(); \
   struct task_basic_info t_info; \
   mach_msg_type_number_t t_info_count = TASK_BASIC_INFO_COUNT; \
   if (KERN_SUCCESS == task_info(mach_task_self(), TASK_BASIC_INFO, (task_info_t) &t_info, &t_info_count)) \
 	{ \
-		cout << " MEM: " << msg << " res: " << t_info.resident_size/1000000 << " virt: " << t_info.virtual_size/1000000 << "\n"; \
-		cout.flush(); \
+		if(opt.debug.value()) {\
+		    cout << " MEM: " << msg << " res: " << t_info.resident_size/1000000 << " virt: " << t_info.virtual_size/1000000 << "\n"; \
+		    cout.flush(); \
+		 } \
 	} \
 }
 #else
 #define memmsg(msg) { \
-   cout << msg; \
+  MelodicOptions&opt = MelodicOptions::getInstance(); \
+  if(opt.debug.value()) {\
+		cout << msg; \
+		cout.flush(); \
+  } \
 }
 #endif
 

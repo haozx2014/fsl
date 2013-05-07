@@ -90,7 +90,7 @@ using namespace fslvtkio;
 
 
 string title="first University of Oxford (Brian Patenaude)";
-string examples="first --baam  -i <input image> -l <flirt matrix> -m <model> -g <number of modes> -y <rob_min> -z <rob_max> ";
+string examples="first -i <input image> -l <flirt matrix> -m <model>";
 
 
 Option<bool> verbose(string("-v,--verbose"), false, 

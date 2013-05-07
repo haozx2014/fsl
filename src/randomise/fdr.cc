@@ -1,8 +1,8 @@
 /*  fdr.cc
 
-    Mark Jenkinson, FMRIB Image Analysis Group
+    Mark Jenkinson, Anderson Winkler and Tom Nichols, FMRIB Image Analysis Group
 
-    Copyright (C) 2004-2006 University of Oxford  */
+    Copyright (C) 2004-2012 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -66,7 +66,7 @@
     University, to negotiate a licence. Contact details are:
     innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
-// Calculates the p-threshold or minimum q rate image from an
+// Calculates the FDR threshold and the FDR-adjusted image from an
 //  input 3D probability image (values of 0 for p are ignored)
 
 #define _GNU_SOURCE 1
@@ -75,15 +75,13 @@
 #include <vector>
 #include <algorithm>
 #include "newimage/newimageall.h"
-#include "miscmaths/miscmaths.h"
 #include "utils/options.h"
 
-using namespace MISCMATHS;
 using namespace NEWIMAGE;
 using namespace Utilities;
 
-string title="fdr (Version 1.2)\nCopyright(c) 2004-2006, University of Oxford (Mark Jenkinson)";
-string examples="fdr -i <pvalimage> [options]\ne.g.  fdr -i <pvalimage> -m <maskimage> -q 0.05\n      fdr -i <pvalimage> -o <qrateimage>\nNote: if a mask is not specified, voxels where p>.9999 are ignored.";
+string title="fdr \nCopyright(c) 2004-2012, University of Oxford (Mark Jenkinson)";
+string examples="fdr -i <pvalimage> [options]\ne.g.  fdr -i <pvalimage> -m <maskimage> -q 0.05\n      fdr -i <pvalimage> -a <adjustedimage>\nNote: if a mask is not specified, voxels where p>.9999 are ignored.";
 
 Option<bool> verbose(string("-v,--verbose"), false, 
 		     string("switch on diagnostic messages"), 
@@ -118,38 +116,13 @@ Option<string> inname(string("-i,--in"), string(""),
 Option<string> mask(string("-m"), string(""),
 		      string("mask filename"),
 		      false, requires_argument);
-Option<string> qoutname(string("-o"), string(""),
-		       string("output q-rate filename"),
+Option<string> adjname(string("-a"), string(""),
+		       string("output image with FDR-adjusted p-values"),
 		       false, requires_argument);
 Option<string> othresh(string("--othresh"), string(""),
 		       string("output a thresholded p-value image"),
 		       false, requires_argument);
 int nonoptarg;
-
-////////////////////////////////////////////////////////////////////////////
-
-vector<int> get_sortindex(const Matrix& vals)
-{
-  // return the mapping of old indices to new indices in the
-  //   new *ascending* sort of vals
-  int length=vals.Nrows();
-  if (debug.value()) { cout << "LENGTH = " << length << endl; }
-  if (debug.value()) { cout << "MIN = " << vals.Minimum() << endl; }
-  if (debug.value()) { cout << "MAX = " << vals.Maximum() << endl; }
-  vector<pair<double, int> > sortlist(length);
-  for (int n=0; n<length; n++) {
-    sortlist[n] = pair<double, int>((double) vals(n+1,1),n+1);
-  }
-  sort(sortlist.begin(),sortlist.end());  // O(N.log(N))
-  vector<int> idx(length);
-  for (int n=0; n<length; n++) {
-    idx[sortlist[n].second-1] = n+1;
-  }
-  return idx;
-}
-
-
-////////////////////////////////////////////////////////////////////////////
 
 int save_as_image(const string& filename, const volume<float>& mask, 
 		  const Matrix& valmat)
@@ -205,15 +178,31 @@ int do_work(int argc, char* argv[], int nonoptarg)
     for (int n=2; n<=Ntot; n++) { C+=1.0/((double) n); }
   }
 
-  vector<int> norder = get_sortindex(pmat);
+  // Sort the p-values
+  if (debug.value()) {
+    cout << "Number of voxels (p-values): " << Ntot << endl;
+    cout << "Smallest p-value: " << pmat.Minimum() << endl;
+    cout << "Largest p-value:  " << pmat.Maximum() << endl;
+  }
+  vector<pair<double, int> > sortlist(Ntot);
+  for (int n=0; n<Ntot; n++) {
+    sortlist[n] = pair<double, int> ((double) pmat(n+1,1), n+1);
+  }
+  sort(sortlist.begin(), sortlist.end());
 
+  // Compute the ranks, in the same order as the original p-values
+  vector<int> norder(Ntot);
+  for (int n=0; n<Ntot; n++) {
+    norder[sortlist[n].second-1] = n+1;
+  }
+  
   // output the appropriate p-threshold, if requested
   float pthresh = 0.0;
   float qthr = qthresh.value();
   float qfac = qthr / ( C * (float) Ntot );
   for (int j=1; j<=Ntot; j++) {
     if ( (pmat(j,1) > pthresh) && 
-	 ( pmat(j,1) < qfac * (float) norder[j-1] ) )
+	 ( pmat(j,1) <= qfac * (float) norder[j-1] ) ) // note an important change here, from '<' to '<='
       {
 	if (verbose.value()) { cout << "p = " << pmat(j,1) << " , n = " 
 				    << norder[j-1] << " , qfac = " << qfac << endl; }
@@ -223,15 +212,22 @@ int do_work(int argc, char* argv[], int nonoptarg)
   cout << "Probability Threshold is: " << endl << pthresh << endl;
   
 
-  // output the q (fdr) image, if requested
-  if (qoutname.set()) {
-    Matrix qmat = pmat;
-    for (int j=1; j<=Ntot; j++) {
-      qmat(j,1) = pmat(j,1) * Ntot * C / norder[j-1];
+  // output the adjusted image, if requested
+  if (adjname.set()) {
+    Matrix amat = pmat;
+    vector<int> reverse(Ntot); // reverse of norder
+    for (int j=0; j<Ntot; j++) {
+      reverse[norder[j]-1] = j+1;
+    }
+    double prev = 1.0;
+    for (int j=Ntot; j>=1; j--) {
+      amat(reverse[j-1],1) = sortlist[j-1].first * C * Ntot / j;
+      amat(reverse[j-1],1) = Min(prev,amat(reverse[j-1],1));
+      prev = amat(reverse[j-1],1);
     }
     
     // save the FDR (q_min) results
-    save_as_image(qoutname.value(),vmask,qmat);
+    save_as_image(adjname.value(),vmask,amat);
   }
 
   
@@ -265,7 +261,7 @@ int main(int argc,char *argv[])
     options.add(inname);
     options.add(mask);
     options.add(qthresh);
-    options.add(qoutname);
+    options.add(adjname);
     options.add(othresh);
     options.add(ordername);
     options.add(invertp);

@@ -78,7 +78,7 @@ using namespace NEWIMAGE;
 
 string SatrecovFwdModel::ModelVersion() const
 {
-  return "$Id: fwdmodel_asl_satrecov.cc,v 1.2 2011/03/10 13:50:51 chappell Exp $";
+  return "$Id: fwdmodel_asl_satrecov.cc,v 1.4 2012/12/19 17:16:43 chappell Exp $";
 }
 
 void SatrecovFwdModel::HardcodedInitialDists(MVNDist& prior, 
@@ -158,6 +158,7 @@ void SatrecovFwdModel::Evaluate(const ColumnVector& params, ColumnVector& result
    if (looklocker) {
      T1tp = 1/( 1/T1t - log(cos(FA))/dti );
      M0tp = M0t*(1 - exp(-dti/T1t) )/(1 - cos(FA)*exp(-dti/T1t));
+     // note that we do not have sin(FA) here - we actually estiamte the M0 at the flip angle used for the readout!
    }
 
     // loop over tis
@@ -172,7 +173,7 @@ void SatrecovFwdModel::Evaluate(const ColumnVector& params, ColumnVector& result
       for (int it=1; it<=tis.Nrows(); it++) {
 	for (int rpt=1; rpt<=repeats; rpt++)
 	  {
-	    ti = tis(it) + slicedt*coord_z; //account here for an increase in the TI due to delays between slices
+	    ti = tis(it) + slicedt*coord_z; //account here for an increase in delay between slices
 	    result( (ph-1)*(nti*repeats) + (it-1)*repeats+rpt ) = M0tp*(1-A*exp(-ti/T1tp));
 	  }
       }
@@ -184,7 +185,9 @@ void SatrecovFwdModel::Evaluate(const ColumnVector& params, ColumnVector& result
       for (int it=1; it<=tis.Nrows(); it++) {
 	for (int rpt=1; rpt<=repeats; rpt++)
 	  {
-	    result( (ph-1)*(nti*repeats) + (it-1)*repeats+rpt ) = M0tp*(1-A*exp(-tis(it)/T1tp));
+	    ti = tis(it) + slicedt*coord_z; //account here for an increase in delay between slices
+	    result( (ph-1)*(nti*repeats) + (it-1)*repeats+rpt ) = M0tp*sin(lFA)/sin(FA)*(1-A*exp(-tis(it)/T1tp));
+	    //note the sin(LFA)/sin(FA) term since the M0 we estimate is actually MOt*sin(FA)
 	  }
       }
     }

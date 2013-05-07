@@ -93,6 +93,7 @@ usage() {
   echo "-x <number>      high-res search"
   echo "-y <number>      standard DOF"
   echo "-z <number>      standard search"
+  echo "-F <number>      FEAT version parameter"
 }
 
 if [ $# -lt 2 ] 
@@ -335,9 +336,10 @@ echoTime=-1
 signalLossThreshold=-1
 echoSpacing=-1
 phaseEncodingDirection=-1
+featVersion=1.00
 
 
-while getopts ":a:b:c:d:e:f:g:h:i:j:l:h:n:op:r:R:s:u:v:w:x:y:z:" Option
+while getopts ":a:b:c:d:e:f:g:h:i:j:l:h:n:op:r:R:s:u:v:w:x:y:z:F:" Option
 do
   case $Option in
     a     ) 
@@ -433,6 +435,10 @@ do
 	  echo "Option -z ( standard search ) selected with  argument \"$OPTARG\""   #standard search
 	  standardSearch=$OPTARG
 	  ;;
+    F     ) 
+	  echo "Option -F ( FEAT version parameter ) selected with  argument \"$OPTARG\""   #standard search
+	  featVersion=$OPTARG
+	  ;;
     *     ) echo "Unimplemented option chosen."
 	  ;;   # Default.
   esac
@@ -452,7 +458,7 @@ fi
 writeToFile $htmlReport 0 0 "<h2>Registration</h2>
 
 <hr><p><b>Analysis methods</b><br>
-FMRI data processing was carried out using FEAT (FMRI Expert Analysis Tool) Version $fmri(version), part of FSL (FMRIB's Software Library, www.fmrib.ox.ac.uk/fsl). Registration to high resolution structural and/or standard space images was carried out using FLIRT [Jenkinson 2001, 2002]." 
+FMRI data processing was carried out using FEAT (FMRI Expert Analysis Tool) Version $featVersion, part of FSL (FMRIB's Software Library, www.fmrib.ox.ac.uk/fsl). Registration to high resolution structural and/or standard space images was carried out using FLIRT [Jenkinson 2001, 2002]." 
 
 if [ "$nonLinearResolution" != "" ] 
     then
@@ -597,19 +603,19 @@ if [ `${FSLDIR}/bin/imtest $standardImage` = 1 ]
 fi
 
 #Do registrations:
-if [ ! -f initial_highres.nii.gz -a ! -f highres.nii.gz -a ! -f standard.nii.gz ]
+if [ `${FSLDIR}/bin/imtest initial_highres` = 0 -a `${FSLDIR}/bin/imtest highres` = 0 -a `${FSLDIR}/bin/imtest standard` = 0 ]
     then 
     writeToFile $logFile 0 1 "Error: you have not selected any images to register to!"
     exit 1
-elif [ ! -f highres.nii.gz ]  # $1 in $2 ref $3 dof $4 search $5 interp $6 report $7 in_weighting $8 nonlinearwarpres $9 logfile
+elif [ `${FSLDIR}/bin/imtest highres` = 0 ]  # $1 in $2 ref $3 dof $4 search $5 interp $6 report $7 in_weighting $8 nonlinearwarpres $9 logfile
          then runFlirt example_func standard $standardDof $standardSearch trilinear $htmlReport "$ef_weighting_flag" "" $logFile ""
-elif [ ! -f initial_highres.nii.gz ]
+elif [ `${FSLDIR}/bin/imtest initial_highres` = 0 ]
          then runFlirt example_func highres $highresDof $highresSearch trilinear $htmlReport "$ef_weighting_flag" "" $logFile "" #need to signal BBR
 else 
     runFlirt example_func initial_highres $initialHighresDof $initialHighresSearch trilinear $htmlReport "$ef_weighting_flag" "" $logFile ""
     runFlirt initial_highres highres  $highresDof $highresSearch trilinear $htmlReport "" "" $logFile "" #need to signal BBR
 fi
-if  [ -f highres.nii.gz -a -f standard.nii.gz ]
+if  [ `${FSLDIR}/bin/imtest highres` = 1 -a `${FSLDIR}/bin/imtest standard` = 1 ]
     then runFlirt highres standard $standardDof $standardSearch trilinear $htmlReport "" "$nonLinearResolution" $logFile $fnirtConfig
 fi
 
@@ -621,7 +627,7 @@ if [ `${FSLDIR}/bin/imtest highres` = 1 -a `${FSLDIR}/bin/imtest initial_highres
     then
 	runCommand $logFile "${FSLDIR}/bin/convert_xfm -inverse -omat highres2example_func.mat example_func2highres.mat"
 	runCommand $logFile "${FSLDIR}/bin/convertwarp --ref=highres --premat=example_func2initial_highres.mat --warp1=initial_highres2highres_warp --out=example_func2highres_warp"
-	runCommand $logFile "${FSLDIR}/bin/applywarp -i example_func -r example_func -o example_func -w example_func2highres_warp.nii.gz --postmat=highres2example_func.mat"
+	runCommand $logFile "${FSLDIR}/bin/applywarp -i example_func -r example_func -o example_func -w example_func2highres_warp --postmat=highres2example_func.mat"
     fi
     runFlirt example_func highres "" "" trilinear $htmlReport "" "" $logFile ""
 fi

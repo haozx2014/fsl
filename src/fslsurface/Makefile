@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.17 2012/09/07 13:32:47 duncan Exp $
+# $Id: Makefile,v 1.18 2013/04/10 15:02:45 cowboy Exp $
 include ${FSLCONFDIR}/default.mk
 
 PROJNAME = fslsurface
@@ -12,9 +12,16 @@ ifeq ($(FSLMACHTYPE),apple-darwin8-gcc4.0)
         SYSROOTL = -L/Developer/SDKs/MacOSX10.4u.sdk/usr/X11R6/lib/ 
         applebitness = -arch i386
 endif
+
+
+ifeq ($(FSLMACHTYPE),apple-darwin12-gcc4.2)
+        SYSROOT = -I/usr/X11R6/include/  
+        applebitness = -arch x86_64
+endif
+
 ifeq ($(isapple),apple)
         ARCHFLAGS =  $(applebitness) $(SYSROOT) 
-        ARCHLDFLAGS = -Wl,-search_paths_first -arch i386 -arch x86_64 $(SYSROOT) $(SYSROOTL) -framework OpenGL -framework GLUT
+        ARCHLDFLAGS = -Wl,-search_paths_first ${applebitness} $(SYSROOT) $(SYSROOTL) -framework OpenGL -framework GLUT
 	LINUX_LIBS=
 endif 
 

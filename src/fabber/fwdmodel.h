@@ -72,7 +72,7 @@
  * Written by Adrian Groves, 2007
  * FMRIB Centre, University of Oxford
  *
- * Last modified: $Date: 2011/08/24 10:29:29 $ $Author: chappell $ $Revision: 1.17 $
+ * Last modified: $Date: 2013/04/29 12:38:19 $ $Author: chappell $ $Revision: 1.20 $
  */
 
 //#pragma once // prevent multiple includes
@@ -144,9 +144,14 @@ public:
 
   // Steup function for the ARD process (forces the prior on the parameter that is subject to ARD to be correct) - really a worst case scenario if people are loading in their own priors
   virtual void SetupARD( const MVNDist& posterior, MVNDist& prior, double& Fard ) const { return; };
+
+  //vector of indicies of parameters to which ARD should be applied;
+  vector<int> ardindices;
   
   // For models that need the data values in the voxel to calculate
-  virtual void pass_in_data( const ColumnVector& voxdata ) { };
+  virtual void pass_in_data( const ColumnVector& voxdata ) { data=voxdata; return; };
+  virtual void pass_in_data( const ColumnVector& voxdata, const ColumnVector& voxsuppdata )
+  { data = voxdata; suppdata = voxsuppdata; return; };
 
   // For models that need to know the voxel co-ordinates of the data
   virtual void pass_in_coords( const ColumnVector& coords);
@@ -164,6 +169,9 @@ public:
   int coord_x;
   int coord_y;
   int coord_z;
+  //storage for data
+  ColumnVector data;
+  ColumnVector suppdata;
 };
 
 #endif /* __FABBER_FWDMODEL_H */

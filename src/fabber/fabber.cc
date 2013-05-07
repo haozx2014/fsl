@@ -84,6 +84,7 @@ void Usage(const string& errorString = "");
 
 /*** Function implementations ***/
 
+
 int main(int argc, char** argv)
 {
   bool gzLog = false;
@@ -139,7 +140,7 @@ int main(int argc, char** argv)
 
       // Diagnostic information: software versions
       // This only versions this file... should really use all.
-//      LOG_ERR("FABBER development revision: $Id: fabber.cc,v 1.25 2011/11/16 11:17:42 chappell Exp $\n");
+//      LOG_ERR("FABBER development revision: $Id: fabber.cc,v 1.29 2013/01/25 15:34:35 chappell Exp $\n");
       LOG_ERR("FABBER release v2.0 \n");
       LOG << "Command line and effective options:\n" << args.Read("") << endl;
       LOG << "--output='" << EasyLog::GetOutputDirectory() << "'" << endl;
@@ -238,6 +239,7 @@ int main(int argc, char** argv)
   return 1;
 }
 
+
 void Usage(const string& errorString)
 {
     cout << "\n\nUsage: fabber <arguments>\n"
@@ -252,8 +254,7 @@ void Usage(const string& errorString)
      << "be interleaved (e.g. TE1/TE2) or left in order? (default: interleave)\n"
      << "  --data1=file1, [--data2=file2]. (use --data=file instead if --data-order=singlefile)\n"
      << "  --mask=maskfile : inference will only be performed where mask value > 0\n"
-     << "  --model={quipss2|q2tips-dualecho|grase} : forward model to use. "
-//     << "  --model={quipss2|simple|grase} : forward model to use. "
+     << "  --model={quipss2|q2tips-dualecho|pcasl-dualecho} : forward model to use. "
      << "For model parameters use fabber --help --model=<model_of_interest>\n"
      << "  --noise={ar1|white} : Noise model to use\n"
      << "    ar1: two AR(1) models (optional cross-linking between TE1 & TE2)\n"
@@ -274,4 +275,28 @@ void Usage(const string& errorString)
     if (errorString.length() > 0)
         cout << "\nImmediate cause of error: " << errorString << endl;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

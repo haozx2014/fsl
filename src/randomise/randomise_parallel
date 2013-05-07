@@ -176,6 +176,8 @@ while [ \$ACTIVESEED -le $SLOTS_PER_CONTRAST ] ; do
   rm -rf ${ROOTNAME}_SEED\${ACTIVESEED}*stat???.nii.gz
   rm -rf ${ROOTNAME}_SEED\${ACTIVESEED}*stat??.nii.gz
   rm -rf ${ROOTNAME}_SEED\${ACTIVESEED}*stat?.nii.gz
+  rm -rf ${ROOTNAME}_SEED\${ACTIVESEED}_*perm_*.txt ${ROOTNAME}_SEED\${ACTIVESEED}_*_p_*.txt ${ROOTNAME}_SEED\${ACTIVESEED}_*_corrp_*.txt
+
   ACTIVESEED=\`expr \$ACTIVESEED + 1\`
 done
  

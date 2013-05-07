@@ -376,7 +376,8 @@ ${FSLDIR}/bin/fslmaths $IN -div ${OUT}_tmp_premask_bias ${OUT}_tmp_unbiased
 
 #### get skull if asked for
 if [ $skull ] ; then
-  ${FSLDIR}/bin/bet2 ${OUT}_tmp_unbiased ${OUT}_tmp_unbiased_forskull $bet2opts
+  ${FSLDIR}/bin/standard_space_roi ${OUT}_tmp_unbiased ${OUT}_tmp_unbiased_forskull_reduced -maskFOV -roiNONE -d
+  ${FSLDIR}/bin/bet2 ${OUT}_tmp_unbiased_forskull_reduced ${OUT}_tmp_unbiased_forskull $bet2opts
   bet2opts=`echo $bet2opts | sed 's/-s//g'`
   ${FSLDIR}/bin/immv ${OUT}_tmp_unbiased_forskull_skull ${OUT}_skull
 fi

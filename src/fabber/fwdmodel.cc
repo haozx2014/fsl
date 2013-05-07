@@ -79,7 +79,7 @@ string FwdModel::ModelVersion() const
   // Something like this:
   // return " $ I d $ "; // without the spaces
   // CVS will automatically replace this with version information that looks
-  // like this: $Id: fwdmodel.cc,v 1.30 2011/08/24 13:11:49 chappell Exp $
+  // like this: $Id: fwdmodel.cc,v 1.36 2013/03/13 10:57:25 chappell Exp $
   // It should probably go in your .cc file, not the header.
 }
 
@@ -141,13 +141,16 @@ void FwdModel::pass_in_coords( const ColumnVector& coords )
 //#include "fwdmodel_asl_2cpt.h"
 //#include "fwdmodel_asl_multite.h"
 //#include "fwdmodel_cest_devel.h"
-#include "fwdmodel_asl_dynangio.h"
+//  #include "fwdmodel_asl_dynangio.h" - this is currently broken since changing asl_models, use asl_models_*_archive
 #include "fwdmodel_fasl.h"
 #include "fwdmodel_oef.h"
 #include "fwdmodel_biexp.h"
 #include "fwdmodel_deconv.h"
 #include "fwdmodel_flex.h"
 #include "fwdmodel_asl_samira.h"
+#include "fwdmodel_asl_precap.h"
+#include "fwdmodel_asl_rest.h"
+#include "fwdmodel_dce.h"
 #endif /* __DEVEL */
 
 // Add your models here
@@ -209,7 +212,7 @@ FwdModel* FwdModel::NewFromName(const string& name, ArgsType& args)
 	{
 		return new ASL_PVC_FwdModel(args);
 	}
-	else if (name == "satrecov")
+    else if (name == "satrecov")
 	{
 		return new SatrecovFwdModel(args);
 	}
@@ -229,16 +232,19 @@ FwdModel* FwdModel::NewFromName(const string& name, ArgsType& args)
       {
 	return new DevelFwdModel(args);
       }
-    
+    else if (name == "aslrest")
+      {
+	return new ASLFwdModel(args);
+      }
 
     // else if (name == "cestdevel")
     //  {
     //	return new CESTDevelFwdModel(args);
     //  }
-    else if (name == "dynangio")
-      {
-	return new DynAngioFwdModel(args);
-      }
+    //else if (name == "dynangio")
+    //  {
+    //	return new DynAngioFwdModel(args);
+    //  }
     else if (name == "fasl")
       {
 	return new FASLFwdModel(args);
@@ -263,6 +269,10 @@ FwdModel* FwdModel::NewFromName(const string& name, ArgsType& args)
       {
 	return new SamiraFwdModel(args);
       }
+    else if (name == "aslprecap")
+      {
+	return new PreCapFwdModel(args);
+      }
     //    else if (name == "twocpt")
     //  {
     //	return new TwoCptFwdModel(args);
@@ -271,6 +281,10 @@ FwdModel* FwdModel::NewFromName(const string& name, ArgsType& args)
     //  {
     //	return new multiTEFwdModel(args);
     //  }
+    else if (name == "dce")
+      {
+       return new DCEFwdModel(args);
+      }
 #endif /* __DEVEL */
     
     else if (name == "custom")
@@ -316,7 +330,7 @@ void FwdModel::ModelUsageFromName(const string& name, ArgsType& args)
 	CustomFwdModel::ModelUsage();
       }
 
-#ifdef _OXASL
+#ifdef __OXASL
 	else if (name == "buxton")
 	{
 		GraseFwdModel::ModelUsage();
