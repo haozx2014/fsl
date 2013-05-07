@@ -101,6 +101,9 @@ Option<bool> help(string("-h,--help"), false,
 Option<string> lesmaskname(string("-l,--lesionmask"), string(""),
 		  string("filename of lesion mask image"),
 		  true, requires_argument);
+Option<string> wmmaskname(string("-w,--wmmask"), string(""),
+		  string("filename of white matter mask image"),
+		  false, requires_argument);
 Option<string> involname(string("-i,--in"), string(""),
 		  string("input image filename (e.g. T1w image)"),
 		  true, requires_argument);
@@ -133,9 +136,14 @@ int do_work(int argc, char* argv[])
 
   volume<int> tmpcomp;
   volume4D<float> invol;
-  volume<float> lesionmask, comp;
+  volume<float> lesionmask, comp, wmmask;
   read_volume(lesionmask,lesmaskname.value());
   read_volume4D(invol,involname.value());
+  if (wmmaskname.set()) { 
+    read_volume(wmmask,wmmaskname.value());
+  } else {
+    wmmask=lesionmask*0.0f + 1.0f;
+  }
   if (verbose.value()) { cout << "Read in images" << endl; }
   // connectedcomp ../Lesion_mask_2struct_bin.nii.gz lesion_comp
   tmpcomp = connected_components(lesionmask);
@@ -151,6 +159,7 @@ int do_work(int argc, char* argv[])
   // fslmaths lesion_comp_dil.nii.gz -mul ANCO_outerborder.nii.gz ANCO_outerborder_comp
   compb = morphfilter(comp,box3kernel,"dilateD");
   compb *= outborder;
+  compb *= wmmask;
   if (verbose.value()) { cout << "Calculated outer border components" << endl; }
   volume<float> lesinb, lesinreg;
   // fslmaths ../Lesion_mask_2struct_bin.nii.gz -ero -sub ../Lesion_mask_2struct_bin.nii.gz -abs -thr 0.5 -bin ANCO_innerborder
@@ -350,6 +359,7 @@ int main(int argc,char *argv[])
     options.add(involname);
     options.add(outname);
     options.add(lesmaskname);
+    options.add(wmmaskname);
     options.add(verbose);
     options.add(help);
     

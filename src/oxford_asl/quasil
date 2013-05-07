@@ -4,7 +4,7 @@
 #
 # Michael Chappell, IBME & FMRIB Image Analysis Group
 #
-# Copyright (c) 2011 University of Oxford
+# Copyright (c) 2011-2012 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -70,7 +70,7 @@
 
 Usage() {
     echo "QUASAR Bayesian Inference for Arterial Spin Labelling MRI"
-    echo "Version: 0.9 (beta)"
+#    echo "Version: 0.95 (beta)"
     echo ""
     echo "Usage (optional parameters in {}):"
     echo " -i         : specify data file"
@@ -78,8 +78,15 @@ Usage() {
     echo " {-m}       : specify brain mask file"
     echo ""
     echo " Extended options:"
+    echo " --t1b      : Set the value for T1 of arterial blood {default: 1.6 s}"
     echo " --disp     : include bolus dispersion in the model (gamma kernel)"
+    echo " --infertau : estimate bolus duration from data"
     echo " --mfree    : Do model-free (SVD deconvolution) analysis"
+    echo ""
+    echo " Sequence parameters:"
+    echo " --slicedt  : Set the increase in TI with slice {default: 0.035 s}"
+    echo " --fa       : Flip angle for LL readout {default: 35 degrees}"
+    echo " --lfa      : Lower flip angle for final phase of data {default: 11.7 degrees}"
     echo " --tis      : comma separated list of TI values"
     echo "            {default: 0.04,0.34,0.64,0.94,1.24,1.54,1.84,2.14,2.44,2.74,3.04,3.34,3.64}"
     echo ""
@@ -100,6 +107,16 @@ until [ -z $1 ]; do
 	    shift;;
 	-m) mask=$2
 	    shift;;
+	--t1b) t1b=$2
+	    shift;;
+	--t1) t1=$2
+	    shift;;
+	--slicedt) slicedt=$2
+	    shift;;
+	--fa) fa=$2
+	    shift;;
+       --lfa) lfa=$2
+	    shift;;
 	--disp) nodisp=1
 	    ;;
 	--mfree) mfree=1
@@ -110,6 +127,8 @@ until [ -z $1 ]; do
 	    shift;;
 	--tau) tau=$2
 	    shift;;
+	--infertau) infertau=1
+	    ;;
 	--ccmds) calibcmds=$2
 	    shift;;
 	--debug) debug=1;; #debugging option
@@ -181,12 +200,36 @@ if [ -z $tau ]; then
 tau=0.64;
 fi
 
+#T1b
+if [ -z $t1b ]; then
+t1b=1.6;
+fi
+
+#T1 - this si the prior value, since T1 will be estimated from the data
+if [ -z $t1 ]; then
+t1=1.3;
+fi
+
+# sequence parameters
+# slicedt
+if [ -z $slicedt ]; then
+    slicedt=0.035;
+fi
+# Flip angles
+if [ -z $fa ]; then
+    fa=35;
+fi
+if [ -z $lfa ]; then
+    lfa=11.7;
+fi
+
 #### --- Pre-processing ---
 echo "Pre-processing"
 imcp $infile $tempdir/data
 cd $tempdir
 if [ $iform = "q" ]; then
 # input is one big file 13x84 volumes containing raw data (TC pairs) grouped as phases(7) - repeats(6) - tis(13)
+# (NB nesting order is from left to right - so that phases are together for one repeat at one TI in this case)
 # need to get it into right form for fabber: tis(13) - phases(7), mean over repeats, both subtracted and raw data
     
     # first break out all the TIs
@@ -225,7 +268,7 @@ elif [ $iform = "f" ]; then
 fi
 
 # TC difference
-$asl_file --data=aslraw --ntis=$ntis --ibf=tis --aif=tc --diff --out=asldata
+$asl_file --data=aslraw --ntis=$ntis --ibf=tis --iaf=tc --diff --out=asldata
 # discard the final (low flip angle) phase from the differenced data
 # we do not (currently) use this for the main analysis
 nkeep=`expr $ntis \* 6`
@@ -252,29 +295,44 @@ cd $tempdir
 #### --- Calibration ---
 if [ -z "$calibcmds" ]; then
 #voxelwise M0 calibration
-echo "#QUASAR analysis calibration options" > calib_options.txt
-echo "--mask=mask" >> calib_options.txt
-echo "--method=spatialvb --noise=white --param-spatial-priors=MN+" >> calib_options.txt
-echo "--model=satrecov" >> calib_options.txt
-echo "--repeats=1" >> calib_options.txt
-echo "--phases=6" >> calib_options.txt #NB 6 (normal) phases plus 1 LFA phase
-echo $tislist >> calib_options.txt
-echo "--t1=1.3 --FA=30 --LFA=13.3" >> calib_options.txt
-$fabber --data=aslcontrol --data-order=singlefile --output=calib -@ calib_options.txt
-# deal with outputs
-immv calib/mean_T1t calib/T1t
-immv calib/mean_g calib/g
-immv calib/mean_M0t calib/M0t
-#fslmaths instruction for calibration (for execution whilst back in starting dir)
-cinstr=" -div $tempdir/calib/M0t -mul 0.9 " 
+    echo "#QUASAR analysis calibration options" > calib_options.txt
+    echo "--mask=mask" >> calib_options.txt
+    echo "--method=spatialvb --noise=white --param-spatial-priors=MN+" >> calib_options.txt
+    echo "--model=satrecov" >> calib_options.txt
+    echo "--repeats=1" >> calib_options.txt
+    echo "--phases=6" >> calib_options.txt #NB 6 (normal) phases plus 1 LFA phase
+    echo $tislist >> calib_options.txt
+    echo "--t1=$t1 --FA=$fa --LFA=$lfa" >> calib_options.txt
+    echo "--slicedt=$slicedt" >> calib_options.txt
+    $fabber --data=aslcontrol --data-order=singlefile --output=calib -@ calib_options.txt
+    # deal with outputs
+    immv calib/mean_T1t calib/T1t
+    immv calib/mean_g calib/g
+    immv calib/mean_M0t calib/M0t
+
+    #fslmaths instruction for calibration (for execution whilst back in starting dir)
+    cinstr=" -div $tempdir/calib/M0t -mul 0.9 " # partition coefficient 0.9
+
+    #save calibration results to output directory for reference
+    imcp calib/M0t $outdir/M0t
+    imcp calib/T1t $outdir/T1t
+
 else
-# we have some commands to pass to asl_calib
-cd $stdir #NB run this in the original starting directory 
-asl_calib -c $tempdir/aslcontrol $calibcmds --mode satrecov -o $tempdir/calib --bmask $tempdir/mask --tis $tis --fa 30 --lfa 13.3 --nphases
-#fslmaths instruction for calibration (for execution whilst back in starting dir)
-cinstr=" -div `cat $tempdir/calib/M0a.txt` " 
-cd $tempdir
+    # we have some commands to pass to asl_calib
+    cd $stdir #NB run this in the original starting directory 
+    asl_calib -c $tempdir/aslcontrol $calibcmds --mode satrecov -o $tempdir/calib --bmask $tempdir/mask --tis $tis --fa $fa --lfa $lfa --nphases
+
+    #fslmaths instruction for calibration (for execution whilst back in starting dir)
+    cinstr=" -div `cat $tempdir/calib/M0a.txt` " 
+
+    #return to working in temporary directory
+    cd $tempdir
+
+    #save calibration results to output directory for reference
+    cp calib/M0a.txt $outdir/M0a.txt
+    imcp calib/mean_T1t $outdir/T1t
 fi
+
 
 ### --- Analysis ---
 if [ -z $mfree ]; then
@@ -289,14 +347,28 @@ echo "Begin model-based analysis"
     echo "--inferart" >> options.txt
     echo "--repeats=1" >> options.txt
     echo $tislist >> options.txt
-    echo "--t1=1.3 --t1b=1.6 --tau=$tau --fa=30 " >> options.txt
+    echo "--t1=$t1 --t1b=$t1b --tau=$tau --fa=$fa " >> options.txt
+    echo "--slicedt=$slicedt" >> options.txt
     echo "--infert1 ">>options.txt
     echo "--artdir" >> options.txt
 # use calibration information within inference
-    echo "--image-prior5=calib_latest/T1t " >> options.txt
+    
     echo "--usecalib ">>options.txt
-    echo "--image-prior11=calib_latest/g" >> options.txt
-    echo "--param-spatial-priors=MNANINNNNNI" >> options.txt
+   
+    
+
+    if [ ! -z $infertau ]; then
+	#infer bolus duration
+	echo "--infertau --tauboff" >> options.txt #Note we have only a single tau for both arterial and tissue signal (both also share the same dispersion properties)
+	echo "--image-prior6=calib_latest/T1t " >> options.txt
+	echo "--image-prior12=calib_latest/g" >> options.txt
+	echo "--param-spatial-priors=MNNANINNNNNI" >> options.txt
+    else
+	# spatial prior list without bolus duration
+	echo "--image-prior5=calib_latest/T1t " >> options.txt
+	echo "--image-prior11=calib_latest/g" >> options.txt
+	echo "--param-spatial-priors=MNANINNNNNI" >> options.txt
+    fi
 
 
     kern="none"
@@ -313,7 +385,9 @@ echo "Begin model-based analysis"
     fslmaths $tempdir/full/mean_ftiss $outdir/perfusion_raw 
     imcp $tempdir/full/mean_delttiss $outdir/arrival
     fslmaths $tempdir/full/mean_fblood $cinstr $outdir/aCBV
-
+    if [ ! -z $infertau ]; then
+	imcp $tempdir/full/mean_tautiss $outdir/bolus_duration
+    fi
 else
 # --- [Model Free] ---
 echo "Begin model-free analysis"
@@ -333,7 +407,8 @@ fslmaths asl_nocrush -sub asl_tissue asl_blood
     echo "--noise=white" >> aifoptions.txt
     echo "--model=quasar" >> aifoptions.txt
     echo $tislist >> aifoptions.txt
-    echo "--t1=1.3 --t1b=1.6 --tau=$tau --fa=30 " >> aifoptions.txt
+    echo "--t1=$t1 --t1b=$t1b --tau=$tau --fa=$fa " >> aifoptions.txt
+    echo "--slicedt=$slicedt" >> aifoptions.txt
     echo "--repeats=1" >> aifoptions.txt
     echo "--infert1 ">> aifoptions.txt
     echo "--inferart --tissoff" >> aifoptions.txt
@@ -358,12 +433,13 @@ fslmaths asl_nocrush -sub asl_tissue asl_blood
 
     # do deconvolution
 
-    $asl_mfree --data=asl_tissue --mask=mask --out=modfree --aif=aifs --dt=0.3 --metric=aBV --mthresh=0.012 --tcorrect --t1=1.6 --fa=30
+    $asl_mfree --data=asl_tissue --mask=mask --out=modfree --aif=aifs --dt=0.3 --metric=aBV --mthresh=0.012 --tcorrect --t1=1.6 --fa=$fa
 
     #copy results to output directory
     cd "$stdir"
     fslmaths $tempdir/modfree_magntiude $cinstr -mul 6000 -div $tau $outdir/perfusion 
     # note that in the calibration we have to account for the scaling of the AIF by the bolus duration
+    # this is still required (even though we have tau in the model-fitting for the AIF) becuase we normalise the AIF above before deconvolution
     imcp $tempdir/aBV $outdir/aCBV
 fi
 

@@ -259,6 +259,7 @@ namespace Utilities {
     virtual ~BaseOption() {}
 
   private:
+    BaseOption() {}
     std::string key_, help_text_;
     ArgFlag arg_flag_;
 
@@ -447,7 +448,7 @@ namespace Utilities {
      <pre>
 #include "options.h"
 
-// $Id: options.h,v 1.33 2009/04/24 15:34:42 flitney Exp $ 
+// $Id: options.h,v 1.34 2012/12/07 21:47:26 moisesf Exp $ 
 
 using namespace Utilities;
 

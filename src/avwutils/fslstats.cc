@@ -350,7 +350,7 @@ int fmrib_main_float(int argc, char* argv[],const bool timeseriesMode)
         cerr << "Mask and image must be the same size" << endl;
         exit(3);
       }
-      if (timeseriesMode) { mask2=mask[timepoint]; mask=mask2; }
+      if (timeseriesMode && mask.tsize() != 1 ) { mask2=mask[timepoint]; mask=mask2; }
       if ( mask.tsize() > vol.tsize() ) {
         cerr << "Mask and image must be the same size" << endl;
         exit(3);

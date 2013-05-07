@@ -204,6 +204,8 @@ namespace Melodic{
 				0.05*(tmptc.Row(1).Maximum()-tmptc.Row(1).Minimum()));
 			newplot.grid_swapdefault();
 			
+			newplot.set_xysize(750,150);
+			
 	        newplot.timeseries(tmptc,
 			  report.appendDir(string("t")+num2str(cnum)+".png"),
 			  string("Timecourse No. ")+num2str(cnum), 
@@ -240,6 +242,8 @@ namespace Melodic{
 				newplot.set_Ylabel_fmt("%.0f");
 				newplot.set_yrange(0.0,1.02*fmixtc.Maximum());
 				newplot.grid_swapdefault();
+				newplot.set_xysize(750,150);
+				
 				if(opts.tr.value()>0.0){
 					newplot.add_xlabel(string("Frequency (in Hz / ")+num2str(fact)+ " )");
 	  			newplot.timeseries(empty | fmixtc.t(),
@@ -338,7 +342,9 @@ namespace Melodic{
 					newplot.grid_swapdefault();
 					newplot.set_Ylabel_fmt("%.2f");
 					newplot.add_xlabel(" Subject Number");
-//					newplot.set_xysize(smode.Nrows()*80,150);
+					
+
+					newplot.set_xysize(750,150);
 	      	newplot.timeseries(smode.t(), 
 			    	report.appendDir(string("s")+num2str(cnum)+".png"),
 			      string("Subject/Session mode No. ") + num2str(cnum));
@@ -849,7 +855,10 @@ namespace Melodic{
 		outMsize("allmodes", allmodes);
 		newplot.add_xlabel("Component No.");
 		newplot.add_ylabel("");
-		newplot.set_xysize(100+30*allmodes.Ncols(),300);
+		if(allmodes.Ncols()<100)
+			newplot.set_xysize(100+30*allmodes.Ncols(),300);
+		else
+			newplot.set_xysize(1200,300);
 		newplot.boxplot(allmodes,report.appendDir(string("bp_Smodes.png")),
   			string("Subject/Session modes"));
   		report << "<img BORDER=0 SRC=\"bp_Smodes.png\"><p>" << endl;

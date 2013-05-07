@@ -78,7 +78,7 @@ using namespace NEWIMAGE;
 
 string GraseFwdModel::ModelVersion() const
 {
-  return "$Id: fwdmodel_asl_grase.cc,v 1.20 2012/10/19 14:54:17 chappell Exp $";
+  return "$Id: fwdmodel_asl_grase.cc,v 1.21 2013/03/12 10:00:44 chappell Exp $";
 }
 
 void GraseFwdModel::HardcodedInitialDists(MVNDist& prior, 
@@ -561,7 +561,7 @@ GraseFwdModel::GraseFwdModel(ArgsType& args)
 
 void GraseFwdModel::ModelUsage()
 { 
-  cout << "\nUsage info for --model=grase:\n"
+  cout << "\nUsage info for --model=buxton:\n"
        << "Required parameters:\n"
        << "--repeats=<no. repeats in data>\n"
        << "--ti1=<first_inversion_time_in_seconds>\n"

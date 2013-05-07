@@ -77,7 +77,7 @@ using namespace NEWIMAGE;
 
 string pcASLFwdModel::ModelVersion() const
 {
-  return "$Id: fwdmodel_pcASL.cc,v 1.2 2011/11/16 11:15:15 chappell Exp $";
+  return "$Id: fwdmodel_pcASL.cc,v 1.5 2013/01/25 10:57:32 chappell Exp $";
 }
 
 void pcASLFwdModel::HardcodedInitialDists(MVNDist& prior, 
@@ -200,7 +200,7 @@ void pcASLFwdModel::Evaluate(const ColumnVector& params, ColumnVector& result) c
 
 void pcASLFwdModel::ModelUsage()
 {
-    cout << "\nUsage info for --model=quipss2:\n"
+    cout << "\nUsage info for --model=pcasl-dualecho:\n"
       << "Required options:\n"
       << "--bold-basis=<bold_design_file>\n"
       << "--cbf-basis=<cbf_design_file>\n"

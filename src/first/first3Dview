@@ -1,0 +1,22 @@
+#!/bin/sh
+
+if [ $# -lt 2 ] ; then
+  echo "`basename $0` <mask image> <corrp image>"
+  echo " "
+  echo "Script for enabling 3D renderings to be done for new vertex analysis results (corrp image is the 3D image output from randomise)"
+  exit 1
+fi
+
+maskim=$1
+corrpim=$2
+
+$FSLDIR/bin/fslmaths $maskim -binv invmask
+$FSLDIR/bin/cluster -t 0.5 -i invmask -o invmask_comps --connectivity=6 --no_table
+maxc=`$FSLDIR/bin/fslstats invmask_comps -P 100`
+maxc1=`echo $maxc -1 | bc`
+$FSLDIR/bin/fslmaths invmask_comps -uthr $maxc1 -thr 1 -add $maskim -bin filledstruct 
+$FSLDIR/bin/fslmaths $corrpim -thr 0.95 -mul -1 -add filledstruct -thr 0.5 -bin basestruct
+
+$FSLDIR/bin/fslview $FSLDIR/data/standard/MNI152_T1_1mm_brain basestruct -b 0,1 -l Blue-Lightblue $corrpim -b 0.95,1 -l Red-Yellow
+
+

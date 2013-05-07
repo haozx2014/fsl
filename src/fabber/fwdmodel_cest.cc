@@ -78,7 +78,7 @@ using namespace NEWIMAGE;
 
 string CESTFwdModel::ModelVersion() const
 {
-  return "$Id: fwdmodel_cest.cc,v 1.4 2011/08/04 13:38:32 chappell Exp $";
+  return "$Id: fwdmodel_cest.cc,v 1.6 2013/04/12 10:53:20 chappell Exp $";
 }
 
 void CESTFwdModel::HardcodedInitialDists(MVNDist& prior, 
@@ -94,10 +94,24 @@ void CESTFwdModel::HardcodedInitialDists(MVNDist& prior,
      int place=1;
      // M0
      prior.means.Rows(1,npool) = 0.0;
+
      precisions(place,place) = 1e-12;
      place++;
      //precisions(2,2)=1e6;
      //precisions(3,3)=2500;
+
+     /*
+     if (npool>1) {
+       prior.means(2) = 0.003;
+       precisions(2,2) = 1e6;
+       place++;
+     }
+     if (npool>2) {
+       prior.means(3) = 0.1;
+       precisions(3,3) = 100;
+       place++;
+     }
+     */
 
      if (npool>1) {
        for (int i=2; i<=npool; i++) {
@@ -107,7 +121,7 @@ void CESTFwdModel::HardcodedInitialDists(MVNDist& prior,
 	 precisions(place,place) = 1e2;
 	 place++;
        }
-     }
+       }
 
      // exchnage consts (these are log_e)
      if (npool>1) {
@@ -216,19 +230,37 @@ void CESTFwdModel::HardcodedInitialDists(MVNDist& prior,
       //posterior.means(3*npool+1) = 100;
       //precisions(3*npool+1,3*npool+1) = 1;
 
-      /*  if (npool>1) {
+      /*
+        if (npool>1) {
 	for (int i=2; i<=npool; i++) {
-	  posterior.means(i) = 0.0;
+	  posterior.means(i) = 0.01;
 	  precisions(i,i) = 1e6;
 	}
-	}*/
+	}
+      */
 
       posterior.SetPrecisions(precisions);
     
 }    
     
 
+void CESTFwdModel::Initialise(MVNDist& posterior) const
+{
+  Tracer_Plus tr("CESTFwdModel::Initialise");
+  //init the M0a value  - to max value in the z-spectrum
+  posterior.means(1) = data.Maximum();
 
+  //init the ppmoff value - by finding the freq where the min of z-spectrum is
+  int ind;
+  float val;
+  val = data.Minimum1(ind); // find the minimum in the z-spectrum
+  val = wvec(ind)*1e6/wlam; //frequency of the minimum in ppm
+  if (val>0.5) val=0.5; //put a limit on the value
+  if (val<-0.5) val=-0.5;
+  int ppmind=2*npool;
+  posterior.means(ppmind) = val;
+
+}
 
 void CESTFwdModel::Evaluate(const ColumnVector& params, ColumnVector& result) const
 {
@@ -269,6 +301,7 @@ void CESTFwdModel::Evaluate(const ColumnVector& params, ColumnVector& result) co
    kij=0.0; //float ktemp;
    for (int j=2; j<=npool; j++) {
      kij(j,1) = exp(params(place));  //non-linear transformation
+     if (kij(j,1)>1e6) kij(j,1)=1e6; //exclude really extreme values
      kij(1,j) =kij(j,1)*M0(j)/M0(1);
      
      place++;
@@ -424,8 +457,8 @@ void CESTFwdModel::Evaluate(const ColumnVector& params, ColumnVector& result) co
    //cout << wi << endl;
 
    //deal with B1
-   //if (B1off<-0.5) B1off=-0.5; // B1 cannot go too small
-   //if (B1off>10) B1off=10; //unlikely to get this big (hardlimit in case of convergence problems)
+   if (B1off<-0.5) B1off=-0.5; // B1 cannot go too small
+   if (B1off>10) B1off=10; //unlikely to get this big (hardlimit in case of convergence problems)
    ColumnVector w1 = w1vec * (1+B1off); // w1 in radians!
 
    /*
@@ -551,13 +584,13 @@ CESTFwdModel::CESTFwdModel(ArgsType& args)
       tsatvec = dataspec.Column(3);
 
       LOG << " Model parameters: " << endl;
-      LOG << " Water - freq. (MHz) = " << wlam << endl;
+      LOG << " Water - freq. (MHz) = " << wlam/2/M_PI << endl;
       LOG << "         T1    (s)   = " << T12master(1,1) << endl;
       LOG << "         T2    (s)   = " << T12master(2,1) << endl;
 	;
       for (int i=2; i<=npool; i++) {
 	LOG << " Pool " << i << " - freq. (ppm)  = " << poolppm(i-1) << endl;
-	LOG << "       - kiw   (s^-1) = " << poolk(i-1) << endl;
+	LOG << "       - kiw   (s^-1) = " << exp(poolk(i-1)) << endl;
 	LOG << "       - T1    (s)    = " << T12master(1,i) << endl;
 	LOG << "       - T2    (s)    = " << T12master(2,i) << endl;
       }
@@ -584,7 +617,12 @@ CESTFwdModel::CESTFwdModel(ArgsType& args)
 	Matrix pulsemat;
 	pulsemat = read_ascii_matrix(pulsematfile);
 	pmagvec = pulsemat.Column(1); //vector of (relative) magnitude values for each segment
-	ptvec = pulsemat.Column(2); // vector of time durations for each segment
+	// vector of time durations for each segment
+	// note that we are loding in a vector of times for the end of each segment
+	ColumnVector pttemp = pulsemat.Column(2);
+	ColumnVector nought(1);
+	nought=0.0;
+	ptvec =  pttemp - (nought & pttemp.Rows(1,pttemp.Nrows()-1));
 	nseg = pulsemat.Nrows();
 
 	LOG << "Pulse repeats:" << endl << tsatvec.t() << endl;
@@ -769,9 +807,39 @@ void CESTFwdModel::UpdateARD(
 
   }
 
-
-
 ReturnMatrix CESTFwdModel::expm(Matrix inmatrix) const
+{
+  // to set the routine we use to do expm
+  return expm_pade(inmatrix);
+}
+
+ReturnMatrix CESTFwdModel::expm_eig(Matrix inmatrix) const
+{
+  // Do matrix exponential using eigen decomposition of the matrix
+  Tracer_Plus tr("CESTFwdModel::expm_eig");
+
+  SymmetricMatrix A;
+  A << inmatrix; // a bit poor - the matrix coming in should be symmetric, but I haven't implemented this elsewhere in the code (yet!)
+
+  //eigen decomposition
+  DiagonalMatrix D;
+  Matrix V;
+  Jacobi(A,D,V);
+
+  //exponent of D
+  for (int i=1; i<=D.Nrows(); i++) {
+    //if (D(i)>100) D(i)=100;
+    D(i) = exp(D(i));
+  }
+
+  // now matrix exponential
+  Matrix EXP(A);
+  EXP = V*D*V.t();
+  return EXP;
+
+}
+
+ReturnMatrix CESTFwdModel::expm_pade(Matrix inmatrix) const
 {
   // Do matrix exponential
   // Algorithm from Higham, SIAM J. Matrix Analysis App. 24(4) 2005, 1179-1193
@@ -984,9 +1052,11 @@ void CESTFwdModel::Mz_spectrum(ColumnVector& Mz, const ColumnVector& wvec, const
      A(st+1,st+2) = -(wi(i,k)-wvec(k));
      A(st+2,st+1) = wi(i,k)-wvec(k);
 
-     // terms that involve the B1 (w1) value - NOW DONE BELOW!
-     //A(st+2,st+3) = -w1(k);
-     //A(st+3,st+2) = w1(k);
+     if (steadystate) {
+     // terms that involve the B1 (w1) value - now done below for the pulsed case
+       A(st+2,st+3) = -w1(k);
+       A(st+3,st+2) = w1(k);
+     }
    }
 
      if (abs(A.Determinant())<1e-12) {
@@ -1048,6 +1118,14 @@ void CESTFwdModel::Mz_spectrum(ColumnVector& Mz, const ColumnVector& wvec, const
        Mtemp = M.Column(k);
        for (int p=1; p<=npulse; p++) {
 	 for (int s=1; s<=nseg; s++) {
+
+	   //Crusher gradients - force transverse magentizations to zero at the very start of a new pulse
+	   if (s == 1) {
+	     for (int i=1; i<=mpool; i++) {
+	       Mtemp((i-1)*3+1) = 0.0; //x
+	       Mtemp((i-1)*3+2) = 0.0; //y
+	     }
+	   }
 	   Mtemp = expmAseg[s-1]*(Mtemp + AiBseg[s-1]) - AiBseg[s-1];
 	 }
        }

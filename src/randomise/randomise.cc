@@ -914,7 +914,7 @@ int main(int argc,char *argv[]) {
     }
 
 
-    for (int tstat = startingContrast; tstat <= finalContrast && !opts.doFOnly.value(); tstat++ )  
+    for (int tstat = startingContrast; tstat <= finalContrast  && tstat > 0 && !opts.doFOnly.value(); tstat++ )  
       analyseContrast(Tcontrasts.Row(tstat),model,data,mask,blockLabels,tstat,opts,effectiveDesign); 
   }
   catch(Exception& e) 
@@ -954,7 +954,7 @@ void Permuter::createPermutationScheme(const Matrix& design, ColumnVector groups
 	if(groups(row)==group) currentRow |= design.Row(row);
       effectiveBlockDesign &= currentRow;
     }
-      blockPermuter->createPermutationScheme(effectiveBlockDesign,dummyBlocks,false,requiredPermutations,false,outputDebug,false);
+    blockPermuter->createPermutationScheme(effectiveBlockDesign,dummyBlocks,false,requiredPermutations,false,outputDebug,false,forceFlipping);
   }
   
   ColumnVector labels = createDesignLabels(design|groups);
@@ -1027,7 +1027,7 @@ void Permuter::initialisePermutationBlocks(const ColumnVector& designLabels,cons
   }
 
   if ( isPermutingBlocks )
-    uniquePermutations[0]=blockPermuter->finalPermutation;
+    uniquePermutations[0]=blockPermuter->uniquePermutations[0];
   isRandom=!(requiredPermutations==0 || requiredPermutations>=uniquePermutations[0]);
   if (isRandom) finalPermutation=requiredPermutations;
   else finalPermutation=uniquePermutations[0];
@@ -1064,7 +1064,10 @@ ColumnVector Permuter::nextPermutation(const long permutationNumber)
   if ( isPermutingBlocks ) {
     ColumnVector permutedBlocksFoo=blockPermuter->nextPermutation(permutationNumber,false,false);
     for(int block=1;block<nBlocks;block++) {
-      permutedLabels[block]=originalLabels[(int)permutedBlocksFoo(block)];
+      if ( blockPermuter->isFlipping )
+	permutedLabels[block]=originalLabels[block]*permutedBlocksFoo(block);
+      else
+	permutedLabels[block]=originalLabels[(int)permutedBlocksFoo(block)];
     }
     return(permutationVector());
   }

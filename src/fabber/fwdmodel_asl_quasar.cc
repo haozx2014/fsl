@@ -78,7 +78,7 @@ using namespace NEWIMAGE;
 
 string QuasarFwdModel::ModelVersion() const
 {
-  return "$Id: fwdmodel_asl_quasar.cc,v 1.3 2012/02/09 11:33:24 chappell Exp $";
+  return "$Id: fwdmodel_asl_quasar.cc,v 1.6 2013/03/14 16:53:05 chappell Exp $";
 }
 
 void QuasarFwdModel::HardcodedInitialDists(MVNDist& prior, 
@@ -359,7 +359,7 @@ void QuasarFwdModel::Evaluate(const ColumnVector& params, ColumnVector& result) 
     taubset = paramcpy(taub_index());
   }
   else
-    { taubset = tauset; }
+    { taubset = tauset; } //taub comes from the tauset which will be tissue value (or if no tissue then that set by the sequence)
 
   if (inferart) {
     fblood=paramcpy(art_index());
@@ -495,33 +495,37 @@ void QuasarFwdModel::Evaluate(const ColumnVector& params, ColumnVector& result) 
     ColumnVector kcblood(tis.Nrows()); kcblood=0.0;
     ColumnVector kcwm(tis.Nrows()); kcwm=0.0;
 
+    ColumnVector thetis;
+    thetis=tis;
+    thetis += slicedt*coord_z; //account here for an increase in delay between slices
+
     // generate the kinetic curves
     if (disptype=="none") {
-      if (infertiss) kctissue=kctissue_nodisp(tis,delttiss,tau,T_1b,T_1app,deltll,T_1ll);
+      if (infertiss) kctissue=kctissue_nodisp(thetis,delttiss,tau,T_1b,T_1app,deltll,T_1ll);
     //cout << kctissue << endl;
       //kcwm=kctissue_nodisp(tis,deltwm,tauwm,T_1b,T_1appwm);
-      if (inferart) kcblood=kcblood_nodisp(tis,deltblood,taub,T_1b,deltll,T_1ll);
+      if (inferart) kcblood=kcblood_nodisp(thetis,deltblood,taub,T_1b,deltll,T_1ll);
     //cout << kcblood << endl;
     }
     else if (disptype=="gamma") {
-      if (infertiss) kctissue=kctissue_gammadisp(tis,delttiss,tau,T_1b,T_1app,s,p,deltll,T_1ll);
+      if (infertiss) kctissue=kctissue_gammadisp(thetis,delttiss,tau,T_1b,T_1app,s,p,deltll,T_1ll);
     //cout << kctissue << endl;
       //kcwm=kctissue_gammadisp(tis,deltwm,tauwm,T_1b,T_1appwm,s,p);
-      if (inferart) kcblood=kcblood_gammadisp(tis,deltblood,taub,T_1b,s,p,deltll,T_1ll);
+      if (inferart) kcblood=kcblood_gammadisp(thetis,deltblood,taub,T_1b,s,p,deltll,T_1ll);
     //cout << kcblood << endl;
     }
     else if (disptype=="gvf") {
-      if (infertiss) kctissue=kctissue_gvf(tis,delttiss,tau,T_1b,T_1app,s,p,deltll,T_1ll);
+      if (infertiss) kctissue=kctissue_gvf(thetis,delttiss,tau,T_1b,T_1app,s,p,deltll,T_1ll);
     //cout << kctissue << endl;
       //kcwm=kctissue_gvf(tis,deltwm,T_1b,T_1appwm,s,p);
-      if (inferart) kcblood=kcblood_gvf(tis,deltblood,taub,T_1b,s,p,deltll,T_1ll);
+      if (inferart) kcblood=kcblood_gvf(thetis,deltblood,taub,T_1b,s,p,deltll,T_1ll);
     //cout << kcblood << endl;
     }
    else if (disptype=="gauss") {
-     if (infertiss) kctissue=kctissue_gaussdisp(tis,delttiss,tau,T_1b,T_1app,s,s,deltll,T_1ll);
+     if (infertiss) kctissue=kctissue_gaussdisp(thetis,delttiss,tau,T_1b,T_1app,s,s,deltll,T_1ll);
     //cout << kctissue << endl;
       //kcwm=kctissue_gvf(tis,deltwm,T_1b,T_1appwm,s,p);
-     if (inferart) kcblood=kcblood_gaussdisp(tis,deltblood,tau,T_1b,s,s,deltll,T_1ll);
+     if (inferart) kcblood=kcblood_gaussdisp(thetis,deltblood,tau,T_1b,s,s,deltll,T_1ll);
     //cout << kcblood << endl;
     }
     else {
@@ -592,7 +596,7 @@ void QuasarFwdModel::Evaluate(const ColumnVector& params, ColumnVector& result) 
       artdir(3) = cos(bloodphi);
 
       for (int i=1; i<=crushdir.Nrows(); i++) {
-	artweight = 1.0 - std::max(DotProduct(artdir,crushdir.Row(i)),0.0);
+	artweight(i) = 1.0 - std::max(DotProduct(artdir,crushdir.Row(i)),0.0);
 	//angle = fabs(crushdir(i) - blooddir);
 	//if (angle<M_PI/2) {
 	//  artweight(i) = crusheff*sin(angle) + 1.0 - crusheff;
@@ -673,6 +677,8 @@ QuasarFwdModel::QuasarFwdModel(ArgsType& args)
       inferwm = args.ReadBool("inferwm");
 
       seqtau = convertTo<double>(args.ReadWithDefault("tau","1000")); //bolus length as set by sequence (default of 1000 is effectively infinite
+      slicedt = convertTo<double>(args.ReadWithDefault("slicedt","0.0")); // increase in TI per slice
+
       bool ardoff = false;
       ardoff = args.ReadBool("ardoff");
       bool tauboff = false;
@@ -759,7 +765,7 @@ QuasarFwdModel::QuasarFwdModel(ArgsType& args)
        << 1 << -1 << 1
        << -1 << -1 << 1;
 
-      crushdir /= 3; //make unit vectors;
+      crushdir /= sqrt(3); //make unit vectors;
 
       
       singleti = false; //normally we do multi TI ASL
@@ -1032,7 +1038,7 @@ ColumnVector QuasarFwdModel::kcblood_gammadisp(const ColumnVector& tis, float de
 }
 
 ColumnVector QuasarFwdModel::kcblood_gvf(const ColumnVector& tis, float deltblood, float taub, float T_1bin, float s, float p, float deltll,float T_1ll) const {
-  Tracer_Plus tr("QuasarFwdModel:kcblood_gammadisp");
+  Tracer_Plus tr("QuasarFwdModel:kcblood_gvf");
   ColumnVector kcblood(tis.Nrows());
   kcblood=0.0;
   float T_1b;

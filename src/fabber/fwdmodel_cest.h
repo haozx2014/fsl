@@ -76,6 +76,8 @@ public:
   // Virtual function overrides
   virtual void Evaluate(const ColumnVector& params, 
 			      ColumnVector& result) const;
+  void Initialise(MVNDist& posterior) const;
+
    static void ModelUsage();
   virtual string ModelVersion() const;
                   
@@ -107,6 +109,8 @@ protected:
   //maths functions
   void Ainverse(const Matrix A, RowVector& Ai) const;
   ReturnMatrix expm(Matrix inmatrix) const;
+  ReturnMatrix expm_eig(Matrix inmatrix) const;
+  ReturnMatrix expm_pade(Matrix inmatrix) const;
   ReturnMatrix PadeApproximant(Matrix inmatrix, int m) const;
   ReturnMatrix PadeCoeffs(int m) const;
 

@@ -119,7 +119,7 @@ int main(int argc, char** argv)
 
 	    double val;	double var;
 	    string valimfile; string varimfile;
-	    bool bval;bool bvar;bool cvar;
+	    bool bval=false;bool bvar=false;bool cvar=false;
 	    /* Choose what we want to do to/with the parameter - default is to read */
 	    ins = args.ReadBool("new"); //insert a new parameter
 	    write = args.ReadBool("write"); //overwrite an existing parameter

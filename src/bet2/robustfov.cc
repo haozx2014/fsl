@@ -188,14 +188,14 @@ int do_work(int argc, char* argv[])
   if (dim==0) { cerr << "Cannot determine direction of S-I" << endl; return 1; }
   if (verbose.value()) { cout << "Dimension chosen for Superior is: " << dim << endl; }
 
-  int qstart=0, qend=0, qinc=0;
+  int qstart=0, qend=0, qinc=0, nslicevox=0;
   float qdim=0;
-  if (dim==1) { qstart=xmax; qend=-1; qinc=-1; qdim=vol.xdim(); }
-  if (dim==2) { qstart=ymax; qend=-1; qinc=-1; qdim=vol.ydim(); }
-  if (dim==3) { qstart=zmax; qend=-1; qinc=-1; qdim=vol.zdim(); }
-  if (dim==-1) { qstart=0; qend=xmax+1; qinc=1; qdim=vol.xdim(); }
-  if (dim==-2) { qstart=0; qend=ymax+1; qinc=1; qdim=vol.ydim(); }
-  if (dim==-3) { qstart=0; qend=zmax+1; qinc=1; qdim=vol.zdim(); }
+  if (dim==1) { qstart=xmax; qend=-1; qinc=-1; qdim=vol.xdim(); nslicevox=vol.ysize()*vol.zsize(); }
+  if (dim==2) { qstart=ymax; qend=-1; qinc=-1; qdim=vol.ydim(); nslicevox=vol.xsize()*vol.zsize(); }
+  if (dim==3) { qstart=zmax; qend=-1; qinc=-1; qdim=vol.zdim(); nslicevox=vol.xsize()*vol.ysize(); }
+  if (dim==-1) { qstart=0; qend=xmax+1; qinc=1; qdim=vol.xdim(); nslicevox=vol.ysize()*vol.zsize(); }
+  if (dim==-2) { qstart=0; qend=ymax+1; qinc=1; qdim=vol.ydim(); nslicevox=vol.xsize()*vol.zsize(); }
+  if (dim==-3) { qstart=0; qend=zmax+1; qinc=1; qdim=vol.zdim(); nslicevox=vol.xsize()*vol.ysize(); }
 
 
   // save thresholded voxel counts for slices - done from upper end of array (as dim=3 is "natural" counting)
@@ -206,7 +206,7 @@ int do_work(int argc, char* argv[])
     for (int loopnum=1; loopnum<=2; loopnum++) {
       copyv.deactivateROI();
       copyv=vol;
-      if (loopnum==1) copyv.binarise(0,copyv.max(),exclusive);
+      if (loopnum==1) copyv.binarise(0,copyv.max()+1,exclusive);  // set to 1 anything above 0
       copyv.activateROI();
       for (int q=qstart, row=rowmax; q!=qend; q+=qinc, row--) {
 	if (abs(dim)==1) {
@@ -219,13 +219,18 @@ int do_work(int argc, char* argv[])
 	float p1, p99, thresh;
 	if (loopnum==1) { nzsum(row)=copyv.sum(); }
 	if (loopnum==2) {
-	  p1=copyv.percentile(0.01);
-	  p99=copyv.percentile(0.99);
-	  thresh=0.1*(p99-p1)+p1;  // 10% of the value from 1st percentile to 99th percentile
-	  copyv.binarise(thresh);
-	  frac(row)=copyv.sum()/Max(nzsum(row),1);
-	  threshvals(row)=thresh;
-	  if (verbose.value()) { cout << "At q="<<q<<" : frac = " << frac(row) << endl; }
+	  if (nzsum(row)>0) {
+	    p1=copyv.percentile(1-0.99*nzsum(row)/nslicevox);
+	    p99=copyv.percentile(1-0.01*nzsum(row)/nslicevox);
+	    thresh=0.1*(p99-p1)+p1;  // 10% of the value from 1st percentile to 99th percentile
+	    copyv.binarise(thresh);
+	    frac(row)=copyv.sum()/nzsum(row);
+	    threshvals(row)=thresh;
+	  } else {
+	    frac(row)=1;
+	    threshvals(row)=0;
+	  }
+	  if (verbose.value()) { cout << "At q="<<q<<" : frac = " << frac(row) << " : thresh = " << threshvals(row) << endl; }
 	}
       }
     }
@@ -239,10 +244,11 @@ int do_work(int argc, char* argv[])
   int gap=MISCMATHS::round(3.0/qdim+0.5);  // 3mm gap  (distance between baseline slice and slice being tested)
   int minlen=gap;
   int brainlen=MISCMATHS::round(brainsize.value()/qdim);  // 150mm of brain + top scalp
-  int minvox=0;    // only start counting slices with at least 10% non-zero voxels (avoids blank areas due to gradient unwarping or similar)
-  if (abs(dim)==1) minvox=MISCMATHS::round(ymax*zmax*0.1);
-  if (abs(dim)==2) minvox=MISCMATHS::round(xmax*zmax*0.1);
-  if (abs(dim)==3) minvox=MISCMATHS::round(xmax*ymax*0.1);
+  int minvox=0;    // only start counting slices with at least minvoxfraction of non-zero voxels (avoids blank areas due to gradient unwarping or similar)
+  float minvoxfraction=0.02;  // 2% of non-zero voxels  (equivalent of 14% by 14% of coverage in a slice)
+  if (abs(dim)==1) minvox=MISCMATHS::round(ymax*zmax*minvoxfraction);
+  if (abs(dim)==2) minvox=MISCMATHS::round(xmax*zmax*minvoxfraction);
+  if (abs(dim)==3) minvox=MISCMATHS::round(xmax*ymax*minvoxfraction);
   float baseval;
   int qmax=Max(qstart,qend-1), qbest=-1;
   bool foundbest=false;
@@ -252,12 +258,13 @@ int do_work(int argc, char* argv[])
       if ( (nzsum(q+gap+1)>minvox) && (nzsum(q+1)>minvox) && (frac(q+1)<baseval-minchange) ) { 
 	// TODO add a test for threshold values? (avoid artefact being identified as brain in superior slices ala Marco's data)
 	//   something like threshold must be > 0.5 * max threshold found   (but don't want bias field to stop proper slices being found!)
+	if (verbose.value()) { cout << "Testing stability of q = " << q << endl; }
 	bool stable=true;
 	for (int q0=q; q0>=q-minlen; q0--) {
 	  if (frac(q0+1)>=baseval-minchange) stable=false;
 	}
 	if (stable) {
-	  if (verbose.value()) { cout << "Chosen z = " << q << endl; }
+	  if (verbose.value()) { cout << "Chosen q = " << q << endl; }
 	  qbest=q;
 	  foundbest=true;
 	}

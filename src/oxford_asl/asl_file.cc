@@ -117,6 +117,7 @@ int main(int argc, char *argv[])
     string obf=opts.outblockform.value();
     if      (obf.compare("rpt")==0) outblocked=true;
     else if (obf.compare("tis")==0) outblocked=false;
+    else if (obf.compare("notset")==0) outblocked=isblocked; //default is to set output same as input
     else    throw Exception("Unrecognised output block format");
 
     /*

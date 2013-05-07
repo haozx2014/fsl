@@ -91,6 +91,11 @@ if [ `echo "$@" | grep -- -o | wc -w` -gt 0 ] ; then
     outputname=`echo "$@" | sed 's/.*-o *\([^ ]*\).*/\1/'`;
 fi
 
+if [ `$FSLDIR/bin/imtest $1` -eq 0 ] ; then
+echo "cannot read file $1"
+exit 1
+fi
+
 f=/tmp/`${FSLDIR}/bin/remove_ext $1 | sed "s/\//_/g"`
 touch $f > /dev/null 2>&1
 if [ ! -w $f ] ; then

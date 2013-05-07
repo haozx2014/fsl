@@ -1750,7 +1750,7 @@ int maxG(0), isok, isnotzero;
 	isok-=isnotzero;
       }
       if ( isok < 1 )
-	printf("Warning - design matrix uses different groups (for different variances), but these do not contain \"separable\" EVs for the different groups (it is necessary that, for each EV, only one of the groups has non-zero values).\n");
+	printf("Warning - design matrix uses different groups (for different variances), but these do not contain \"separable\" EVs for the different groups (it is necessary that, for each EV, only one of the groups has non-zero values). This message can be ignored if you are intending to use the groups file to define exchangeability blocks for randomise.\n");
     }
   }
   

@@ -552,7 +552,7 @@ elif [ $mode = satrecov ]; then
     # Calibration image is control images and we want to do a saturation recovery fit
     # NB only do the fit in the CSF mask
 
-    # sort out cgain setting
+     # sort out cgain setting
     if [ -z $cgain ]; then
 	cgain=1;        # default cgain is 1!
     fi
@@ -567,6 +567,9 @@ elif [ $mode = satrecov ]; then
 	tislist=`echo $tislist --ti${count}=$ti`
     done
     echo "TIs: tislist" >> $log
+
+   # data should only be one repeat at each TI
+    asl_file --data=$calib --ntis=$count --iaf=diff --ibf=rpt --mean=$temp_calib/calibmean
 
 # Extra options for Look Locker
 
@@ -583,7 +586,7 @@ elif [ $mode = satrecov ]; then
 
     # do fabber within the tissue reference mask with a sensible T1 prior mean
     echo "FABBER within reference tissue mask" >> $log
-    $fabber --data=$calib --mask=$mask --output=$temp_calib/satrecov --data-order=singlefile --model=satrecov --noise=white --method=vb $tislist $llopts --t1=$T1r
+    $fabber --data=$temp_calib/calibmean --mask=$mask --output=$temp_calib/satrecov --data-order=singlefile --model=satrecov --noise=white --method=vb $tislist $llopts --t1=$T1r
 
     # calculate M0 value
     Moval=`fslstats $temp_calib/satrecov/mean_M0t -M` # this is M0 of CSF at the TE of the sequence
@@ -598,7 +601,7 @@ elif [ $mode = satrecov ]; then
     # do fabber again within whole brain to get estimated T1 of tissue and FA correction (if LL)
     echo "FABBER (again) within whole brain mask" >> $log
     if [ ! -z $outdir ]; then #NB we only bother with this if we have an output directory to put the results in
-	$fabber --data=$calib --mask=$bmask --output=$temp_calib/satrecovT --data-order=singlefile --model=satrecov --noise=white --method=vb $tislist $llopts
+	$fabber --data=$temp_calib/calibmean --mask=$bmask --output=$temp_calib/satrecovT --data-order=singlefile --model=satrecov --noise=white --method=vb $tislist $llopts
 
 
         # save useful results to specified output directory

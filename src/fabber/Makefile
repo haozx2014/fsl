@@ -2,9 +2,13 @@ include ${FSLCONFDIR}/default.mk
 
 PROJNAME = fabber
 
-USRINCFLAGS = -I${INC_NEWMAT} -I${INC_PROB} -I${BOOSTDIR} -D__OXASL
+USRINCFLAGS = -I${INC_NEWMAT} -I${INC_PROB} -I${INC_BOOST} -D__OXASL
+#USRINCFLAGS = -I${INC_NEWMAT} -I${INC_PROB} -I${INC_BOOST} -D__OXASL -D__FABBER_LIBRARYONLY
+#USRINCFLAGS = -I${INC_NEWMAT} -I${INC_PROB} -I${INC_BOOST} -D__OXASL -D__FABBER_LIBRARYONLY -D__FABBER_LIBRARYONLY_TESTWITHNEWIMAGE
 USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_PROB}
 
+#LIBS = -lutils -lprob -lnewmat # Will report the MISCMATHS dependencies
+#LIBS = -lutils -lmiscmaths -lprob -lnewmat -lfslio -lniftiio -lznz -lz 
 LIBS = -lutils -lnewimage -lmiscmaths -lprob -lnewmat -lfslio -lniftiio -lznz -lz 
 
 XFILES = fabber mvntool
@@ -24,6 +28,10 @@ fabber: ${OBJS} fabber.o
 
 mvntool: ${OBJS} mvntool.o
 	${CXX}  ${CXXFLAGS} ${LDFLAGS} -o $@ ${OBJS} mvntool.o ${LIBS}
+
+#fabber_library: $(OBJS}
+	#${CXX}  ${CXXFLAGS} ${LDFLAGS} -D__FABBER_LIBRARYONLY -o $@ ${OBJS} fabber.o ${LIBS}
+	#${CXX}  ${CXXFLAGS} ${LDFLAGS} -D__FABBER_LIBRARYONLY -o $@ ${OBJS} mvntool.o ${LIBS}
 
 SCRIPTS = fabber_var
 

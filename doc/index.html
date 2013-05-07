@@ -1,44 +1,35 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
-<HTML><HEAD><meta http-equiv="Content-Type" content="text/html;charset=utf-8">
-<link REL="stylesheet" TYPE="text/css" href="fsl.css">
-<TITLE>FSL</TITLE></HEAD><BODY><IFRAME width="100%" scrolling="no" frameborder="0" src="fsl/top.html">Broken</IFRAME>
+<html>
+<head>
+<script type="text/javascript">
+ xmlhttp=new XMLHttpRequest();
 
-<P> FSL is a comprehensive library of analysis tools for FMRI, MRI and DTI
-brain imaging data. FSL is written mainly by members of
-the <A HREF="http://www.fmrib.ox.ac.uk/analysis"
-target="_top">Analysis Group, FMRIB, Oxford, UK</A>. FSL runs on Apple
-and PCs (Linux and Windows), and is very easy to install. Most of the
-tools can be run both from the command line and as GUIs
-("point-and-click" graphical user interfaces).
+  xmlhttp.onreadystatechange=function()
+  {
+    var redirecting=0;
+    if (xmlhttp.readyState==4 && xmlhttp.status==200)
+    {
+       redirecting=1;
+       window.location.href = "http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FSL";
+    }
 
-<p> To quote the relevant references for FSL tools you should look in the
-individual tool's manual page (or the Analysis Group <a
-href="http://www.fmrib.ox.ac.uk/analysis/fmribindex">publications
-page</a>), and also please reference the FSL overview papers:<br>
+    if (xmlhttp.readyState==4 && xmlhttp.status != 200 && redirecting==0)
+    {
+       window.location.href = "./wiki/FSL.html";
+    }
+  }
 
-<font size=-1><b>1)&nbsp;&nbsp;&nbsp;</b> M.W. Woolrich, S. Jbabdi, B. Patenaude, M. Chappell,
-S. Makni, T. Behrens, C. Beckmann, M. Jenkinson, S.M. Smith. Bayesian
-analysis of neuroimaging data in FSL. NeuroImage, 45:S173-186, 2009.</font><br>
+ xmlhttp.open("GET","http://fsl.fmrib.ox.ac.uk/fsldownloads/latest-version.txt?var=" + Math.floor(Math.random() * 1000),true);
+ xmlhttp.send(); 
 
-<font size=-1><b>2)&nbsp;&nbsp;&nbsp;</b> S.M. Smith, M.&nbsp;Jenkinson, M.W. Woolrich, C.F. Beckmann,
-T.E.J. Behrens, H.&nbsp;Johansen-Berg, P.R. Bannister,
-M.&nbsp;De&nbsp;Luca, I.&nbsp;Drobnjak, D.E. Flitney, R.&nbsp;Niazy,
-J.&nbsp;Saunders, J.&nbsp;Vickers, Y.&nbsp;Zhang,
-N.&nbsp;De&nbsp;Stefano, J.M. Brady, and P.M. Matthews. Advances in
-functional and structural MR image analysis and implementation as
-FSL. NeuroImage, 23(S1):208-219, 2004.</font>
+ setTimeout( function(){window.location.href = "./wiki/FSL.html"}, 10000 );
+    
 
 
-<P>The <a href="http://www.epsrc.ac.uk/" target="_top">UK EPSRC</a> is
-the largest provider of funding for the FMRIB Analysis Group, and for
-this we are extremely grateful. We are also very grateful for
-significant financial support from <a href="http://www.mrc.ac.uk/"
-target="_top">UK MRC</a>, <a href="http://www.bbsrc.ac.uk/"
-target="_top">UK BBSRC</a>, <a href="http://www.gsk.com"
-target="_top">GlaxoSmithKline CIC</a> and <a
-href="http://www.pfizer.co.uk">Pfizer UK</a>.
 
-<p>What's in FSL: see the <a href="fsl/list.html">list of tools</a>.
+</script>
 
-</BODY></HTML>
-
+</head>
+<body>
+<h2> Attempting to connect to online documentation, will revert to offline documentation if unavailable</h2>
+</body>
+</html>

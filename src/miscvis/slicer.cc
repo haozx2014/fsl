@@ -143,7 +143,15 @@ int fmrib_main(int argc, char* argv[])
   //End of parsing
 
   volume<float> inputVolume, secondaryVolume(1,1,1); 
-  read_volume(inputVolume,nonOptionInputs[0]);
+  try
+  {
+    read_volume(inputVolume,nonOptionInputs[0]);
+  }
+  catch (...)
+  {
+    cout << "Error in slicer input, exiting..." << endl;
+    exit(1);
+  }
   if ( nonOptionInputs.size()>1 && FslFileExists(nonOptionInputs[1].c_str()) ) 
     read_volume(secondaryVolume,nonOptionInputs[1]);
 

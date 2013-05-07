@@ -860,7 +860,7 @@ unsigned int Splinterpolator<T>::get_wgts(const double *coord, const int *sinds,
 
   for (unsigned int dim=0; dim<_ndim; dim++) {
     for (unsigned int i=0; i<ni; i++) {
-      wgts[dim][i] = get_wgt(coord[dim]-(sinds[dim]+i));
+      wgts[dim][i] = get_wgt(coord[dim]-(sinds[dim]+int(i)));
     }
   }
   for (unsigned int dim=_ndim; dim<5; dim++) wgts[dim][0] = 1.0;
@@ -876,7 +876,7 @@ unsigned int Splinterpolator<T>::get_wgts_at_i(const unsigned int *indx, const i
   
   for (unsigned int dim=0; dim<_ndim; dim++) {
     for (unsigned int i=0; i<ni; i++) {
-      wgts[dim][i] = get_wgt_at_i(indx[dim]-(sinds[dim]+i));
+      wgts[dim][i] = get_wgt_at_i(indx[dim]-(sinds[dim]+int(i)));
     }
   }
   for (unsigned int dim=_ndim; dim<5; dim++) wgts[dim][0] = 1.0;
@@ -900,7 +900,7 @@ unsigned int Splinterpolator<T>::get_dwgts(const double *coord, const int *sinds
 	break;
       case 2: case 3: case 4: case 5: case 6: case 7:
 	for (unsigned int i=0; i<ni; i++) {
-	  dwgts[dim][i] = get_dwgt(coord[dim]-(sinds[dim]+i));
+	  dwgts[dim][i] = get_dwgt(coord[dim]-(sinds[dim]+int(i)));
         }
 	break;
       default:
@@ -926,7 +926,7 @@ unsigned int Splinterpolator<T>::get_dwgts_at_i(const unsigned int *indx, const 
         break;
       case 2: case 3: case 4: case 5: case 6: case 7:
 	for (unsigned int i=0; i<ni; i++) {
-	  dwgts[dim][i] = get_dwgt_at_i(indx[dim]-(sinds[dim]+i));
+	  dwgts[dim][i] = get_dwgt_at_i(indx[dim]-(sinds[dim]+int(i)));
         }
 	break;
       default:
@@ -1207,13 +1207,59 @@ inline unsigned int Splinterpolator<T>::indx2indx(int indx, unsigned int d) cons
 {
   if (d > (_ndim-1)) return(0);
 
+  // cout << "indx in = " << indx << endl;
+
+  if (indx < 0) {
+    switch (_et[d]) {
+    case Constant:
+      indx = 0;
+      break;
+    case Zeros: case Mirror:
+      indx = (indx%int(_dim[d])) ? -indx%int(_dim[d]) : 0;
+      break;
+    case Periodic:
+      indx = (indx%int(_dim[d])) ? _dim[d]+indx%int(_dim[d]) : 0;
+      break;
+    default:
+      break;
+    }
+  }
+  else if (indx >= static_cast<int>(_dim[d])) {
+    switch (_et[d]) {
+    case Constant:
+      indx = _dim[d]-1;
+      break;
+    case Zeros: case Mirror:
+      indx = 2*_dim[d] - (_dim[d]+indx%int(_dim[d])) - 2;
+      break;
+    case Periodic:
+      indx = indx%int(_dim[d]);
+      break;
+    default:
+      break;
+    }
+  }
+
+  // cout << "indx out = " << indx << endl;
+
+  return(indx);
+}
+
+// The next routine is defunct and will be moved out of this file.
+
+/*
+template<class T>
+inline unsigned int Splinterpolator<T>::indx2indx(int indx, unsigned int d) const
+{
+  if (d > (_ndim-1)) return(0);
+
   if (indx < 0) {
     switch (_et[d]) {
     case Constant:
       return(0);
       break;
     case Zeros: case Mirror:
-      return((indx%int(_dim[d])) ? _dim[d]-1 : -1-indx%int(_dim[d]));
+      return((indx%int(_dim[d])) ? -1-indx%int(_dim[d]) : _dim[d]-1);
       break;
     case Periodic:
       return((indx%int(_dim[d])) ? _dim[d]+indx%int(_dim[d]) : 0);
@@ -1239,6 +1285,7 @@ inline unsigned int Splinterpolator<T>::indx2indx(int indx, unsigned int d) cons
   }
   return(indx);
 }
+*/
 
 template<class T>
 unsigned int Splinterpolator<T>::indx2linear(int k, int l, int m) const

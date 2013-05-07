@@ -5,7 +5,7 @@
 
     Christian F. Beckmann, FMRIB Image Analysis Group
     
-    Copyright (C) 1999-2008 University of Oxford */
+    Copyright (C) 1999-2013 University of Oxford */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -143,6 +143,9 @@ int main(int argc, char *argv[]){
 
       melodat.setup();
 
+	  if (opts.maxRestart.value()<0)
+		opts.maxRestart.set_T(melodat.data_dim());
+ 
       do{
 				//do PCA pre-processing
 				MelodicPCA pcaobj(melodat,opts,logger,report);
@@ -155,40 +158,27 @@ int main(int argc, char *argv[]){
     
 				no_conv = icaobj.no_convergence;
 
-				opts.maxNumItt.set_T(500);
-	  if((opts.approach.value()=="symm")&&(retry > std::min(opts.retrystep,3)))
-	  {
-	  			if(no_conv){
-	    			retry++;
-	    			opts.approach.set_T("defl");
-	    			message(endl << "Restarting MELODIC using deflation approach" 
-		    			<< endl << endl);
-	  			}else{
-	    			leaveloop = true;
-	  			}
-				}else{
-	  			if(no_conv){
-	    			retry++;
-	    			if(opts.pca_dim.value()-retry*opts.retrystep > 
-	       			0.1*melodat.data_dim()){
-	      				opts.pca_dim.set_T(opts.pca_dim.value()-retry*opts.retrystep);
-	    				}
-	    			else{
-	      			if(opts.pca_dim.value()+retry*opts.retrystep <  melodat.data_dim()){
-								opts.pca_dim.set_T(opts.pca_dim.value()+retry*opts.retrystep);
-	      			}else{
-								leaveloop = true; //stupid, but break does not compile 
-		                  						//on all platforms
-	      			}
-	    			}
-	    			if(!leaveloop){
-					if(opts.paradigmfname.value().length()>0)
-						opts.pca_dim.set_T(std::max(opts.pca_dim.value(),melodat.get_param().Ncols()+3*opts.retrystep-1));
-	      			message(endl << "Restarting MELODIC using -d " 
-		      			<< opts.pca_dim.value() 
-		      			<< endl << endl);
-	          }
-	  			}
+				if(no_conv){
+				    retry++;
+					if((opts.approach.value()=="symm")&&(retry == opts.maxRestart.value())){
+						// try final round with defl
+						opts.approach.set_T("defl");
+					    message(endl << "Restarting MELODIC using deflation approach" << endl << endl);	
+					}
+					else{
+					    // try using different dim	
+						if((int)opts.pca_dim.value()*opts.retryfactor.value() > (int)(0.05*melodat.data_dim()+1)){
+		      				opts.pca_dim.set_T((int)opts.pca_dim.value()*opts.retryfactor.value());
+		    			}
+     					else{
+							if((int)opts.pca_dim.value()/opts.retryfactor.value() > (int)(melodat.data_dim())){
+			      				opts.pca_dim.set_T((int)opts.pca_dim.value()/opts.retryfactor.value());
+			    			}
+							else{
+								leaveloop = TRUE;
+							}
+						}	
+					}				
 				}
       } while (no_conv && retry<opts.maxRestart.value() && !leaveloop);	
      

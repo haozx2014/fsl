@@ -337,11 +337,13 @@ else
 	echo "ERROR: Cannot specify both -d and --list";
 	exit 1;
     fi
-    outputname=`basename $anatdir .anat`;
+    outputname=`$FSLDIR/bin/fsl_abspath $anatdir`;
+    outputname=`echo $outputname | sed 's/\.anat$//'`;
     if [ ! -d ${outputname}.anat ] ; then
 	echo "ERROR: Directory ${outputname}.anat not found"
 	exit 1;
     fi
+    inputimage=$anatdir/T1
 fi
 
 # some initial reporting for the log file
@@ -400,9 +402,16 @@ fi
 # required input: ${T1}
 # output: ${T1}
 minval=`$FSLDIR/bin/fslstats ${T1} -p 0`;
+maxval=`$FSLDIR/bin/fslstats ${T1} -p 100`;
 if [ X`echo "if ( $minval < 0 ) { 1 }" | bc -l` = X1 ] ; then
-    run ${FSLDIR}/bin/fslmaths ${T1} -bin -binv zeromask
-    run ${FSLDIR}/bin/fslmaths ${T1} -sub $minval -mas zeromask ${T1} -odt float
+    if [ X`echo "if ( $maxval > 0 ) { 1 }" | bc -l` = X1 ] ; then
+	# if there are just some negative values among the positive ones then reset zero to the min value
+	run ${FSLDIR}/bin/fslmaths ${T1} -sub $minval ${T1} -odt float
+    else
+	# if all values are negative then make them positive, but retain any zeros as zeros
+	run ${FSLDIR}/bin/fslmaths ${T1} -bin -binv zeromask
+	run ${FSLDIR}/bin/fslmaths ${T1} -sub $minval -mas zeromask ${T1} -odt float
+    fi
 fi
 
 
@@ -506,7 +515,7 @@ if [ $do_biasrestore = yes ] ; then
     run $FSLDIR/bin/fslsmoothfill -i ${T1}_fast_totbias -m ${T1}_initfast2_brain_mask2 -o ${T1}_fast_bias
     run $FSLDIR/bin/fslmaths ${T1}_fast_bias -add 1 ${T1}_fast_bias 
     run $FSLDIR/bin/fslmaths ${T1}_fast_totbias -add 1 ${T1}_fast_totbias 
-    # run $FSLDIR/bin/fslmath ${T1}_fast_totbias -sub 1 -mas ${T1}_initfast2_brain_mask -dilall -add 1 ${T1}_fast_bias  # alternative to fslsmoothfill
+    # run $FSLDIR/bin/fslmaths ${T1}_fast_totbias -sub 1 -mas ${T1}_initfast2_brain_mask -dilall -add 1 ${T1}_fast_bias  # alternative to fslsmoothfill
     run $FSLDIR/bin/fslmaths ${T1} -div ${T1}_fast_bias ${T1}_biascorr
 else
     run $FSLDIR/bin/fslmaths ${T1} ${T1}_biascorr
@@ -569,7 +578,7 @@ if [ $do_seg = yes ] ; then
     run $FSLDIR/bin/fslsmoothfill -i ${T1}_fast_totbias -m ${T1}_biascorr_brain_mask2 -o ${T1}_fast_bias
     run $FSLDIR/bin/fslmaths ${T1}_fast_bias -add 1 ${T1}_fast_bias
     run $FSLDIR/bin/fslmaths ${T1}_fast_totbias -add 1 ${T1}_fast_totbias
-    # run $FSLDIR/bin/fslmath ${T1}_fast_totbias -sub 1 -mas ${T1}_biascorr_brain_mask2 -dilall -add 1 ${T1}_fast_bias # alternative to fslsmoothfill
+    # run $FSLDIR/bin/fslmaths ${T1}_fast_totbias -sub 1 -mas ${T1}_biascorr_brain_mask2 -dilall -add 1 ${T1}_fast_bias # alternative to fslsmoothfill
     run $FSLDIR/bin/fslmaths ${T1}_biascorr_init -div ${T1}_fast_bias ${T1}_biascorr
     if [ $do_nonlinreg = yes ] ; then
         # regenerate the standard space version with the new bias field correction applied

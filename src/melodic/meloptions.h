@@ -114,7 +114,13 @@ class MelodicOptions {
   	Option<bool>   joined_whiten;
   	Option<bool>   joined_vn;
 	Option<bool>   dr_pca;
-	Option<float>	 vn_level;
+	Option<bool>   migp;
+	Option<int>    migpN;
+	Option<bool>   migp_shuffle;
+	Option<int>	   migp_factor;
+	Option<bool>   dr;
+	Option<bool>   dr_out;
+	Option<float>  vn_level;
   	Option<int>    numICs;
   	Option<string> approach;
   	Option<string> nonlinearity;
@@ -138,21 +144,21 @@ class MelodicOptions {
   	Option<string> filter; 
 
   	Option<bool>   genreport;
-		Option<string> guireport;
-		Option<string> bgimage;
+	Option<string> guireport;
+	Option<string> bgimage;
   	Option<float>  tr;
   	Option<bool>   logPower;
-		Option<bool>   addsigchng;
-		Option<bool>   allPPCA;
-		Option<bool>   varplots;
-		Option<bool>   varvals;
+	Option<bool>   addsigchng;
+	Option<bool>   allPPCA;
+	Option<bool>   varplots;
+	Option<bool>   varvals;
 
-		Option<string> fn_Tdesign;
-		Option<string> fn_Tcon;
-		Option<string> fn_TconF;
-		Option<string> fn_Sdesign;
-		Option<string> fn_Scon;	
-		Option<string> fn_SconF;	
+	Option<string> fn_Tdesign;
+	Option<string> fn_Tcon;
+	Option<string> fn_TconF;
+	Option<string> fn_Sdesign;
+	Option<string> fn_Scon;	
+	Option<string> fn_SconF;	
 	
   	Option<bool>   output_all;
   	Option<bool>   output_unmix;
@@ -187,7 +193,7 @@ class MelodicOptions {
   	Option<bool> guess_remderiv;
   	Option<bool> temporal;
 
-  	int retrystep;
+  	Option<float> retryfactor;
 
   	void parse_command_line(int argc, char** argv, Log& logger,  const string &p_version);
 
@@ -248,12 +254,30 @@ class MelodicOptions {
    joined_whiten(string("--sep_whiten"), false,
 	   string("switch on separate whitening"), 
 	   false, no_argument, false),
-   joined_vn(string("--sep_vn"), true,
-   	   string("switch on separate variance nomalisation"), 
+   joined_vn(string("--group_vn"), false,
+   	   string("switch on group variance nomalisation (as opposed to separate VN)"), 
        false, no_argument, false),
    dr_pca(string("--mod_pca"), true,
 	   string("switch off modified PCA for concat ICA"),
 	   false, no_argument, false),
+   migp(string("--migp"), false,
+	   string("switch on MIGP data reduction"),
+	   false, no_argument, false),	
+   migpN(string("--migpN"), 0,
+	   string("Number of internal Eigenmaps"),
+	   false, requires_argument, false),
+   migp_shuffle(string("--migp_order"), true,
+	   string("Randomise MIGP file order (default: TRUE)"),
+	   false, no_argument, false),
+   migp_factor(string("--migp_factor"), 2,
+	   string("Internal Factor of mem-threshold relative to number of Eigenmaps (default: 2)"),
+       false, requires_argument, false),
+   dr(string("--dr"), false,
+	   string("Dual Regression (default: TRUE)"),
+	   false, no_argument, false),
+   dr_out(string("--dr_out"), false,
+	   string("Dual Regression output for MIGP/concat ICA"),
+	   false, no_argument, false),	
    vn_level(string("--vn_level"), float(2.3),
 	   string("variance nomalisation threshold level (Z> value is ignored)"), 
 	   false, requires_argument, false),
@@ -261,7 +285,7 @@ class MelodicOptions {
 	   string("numer of IC's to extract (for deflation approach)"), 
 	   false, requires_argument),
    approach(string("-a,--approach"),  string("symm"),
-	   string("approach for decomposition, 2D: defl, symm (default), 3D: tica (default), concat"),
+	   string("approach for decomposition, 2D: defl, symm (default), 3D: tica, concat (default)"),
 	   false, requires_argument),
    nonlinearity(string("--nl"), string("tanh"),
 	   string("\tnonlinearity: gauss, tanh, pow3, pow4"), 
@@ -290,7 +314,7 @@ class MelodicOptions {
    maxNumItt(string("--maxit"),  500,
 	   string("\tmaximum number of iterations before restart"), 
 	   false, requires_argument),
-   maxRestart(string("--maxrestart"),  6,
+   maxRestart(string("--maxrestart"),  -1,
 	   string("maximum number of restarts\n"), 
 	   false, requires_argument),
    rank1interval(string("--rank1interval"),  10,
@@ -440,7 +464,9 @@ class MelodicOptions {
    temporal(string("--temporal"),  false,
 	   string("perform temporal ICA"), 
 	   false, no_argument, false),
-   retrystep(3),
+   retryfactor(string("--retryfactor"), float(0.95),
+		string("multiplicative factor for determining new dim if estimated dim fails to converge"),
+		false, requires_argument, false),
    options(title, usageexmpl)
    {
      try {  
@@ -458,6 +484,12 @@ class MelodicOptions {
 	    options.add(joined_whiten);
 	    options.add(joined_vn);
 		options.add(dr_pca);
+		options.add(migp);
+		options.add(migpN);
+		options.add(migp_shuffle);
+		options.add(migp_factor);
+		options.add(dr);
+		options.add(dr_out);
 	    options.add(vn_level);
 	    options.add(numICs);
 	    options.add(approach);
@@ -521,6 +553,7 @@ class MelodicOptions {
 	    options.add(rescale_nht);
 	    options.add(guess_remderiv);
 	    options.add(temporal);
+		options.add(retryfactor);
      }
      catch(X_OptionError& e) {
        options.usage();
