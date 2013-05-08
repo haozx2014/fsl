@@ -10,7 +10,7 @@ transference as long as there is no financial return (see license below).
 
 
 Files: *
-Copyright: 2012, The University of Oxford
+Copyright: 1999-2013, The University of Oxford
 License:
  FMRIB Software Library, Release 5.0 (c) 2012, The University of Oxford
  (the "Software")
@@ -309,7 +309,7 @@ License:
  OTHER DEALINGS IN THE SOFTWARE.
 
 Files: debian/*
-Copyright: 2005-2012 Michael Hanke <michael.hanke@gmail.com
+Copyright: 2005-2013 Michael Hanke <michael.hanke@gmail.com
 License: GPL-2+
  The Debian packaging is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
