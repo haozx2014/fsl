@@ -1,2 +1,2 @@
 /etc/fsl/#FSLMVERSION#/fsl.sh /etc/fsl/fsl.sh
-/usr/share/man/man1/fsl-#FSLMVERSION#.1.gz /usr/share/man/man1/fsl.1.gz
+/usr/share/man/man1/fsl-#FSLMVERSION#-core.1.gz /usr/share/man/man1/fsl.1.gz

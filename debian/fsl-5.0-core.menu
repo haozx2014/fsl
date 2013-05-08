@@ -1,4 +1,4 @@
-?package(fsl-5.0):\
+?package(fsl-5.0-core):\
     needs="X11" \
     section="Applications/Science/Medicine" \
     title="FSL 5.0" \

@@ -17,9 +17,9 @@ export DH_OPTIONS
 PROJECTS = \
   utils fslio miscmaths newimage libvis first_lib meshclass fslvtkio \
   misc_tcl basisfield warpfns bint shapeModel MVdisc fslsurface libmeshutils \
-  avwutils basil bet2 cluster fast4 feat5 film filmbabe flirt fabber fslvbm \
-  mcflirt melodic misc_c miscvis mm randomise siena slicetimer susan tbss \
-  fnirt fugue asl_mfree misc_scripts fdt first possum sgeutils flameo \
+  avwutils basil bet2 cluster fast4 feat5 film filmbabe flirt fabber baycest \
+  fslvbm mcflirt melodic misc_c miscvis mm randomise siena slicetimer susan \
+  tbss fnirt fugue asl_mfree misc_scripts fdt first possum sgeutils flameo \
   oxford_asl qboot topup ptx2 lesions eddy
 
 # specify FSL extras to be built
@@ -29,29 +29,22 @@ EXTRAS = libprob libcprob cprob
 FSLDIR=$(CURDIR)
 FSLCONFDIR=$(FSLDIR)/config
 
-ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
-	OPTFLAGS = -O0
-else
-	# -O3 seems to kill GCC for some pieces on some architectures, sometimes
-	# (miscmaths, avwutils)
-	OPTFLAGS = -O2
-endif
-
+# apply to FSL as 'ARCHLDFLAGS'
+# 'as-needed' kills everything -- symbols of C libs get confused
+# and results change -- remember cprob:gamma()
+#LDFLAGS = -Wl,--no-undefined -Wl,--as-needed -L/usr/lib/fsl/lib
+LDFLAGS:=$(shell dpkg-buildflags --get LDFLAGS) \
+         -Wl,--no-undefined -L/usr/lib/fsl/lib
 # default compiler flags
+CPPFLAGS:=$(shell dpkg-buildflags --get CPPFLAGS)
 # apply to FSL as 'ANSI_FLAGS'
-CFLAGS = -Wall -g -DHAVE_LIBFREETYPE -fPIC \
+CFLAGS:=$(shell dpkg-buildflags --get CFLAGS) \
+         -DHAVE_LIBFREETYPE -fPIC \
          -I/usr/include/nifti \
          -I/usr/include/gifti \
          -I/usr/include/newmat \
          -I$(FSLDIR)/extras/src/libprob -I$(FSLDIR)/extras/src/libcprob \
          -I$(FSLDIR)/src
-
-# default linker flags
-# apply to FSL as 'ARCHLDFLAGS'
-LDFLAGS = -Wl,--no-undefined -L/usr/lib/fsl/lib
-# 'as-needed' kills everything -- symbols of C libs get confused
-# and results change -- remember cprob:gamma()
-#LDFLAGS = -Wl,--no-undefined -Wl,--as-needed -L/usr/lib/fsl/lib
 
 # where are the internal libs
 FSL_LIBRARY_PATH=$(CURDIR)/lib
@@ -67,7 +60,7 @@ DEB_BUILD_ENV=LD_LIBRARY_PATH=$(FSL_LIBRARY_PATH)$${LD_LIBRARY_PATH:+:$${LD_LIBR
 		FSLCONFDIR="$(FSLCONFDIR)" \
 		DEB_DESTDIR="$(DEB_DESTDIR)" \
 		OPTFLAGS="$(OPTFLAGS)" \
-		ANSI_FLAGS="$(CFLAGS)" \
+		ANSI_FLAGS="$(CFLAGS) $(CPPFLAGS)" \
 		DEPENDFLAGS="$(CFLAGS)" \
 		ARCHLDFLAGS="$(LDFLAGS)"
 
@@ -79,15 +72,15 @@ controlfiles:
 	done
 	# renamed files that need to have a version-specific name
 	for suffix in 1 desktop dirs install links lintian-overrides manpages menu docs; do \
-		for prefix in fsl fsl-doc nudge; do \
-		[ -f debian/$$prefix.$$suffix ] &&  \
-			mv debian/$$prefix.$$suffix debian/$$prefix-$(FSLMAJORVERSION).$$suffix || true ; \
+		for prefix in 'core' 'doc'; do \
+		[ -f debian/fsl-$$prefix.$$suffix ] &&  \
+			mv debian/fsl-$$prefix.$$suffix debian/fsl-$(FSLMAJORVERSION)-$$prefix.$$suffix || true ; \
 		done ; \
 	done
 	# and rename the meta-package files
 	for f in debian/meta.*; do \
 		target=$$(basename $$f); suffix=$${target#*.} ; \
-		mv $$f debian/fsl.$$suffix; \
+		mv $$f debian/fsl-core.$$suffix; \
 	done
 
 cleancontrolfiles:
@@ -95,9 +88,9 @@ cleancontrolfiles:
 	for f in debian/templates/*; do\
 		rm -f debian/$$(basename $$f) ; \
 	done
-	rm -f debian/fsl.preinst
+	rm -f debian/fsl-core.preinst
 	# versioned files
-	rm -f debian/{fsl,fsl-doc,nudge}-$(FSLMAJORVERSION).{1,desktop,dirs,install,links,lintian-overrides,manpages,menu,preinst,docs}
+	rm -f debian/fsl-$(FSLMAJORVERSION)-{core,doc}.{1,desktop,dirs,install,links,lintian-overrides,manpages,menu,preinst,docs}
 
 # build and install extra
 biextra-%:
@@ -158,8 +151,8 @@ build-stamp: instdir biextras biprojs
 	# for all relevant binaries installed by the versioned FSL package
 	for f in $$(find debian/tmp/bin \! -type d \! -name Runtcl); do \
 		bname=$$(basename $$f); \
-		echo "/usr/lib/fsl/$(FSLMAJORVERSION)/fsl_app_wrapper /usr/bin/fsl$(FSLMAJORVERSION)-$$bname" >> debian/fsl-$(FSLMAJORVERSION).links ; \
-		echo "/usr/share/man/man1/fsl-$(FSLMAJORVERSION).1.gz /usr/share/man/man1/fsl$(FSLMAJORVERSION)-$${bname}.1.gz" >> debian/fsl-$(FSLMAJORVERSION).links ; \
+		echo "/usr/lib/fsl/$(FSLMAJORVERSION)/fsl_app_wrapper /usr/bin/fsl$(FSLMAJORVERSION)-$$bname" >> debian/fsl-$(FSLMAJORVERSION)-core.links ; \
+		echo "/usr/share/man/man1/fsl-$(FSLMAJORVERSION).1.gz /usr/share/man/man1/fsl$(FSLMAJORVERSION)-$${bname}.1.gz" >> debian/fsl-$(FSLMAJORVERSION)-core.links ; \
 	done
 	touch $@
 
@@ -238,9 +231,6 @@ binary-common:
 binary-indep: install
 	dh_installdirs -i
 
-	# cleanup doc path
-	-rm debian/tmp/doc/fsl/fsl_installer.sh
-
 	$(MAKE) -f debian/rules DH_OPTIONS=-i binary-common
 
 
@@ -249,10 +239,10 @@ binary-arch: install
 	dh_installdirs -a
 
 	# install the stylesheet
-	cp -r doc/fsl.css debian/fsl-$(FSLMAJORVERSION)/usr/share/fsl/$(FSLMAJORVERSION)/doc
+	cp -r doc/fsl.css debian/fsl-$(FSLMAJORVERSION)-core/usr/share/fsl/$(FSLMAJORVERSION)/doc
 
 	# remove previous link to make repeated builds work
-	-rm debian/fsl-$(FSLMAJORVERSION)/usr/share/fsl/$(FSLMAJORVERSION)/etc/fslconf/{feat.tcl,fsl.sh}
+	-rm debian/fsl-$(FSLMAJORVERSION)-core/usr/share/fsl/$(FSLMAJORVERSION)/etc/fslconf/{feat.tcl,fsl.sh}
 
 	# set execute permission for GUI application wrapper
 	chmod +x debian/fsl_app_wrapper
