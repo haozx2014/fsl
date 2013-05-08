@@ -3,6 +3,13 @@ fsl (5.0.3-1) UNRELEASED; urgency=low
   * New upstream release:
     - spdoijfs
   * Remove fabber patches -- merged upstream.
+  * Use dpkg-buildflags to obtain default compiler flags. This also enables
+    various hardening options.
+  * Rename 'fsl' to 'fsl-core', 'fsl-5.0' to 'fsl-5.0-core', and 'fsl-doc-5.0'
+    to 'fsl-5.0-doc'. See related entry in NEWS for the rational. Appropriate
+    transitional dummy packages have been added.
+  * Adjusted dependencies to recommend/suggest alternative packages for DICOM
+    image conversion and distributed computing.
 
  -- Michael Hanke <mih@debian.org>  Wed, 08 May 2013 08:38:38 +0200
 

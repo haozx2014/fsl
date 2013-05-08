@@ -41,7 +41,8 @@ case "$1" in
         # Move whole config dir to a version-specific location when upgrading
         # from an old unversioned installation
         if dpkg --compare-versions "$2" le "4.1.6-2~"; then
-            if [ -e /etc/fsl/fsl.sh ]; then
+            # only if a real file, not a symlink
+            if [ -f /etc/fsl/fsl.sh -a ! -L /etc/fsl/fsl.sh ] ; then
                 echo "Moving FSL config file to /etc/fsl/5.0."
                 if [ ! -d /etc/fsl/5.0 ]; then
                     mkdir /etc/fsl/5.0

@@ -36,15 +36,15 @@ FSLCONFDIR=$(FSLDIR)/config
 LDFLAGS:=$(shell dpkg-buildflags --get LDFLAGS) \
          -Wl,--no-undefined -L/usr/lib/fsl/lib
 # default compiler flags
-CPPFLAGS:=$(shell dpkg-buildflags --get CPPFLAGS)
 # apply to FSL as 'ANSI_FLAGS'
 CFLAGS:=$(shell dpkg-buildflags --get CFLAGS) \
-         -DHAVE_LIBFREETYPE -fPIC \
-         -I/usr/include/nifti \
-         -I/usr/include/gifti \
-         -I/usr/include/newmat \
-         -I$(FSLDIR)/extras/src/libprob -I$(FSLDIR)/extras/src/libcprob \
-         -I$(FSLDIR)/src
+        $(shell dpkg-buildflags --get CPPFLAGS) \
+        -DHAVE_LIBFREETYPE -fPIC \
+        -I/usr/include/nifti \
+        -I/usr/include/gifti \
+        -I/usr/include/newmat \
+        -I$(FSLDIR)/extras/src/libprob -I$(FSLDIR)/extras/src/libcprob \
+        -I$(FSLDIR)/src
 
 # where are the internal libs
 FSL_LIBRARY_PATH=$(CURDIR)/lib

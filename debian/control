@@ -26,12 +26,36 @@ Vcs-Git: git://git.debian.org/git/pkg-exppsy/fsl.git
 XS-Autobuild: yes
 XS-DM-Upload-Allowed: yes
 
+Package: fsl
+Architecture: all
+Depends: non-free/fsl-core,
+         ${misc:Depends},
+Section: non-free/oldlibs
+Description: transitional dummy package
+ This is a transitional dummy package. it can safely be removed.
+
+Package: fsl-5.0
+Architecture: all
+Depends: fsl-5.0-core,
+         ${misc:Depends}
+Section: non-free/oldlibs
+Description: transitional dummy package
+ This is a transitional dummy package. it can safely be removed.
+
+Package: fsl-doc-5.0
+Architecture: all
+Depends: fsl-5.0-doc,
+         ${misc:Depends}
+Section: non-free/oldlibs
+Description: transitional dummy package
+ This is a transitional dummy package. it can safely be removed.
+
 Package: fsl-core
 Architecture: all
-Depends: ${misc:Depends},
-         fsl-5.0-core
-Replaces: fsl
-Conflicts: fsl
+Depends:  fsl-5.0-core,
+          ${misc:Depends},
+Replaces: fsl (<< 5.0.3)
+Breaks: fsl (<< 5.0.3)
 Description: metapackage for the latest version of FSL
  FSL is a comprehensive library of image analysis and statistical tools
  for fMRI, MRI and DTI brain imaging data. The suite consists of various
@@ -47,28 +71,28 @@ Description: metapackage for the latest version of FSL
 
 Package: fsl-5.0-core
 Architecture: any
-Depends: ${shlibs:Depends},
-         ${misc:Depends},
-         mozilla-firefox | www-browser,
+Replaces: fsl-5.0 (<< 5.0.3)
+Breaks: fsl-5.0 (<< 5.0.3)
+Depends: mozilla-firefox | www-browser,
          tcsh | c-shell,
          tk8.4 (>=8.4.7),
          tcl8.4 (>=8.4.7),
          bc,
          dc,
-         python
+         python,
+         ${shlibs:Depends},
+         ${misc:Depends}
 Recommends: fsl-5.0-doc (= ${source:Version}),
             fsl-atlases,
             fslview
 Suggests: fsl-feeds,
           octave | ${octave:Depends},
-          dicomnifti,
-          fsl-possum-data,
-          fsl-first-data,
-          gridengine-client
+          mriconvert | dicomnifti,
+          fsl-complete,
+          condor | gridengine-client
 Conflicts: fsl-fslview,
-           fsl-doc-4.1 (<< 4.1.9-5~),
-           fsl-5.0
-Replaces: fsl-5.0
+           fsl-doc-4.1 (<< 4.1.9-5~)
+Provides: fsl
 Description: analysis tools for FMRI, MRI and DTI brain imaging
  FSL is a comprehensive library of image analysis and statistical tools
  for fMRI, MRI and DTI brain imaging data. The suite consists of various
@@ -92,6 +116,8 @@ Architecture: all
 Depends: ${misc:Depends}
 Recommends: fslview-doc
 Provides: fsl-doc
+Replaces: fsl-doc-5.0 (<< 5.0.3)
+Breaks: fsl-doc-5.0 (<< 5.0.3)
 Description: documentation for FSL
  FSL is a comprehensive library of image analysis and statistical tools
  for fMRI, MRI and DTI brain imaging data. The suite consists of various
