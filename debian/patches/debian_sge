@@ -153,11 +153,10 @@ Description: out-of-the-box compatibility with Debian's SGE
  date
 --- a/src/sgeutils/fsl_sub
 +++ b/src/sgeutils/fsl_sub
-@@ -70,6 +70,14 @@
+@@ -70,6 +70,13 @@
  # cluster.
  ###########################################################################
  
-+fslcluster_cell_settings=/usr/local/share/sge/default/common/settings.sh
 +# Domain mail should be sent to if necessary. The complete address will be
 +# `whoami`@${fslcluster_mailto_domain}
 +fslcluster_mailto_domain=localhost
@@ -168,22 +167,8 @@ Description: out-of-the-box compatibility with Debian's SGE
  
  ###########################################################################
  # The following section determines what to do when fsl_sub is called
-@@ -84,10 +92,11 @@
- # cluster to be used.
- ###########################################################################
- 
-+# try autodetecting SGE, but see ovveride switch FSLPARALLEL below
- METHOD=SGE
- if [ "x$SGE_ROOT" = "x" ] ; then
--    if [ -f /usr/local/share/sge/default/common/settings.sh ] ; then
--	. /usr/local/share/sge/default/common/settings.sh
-+    if [ -f ${fslcluster_cell_settings} ] ; then
-+	. ${fslcluster_cell_settings}
-     elif [ -f /usr/local/sge/default/common/settings.sh ] ; then
- 	. /usr/local/sge/default/common/settings.sh
-     else
-@@ -95,6 +104,22 @@
-     fi
+@@ -85,6 +92,22 @@
+ 	METHOD=NONE
  fi
  
 +# define the default 'qsub' implementation to be used for cluster submission
@@ -205,7 +190,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  # stop submitted scripts from submitting jobs themselves
  if [ "X$FSLSUBALREADYRUN" = "Xtrue" ] ; then
      METHOD=NONE
-@@ -116,15 +141,21 @@
+@@ -106,16 +129,22 @@
  
  map_qname ()
  {
@@ -218,12 +203,13 @@ Description: out-of-the-box compatibility with Debian's SGE
 -    else
 -	queue=verylong.q
 -    fi
+-    queueCmd=" -q $queue " 
 +	# for Debian we can't do the stuff below, because it would be hard
 +	# to determine how particular queues are meant to be used on any given
 +	# system. Instead of translating into a queue name we specify proper
 +	# resource limits, and let SGE decide what queue matches
 +	# (qsub wants the time limit in seconds)
-+	queue_opts="$queue_opts -l h_rt=$(echo "$1 * 60" | bc)"
++	queueCmd="$queueCmd -l h_rt=$(echo "$1 * 60" | bc)"
 +    #if [ $1 -le 20 ] ; then
 +	#queue=veryshort.q
 +    #elif [ $1 -le 120 ] ; then
@@ -233,10 +219,11 @@ Description: out-of-the-box compatibility with Debian's SGE
 +    #else
 +	#queue=verylong.q
 +    #fi
++    #queueCmd=" -q $queue "
+ 
      #echo "Estimated time was $1 mins: queue name is $queue"
  }
- 
-@@ -149,13 +180,13 @@
+@@ -141,13 +170,13 @@
  $command -q short.q gzip *.img *.hdr
  $command -a darwin regscript rawdata outputdir ...
  
@@ -255,7 +242,7 @@ Description: out-of-the-box compatibility with Debian's SGE
    -j <jid>              Place a hold on this task until job jid has completed
    -t <filename>         Specify a task file of commands to execute in parallel
    -N <jobname>          Specify jobname as it will appear on queue
-@@ -168,24 +199,26 @@
+@@ -160,24 +189,26 @@
                          <threads> specifies the number of threads to run
    -v                    Verbose mode.
  
@@ -296,34 +283,25 @@ Description: out-of-the-box compatibility with Debian's SGE
  
  nargs=$#
  if [ $nargs -eq 0 ] ; then
-@@ -220,9 +253,11 @@
+@@ -212,10 +243,13 @@
  # change. It also sets up the basic emailing control.
  ###########################################################################
  
 -queue=long.q
+-queueCmd=" -q long.q "
 -mailto=`whoami`@fmrib.ox.ac.uk
 -MailOpts="n"
 +# SGE should already have a default queue, but allow for overwrite
-+queue=${FSLCLUSTER_DEFAULT_QUEUE:-}
-+queue_opts=""
++queueCmd=""
++if [ "x$FSLCLUSTER_DEFAULT_QUEUE" != "x" ] ; then
++    queueCmd=" -q $FSLCLUSTER_DEFAULT_QUEUE "
++fi
 +mailto=`whoami`@${fslcluster_mailto_domain}
 +MailOpts=${fslcluster_mailopts}
  
  
  ###########################################################################
-@@ -335,6 +370,11 @@
- done
- shift
- 
-+# if there is a queue specified, set up corresponding option
-+if [ "x$queue" != "x" ] ; then
-+	queue_opts="$queue_opts -q $queue"
-+fi
-+
- ###########################################################################
- # Don't change the following (but keep scrolling down!)
- ###########################################################################
-@@ -393,6 +435,11 @@
+@@ -387,6 +421,11 @@
  		exit -1
  	    fi
  
@@ -335,24 +313,24 @@ Description: out-of-the-box compatibility with Debian's SGE
              # Get a list of queues configured for this PE and confirm that the queue
              # we have submitted to has that PE set up.
  	    qstat -g c -pe $peName 2>&1 >/dev/null
-@@ -417,9 +464,9 @@
+@@ -411,9 +450,9 @@
  
  	if [ "x$tasks" = "x" ] ; then
  	    if [ $scriptmode -ne 1 ] ; then
--		sge_command="qsub -V -cwd -shell n -b y -r y -q $queue $pe_options -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold"
-+		sge_command="$qsub_cmd -V -cwd -shell n -b y -r y $queue_opts $pe_options -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold"
+-		sge_command="qsub -V -cwd -shell n -b y -r y $queueCmd $pe_options -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold"
++		sge_command="$qsub_cmd -V -cwd -shell n -b y -r y $queueCmd $pe_options -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold"
  	    else
 -		sge_command="qsub $LogOpts $sge_arch $sge_hold"
 +		sge_command="$qsub_cmd $LogOpts $sge_arch $sge_hold"
  	    fi
  	    if [ $verbose -eq 1 ] ; then 
  		echo sge_command: $sge_command >&2
-@@ -427,7 +474,7 @@
+@@ -421,7 +460,7 @@
  	    fi
  	    exec $sge_command $@ | awk '{print $3}'
  	else
--	    sge_command="qsub -V -cwd -q $queue $pe_options -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold $sge_tasks"
-+	    sge_command="$qsub_cmd -V -cwd $queue_opts $pe_options -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold $sge_tasks"
+-	    sge_command="qsub -V -cwd $queueCmd $pe_options -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold $sge_tasks"
++	    sge_command="$qsub_cmd -V -cwd $queueCmd $pe_options -M $mailto -N $JobName -m $MailOpts $LogOpts $sge_arch $sge_hold $sge_tasks"
  	    if [ $verbose -eq 1 ] ; then 
  		echo sge_command: $sge_command >&2
  		echo control file: $taskfile >&2

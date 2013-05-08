@@ -1,3 +1,11 @@
+fsl (5.0.3-1) UNRELEASED; urgency=low
+
+  * New upstream release:
+    - spdoijfs
+  * Remove fabber patches -- merged upstream.
+
+ -- Michael Hanke <mih@debian.org>  Wed, 08 May 2013 08:38:38 +0200
+
 fsl (5.0.2.2-1) neurodebian; urgency=low
 
   * New upstream release.
