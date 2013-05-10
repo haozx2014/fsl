@@ -3,9 +3,9 @@
     
     melhlprfns.cc - misc functions
 
-    Christian F. Beckmann, FMRIB Image Analysis Group
+    Christian F. Beckmann, FMRIB Analysis Group
     
-    Copyright (C) 1999-2008 University of Oxford */
+    Copyright (C) 1999-2013 University of Oxford */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -104,11 +104,11 @@ namespace Melodic{
 
   Matrix convert_to_pbsc(Matrix& Mat);
 
-  RowVector varnorm(Matrix& in, int dim = 30, float level = 1.6);
+  RowVector varnorm(Matrix& in, int dim = 30, float level = 1.6, int econ = 0);
        void varnorm(Matrix& in, const RowVector& vars);
-  RowVector varnorm(Matrix& in, Matrix& Corr, int dim = 30, float level = 1.6);
+  RowVector varnorm(Matrix& in, Matrix& Corr, int dim = 30, float level = 1.6, int econ = 0);
 
-  Matrix SP2(const Matrix& in, const Matrix& weights, bool econ = 0);
+  Matrix SP2(const Matrix& in, const Matrix& weights, int econ = 20000);
   void SP3(Matrix& in, const Matrix& weights);
 
   RowVector Feta(int n1,int n2);
@@ -116,8 +116,8 @@ namespace Melodic{
 
   Matrix corrcoef(const Matrix& in1, const Matrix& in2);
   Matrix corrcoef(const Matrix& in1, const Matrix& in2, const Matrix& part);
-  Matrix calc_corr(const Matrix& in, bool econ = 1);
-  Matrix calc_corr(const Matrix& in, const Matrix& weights, bool econ = 1);
+  Matrix calc_corr(const Matrix& in, int econ = 20000);
+  Matrix calc_corr(const Matrix& in, const Matrix& weights, int econ = 20000);
 
   float calc_white(const Matrix& tmpE, const RowVector& tmpD, const RowVector& PercEV, int dim, Matrix& param, Matrix& paramS, Matrix& white, Matrix& dewhite);
   float calc_white(const Matrix& tmpE, const RowVector& tmpD, const RowVector& PercEV, int dim, Matrix& white, Matrix& dewhite);
@@ -125,8 +125,8 @@ namespace Melodic{
   void calc_white(const Matrix& tmpE, const RowVector& tmpD, int dim, Matrix& white, Matrix& dewhite);
   void calc_white(const Matrix& Corr, int dim, Matrix& white, Matrix& dewhite);
   
-  void std_pca(const Matrix& Mat, Matrix& Corr, Matrix& evecs, RowVector& evals);
-  void std_pca(const Matrix& Mat, const Matrix& weights, Matrix& Corr, Matrix& evecs, RowVector& evals);
+  void std_pca(const Matrix& Mat, Matrix& Corr, Matrix& evecs, RowVector& evals, int econ = 20000);
+  void std_pca(const Matrix& Mat, const Matrix& weights, Matrix& Corr, Matrix& evecs, RowVector& evals, int econ = 20000);
   void em_pca(const Matrix& Mat, Matrix& evecs, RowVector& evals, int num_pc = 1, int iter = 20);
   void em_pca(const Matrix& Mat, Matrix& guess, Matrix& evecs, RowVector& evals, int num_pc = 1, int iter = 20);
 
@@ -152,7 +152,7 @@ namespace Melodic{
   ColumnVector gen_ar(const ColumnVector& in, int maxorder = 1);
   Matrix gen_ar(const Matrix& in, int maxorder);
   Matrix gen_arCorr(const Matrix& in, int maxorder);
-  
+ 
 	class basicGLM{
 		public:
 		

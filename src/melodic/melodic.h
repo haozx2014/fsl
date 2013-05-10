@@ -3,9 +3,9 @@
     
     melodic.h - main program header
 
-    Christian F. Beckmann, FMRIB Image Analysis Group
+    Christian F. Beckmann, FMRIB Analysis Group
     
-    Copyright (C) 1999-2008 University of Oxford */
+    Copyright (C) 1999-2013 University of Oxford */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -126,13 +126,13 @@
 
 namespace Melodic{
 
-const string version = "3.12";  
+const string version = "3.13";  
 
 // The two strings below specify the title and example usage that is	
 // printed out as the help or usage message
 const string title=string("MELODIC (Version ")+version+")"+
 		string("\n Multivariate Exploratory Linear Optimised Decomposition into Independent Components\n")+
-		string(" Copyright(c) 2001-2008, University of Oxford (Christian F. Beckmann)");
+		string("\nAuthor: Christian F. Beckmann \n Copyright(c) 2001-2013 University of Oxford");
 
 const string usageexmpl=string(" melodic -i <filename> <options>")+
 		   string("\n \t \t to run melodic")+

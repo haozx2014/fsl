@@ -3,9 +3,9 @@
     
     meloptions.h - class for command line options
 
-    Christian F. Beckmann, FMRIB Image Analysis Group
+    Christian F. Beckmann, FMRIB Analysis Group
     
-    Copyright (C) 1999-2008 University of Oxford */
+    Copyright (C) 1999-2013 University of Oxford */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -126,6 +126,7 @@ class MelodicOptions {
   	Option<string> nonlinearity;
 
   	Option<bool>   varnorm;
+ 	Option<bool>   varnorm2;
   	Option<bool>   pbsc;
   	Option<bool>   pspec;
   	Option<string> segment;
@@ -194,6 +195,7 @@ class MelodicOptions {
   	Option<bool> temporal;
 
   	Option<float> retryfactor;
+  	Option<int> econ;
 
   	void parse_command_line(int argc, char** argv, Log& logger,  const string &p_version);
 
@@ -254,9 +256,9 @@ class MelodicOptions {
    joined_whiten(string("--sep_whiten"), false,
 	   string("switch on separate whitening"), 
 	   false, no_argument, false),
-   joined_vn(string("--group_vn"), false,
-   	   string("switch on group variance nomalisation (as opposed to separate VN)"), 
-       false, no_argument, false),
+   joined_vn(string("--sep_vn"), true,
+   	   string("switch on separate variance nomalisation (as opposed to separate VN)"), 
+       false, no_argument),
    dr_pca(string("--mod_pca"), true,
 	   string("switch off modified PCA for concat ICA"),
 	   false, no_argument, false),
@@ -266,14 +268,14 @@ class MelodicOptions {
    migpN(string("--migpN"), 0,
 	   string("Number of internal Eigenmaps"),
 	   false, requires_argument, false),
-   migp_shuffle(string("--migp_order"), true,
+   migp_shuffle(string("--migp_shuffle"), true,
 	   string("Randomise MIGP file order (default: TRUE)"),
 	   false, no_argument, false),
    migp_factor(string("--migp_factor"), 2,
 	   string("Internal Factor of mem-threshold relative to number of Eigenmaps (default: 2)"),
        false, requires_argument, false),
    dr(string("--dr"), false,
-	   string("Dual Regression (default: TRUE)"),
+	   string("Dual Regression (default: false)"),
 	   false, no_argument, false),
    dr_out(string("--dr_out"), false,
 	   string("Dual Regression output for MIGP/concat ICA"),
@@ -293,6 +295,9 @@ class MelodicOptions {
    varnorm(string("--vn,--varnorm"), true,
 	   string("switch off variance normalisation"), 
 	   false, no_argument),
+   varnorm2(string("--vn2"), true,
+		string("switch off 2nd level variance normalisation"), 
+		false, no_argument, false),
    pbsc(string("--pbsc"), false,
 	   string("        switch on conversion to percent BOLD signal change"), 
 	   false, no_argument, false),
@@ -305,10 +310,10 @@ class MelodicOptions {
    tsmooth(string("--spca"),  false,
 	   string("smooth the eigenvectors prior to IC decomposition"), 
 	    false, no_argument, false),
-   epsilon(string("--eps,--epsilon"), 0.00005,
+   epsilon(string("--eps"), 0.00005,
 	   string("minimum error change"), 
 	   false, requires_argument),
-   epsilonS(string("--epsS,--epsilonS"), 0.03,
+   epsilonS(string("--epsS"), 0.03,
 	   string("minimum error change for rank-1 approximation in TICA"), 
 	   false, requires_argument),
    maxNumItt(string("--maxit"),  500,
@@ -327,16 +332,16 @@ class MelodicOptions {
 	   string("\tswitch off mixture modelling on IC maps\n "), 
 	   false, no_argument),
    ICsfname(string("--ICs"), string(""),
-	   string("\tfilename of the IC components file for mixture modelling"), 
+	   string("\tinput filename of the IC components file for mixture modelling"), 
 	   false, requires_argument),
    filtermix(string("--mix"),  string(""),
-	   string("\tmixing matrix for mixture modelling / filtering"), 
+	   string("\tinput filename of mixing matrix for mixture modelling / filtering"), 
 	   false, requires_argument),
    smodename(string("--smode"),  string(""),
-	   string("\tmatrix of session modes for report generation"), 
+	   string("\tinput filename of matrix of session modes for report generation"), 
 	   false, requires_argument),
    filter(string("-f,--filter"),  string(""),
-	   string("component numbers to remove\n "), 
+	   string("list of component numbers to remove\n "), 
 	   false, requires_argument),
    genreport(string("--report"), false,
 	   string("generate Melodic web report"), 
@@ -467,6 +472,9 @@ class MelodicOptions {
    retryfactor(string("--retryfactor"), float(0.95),
 		string("multiplicative factor for determining new dim if estimated dim fails to converge"),
 		false, requires_argument, false),
+   econ(string("--econ"), 20000, 
+	   string("set ctrl parameter for helperfns econ mode"),
+       false, requires_argument, false),
    options(title, usageexmpl)
    {
      try {  
@@ -495,6 +503,7 @@ class MelodicOptions {
 	    options.add(approach);
 	    options.add(nonlinearity);
 	    options.add(varnorm);
+		options.add(varnorm2);
 	    options.add(pbsc);
 	    options.add(pspec);
 	    options.add(segment);
@@ -554,6 +563,7 @@ class MelodicOptions {
 	    options.add(guess_remderiv);
 	    options.add(temporal);
 		options.add(retryfactor);
+		options.add(econ);
      }
      catch(X_OptionError& e) {
        options.usage();

@@ -105,6 +105,9 @@ public:
 	    const Utilities::Option<string>&            cout,
 	    const Utilities::Option<string>&            fout,
 	    const Utilities::Option<string>&            iout,
+	    const Utilities::Option<string>&            dfout,
+	    const Utilities::Option<string>&            rbmout,
+	    const Utilities::Option<string>&            jacout,
 	    const Utilities::Option<string>&            lout,
 	    const Utilities::Option<vector<float> >&    warpres,
 	    const Utilities::Option<vector<int> >&      subsamp,
@@ -138,6 +141,9 @@ public:
   }
   const std::string& FieldFname() const { return(_fout); }
   const std::string& ImaOutFname() const { return(_iout); }
+  const std::string& DisplacementFieldBaseFname() const { return(_dfout); }
+  const std::string& RigidBodyBaseFname() const { return(_rbmout); }
+  const std::string& JacobianBaseFname() const { return(_jacout); }
   const NEWMAT::Matrix PhaseEncodeVectors() const { return(_datafile.PhaseEncodeVectors()); }
   const NEWMAT::ColumnVector ReadoutTimes() const { return(_datafile.ReadOutTimes()); }
   unsigned int NoOfLevels() const { return(_nlev); }
@@ -186,6 +192,9 @@ private:
   mutable std::string                    _out;
   std::string                            _fout;
   std::string                            _iout;
+  std::string                            _dfout;
+  std::string                            _rbmout;
+  std::string                            _jacout;
   mutable std::string                    _lout;
   TopupDatafileReader                    _datafile;
   std::vector<float>                     _warpres;

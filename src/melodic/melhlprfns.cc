@@ -3,9 +3,9 @@
     
     melhlprfns.cc - misc functions
 
-    Christian F. Beckmann, FMRIB Image Analysis Group
+    Christian F. Beckmann, FMRIB Analysis Group
     
-    Copyright (C) 1999-2008 University of Oxford */
+    Copyright (C) 1999-2013 University of Oxford */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -185,12 +185,12 @@ namespace Melodic{
     return meanimg;
   }  //void convert_to_pbsc   
 
-  RowVector varnorm(Matrix& in, int dim, float level)
+  RowVector varnorm(Matrix& in, int dim, float level, int econ)
   {
     Matrix Corr;
-    Corr = calc_corr(in);
+    Corr = calc_corr(in,econ);
     RowVector out;
-    out = varnorm(in,Corr,dim,level);
+    out = varnorm(in,Corr,dim,level, econ);
     return out;
   }  //RowVector varnorm
 
@@ -201,13 +201,13 @@ namespace Melodic{
 		}
 	}
 	
-  RowVector varnorm(Matrix& in, Matrix& Corr, int dim, float level)
+  RowVector varnorm(Matrix& in, Matrix& Corr, int dim, float level, int econ)
   { 
 	
     Matrix tmpE, white, dewhite;
     RowVector tmpD, tmpD2;
 
-    std_pca(remmean(in,2), Corr, tmpE, tmpD);
+    std_pca(remmean(in,2), Corr, tmpE, tmpD, econ);
     calc_white(tmpE,tmpD, dim, white, dewhite);
     
     Matrix ws = white * in;
@@ -226,11 +226,11 @@ namespace Melodic{
     return tmpD;
   }  //RowVector varnorm
 
-  Matrix SP2(const Matrix& in, const Matrix& weights, bool econ)
+  Matrix SP2(const Matrix& in, const Matrix& weights, int econ)
   {
     Matrix Res;
     Res = in;
-    if(econ){
+    if(econ>0){
       ColumnVector tmp;
       for(int ctr=1; ctr <= in.Ncols(); ctr++){
 	tmp = in.Column(ctr);
@@ -271,16 +271,37 @@ namespace Melodic{
 	return out;
   }
 
-  Matrix calc_corr(const Matrix& in, bool econ)
-  {
+  Matrix calc_corr(const Matrix& in, int econ)
+  { 
     Matrix Res;
-    Res = zeros(in.Nrows(),in.Nrows());
-    if(econ){
-      ColumnVector tmp;
-      for(int ctr=1; ctr <= in.Ncols(); ctr++){
-	tmp = in.Column(ctr);
-	tmp = tmp - mean(tmp).AsScalar();
-	Res += (tmp * tmp.t()) / in.Ncols();
+	int nrows=in.Nrows();
+	int ncols=in.Ncols();    
+    Res = zeros(nrows,nrows);
+
+    if(econ>0){
+      RowVector colmeans(ncols);
+	  for (int n=1; n<=ncols; n++) {
+        colmeans(n)=0;
+        for (int m=1; m<=nrows; m++) {
+          colmeans(n)+=in(m,n);
+        }
+        colmeans(n)/=nrows;
+      }
+      int dcol = econ;
+	  Matrix suba; 
+
+      for(int ctr=1; ctr <= in.Ncols(); ctr+=dcol){
+	    suba=in.SubMatrix(1,nrows,ctr,Min(ctr+dcol-1,ncols));
+		int scolmax = suba.Ncols();
+
+		for (int n=1; n<=scolmax; n++) {
+	        double cmean=colmeans(ctr + n - 1);
+	        for (int m=1; m<=nrows; m++) {
+	          suba(m,n)-=cmean;
+	        }
+	    }
+		
+	    Res += suba*suba.t() / ncols;
       }
     }
     else
@@ -288,23 +309,43 @@ namespace Melodic{
     return Res;
   }  //Matrix calc_corr
 
-  Matrix calc_corr(const Matrix& in, const Matrix& weights, bool econ)
+  Matrix calc_corr(const Matrix& in, const Matrix& weights, int econ)
   {
     Matrix Res;
-    Res = zeros(in.Nrows(),in.Nrows());
-    Matrix localweights;
+	int nrows=in.Nrows();
+	int ncols=in.Ncols();    
+    Res = zeros(nrows,nrows);
+    RowVector localweights;
     if(weights.Storage() == 0)
-      localweights = ones(1,in.Ncols());
+      localweights = ones(1,ncols);
     else
       localweights = weights;
-    if(econ){
-      ColumnVector tmp;
-      for(int ctr=1; ctr <= in.Ncols(); ctr++){
-	tmp = in.Column(ctr);
-	tmp = tmp - mean(tmp).AsScalar();
-	tmp = tmp * localweights(1,ctr);
-	Res += (tmp * tmp.t()) / in.Ncols();
-      }
+    if(econ>0){	
+		RowVector colmeans(ncols);
+		  for (int n=1; n<=ncols; n++) {
+	        colmeans(n)=0;
+	        for (int m=1; m<=nrows; m++) {
+	          colmeans(n)+=in(m,n);
+	        }
+	        colmeans(n)/=nrows;
+	      }
+	      int dcol = econ;
+		  Matrix suba; 
+
+	      for(int ctr=1; ctr <= in.Ncols(); ctr+=dcol){
+		    suba=in.SubMatrix(1,nrows,ctr,Min(ctr+dcol-1,ncols));
+			int scolmax = suba.Ncols();
+
+			for (int n=1; n<=scolmax; n++) {
+		        double cmean=colmeans(ctr + n - 1);
+				double locw =localweights(ctr + n - 1);
+		        for (int m=1; m<=nrows; m++) {
+		          suba(m,n)-=cmean;
+			      suba(m,n)*=	locw;
+		        }
+		    }
+		    Res += suba*suba.t() / ncols;
+	      }
     }
     else{
       Res = SP2(in,localweights);
@@ -312,6 +353,8 @@ namespace Melodic{
     }
     return Res;
   }  //Matrix calc_corr
+
+
 
   float calc_white(const Matrix& tmpE, const RowVector& tmpD, const RowVector& PercEV,  int dim, Matrix& param, Matrix& paramS, Matrix& white, Matrix& dewhite)
   {
@@ -403,12 +446,12 @@ namespace Melodic{
   }  //Matrix calc_white
   
  
-  void std_pca(const Matrix& Mat, const Matrix& weights, Matrix& Corr, Matrix& evecs, RowVector& evals)
+  void std_pca(const Matrix& Mat, const Matrix& weights, Matrix& Corr, Matrix& evecs, RowVector& evals, int econ)
   {
     if(weights.Storage()>0)
-      Corr << calc_corr(Mat, weights);
+      Corr << calc_corr(Mat, weights, econ);
     else
-      Corr << calc_corr(Mat);
+      Corr << calc_corr(Mat, econ);
     SymmetricMatrix tmp;
     tmp << Corr;
     DiagonalMatrix tmpD;
@@ -416,10 +459,10 @@ namespace Melodic{
     evals = tmpD.AsRow();
   }  //void std_pca
 
-  void std_pca(const Matrix& Mat, Matrix& Corr, Matrix& evecs, RowVector& evals)
+  void std_pca(const Matrix& Mat, Matrix& Corr, Matrix& evecs, RowVector& evals, int econ)
   {
     Matrix weights;
-    std_pca(Mat,weights,Corr,evecs,evals);
+    std_pca(Mat,weights,Corr,evecs,evals, econ);
   }  //void std_pca
 
   void em_pca(const Matrix& Mat, Matrix& evecs, RowVector& evals, int num_pc, int iter)

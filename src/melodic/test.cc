@@ -1,6 +1,8 @@
 /*  test.cc
-    
-    Copyright (C) 1999-2008 University of Oxford */
+  
+    Christian F. Beckmann, FMRIB Analysis Group
+  
+    Copyright (C) 1999-20013 University of Oxford */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -69,9 +71,10 @@
 #include "miscmaths/miscprob.h"
 #include "utils/options.h"
 #include <vector>
-#include <time.h>
+#include <ctime>
 #include "newimage/newimageall.h"
 #include "melhlprfns.h"
+#include <iostream>
 
 #ifdef __APPLE__
 #include <mach/mach.h>
@@ -90,11 +93,14 @@
 }
 #endif
 
-
-// a simple message macro that takes care of cout
+// a simple message macro that takes care of cout and log
 #define message(msg) { \
   cout << msg; \
   cout.flush(); \
+}
+
+#define outMsize(msg,Mat) { \
+    cerr << "     " << msg << "  " <<Mat.Nrows() << " x " << Mat.Ncols() << endl;	\
 }
 
 
@@ -102,28 +108,40 @@ using namespace MISCPLOT;
 using namespace MISCMATHS;
 using namespace Utilities;
 using namespace std;
+using namespace Melodic;
+
+// GLOBALS
+
+clock_t tictime;
+
 
 // The two strings below specify the title and example usage that is
 // printed out as the help or usage message
 
   string title=string("fsl_BLAH")+
-		string("\nCopyright(c) 2008, University of Oxford (Christian F. Beckmann)\n")+
+		string("\nAuthor: Christian F. Beckmann \nCopyright(c) 2008-2013 University of Oxford\n")+
 		string(" \n \n")+
 		string(" \n");
   string examples="fsl_BLAH [options]";
 
 //Command line Options {
-  Option<string> fnin(string("-i,--in"), string(""),
+    Option<string> fnin(string("-i,--in"), string(""),
 		string("input file name (matrix 3D or 4D image)"),
-		true, requires_argument);
+		false, requires_argument);
+    Option<string> fnmask(string("-m"), string(""),
+			string("mask file name "),
+			false, requires_argument);
 	Option<int> help(string("-h,--help"), 0,
 		string("display this help text"),
 		false,no_argument);
-	Option<int> xdim(string("-x,--xdim"), 10,
+	Option<int> xdim(string("-x,--xdim"), 0,
 		string("xdim"),
 		false,requires_argument);
-	Option<int> ydim(string("-y,--ydim"), 10,
+	Option<int> ydim(string("-y,--ydim"), 0,
 		string("ydim"),
+		false,requires_argument);
+	Option<int> econ(string("-e,--econ"), 0,
+		string("econ: how to liump stuff"),
 		false,requires_argument);
 		/*
 }
@@ -132,37 +150,108 @@ using namespace std;
 
 // Local functions
 
+void tic(){
+	tictime = clock();
+}
+
+void toc(){
+	cerr << endl << "TOC: " << float(clock()-tictime)/CLOCKS_PER_SEC << " seconds" << endl<<endl;
+}
+
+Matrix calccorr(const Matrix& in, int econ)
+  { 
+    Matrix Res;
+	int nrows=in.Nrows();
+	int ncols=in.Ncols();    
+    Res = zeros(nrows,nrows);
+
+    if(econ>0){
+      RowVector colmeans(ncols);
+	  for (int n=1; n<=ncols; n++) {
+        colmeans(n)=0;
+        for (int m=1; m<=nrows; m++) {
+          colmeans(n)+=in(m,n);
+        }
+        colmeans(n)/=nrows;
+      }
+      int dcol = econ;
+	  Matrix suba; 
+
+      for(int ctr=1; ctr <= in.Ncols(); ctr+=dcol){
+	    suba=in.SubMatrix(1,nrows,ctr,Min(ctr+dcol-1,ncols));
+		int scolmax = suba.Ncols();
+
+		for (int n=1; n<=scolmax; n++) {
+	        double cmean=colmeans(ctr + n - 1);
+	        for (int m=1; m<=nrows; m++) {
+	          suba(m,n)-=cmean;
+	        }
+	    }
+		
+	    Res += suba*suba.t() / ncols;
+      }
+    }
+    else
+      Res = cov(in.t());
+    return Res;
+  }  //Matrix calccorr
+
 int do_work(int argc, char* argv[]) {
-    
+
+	tic();
 	Matrix MatrixData;
 	volume<float> Mean;
+  	
+	if(xdim.value()==0 && ydim.value()==0)
+    {
+		volume4D<float> RawData;
+		volume<float> theMask;
+		toc();
+    	//read data
+    	message("Reading data file " << (string)fnin.value() << "  ... ");
+    	read_volume4D(RawData,fnin.value());
+    	message(" done" << endl);
+ 
+		Mean = meanvol(RawData);
+		toc();
+    	message("Reading mask file " << (string)fnmask.value() << "  ... ");
+      	read_volume(theMask,fnmask.value());
 
-   	{
-	volume4D<float> RawData;
-
-    //read data
-    message("Reading data file " << (string)fnin.value() << "  ... ");
-    read_volume4D(RawData,fnin.value());
-    message(" done" << endl);
-  
-	Mean = meanvol(RawData);
-  
-	memmsg(" Before reshape ");
-    MatrixData = RawData.matrix();
+		memmsg(" Before reshape ");
+    	MatrixData = RawData.matrix(theMask);
     }
-	memmsg(" after reshape ");
-	message(" Data size " << MatrixData.Nrows() << " x " << MatrixData.Ncols() << endl);
+	else{
+		Matrix data = unifrnd(xdim.value(),ydim.value());
+	    outMsize("data", data);
+		tic(); calccorr(data,econ.value()); toc();
+		
+		data = unifrnd(10,100);
+		outMsize("data", data);
+		tic(); calccorr(data,econ.value()); toc();
+		
+		data = unifrnd(100,1000);
+		outMsize("data", data);
+		tic(); calccorr(data,econ.value()); toc();
+		
+		data = unifrnd(100,10000);
+		outMsize("data", data);
+		tic(); calccorr(data,econ.value()); toc();
+
+		data = unifrnd(300,200000);
+		outMsize("data", data);
+		tic(); calccorr(data,econ.value()); toc();		
+		
+		data = unifrnd(500,20000);
+		outMsize("data", data);
+		tic(); calccorr(data,econ.value()); toc();
+		
+		data = unifrnd(500,200000);
+		outMsize("data", data);
+		tic(); calccorr(data,econ.value()); toc();
+		
+		
+	}
 	
-	memmsg(" before remmean_econ ");
-	remmean_econ(MatrixData);
-	memmsg("after remmean_econ / before remmean")
-	
-	MatrixData = remmean(MatrixData);
-	
-	memmsg(" after remmean ");
-	message(" Mean size " << MatrixData.Nrows() << " x " << MatrixData.Ncols() << endl);
-	
-	message(" Mean size " << MatrixData.Nrows() << " x " << MatrixData.Ncols() << endl);
 	
 	return 0;
 }
@@ -177,9 +266,11 @@ int do_work(int argc, char* argv[]) {
 	    //  the help message is printed)
 	
 			options.add(fnin);		
+			options.add(fnmask);		
 			options.add(help);
 			options.add(xdim);
 			options.add(ydim);
+			options.add(econ);
 	    options.parse_command_line(argc, argv);
 
 	    // line below stops the program if the help was requested or 

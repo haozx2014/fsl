@@ -100,6 +100,9 @@ topup_clp::topup_clp(const Utilities::Option<string>&            imain,
                      const Utilities::Option<string>&            out,
                      const Utilities::Option<string>&            fout,
                      const Utilities::Option<string>&            iout,
+                     const Utilities::Option<string>&            dfout,
+                     const Utilities::Option<string>&            rbmout,
+                     const Utilities::Option<string>&            jacout,
                      const Utilities::Option<string>&            lout,
                      const Utilities::Option<vector<float> >&    warpres,
                      const Utilities::Option<vector<int> >&      subsamp,
@@ -118,11 +121,12 @@ topup_clp::topup_clp(const Utilities::Option<string>&            imain,
                      const Utilities::Option<bool>&              verbose,
                      const Utilities::Option<int>&               debug,
                      const Utilities::Option<bool>&              trace)
-: _imain(imain.value()), _out(out.value()), _fout(fout.value()), _iout(iout.value()), _lout(lout.value()), _datafile(datain.value()), 
-  _warpres(warpres.value()), _subsamp(subsamp.value()), _fwhm(fwhm.value()), _miter(miter.value()), _lambda(lambda.value()), 
-  _ssqlambda((ssqlambda.value()==0) ? false : true), _indscale((indscale.value()==0) ? false : true), 
-  _regrid((regrid.value()==0) ? false : true), _estmov(estmov.value()), 
-  _sporder(static_cast<unsigned int>(sporder.value())), _verbose(verbose.value()), _trace(trace.value()), _debug(debug.value())
+  : _imain(imain.value()), _out(out.value()), _fout(fout.value()), _iout(iout.value()), _dfout(dfout.value()), 
+    _rbmout(rbmout.value()), _jacout(jacout.value()), _lout(lout.value()), _datafile(datain.value()), 
+    _warpres(warpres.value()), _subsamp(subsamp.value()), _fwhm(fwhm.value()), _miter(miter.value()), 
+    _lambda(lambda.value()), _ssqlambda((ssqlambda.value()==0) ? false : true), _indscale((indscale.value()==0) ? false : true), 
+    _regrid((regrid.value()==0) ? false : true), _estmov(estmov.value()), _sporder(static_cast<unsigned int>(sporder.value())), 
+    _verbose(verbose.value()), _trace(trace.value()), _debug(debug.value())
 {
   // Parse and assert input
   // Check input volume
@@ -230,6 +234,15 @@ boost::shared_ptr<topup_clp> parse_topup_command_line(unsigned int   narg,
   Utilities::Option<string> ioutname(string("--iout"), string(""),
       string("\tname of 4D image file with unwarped images"), false, Utilities::requires_argument);
  
+  Utilities::HiddenOption<string> dfoutname(string("--dfout"), string(""),
+      string("\tbasename of 4D image files with displacement fields"), false, Utilities::requires_argument);
+ 
+  Utilities::HiddenOption<string> rbmoutname(string("--rbmout"), string(""),
+      string("\tbasename of ascii files with RB matrices"), false, Utilities::requires_argument);
+ 
+  Utilities::HiddenOption<string> jacoutname(string("--jacout"), string(""),
+      string("\tbasename of image files with jacobian determinants"), false, Utilities::requires_argument);
+ 
   Utilities::Option<string> logoutname(string("--logout"),string(""),
 			    string("Name of log-file"),false,Utilities::requires_argument);
  
@@ -316,6 +329,9 @@ boost::shared_ptr<topup_clp> parse_topup_command_line(unsigned int   narg,
     options.add(outname);
     options.add(foutname);
     options.add(ioutname);
+    options.add(dfoutname);
+    options.add(rbmoutname);
+    options.add(jacoutname);
     options.add(logoutname);
     options.add(warpres);
     options.add(subsampling);
@@ -381,9 +397,9 @@ boost::shared_ptr<topup_clp> parse_topup_command_line(unsigned int   narg,
 
   boost::shared_ptr<topup_clp>   clp;
   try {
-    clp = boost::shared_ptr<topup_clp>(new topup_clp(imaname,dataname,outname,foutname,ioutname,logoutname,warpres,
-						     subsampling,smoothing,maxiter,lambda,ssqlambda,estimatemovements,
-						     minimisationmethod,regularisationmodel,splineorder,numprec,
+    clp = boost::shared_ptr<topup_clp>(new topup_clp(imaname,dataname,outname,foutname,ioutname,dfoutname,rbmoutname,
+						     jacoutname,logoutname,warpres,subsampling,smoothing,maxiter,lambda,ssqlambda,
+						     estimatemovements,minimisationmethod,regularisationmodel,splineorder,numprec,
 						     interpolation,individualscaling,regridding,verbose,debug,traceprint));
   }
   catch(std::exception& e) {
