@@ -225,6 +225,7 @@ public:
   NEWIMAGE::volume<float> GetNumericalMovementDerivative(unsigned int i,
                                                          const BASISFIELD::splinefield& field) const;
   NEWIMAGE::volume<float> GetJacobian(const BASISFIELD::splinefield& field) const;
+  NEWIMAGE::volume4D<float> GetDisplacementField(const BASISFIELD::splinefield&  field) const;
   NEWMAT::ColumnVector GetMovementParameters() const { return(_mp); }  // Will always serve up six elements
   NEWMAT::Matrix GetRigidBodyMatrix() const { return(mp_to_matrix(_mp)); }
   void SetUpToDate(bool flag) const { _uptodate=flag; }
@@ -324,6 +325,13 @@ public:
   NEWIMAGE::volume<float> GetJacobian(unsigned int i,
                                       const BASISFIELD::splinefield& field) const;
   
+  NEWIMAGE::volume4D<float> GetDisplacementField(unsigned int                    scanindx,
+						 const BASISFIELD::splinefield&  field) const 
+  {
+    if (scanindx >= _scans.size()) throw TopupException("TopupScanManager::GetDisplacementField: index scanindx out of range");
+    return(_scans[scanindx]->GetDisplacementField(field));
+  }
+
 
   // Routines that set/change the state of the scans
   void FieldUpdated() const;
@@ -410,12 +418,14 @@ public:
 
   void WriteCoefficients(const std::string& fname) const;
   void WriteUnwarped(const std::string& fname) const;
-  void WriteJacobians(const std::string& fname) const;
+  void WriteJacobiansForDebug(const std::string& fname) const;
   void WriteField(const std::string& fname) const;
+  void WriteDisplacementFields(const std::string& fname) const;
   void WriteMask(const std::string& fname) const;
   void WriteMaskedDiff(const std::string& fname) const;
   void WriteMovementParameters(const std::string& fname) const;
   void WriteRigidBodyMatrices(const std::string& fname) const;
+  void WriteJacobians(const std::string& fname) const;
 
   // Routines for writing debug output to disc.
 

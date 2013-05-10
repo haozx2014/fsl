@@ -1,8 +1,8 @@
 /*  fsl_glm - 
 
-    Christian F. Beckmann, FMRIB Image Analysis Group
+    Christian F. Beckmann, FMRIB Analysis Group
 
-    Copyright (C) 2006-2008 University of Oxford  */
+    Copyright (C) 2006-2013 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -83,7 +83,7 @@ using namespace std;
 // printed out as the help or usage message
 
   string title=string("fsl_glm")+
-		string("\nCopyright(c) 2004-2009, University of Oxford (Christian F. Beckmann)\n")+
+		string("\nAuthor: Christian F. Beckmann \nCopyright(C) 2006-2013 University of Oxford \n")+
     string(" \n Simple GLM allowing temporal or spatial regression on either text data or images\n");
   string examples="fsl_glm -i <input> -d <design> -o <output> [options]";
 

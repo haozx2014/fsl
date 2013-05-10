@@ -3,7 +3,7 @@
     
     melodic.cc - main program file
 
-    Christian F. Beckmann, FMRIB Image Analysis Group
+    Christian F. Beckmann, FMRIB Analysis Group
     
     Copyright (C) 1999-2013 University of Oxford */
 

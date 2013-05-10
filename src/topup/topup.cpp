@@ -157,7 +157,7 @@ int main(int   argc,
     cf->SetRegularisation(clp->Lambda(1),clp->RegularisationModel());
     cf->SetSSQLambda(clp->SSQLambda());
     cf->SetHessianPrecision(clp->HessianPrecision());
-
+    
     // Create non-linear parameters object
     ColumnVector spar(cf->NPar());
     spar = 0;
@@ -224,16 +224,22 @@ int main(int   argc,
   // Save Everything we have been asked so save
   try {
     if (clp->SubSampling(clp->NoOfLevels()) > 1) {
+      cf->Smooth(0.0);
       cf->SubSample(1);
     }
     cf->WriteCoefficients(clp->CoefFname());
     cf->WriteMovementParameters(clp->MovParFname());
     if (clp->FieldFname().size()) cf->WriteField(clp->FieldFname());
-    if (clp->ImaOutFname().size()) {
-      cf->Smooth(0.0);
-      cf->SubSample(1);
-      cf->WriteUnwarped(clp->ImaOutFname());
-    }    
+    if (clp->ImaOutFname().size()) cf->WriteUnwarped(clp->ImaOutFname());
+    if (clp->DisplacementFieldBaseFname().size()) {
+      cf->WriteDisplacementFields(clp->DisplacementFieldBaseFname());
+    }
+    if (clp->RigidBodyBaseFname().size()) {
+      cf->WriteRigidBodyMatrices(clp->RigidBodyBaseFname());
+    }
+    if (clp->JacobianBaseFname().size()) {
+      cf->WriteJacobians(clp->JacobianBaseFname());
+    }
   }
   catch(const std::exception& error) {
     cerr << "Error occured while writing output from topup" << endl;

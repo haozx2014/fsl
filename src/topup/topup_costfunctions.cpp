@@ -494,6 +494,23 @@ void TopupScan::ReGrid(int xsz, int ysz, int zsz)
   if (TracePrint()) cout << "Leaving TopupScan::ReGrid" << endl;
 }
 
+NEWIMAGE::volume4D<float> TopupScan::GetDisplacementField(const BASISFIELD::splinefield&  field) const
+{
+  std::vector<unsigned int> isz = this->ImageSize(Target);
+  std::vector<double> idim = this->ImageVxs(Target); 
+  NEWIMAGE::volume4D<float> df(isz[0],isz[1],isz[2],3);
+  df.setdims(float(idim[0]),float(idim[1]),float(idim[2]),1.0);  
+  // I am forced to cast away constness on field here. When I have more
+  // time I should address this in the splinefield class instead.
+  BASISFIELD::splinefield& tmpfield = const_cast<BASISFIELD::splinefield& >(field);
+  tmpfield.AsVolume(df[0]);
+  df[1] = float(_rotime * _pevec(2) * _orig->ydim()) * df[0];
+  df[0] *= _rotime * _pevec(1) * _orig->xdim(); 
+  df[2] = 0; // Don't allow any component in the z-direction
+
+  return(df);
+}
+
 NEWMAT::Matrix TopupScan::mp_to_matrix(const NEWMAT::ColumnVector& mp) const
 {
   if (TracePrint()) cout << "Entering TopupScan::mp_to_matrix" << endl;
@@ -1064,9 +1081,9 @@ void TopupCF::WriteUnwarped(const std::string& fname) const
   if (TracePrint()) cout << "Leaving TopupCF::WriteUnwarped" << endl;
 }
 
-void TopupCF::WriteJacobians(const std::string& fname) const
+void TopupCF::WriteJacobiansForDebug(const std::string& fname) const
 {
-  if (TracePrint()) cout << "Entering TopupCF::WriteJacobians" << endl;
+  if (TracePrint()) cout << "Entering TopupCF::WriteJacobiansForDebug" << endl;
 
   std::vector<unsigned int> imsz = _sm.ImageSize(Subsampled);
   NEWIMAGE::volume4D<float> out(imsz[0],imsz[1],imsz[2],_sm.NoOfScans());
@@ -1074,6 +1091,20 @@ void TopupCF::WriteJacobians(const std::string& fname) const
     out[i] = _sm.GetJacobian(i,_field);
   }
   write_volume4D(out,fname);
+
+  if (TracePrint()) cout << "Leaving TopupCF::WriteJacobiansForDebug" << endl;
+}
+
+void TopupCF::WriteJacobians(const std::string& fname) const
+{
+  if (TracePrint()) cout << "Entering TopupCF::WriteJacobians" << endl;
+
+  for (unsigned int i=0; i<_sm.NoOfScans(); i++) {
+    NEWIMAGE::volume<float> out = _sm.GetJacobian(i,_field);
+    std::stringstream tmp(fname+std::string("_"),ios_base::out|ios_base::app);
+    tmp.width(2); tmp.fill('0'); tmp << i+1;
+    write_volume(out,tmp.str());
+  }
 
   if (TracePrint()) cout << "Leaving TopupCF::WriteJacobians" << endl;
 }
@@ -1085,6 +1116,20 @@ void TopupCF::WriteField(const std::string& fname) const
   TopupFileWriter  write_it(fname,_sm.GetScan(0,_field),_field);
 
   if (TracePrint()) cout << "Leaving TopupCF::WriteField" << endl;
+}
+
+void TopupCF::WriteDisplacementFields(const std::string& fname) const
+{
+  if (TracePrint()) cout << "Entering TopupCF::WriteDisplacementFields" << endl;
+
+  for (unsigned int i=0; i<_sm.NoOfScans(); i++) {
+    NEWIMAGE::volume4D<float> out = _sm.GetDisplacementField(i,_field);
+    std::stringstream tmp(fname+std::string("_"),ios_base::out|ios_base::app);
+    tmp.width(2); tmp.fill('0'); tmp << i+1;
+    write_volume4D(out,tmp.str());
+  }
+
+  if (TracePrint()) cout << "Leaving TopupCF::WriteDisplacementFields" << endl;
 }
 
 void TopupCF::WriteMask(const std::string& fname) const
@@ -1144,9 +1189,12 @@ void TopupCF::WriteRigidBodyMatrices(const std::string& fname) const
 {
   if (TracePrint()) cout << "Entering TopupCF::WriteRigidBodyMatrices" << endl;
 
-  std::vector<NEWMAT::Matrix> mvec(_sm.NoOfScans());
-  for (unsigned s=0; s<_sm.NoOfScans(); s++) mvec[s] = _sm.GetRigidBodyMatrix(s);
-  TopupFileWriter   write_it(fname,mvec);
+  for (unsigned s=0; s<_sm.NoOfScans(); s++) {
+    NEWMAT::Matrix M = _sm.GetRigidBodyMatrix(s);
+    std::stringstream tmp(fname+std::string("_"),ios_base::out|ios_base::app);
+    tmp.width(2); tmp.fill('0'); tmp << s+1 << ".mat";
+    MISCMATHS::write_ascii_matrix(tmp.str(),M);
+  }
 
   if (TracePrint()) cout << "Leaving TopupCF::WriteRigidBodyMatrices" << endl;
 }
@@ -1221,7 +1269,7 @@ double TopupCF::cf(const NEWMAT::ColumnVector& p) const
   if (debug_level()) {
     set_attempt(attempt()+1);
     WriteUnwarped(string("TopupDebugUnwarped")+debug_string());    
-    WriteJacobians(string("TopupDebugJacobians")+debug_string());   
+    WriteJacobiansForDebug(string("TopupDebugJacobians")+debug_string());   
     WriteField(string("TopupDebugField")+debug_string());
     WriteMovementParameters(string("TopupDebugMovementParameters")+debug_string()+string(".txt"));
     if (debug_level() > 1) {
