@@ -25,8 +25,8 @@ Versioned FSL packages
 ----------------------
 
 To allow multiple major FSL version to be installed concurrently versioned
-binary packages (ala fsl-4.1) are built since 4.1.6-2. In addition, an
-unversioned 'fsl' package is built that depends on the latest available
+binary packages (ala fsl-5.0-core) are built since 4.1.6-2. In addition, an
+unversioned 'fsl-core' package is built that depends on the latest available
 versioned package and provides symlinks to all FSL tools in /usr/bin.
 
 All version-dependent packaging files are included in debian/templates/. The

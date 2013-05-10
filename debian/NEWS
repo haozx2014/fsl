@@ -2,14 +2,14 @@ fsl (5.0.3-1) unstable; urgency=low
 
   * The 'fsl' and 'fsl-5.0' binary packages have been renamed to 'fsl-core',
     and 'fsl-5.0-core' respectively. This is done to emphasize the fact that
-    only non-data components of FSL are shipped in these packages, and is an
+    only non-data components of FSL are shipped in these packages, and it is an
     attempt to address the ongoing confusion of users expecting functionality
     that requires huge additional data files. Additionally, a note has been
-    added to the package description how this data can be obtained. A separate
-    meta package ('fsl-complete') will be made available in the NeuroDebian
-    repository for installing the entire FSL suite. Related to this change is
-    the renaming of the 'fsl-doc-5.0' package to 'fsl-5.0-doc' in order to
-    harmonize the package naming scheme.
+    added to the package description on how this data can be obtained.
+    A separate meta package ('fsl-complete') will be made available in the
+    NeuroDebian repository for installing the entire FSL suite. Related to this
+    change is the renaming of the 'fsl-doc-5.0' package to 'fsl-5.0-doc' in
+    order to harmonize the package naming scheme.
 
  -- Michael Hanke <mih@debian.org>  Wed, 08 May 2013 11:17:31 +0200
 

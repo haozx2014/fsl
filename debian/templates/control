@@ -32,7 +32,8 @@ Depends: fsl-core,
          ${misc:Depends},
 Section: non-free/oldlibs
 Description: transitional dummy package
- This is a transitional dummy package. it can safely be removed.
+ This is a transitional dummy package. Its only purpose is to install the
+ 'fsl-core' package which replaces 'fsl'. It can safely be removed.
 
 Package: fsl-#FSLMVERSION#
 Architecture: all
@@ -40,7 +41,9 @@ Depends: fsl-#FSLMVERSION#-core,
          ${misc:Depends}
 Section: non-free/oldlibs
 Description: transitional dummy package
- This is a transitional dummy package. it can safely be removed.
+ This is a transitional dummy package. Its only purpose is to install the
+ 'fsl-#FSLMVERSION#-core' package which replaces 'fsl-#FSLMVERSION#'.
+ It can safely be removed.
 
 Package: fsl-doc-#FSLMVERSION#
 Architecture: all
@@ -48,7 +51,9 @@ Depends: fsl-#FSLMVERSION#-doc,
          ${misc:Depends}
 Section: non-free/oldlibs
 Description: transitional dummy package
- This is a transitional dummy package. it can safely be removed.
+ This is a transitional dummy package. Its only purpose is to install the
+ 'fsl-#FSLMVERSION#-doc' package which replaces 'fsl-doc-#FSLMVERSION#'.
+ It can safely be removed.
 
 Package: fsl-core
 Architecture: all

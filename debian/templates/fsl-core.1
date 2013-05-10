@@ -22,7 +22,7 @@ Alternatively, the Debian package installs symlinks for all FSL tools in
 The symlink names are prefixed with the corresponding \fBFSL\fR version to
 prevent filename conflicts and allow multiple version to coexist on the same
 system. For example, the \fBslicer\fR command is available as
-\fBfsl#FSLMVERSION-slicer\fR. Please note that for using \fBFSL\fR tools via
+\fBfsl#FSLMVERSION#-slicer\fR. Please note that for using \fBFSL\fR tools via
 these symlinks it is \fBnot\fR necessary to perform the setup procedure
 describe above. However, this convenience feature is Debian-specific. Scripts
 that employ FSL commands and are intended to be shared with others should rely
@@ -31,7 +31,7 @@ on unprefixed command names and the FSL environment variable setup.
 The \fBFSL\fR user interface sometimes refers to an \fBFSLDIR\fR. On Debian
 systems this is \fI/usr/share/fsl/#FSLMVERSION#\fR for FSL version #FSLMVERSION#.
 .PP
-\fBFSL\fR documentation and online help is provided by the \fBfsl-doc-#FSLMVERSION#\fR
+\fBFSL\fR documentation and online help is provided by the \fBfsl-#FSLMVERSION#-doc\fR
 package.
 .PP
 Questions regarding the usage of \fBFSL\fR or related theory can be

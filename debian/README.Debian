@@ -20,7 +20,7 @@ Alternatively, the Debian package installs symlinks for all FSL tools in
 The symlink names are prefixed with the corresponding FSL version to
 prevent filename conflicts and allow multiple version to coexist on the same
 system. For example, the `slicer` command is available as
-`fsl#FSLMVERSION-slicer`. Please note that for using FSL tools via
+`fsl5.0-slicer`. Please note that for using FSL tools via
 these symlinks it is not necessary to perform the setup procedure
 describe above. However, this convenience feature is Debian-specific. Scripts
 that employ FSL commands and are intended to be shared with others should rely
@@ -63,9 +63,8 @@ Sun Gridengine
 
 Condor
 
-  There is also experimental support for the Condor high-throughput-computing
+  There is also support for the Condor high-throughput-computing
   system. To enable this functionality set the environment variable
-  FSLPARALLEL=condor. An experimental Condor package can be obtained from
-  http://neuro.debian.net.
+  FSLPARALLEL=condor.
 
  -- Michael Hanke <michael.hanke@gmail.com>, Sat, 17 Mar 2012 10:22:00 +0100
