@@ -30,7 +30,7 @@ Package: fsl
 Architecture: all
 Depends: fsl-core,
          ${misc:Depends},
-Section: oldlibs
+Section: non-free/oldlibs
 Description: transitional dummy package
  This is a transitional dummy package. it can safely be removed.
 
@@ -38,7 +38,7 @@ Package: fsl-#FSLMVERSION#
 Architecture: all
 Depends: fsl-#FSLMVERSION#-core,
          ${misc:Depends}
-Section: oldlibs
+Section: non-free/oldlibs
 Description: transitional dummy package
  This is a transitional dummy package. it can safely be removed.
 
@@ -46,7 +46,7 @@ Package: fsl-doc-#FSLMVERSION#
 Architecture: all
 Depends: fsl-#FSLMVERSION#-doc,
          ${misc:Depends}
-Section: oldlibs
+Section: non-free/oldlibs
 Description: transitional dummy package
  This is a transitional dummy package. it can safely be removed.
 

@@ -28,7 +28,7 @@ XS-DM-Upload-Allowed: yes
 
 Package: fsl
 Architecture: all
-Depends: non-free/fsl-core,
+Depends: fsl-core,
          ${misc:Depends},
 Section: non-free/oldlibs
 Description: transitional dummy package

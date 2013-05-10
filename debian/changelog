@@ -1,7 +1,12 @@
-fsl (5.0.3-1) UNRELEASED; urgency=low
+fsl (5.0.4-1) UNRELEASED; urgency=low
 
-  * New upstream release:
-    - spdoijfs
+  * New upstream release (skipped short-lived 5.0.3):
+    - Documentation update
+    - Various bugfixes
+    - New 'baycest' tool for Bayesian analysis for chemical exchange saturation
+      transfer z-spectra
+    - New script 'first3Dview' for enabling 3D renderings for new vertex
+      analysis results
   * Remove fabber patches -- merged upstream.
   * Use dpkg-buildflags to obtain default compiler flags. This also enables
     various hardening options.
