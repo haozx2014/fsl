@@ -1,0 +1,38 @@
+From: Yaroslav Halchenko <debian@onerussian.com>
+Subject: Use --option=VALUE in --help output to match expected cmdline options formatting
+
+References: https://www.jiscmail.ac.uk/cgi-bin/webadmin?A2=fsl;cae1093e.1308
+
+diff --git a/src/utils/functions.cc b/src/utils/functions.cc
+index 3303250..e4612fe 100644
+--- a/src/utils/functions.cc
++++ b/src/utils/functions.cc
+@@ -195,22 +195,22 @@ namespace Utilities {
+ //       return os << "\t" << o.key() << "\t" << o.help_text();
+ //     }
+ //   }
++  
++  bool is_short_form(const string& s)
++  {
++    return (s.substr(0,2) != "--");
++  }
+ 
+   void BaseOption::usage(ostream& os) const {
+     string test(help_text());
+      if ((test.length()>=1) && (test[0]=='~')) {
+-       test[0]=' ';
++	   test[0] = (is_short_form(key()) ? ' ' : '=');
+        os << "\t" << key() << test;
+      } else {
+        os << "\t" << key() << "\t" << help_text();
+      }
+    }
+ 
+-  bool is_short_form(const string& s)
+-  {
+-    return (s.substr(0,2) != "--");
+-  }
+-
+ 
+   /*
+     @return first short-form key (if any)

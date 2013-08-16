@@ -1,3 +1,11 @@
+fsl (5.0.4-2) neurodebian; urgency=low
+
+  * debian/patches
+    - added up_longoptions= - print --option=VALUE (instead of --option VALUE)
+      in --help output to match expected formatting
+
+ -- Yaroslav Halchenko <debian@onerussian.com>  Fri, 16 Aug 2013 12:44:51 -0400
+
 fsl (5.0.4-1) neurodebian; urgency=low
 
   * New upstream release (skipped short-lived 5.0.3):
