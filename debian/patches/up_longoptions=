@@ -5,7 +5,7 @@ References: https://www.jiscmail.ac.uk/cgi-bin/webadmin?A2=fsl;cae1093e.1308
 
 --- a/src/utils/functions.cc
 +++ b/src/utils/functions.cc
-@@ -195,22 +195,23 @@
+@@ -195,22 +195,29 @@
  //       return os << "\t" << o.key() << "\t" << o.help_text();
  //     }
  //   }
@@ -14,16 +14,24 @@ References: https://www.jiscmail.ac.uk/cgi-bin/webadmin?A2=fsl;cae1093e.1308
 +  {
 +    return (s.substr(0,2) != "--");
 +  }
++
++  bool has_long_form(const string& s)
++  {
++    return (!is_short_form(s) || s.find(",--") != string::npos || s.find(", --") != string::npos);
++  }
  
    void BaseOption::usage(ostream& os) const {
      string test(help_text());
++    string help_key(key());
       if ((test.length()>=1) && (test[0]=='~')) {
 -       test[0]=' ';
-+         test[0] = (is_short_form(key()) || (test[1]!='<')
-+                    ? ' ' : '=');
-        os << "\t" << key() << test;
+-       os << "\t" << key() << test;
++       test[0] = (has_long_form(help_key) && (test[1]=='<')
++                  ? '=' : ' ');
++       os << "\t" << help_key << test;
       } else {
-        os << "\t" << key() << "\t" << help_text();
+-       os << "\t" << key() << "\t" << help_text();
++       os << "\t" << help_key << "\t" << test;
       }
     }
  
