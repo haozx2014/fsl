@@ -1,3 +1,11 @@
+fsl (5.0.4-3) neurodebian; urgency=low
+
+  * debian/patches
+    - enanced up_longoptions= to print -o,--option=VALUE i.e. whenever
+      both short and long options are available
+
+ -- Yaroslav Halchenko <debian@onerussian.com>  Sat, 24 Aug 2013 09:07:32 -0400
+
 fsl (5.0.4-2) neurodebian; urgency=low
 
   * debian/patches
