@@ -173,17 +173,22 @@ proc fsl:exec { thecommand args } {
     }
     if { $do_logout } {
 	if { $logout != "" } {
-	    catch { exec sh -c $thecommand >>& $logout } errmsg
-	    set errmsg [ exec sh -c "tail -n 1 $logout" ]
+	    set errorCode [ catch { exec sh -c $thecommand >> $logout } errmsg ]
+	    if { $errorCode != 0 } { fsl:echo $logout "$errmsg" }
+	    # Trim errmsg to final line
+            set errmsg [ exec sh -c "tail -n 1 $logout" ]
 	} else {
-	    catch { exec sh -c $thecommand } errmsg
+	    set errorCode [ catch { exec sh -c $thecommand } errmsg ]
 	    catch { puts $errmsg } putserr
 	}
     } else {
-	catch { exec sh -c $thecommand } errmsg
+	set errorCode [ catch { exec sh -c $thecommand } errmsg ]
     }
 
     # now return errmsg in case the exec call needs to know the output
-    return $errmsg
+    if { $errorCode != 0 && $do_logout } {
+	fsl:echo $logout "\nFATAL ERROR ENCOUNTERED"
+    }
+    return -code $errorCode $errmsg 
 }
 

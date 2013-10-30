@@ -94,7 +94,6 @@ namespace Melodic {
     //initialize matrices
     Matrix redUMM_old, rank1_old;
     Matrix tmpU;    
-    
     //srand((unsigned int)timer(NULL));
     redUMM = melodat.get_white()*
        unifrnd(melodat.get_white().Ncols(),dim); // got to start somewhere
@@ -117,10 +116,9 @@ namespace Melodic {
     if(opts.approach.value() == string("tica"))
       opts.maxNumItt.set_T(opts.rank1interval.value());
 
-	rank1_old = melodat.get_dewhite()*redUMM;
-	rank1_old = melodat.expand_dimred(rank1_old);
-	rank1_old = krapprox(rank1_old,int(rank1_old.Nrows()/melodat.get_numfiles())); 
-
+    rank1_old = melodat.get_dewhite()*redUMM;
+    rank1_old = melodat.expand_dimred(rank1_old);
+    rank1_old = krapprox(rank1_old,int(rank1_old.Nrows()/melodat.get_numfiles())); 
     do{// TICA loop
       itt_ctr = 1;
       do{ // da loop!!!

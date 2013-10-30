@@ -215,6 +215,9 @@ MelodicOptions* MelodicOptions::gopt = NULL;
   		if (numICs.value() > 0){
     		explicitnums = true;
   		}
+		if (insta_fn.value() > ""){
+			varnorm.set_T(false);
+		}
   
   		//in the case of indirect inputs, create the vector of input names here
   		if(!fsl_imageexists(inputfname.value().at(0))){

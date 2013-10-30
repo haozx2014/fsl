@@ -1,6 +1,6 @@
-//     fslcc.cc cross-correlate two time series
+//     fslcc.cc cross-correlate two time series timepoint by timepoint
 //     Steve Smith and Matthew Webster, FMRIB Image Analysis Group
-//     Copyright (C) 2001-2010 University of Oxford  
+//     Copyright (C) 2001-2013 University of Oxford  
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
     fsl@fmrib.ox.ac.uk
@@ -71,7 +71,9 @@
 using namespace NEWIMAGE;
 using namespace Utilities;
 
-
+Option<string> fnmask(string("-m"), string(""),
+		string("mask file name "),
+		false, requires_argument);
 Option<bool> noabs(string("--noabs"), false, 
 		     string("\tDon't return absolute values (keep sign)"), 
 		     false, no_argument);
@@ -100,21 +102,38 @@ int fmrib_main(int argc, char *argv[])
     return 1;
   }
 
-  if ( !nodemean.value() ) {
-    input_volume1-=input_volume1.mean();
-    input_volume2-=input_volume2.mean();
+  volume<T> mask;
+  if(fnmask.value().length()>0){
+	read_volume(mask,fnmask.value());
+	if(!samesize(input_volume1[0],mask)){  	
+	  cerr << "Error: Mismatch in mask dimensions" << endl; 
+	  return 1;
+	}
+  } else {
+    mask=input_volume1[0];
+    mask=1;
+  }
+ 
+
+   if ( !nodemean.value() ) {
+    for(int t1=0;t1<=input_volume1.maxt();t1++)
+      input_volume1[t1] -= input_volume1[t1].mean(mask);
+    for(int t2=0;t2<=input_volume2.maxt();t2++)
+      input_volume2[t2] -= input_volume2[t2].mean(mask);
    }
+
   for(int t1=0;t1<=input_volume1.maxt();t1++)
   {
-    double ss1=sqrt(input_volume1[t1].sumsquares());  
+    double ss1=sqrt(input_volume1[t1].sumsquares(mask));  
     for(int t2=0;t2<=input_volume2.maxt();t2++)
     {
-       double ss2=sqrt(input_volume2[t2].sumsquares());  
+       double ss2=sqrt(input_volume2[t2].sumsquares(mask));  
        double score=0;
        for(int k=0;k<=input_volume1.maxz();k++)
          for(int j=0;j<=input_volume1.maxy();j++)
            for(int i=0;i<=input_volume1.maxx();i++)
-	     score+=(double)input_volume1(i,j,k,t1)*(double)input_volume2(i,j,k,t2); 
+	     if ( !fnmask.set() || mask(i,j,k)>0 ) 
+	       score+=(double)input_volume1(i,j,k,t1)*(double)input_volume2(i,j,k,t2); 
        if (!noabs.value())
 	 score=fabs(score);
        score/=(ss1*ss2);
@@ -129,10 +148,11 @@ int fmrib_main(int argc, char *argv[])
 
 int main(int argc,char *argv[])
 {
-  string title("fslcc");
+  string title("fslcc: Cross-correlate two time-series, timepoint by timepoint");
   string examples("fslcc [options] <first_input> <second_input> ");
   OptionParser options(title, examples);
 
+  options.add(fnmask);
   options.add(noabs);
   options.add(nodemean);
   options.add(thresh);

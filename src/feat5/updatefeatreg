@@ -134,6 +134,12 @@ fi
 
 cd ${dirnm}/reg
 
+if [ -d unwarp ]; then
+    echo " " 
+    echo "Error: updatefeatreg cannot be used when the FEAT data has had B0 unwarping applied"
+    exit -1
+fi
+
 regupdate example_func initial_highres highres
 regupdate example_func highres standard
 

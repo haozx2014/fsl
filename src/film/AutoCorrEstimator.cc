@@ -77,8 +77,6 @@
 #include "glm.h"
 
 using namespace Utilities;
-using namespace NEWMAT;
-using namespace MISCMATHS;
 using namespace NEWIMAGE;
 
 namespace FILM {
@@ -343,13 +341,10 @@ namespace FILM {
       return usanthresh;
     } 
 
-  void AutoCorrEstimator::spatiallySmooth(const string& usanfname, const ColumnVector& epivol, int masksize, const string& epifname, int usan_thresh, const volume<float>& usan_vol, int lag) {
+  void AutoCorrEstimator::spatiallySmooth(const ColumnVector& epivol, int masksize, int usan_thresh, const volume<float>& usan_vol, int lag) {
     Tracer trace("AutoCorrEstimator::spatiallySmooth");
-    
     if(numTS<=1)
-      {
 	cerr << "Warning: Number of voxels = " << numTS << ". Spatial smoothing of autocorrelation estimates is not carried out" << endl;
-      }
     else
       {
 	
@@ -380,6 +375,31 @@ namespace FILM {
 	cout<< endl << "Completed" << endl;
       }
   }
+
+  void AutoCorrEstimator::spatiallySmooth(fslSurface<float, unsigned int> surfaceData, const float sigma, const float extent,int lag) {
+   Tracer trace("AutoCorrEstimator::spatiallySmooth_GIFTI");
+   if(numTS<=1)
+     cerr << "Warning: Number of vertices = " << numTS << ". Spatial smoothing of autocorrelation estimates is not carried out" << endl;
+   else {	
+     if(lag==0)
+       lag = MISCMATHS::Min(40,int(sizeTS/4));
+     cout<< "Spatially smoothing auto corr estimates for surface" << endl;
+     for(int i=2 ; i <= lag; i++) {
+       vector<float> scalars;
+       for ( unsigned int point = 1; point<=surfaceData.getNumberOfVertices(); point++ )
+	 scalars.push_back( acEst(i,point) );
+       surfaceData.clearScalars();
+       surfaceData.insertScalars(scalars,0,"input field" );  //Add data to surface
+       sc_smooth_gaussian_geodesic(  surfaceData , 0, sigma, extent , false);
+       int point(1);
+       for (std::vector< float >::const_iterator i_sc = surfaceData.const_scbegin(0); i_sc != surfaceData.const_scend(0); i_sc++, point++)
+	 acEst(i,point) = *i_sc; // insert output back into acEst
+       cout<< ".";
+     }
+     cout<< endl << "Completed" << endl;
+   }
+}
+
   
   void AutoCorrEstimator::calcRaw(int lag) { 
     

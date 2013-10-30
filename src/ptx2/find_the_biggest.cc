@@ -144,7 +144,7 @@ void biggest_from_surfaces(vector<string> innames,string oname){
       m.set_pvalue(i-1,0);
       continue;
     }
-    int jmax=1;float vm;
+    int jmax=1;float vm=0;
     for(int j=1;j<=nt;j++){
       if(j==1)vm=allvals(i,j);
       if(allvals(i,j)>=vm){vm=allvals(i,j);jmax=j;}

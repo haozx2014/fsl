@@ -152,6 +152,33 @@ int fmrib_main(int argc, char* argv[])
     cout << "Error in slicer input, exiting..." << endl;
     exit(1);
   }
+  //Fix -x option for neurological images
+  for (unsigned int option=0;option<miscpicOptions.size();option++)
+    {
+    if ( miscpicOptions[option].compare(0,2,"-x") == 0 ) {
+      string subString(miscpicOptions[option].substr(3,string::npos));
+      string filename(subString);
+      filename.erase(0,filename.find(' ')+1);
+      subString.erase(subString.find(' '),string::npos); //This substring contains the slice number ( in nifti format )
+      if ( subString[0] == '-' ) {
+	int sliceNumber=-atof(subString.c_str());
+	ColumnVector v0(4);
+	v0 << sliceNumber << 0 << 0 << 1.0;
+	v0 = inputVolume.niftivox2newimagevox_mat() * v0;
+        sliceNumber=-MISCMATHS::round(v0(1));
+	miscpicOptions[option]="-x "+num2str(sliceNumber)+" "+filename;
+      } else {
+	double sliceNumber=atof(subString.c_str())*inputVolume.maxx();
+	ColumnVector v0(4);
+	v0 << sliceNumber << 0 << 0 << 1.0;
+	v0 = inputVolume.niftivox2newimagevox_mat() * v0;
+        sliceNumber=v0(1)/(float)inputVolume.maxx();
+	sliceNumber=std::max(std::min(sliceNumber,1.0),0.0);
+	miscpicOptions[option]="-x "+num2str(sliceNumber)+" "+filename;
+      }
+    }
+  }
+
   if ( nonOptionInputs.size()>1 && FslFileExists(nonOptionInputs[1].c_str()) ) 
     read_volume(secondaryVolume,nonOptionInputs[1]);
 

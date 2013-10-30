@@ -1068,12 +1068,19 @@ namespace ODFs{
 	
 	//Get the signal attenuations for each shell. Do it individually, as the b=0 may have different intensity scalings for each shell!
 	vector<Matrix> data_shell, bvecs_shell, bvals_shell;
+	//Copying shell1
 	data_shell.push_back(m_data.SubMatrix(1,shell_num[0],1,m_data.Ncols()));              
-	bvecs_shell.push_back(m_bvecs.SubMatrix(1,3,1,shell_num[0]));     bvals_shell.push_back(m_bvals.SubMatrix(1,1,1,shell_num[0]));
-	data_shell.push_back(m_data.SubMatrix(shell_num[0]+1,shell_num[0]+shell_num[1],1,m_data.Ncols())); 
-	bvecs_shell.push_back(m_bvecs.SubMatrix(1,3,shell_num[0]+1,shell_num[0]+shell_num[1])); bvals_shell.push_back(m_bvals.SubMatrix(1,1,shell_num[0]+1,shell_num[0]+shell_num[1]));
-	data_shell.push_back(m_data.SubMatrix(shell_num[1]+1,shell_num[1]+shell_num[2],1,m_data.Ncols())); 
-	bvecs_shell.push_back(m_bvecs.SubMatrix(1,3,shell_num[1]+1,shell_num[1]+shell_num[2])); bvals_shell.push_back(m_bvals.SubMatrix(1,1,shell_num[1]+1,shell_num[1]+shell_num[2]));
+	bvecs_shell.push_back(m_bvecs.SubMatrix(1,3,1,shell_num[0]));    
+	bvals_shell.push_back(m_bvals.SubMatrix(1,1,1,shell_num[0]));
+	//Copying shell2
+	data_shell.push_back(m_data.SubMatrix(1+shell_num[0],shell_num[0]+shell_num[1],1,m_data.Ncols())); 
+	bvecs_shell.push_back(m_bvecs.SubMatrix(1,3,1+shell_num[0],shell_num[0]+shell_num[1])); 
+	bvals_shell.push_back(m_bvals.SubMatrix(1,1,1+shell_num[0],shell_num[0]+shell_num[1]));
+	//Copying shell3
+	data_shell.push_back(m_data.SubMatrix(1+shell_num[0]+shell_num[1],shell_num[0]+shell_num[1]+shell_num[2],1,m_data.Ncols()));     
+	bvecs_shell.push_back(m_bvecs.SubMatrix(1,3,1+shell_num[0]+shell_num[1],shell_num[0]+shell_num[1]+shell_num[2]));  
+	bvals_shell.push_back(m_bvals.SubMatrix(1,1,1+shell_num[0]+shell_num[1],shell_num[0]+shell_num[1]+shell_num[2]));
+
 	for (int n=0; n<3; n++)
 	  Sig2SigAttenuation(data_shell[n],bvals_shell[n],bvecs_shell[n]); 
      
@@ -1101,8 +1108,8 @@ namespace ODFs{
 	  else{ max=bvecs_shell[1].Ncols(); max_shell=1;}
 	  if (max<bvecs_shell[2].Ncols()) max_shell=2;
 
-	  //Determine which order will be used for interpolation (common to all shells). Use 10, unless the data are not enough 
-	  int lmax_interp=10; 
+	  //Determine which order will be used for interpolation (common to all shells). Use 6, unless the data are not enough 
+	  int lmax_interp=6; //10 
 	  while (((lmax_interp+1)*(lmax_interp+2)/2)>bvecs_shell[min_shell].Ncols()/3.0 && lmax_interp>lmax)
 	    lmax_interp-=2;
 

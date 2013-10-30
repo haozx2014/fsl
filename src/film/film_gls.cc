@@ -71,6 +71,7 @@
 #define WANT_MATH
 
 #include "newimage/newimageall.h"
+#include "fslsurface/fslsurface.h"
 #include "utils/log.h"
 #include "AutoCorrEstimator.h"
 #include "paradigm.h"
@@ -84,53 +85,60 @@ using namespace FILM;
 using namespace Utilities;
 using namespace MISCMATHS;
 using namespace NEWIMAGE;
+using namespace fslsurface_name;
+
 
 int main(int argc, char *argv[])
 {
   try{
     
-    // Setup logging:
     Log& logger = LogSingleton::getInstance();
-
-    // parse command line
     FilmGlsOptions& globalopts = FilmGlsOptions::getInstance();
     globalopts.parse_command_line(argc, argv, logger);
-
+    cout << "Running in " << globalopts.analysisMode.value() << " mode." << endl;
     // load data
-    volume4D<float> input_data;
-    read_volume4D(input_data,globalopts.inputfname);
-    int sizeTS(input_data.tsize());
-
-    volume4D<float> reference;
-    reference=input_data[int(sizeTS/2)-1];
-    copybasicproperties(input_data,reference);
-
-    volume<float> mask(meanvol(input_data));
-    volume<float> variance(variancevol(input_data));
-    input_data-=mask;
-
-    mask.binarise(globalopts.thresh,mask.max()+1,exclusive);
-    variance.binarise(1e-10,variance.max()+1,exclusive); //variance mask needed if thresh is -ve to remove background voxels (0 variance)
-    mask*=variance; //convolved mask ensures that only super-threshold non-background voxels pass
-
+    string epifname("epivolume");
+    volume4D<float> input_data, reference;
+    volume<float> mask, variance;
+    fslSurface<float, unsigned int> surfaceData;
+    Matrix datam;
     vector<long> labels;
-    Matrix datam(input_data.matrix(mask,labels));
-   
-    int numTS = datam.Ncols();
-    ColumnVector epivol = reference.matrix(mask).t();
-    
+
+
+    if ( globalopts.analysisMode.value()=="surface" ) {
+      read_surface(surfaceData,globalopts.inputDataName.value());
+      datam.ReSize(surfaceData.getNumberOfScalarData(),surfaceData.getNumberOfVertices());
+      for(unsigned int vertex=0; vertex < surfaceData.getNumberOfVertices(); vertex++) {
+	for(unsigned int timepoint=0; timepoint < surfaceData.getNumberOfScalarData(); timepoint++) 
+	   datam(timepoint+1,vertex+1)=surfaceData.getScalar(timepoint,vertex);
+	datam.Column(vertex+1)-=(datam.Column(vertex+1).Sum()/datam.Nrows());
+      }
+    } else {
+      read_volume4D(input_data,globalopts.inputDataName.value());
+      reference=input_data[int(input_data.tsize()/2)-1];
+      copybasicproperties(input_data,reference);
+      mask=meanvol(input_data);
+      variance=variancevol(input_data);
+      input_data-=mask;
+      mask.binarise(globalopts.thresh.value(),mask.max()+1,exclusive);
+      variance.binarise(1e-10,variance.max()+1,exclusive); //variance mask needed if thresh is -ve to remove background voxels (0 variance)
+      mask*=variance; //convolved mask ensures that only super-threshold non-background voxels pass
+      datam=input_data.matrix(mask,labels);
+    }
+    int sizeTS(datam.Nrows()), numTS(datam.Ncols());
+
     // Load paradigm:
     Paradigm paradigm;
-    if(!globalopts.ac_only)
-      paradigm.load(globalopts.paradigmfname, "", "", false, sizeTS);
+    if(!globalopts.ac_only.value())
+      paradigm.load(globalopts.paradigmfname.value(), "", "", false, sizeTS);
     else
       paradigm.setDesignMatrix(sizeTS); // set design matrix to be one ev with all ones:
 
-    if(globalopts.verbose)
+    if(globalopts.verbose.value())
       write_vest(logger.appendDir("Gc"), paradigm.getDesignMatrix());
 
-    if (globalopts.voxelwise_ev_numbers.size()>0 && globalopts.voxelwiseEvFilenames.size()>0)
-      paradigm.loadVoxelwise(globalopts.voxelwise_ev_numbers,globalopts.voxelwiseEvFilenames,mask);
+    if (globalopts.voxelwise_ev_numbers.value().size()>0 && globalopts.voxelwiseEvFilenames.value().size()>0)
+      paradigm.loadVoxelwise(globalopts.voxelwise_ev_numbers.value(),globalopts.voxelwiseEvFilenames.value(),mask);
     
 
     OUT(paradigm.getDesignMatrix().Nrows());
@@ -150,8 +158,7 @@ int main(int argc, char *argv[])
 
     acEst.mask=mask;
 
-    if(!globalopts.noest)
-      {
+    if(!globalopts.noest.value()) {
 	cout << "Calculating residuals..." << endl; 
 	for(int i = 1; i <= numTS; i++)
 	  {						    
@@ -162,43 +169,40 @@ int main(int argc, char *argv[])
 	
 	cout << "Estimating residual autocorrelation..." << endl; 
 		
-	if(globalopts.fitAutoRegressiveModel)
-	  {
-	    volume4D<float> beta;
-	    beta.setmatrix(acEst.fitAutoRegressiveModel(),mask);
-	    copybasicproperties(reference,beta);
-	    beta.setDisplayMaximumMinimum(beta.max(),beta.min());
-	    save_volume4D(beta,LogSingleton::getInstance().getDir() + "/betas");
+	if( globalopts.fitAutoRegressiveModel.value() ) {
+          glimGls.saveData(logger.getDir() + "/betas",acEst.fitAutoRegressiveModel(),input_data,mask,true,true,reference.tdim(),false,-1,surfaceData,globalopts.analysisMode.value());
+	}
+	else if( globalopts.multitapersize.set() ) {
+	  acEst.calcRaw();
+	  acEst.multitaper(int(globalopts.multitapersize.value()));
+	}
+	else if(globalopts.pava.value()) {
+	  acEst.calcRaw();
+	  if(globalopts.smoothACEst.value()) {
+	    if ( globalopts.analysisMode.value()=="surface" ) {
+	      fslSurface<float, unsigned int> topologyData;
+	      read_surface(topologyData,globalopts.inputDataName2.value());
+	      acEst.spatiallySmooth(topologyData,globalopts.epith.value(),globalopts.ms.value());
+	    } else
+	      acEst.spatiallySmooth(reference.matrix(mask).t(), globalopts.ms.value(), globalopts.epith.value(), reference[0]);
 	  }
-	else if(globalopts.tukey)
-	  {    
-	    if(globalopts.tukeysize == 0)
-	      globalopts.tukeysize = (int)(2*sqrt(sizeTS))/2;
-
-	    acEst.calcRaw();
-
-	    if(globalopts.smoothACEst)
-		acEst.spatiallySmooth(logger.getDir() + "/" + globalopts.epifname, epivol, globalopts.ms, globalopts.epifname, globalopts.epith, reference[0], globalopts.tukeysize);	
-
-		
-	    acEst.tukey(globalopts.tukeysize);
-	  }
-	else if(globalopts.multitaper)
-	  {
-	    acEst.calcRaw();
-	    acEst.multitaper(int(globalopts.multitapersize));
-	  }
-	else if(globalopts.pava)
-	  {
-	    acEst.calcRaw();
-
-	    if(globalopts.smoothACEst)
-		acEst.spatiallySmooth(logger.getDir() + "/" + globalopts.epifname, epivol, globalopts.ms, globalopts.epifname, globalopts.epith, reference[0]);
-	    
 	    acEst.pava();
-	  }
-	    
-      }
+	}
+	else {    
+	  if(globalopts.tukeysize.value() == 0)
+	     globalopts.tukeysize.set_value(num2str((int)(2*sqrt(sizeTS))/2));
+	   acEst.calcRaw();
+	   if(globalopts.smoothACEst.value()) {
+	     if ( globalopts.analysisMode.value()=="surface" ) {
+	        fslSurface<float, unsigned int> topologyData;
+	        read_surface(topologyData,globalopts.inputDataName2.value());
+	        acEst.spatiallySmooth(topologyData,globalopts.epith.value(),globalopts.ms.value(),globalopts.tukeysize.value());
+	     } else
+	        acEst.spatiallySmooth(reference.matrix(mask).t(), globalopts.ms.value(), globalopts.epith.value(), reference[0], globalopts.tukeysize.value());		
+	   }
+	   acEst.tukey(globalopts.tukeysize.value());
+	}
+    }
     cout << "Completed" << endl; 
 
     cout << "Prewhitening and Computing PEs..." << endl;
@@ -212,7 +216,7 @@ int main(int argc, char *argv[])
       Matrix effectiveDesign(paradigm.getDesignMatrix(i,mask,labels));
       if ( (100.0*i)/numTS > co )
         cout << co++ << "," << flush;	   
-      if(!globalopts.noest) {
+      if(!globalopts.noest.value()) {
 	acEst.setDesignMatrix(effectiveDesign);
 	// Use autocorr estimate to prewhiten data and design:
 	ColumnVector xw;
@@ -221,22 +225,17 @@ int main(int argc, char *argv[])
       }
       glimGls.setData(datam.Column(i), effectiveDesign, i);
       residuals.Column(i)=glimGls.getResiduals();
-      if(globalopts.output_pwdata || globalopts.verbose)
+      if(globalopts.output_pwdata.value() || globalopts.verbose.value())
         mean_prewhitened_dm+=effectiveDesign;	
     }
-
-    if(globalopts.output_pwdata || globalopts.verbose) 
-      mean_prewhitened_dm/=numTS;
      
     cout << "Completed" << endl << "Saving results... " << endl;
 
-    if (globalopts.meanInputFile=="" || globalopts.minimumTimepointFile=="") {
-      input_data.setmatrix(residuals,mask);
-      input_data.setDisplayMaximumMinimum(input_data.max(),input_data.min());
-      save_volume4D(input_data,logger.getDir() + "/res4d");
+    if (globalopts.meanInputFile.value()=="" || globalopts.minimumTimepointFile.value()=="") {
+      glimGls.saveData(logger.getDir() + "/res4d",residuals,input_data,mask,true,true,reference.tdim(),false,-1,surfaceData,globalopts.analysisMode.value());
     } else {
       int minimumTimepoint(0);
-      ifstream inputTextFile(globalopts.minimumTimepointFile.c_str());
+      ifstream inputTextFile(globalopts.minimumTimepointFile.value().c_str());
       if(inputTextFile.is_open()) {
 	inputTextFile >> minimumTimepoint;
 	inputTextFile.close();
@@ -244,43 +243,40 @@ int main(int argc, char *argv[])
       cout << "Calculating new mean functional image using timepoint " << minimumTimepoint << endl;
       volume4D<float> residualsImage;
       volume<float> meanInput;
-      read_volume4D(input_data,globalopts.inputfname);
-      read_volume(meanInput,globalopts.meanInputFile);
+      read_volume4D(input_data,globalopts.inputDataName.value());
+      read_volume(meanInput,globalopts.meanInputFile.value());
       residualsImage.setmatrix(residuals,mask);
       residualsImage.setDisplayMaximumMinimum(residualsImage.max(),residualsImage.min());
       save_volume4D(residualsImage,logger.getDir() + "/res4d");
       input_data-=residualsImage;
       input_data-=meanInput;
-      save_volume(input_data[minimumTimepoint],"mean_func2");
+      save_volume(input_data[minimumTimepoint],"mean_func2"); 
     }
 
-    if(globalopts.output_pwdata || globalopts.verbose)
+    if(globalopts.output_pwdata.value() || globalopts.verbose.value())
       {
 	// Write out whitened data
         input_data.setmatrix(datam,mask);
 	input_data.setDisplayMaximumMinimum(input_data.max(),input_data.min());
         save_volume4D(input_data,logger.getDir() + "/prewhitened_data");
 	// Write out whitened design matrix
-	write_vest(logger.appendDir("mean_prewhitened_dm.mat"), mean_prewhitened_dm);
+	write_vest(logger.appendDir("mean_prewhitened_dm.mat"), mean_prewhitened_dm/numTS);
 		
       }
 
     // Write out threshac:
     Matrix& threshacm = acEst.getEstimates();
     int cutoff = sizeTS/2;
-    if(globalopts.tukey) cutoff = globalopts.tukeysize;
+    if( globalopts.tukeysize.value()>0 ) cutoff = globalopts.tukeysize.value();
+    if( globalopts.noest.value() ) cutoff=1;
     threshacm = threshacm.Rows(1,MISCMATHS::Max(1,cutoff)); 
 
-    input_data.setmatrix(threshacm,mask);
-    input_data.settdim(reference.tdim()); //Possibly just set to a constant 1?
-    input_data.set_intent(NIFTI_INTENT_ESTIMATE,0,0,0);
-    input_data.setDisplayMaximumMinimum(input_data.max(),input_data.min());
-    save_volume4D(input_data,logger.getDir() + "/threshac1");
 
+    glimGls.saveData(logger.getDir() + "/threshac1",threshacm,input_data,mask,true,true,reference.tdim(),true,NIFTI_INTENT_ESTIMATE,surfaceData,globalopts.analysisMode.value());
     threshacm.CleanUp();
 
     // save gls results:
-    glimGls.Save(mask,reference.tdim());
+    glimGls.Save(mask,input_data,surfaceData,globalopts.analysisMode.value(),reference.tdim());
     glimGls.CleanUp();
 
     cout << "Completed" << endl;

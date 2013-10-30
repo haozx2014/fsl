@@ -75,6 +75,8 @@
 #define WANT_MATH
 
 #include "newimage/newimageall.h"
+#include "fslsurface/fslsurfaceio.h"
+
 
 using namespace NEWMAT;
 
@@ -88,7 +90,10 @@ namespace FILM {
       GlimGls(const int pnumTS, const int psizeTS, const int pnumParams);
      
       void setData(const ColumnVector& p_y, const Matrix& p_x, const int ind);       
-      void Save(const NEWIMAGE::volume<float>& mask,const float reftdim);
+      void Save(const NEWIMAGE::volume<float>& mask, NEWIMAGE::volume4D<float>& saveVolume,fslsurface_name::fslSurface<float, unsigned int>& saveSurface,const string& saveMode,const float reftdim=1.0);
+      void saveData(const string& outputName, const Matrix& data, NEWIMAGE::volume4D<float>& saveVolume, const NEWIMAGE::volume<float>& volumeMask, const  bool setVolumeRange, const bool setVolumeTdim, const int outputTdim, const bool setIntent, const int intentCode,  fslsurface_name::fslSurface<float, unsigned int>& saveSurface, const string& saveToVolume);
+
+
       ColumnVector& getResiduals() { return r; }
       void CleanUp();
 

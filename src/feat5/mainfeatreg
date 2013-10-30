@@ -283,7 +283,7 @@ runFlirt() { # $1 in $2 ref $3 dof $4 search $5 interp $6 report $7 in_weighting
 	    runCommand $9 "${FSLDIR}/bin/slicer grot   -s 3 -x 0.35 sla.png -x 0.45 slb.png -x 0.55 slc.png -x 0.65 sld.png -y 0.35 sle.png -y 0.45 slf.png -y 0.55 slg.png -y 0.65 slh.png -z 0.35 sli.png -z 0.45 slj.png -z 0.55 slk.png -z 0.65 sll.png ; ${FSLDIR}/bin/pngappend sla.png + slb.png + slc.png + sld.png + sle.png + slf.png + slg.png + slh.png + sli.png + slj.png + slk.png + sll.png EF_D_edges.gif"
 	    runCommand $9 "${FSLDIR}/bin/overlay  0 0 ../${1}2highres -a ../${out}_fast_wmedge 0.001 10 grot"
 	    runCommand $9 "${FSLDIR}/bin/slicer grot    -s 3 -x 0.35 sla.png -x 0.45 slb.png -x 0.55 slc.png -x 0.65 sld.png -y 0.35 sle.png -y 0.45 slf.png -y 0.55 slg.png -y 0.65 slh.png -z 0.35 sli.png -z 0.45 slj.png -z 0.55 slk.png -z 0.65 sll.png ; ${FSLDIR}/bin/pngappend sla.png + slb.png + slc.png + sld.png + sle.png + slf.png + slg.png + slh.png + sli.png + slj.png + slk.png + sll.png EF_U_edges.gif"
-	    runCommand $9 "${FSLDIR}/bin/whirlgif -o EF_UD_movie.gif -time 50 -loop 0 EF_D_edges.gif EF_U_edges.gif; /bin/rm -f sla* slb* slc* sld* sle* slf* slg* slh* sli* slj* slk* sll* grot*"
+	    runCommand $9 "${FSLDIR}/bin/whirlgif -o EF_UD_movie.gif -time 50 -loop 0 EF_D_edges.gif EF_U_edges.gif 2>&1; /bin/rm -f sla* slb* slc* sld* sle* slf* slg* slh* sli* slj* slk* sll* grot*"
 	    writeToFile $htmlReport2 0 0 "<p>Movie of distorted and undistorted ${1} images<br>
 <a href=\"reg/unwarp/EF_UD_movie.gif\"><IMG BORDER=0 SRC=\"reg/unwarp/EF_UD_movie.gif\" WIDTH=1200></a>
 <br>"
@@ -510,8 +510,6 @@ if [ $doUnwarping = 1 ] #Initialise files
     cd unwarp
     runCommand $logFile "${FSLDIR}/bin/fslmaths ../example_func EF_D_example_func"
     runCommand $logFile "${FSLDIR}/bin/fslmaths $fieldmapImage FM_UD_fmap"
-    runCommand $logFile "${FSLDIR}/bin/fslmaths $magnitudeImage FM_UD_fmap_mag"
-
 
     if [ `${FSLDIR}/bin/imtest $magnitudeImage` = 1 ]
     then
@@ -567,10 +565,13 @@ if [ `${FSLDIR}/bin/imtest $highresImage` = 1 ]
 	    then highresHead=$highresImage
 	fi
 	runCommand $logFile "${FSLDIR}/bin/fslmaths $highresHead  highres_head"
-	highresSegmentation=${highresImage/_brain/}_wmseg
-	if [ `${FSLDIR}/bin/imtest $highresSegmentation` = 1 ]
+	highresSegmentationRoot=${highresImage/_brain/}
+	if [ `${FSLDIR}/bin/imtest ${highresSegmentationRoot}_brain_wmseg` = 1 ]
         then
-	runCommand $logFile "${FSLDIR}/bin/fslmaths $highresSegmentation highres_wmseg"
+	    runCommand $logFile "${FSLDIR}/bin/fslmaths ${highresSegmentationRoot}_brain_wmseg highres_wmseg"
+	elif [ `${FSLDIR}/bin/imtest ${highresSegmentationRoot}_wmseg` = 1  ] 
+	then
+	    runCommand $logFile "${FSLDIR}/bin/fslmaths ${highresSegmentationRoot}_wmseg highres_wmseg"
 	fi
     fi
     else if [ "$highresImage" != "" ]
@@ -626,7 +627,7 @@ if [ `${FSLDIR}/bin/imtest highres` = 1 -a `${FSLDIR}/bin/imtest initial_highres
     if [ `${FSLDIR}/bin/imtest initial_highres2highres_warp` = 1 ]
     then
 	runCommand $logFile "${FSLDIR}/bin/convert_xfm -inverse -omat highres2example_func.mat example_func2highres.mat"
-	runCommand $logFile "${FSLDIR}/bin/convertwarp --ref=highres --premat=example_func2initial_highres.mat --warp1=initial_highres2highres_warp --out=example_func2highres_warp"
+	runCommand $logFile "${FSLDIR}/bin/convertwarp --ref=highres --premat=example_func2initial_highres.mat --warp1=initial_highres2highres_warp --out=example_func2highres_warp --relout"
 	runCommand $logFile "${FSLDIR}/bin/applywarp -i example_func -r example_func -o example_func -w example_func2highres_warp --postmat=highres2example_func.mat"
     fi
     runFlirt example_func highres "" "" trilinear $htmlReport "" "" $logFile ""

@@ -665,27 +665,26 @@ int set_dataplot(const ColumnVector& datavals, const ColumnVector& tp, int colno
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
-int process_triggers(const ColumnVector& datavals) {
+int process_scanner_triggers(const ColumnVector& datavals) {
   // TRIGGERS
   // detect slice/volume triggers and mark initial detection in Etrig
-  // threshold is 90% of the 6th largest value (assume up to 5 outliers!)
-  
-  float trigLevel = 0.9*percentile(datavals,100.0*(1.0-5.0/datavals.Nrows()));
+
+  // threshold is 90% of the 6th largest value (assume up to 5 outliers!)  
+  float trigLevel = 0.9*percentile(datavals,100.0*(1.0-5.0/datavals.Nrows())) + 0.1*percentile(datavals,50.0);
+
   ColumnVector Etrig, trigpts;
   Etrig = detect_triggers(datavals,trigLevel);
   trigpts=find(Etrig,0.5);
   int ntrigs=trigpts.Nrows();
-  // do some sanity checking and set sec_per_trig
   float sec_per_trig=0.0;
-  // MJ - TODO - NEED TO PERFORM THESE CHECKS AND REPORT ERRORS/WARNINGS (ALTHOUGH NOTE
-  //    THAT AS LONG AS THE TR IS THE SAME FOR POPP AND RETROICOR_EVS, THE TIMING WILL BE FINE)
-  // if a volume is read in (or number of time points is known) then:
   //   if ntrigs = number of time points then sec_per_trig=TR
   //   else if ntrigs = number of time points * number of slices, sec_per_trig=TR/nslices
-  // Otherwise, if number of time points is not know
-  //   see if TR is close to average trig spacing * sampling time  (but keep sec_per_trig=TR)
-  // If it gets through to here without setting sec_per_trig then error/warning
-  sec_per_trig = tr.value();
+  //   estimate how many slices per trigger based on TR / average time between trigger points
+  float nslice_est = tr.value() / ((trigpts(ntrigs)-trigpts(1))/(samplingrate.value()*(ntrigs-1)));
+  if ((nslice_est>0.9) && (nslice_est<1.1)) { sec_per_trig = tr.value(); }
+  else if ((nslice_est>1.0) && (fabs(nslice_est-(MISCMATHS::round(nslice_est)))<0.2)) { sec_per_trig = tr.value()/MISCMATHS::round(nslice_est); }
+  else { cerr << "ERROR:: Problem with trigger timing" << endl << "Estimated time per trigger does not match with integer number of slices" << endl << "Time per trigger / TR = " << 1/nslice_est << endl; }
+
   ColumnVector timepts(ntrigs);
   for (int n=1; n<=ntrigs; n++) { timepts(n) = (n-1)*sec_per_trig; }
   // set the GLOBAL variable "times" (to be the acquisition time of each timept)
@@ -728,8 +727,8 @@ int process_cardiac(const ColumnVector& datavals_orig) {
   if (loadcardphase.unset()) {
     // PULSE-OX TRIGGER FILE 
     if (pulseox_trigger.value()) {
-      // calculate the pulse ox triggers here (leave out the top 5, as potential outliers)
-      float PtrigLevel = 0.2*percentile(datavals,100.0*(1.0-5.0/datavals.Nrows()));
+      // calculate the pulse ox triggers here (leave out the top 10, as potential outliers)
+      float PtrigLevel = 0.8*percentile(datavals,100.0*(1.0-10.0/datavals.Nrows())) + 0.2*percentile(datavals,50);
       peakmask = detect_triggers(datavals,PtrigLevel);   // binary vector same length as datavals
       peakind = find(peakmask,0.5);
     } else {
@@ -942,7 +941,7 @@ int do_work(int argc, char* argv[])
   if (trigger.set()) {
     if (verbose.value()) { cout << "Processing triggers in column " << trigger.value() << endl; }
     datavals = rpm.Column(trigger.value());
-    process_triggers(datavals);
+    process_scanner_triggers(datavals);
   } else {
     set_default_sample_times(nn);
   }

@@ -40,6 +40,13 @@ FSLREMOTECALL=
 
 export FSLLOCKDIR FSLMACHINELIST FSLREMOTECALL
 
+# The following variables are used to configure CUDA capable queues - if you
+# are using Grid Engine then this queue will be used to enqueue tasks that
+# support execution on NVIDIA CUDA hardware.
+FSLGECUDAQ=cuda.q
+
+export FSLGECUDAQ
+
 # Set up development variables (not for the faint-hearted)
 
 FSLCONFDIR=$FSLDIR/config

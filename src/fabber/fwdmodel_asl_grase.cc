@@ -78,7 +78,7 @@ using namespace NEWIMAGE;
 
 string GraseFwdModel::ModelVersion() const
 {
-  return "$Id: fwdmodel_asl_grase.cc,v 1.21 2013/03/12 10:00:44 chappell Exp $";
+  return "$Id: fwdmodel_asl_grase.cc,v 1.22 2013/09/04 15:13:00 chappell Exp $";
 }
 
 void GraseFwdModel::HardcodedInitialDists(MVNDist& prior, 
@@ -98,7 +98,7 @@ void GraseFwdModel::HardcodedInitialDists(MVNDist& prior,
      if (!singleti) {
        // Tissue bolus transit delay
        prior.means(tiss_index()+1) = setdelt;
-       precisions(tiss_index()+1,tiss_index()+1) = 10;
+       precisions(tiss_index()+1,tiss_index()+1) = deltprec;
      }
     
     
@@ -443,7 +443,7 @@ GraseFwdModel::GraseFwdModel(ArgsType& args)
       // specify command line parameters here
       repeats = convertTo<int>(args.ReadWithDefault("repeats","1")); // number of repeats in data
       t1 = convertTo<double>(args.ReadWithDefault("t1","1.3"));
-      t1b = convertTo<double>(args.ReadWithDefault("t1b","1.5"));
+      t1b = convertTo<double>(args.ReadWithDefault("t1b","1.65"));
       lambda = convertTo<double>(args.ReadWithDefault("lambda","0.9"));
 
 
@@ -463,6 +463,9 @@ GraseFwdModel::GraseFwdModel(ArgsType& args)
       //infertrailing = args.ReadBool("infertrailing"); //infers a trailing edge bolus slope using new model
       seqtau = convertTo<double>(args.ReadWithDefault("tau","1000")); //bolus length as set by sequence (default of 1000 is effectively infinite
       setdelt = convertTo<double>(args.ReadWithDefault("bat","0.7"));
+      double deltsd; //std dev for delt prior
+      deltsd = convertTo<double>(args.ReadWithDefault("batsd","0.316"));
+      deltprec = 1/(deltsd*deltsd);
 
       bool ardoff = false;
       ardoff = args.ReadBool("ardoff");
@@ -571,9 +574,9 @@ void GraseFwdModel::ModelUsage()
        << "--grase *DEPRECEATAED* (data collected using GRASE-ASL: same as --pretissat=0.1)\n"
        << "--pretisat=<presat_time> (Define that blood is saturated a specific time before TI image acquired)\n"
        << "--calib (data has been provided in calibrated units)\n"
-       << "--tau=<temporal_bolus_length> (default 10s if --infertau not set)\n"
+       << "--tau=<bolus duration> (default 10s if --infertau not set)\n"
        << "--t1=<T1_of_tissue> (default 1.3)\n"
-       << "--t1b=<T1_of_blood> (default 1.5)\n"
+       << "--t1b=<T1_of_blood> (default 1.65)\n"
        << "--infertau (to infer on bolus length)\n"
        << "--inferart (to infer on arterial compartment)\n"
        << "--infert1 (to infer on T1 values)\n"

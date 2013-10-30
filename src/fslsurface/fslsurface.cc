@@ -1114,6 +1114,22 @@ namespace fslsurface_name {
         scalar_names.clear();
     }
 
+	template<class T, class T2>
+	void fslSurface<T,T2>::setScalar(const unsigned int & sc_ind, const unsigned int & vert_ind, const T& value )
+	{ // Note this will generate exceptions if scalar_data is accessed outside of bounds
+	  scalar_data[sc_ind][vert_ind]=value; 
+	}
+
+	template<class T, class T2>
+	void fslSurface<T,T2>::reinitialiseScalars(const unsigned int fields)
+	{ //assumes data has same number of cols as surface has vertices - use at your peril!!
+	  clearScalars();
+	  scalar_data.resize(fields); //number of scalar fields
+	  scalar_names.resize(fields);
+	  for(unsigned int field=0; field < getNumberOfScalarData(); field++)
+	    scalar_data[field].resize( getNumberOfVertices() );
+	}
+
 
 	template<class T, class T2>
 	void fslSurface<T,T2>::setScalars(const int & index )

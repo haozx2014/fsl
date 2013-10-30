@@ -76,9 +76,11 @@
 
 #include "miscmaths/miscmaths.h"
 #include "newimage/newimageall.h"
+#include "fslsurface/fslsurface.h"
 
 using namespace NEWMAT;
 using namespace MISCMATHS;
+using namespace fslsurface_name;
 
 namespace FILM {
      
@@ -109,7 +111,8 @@ namespace FILM {
 	}
 
       void calcRaw(int lag = 0);
-      void spatiallySmooth(const string& usanfname, const ColumnVector& epivol, int masksize, const string& epifname, int usanthresh, const NEWIMAGE::volume<float>& usan_vol, int lag=0);
+      void spatiallySmooth(const ColumnVector& epivol, int masksize, int usanthresh, const NEWIMAGE::volume<float>& usan_vol, int lag=0);
+      void spatiallySmooth(const fslSurface<float, unsigned int> surfaceData, const float sigma, const float extent, int lag=0); 
       void applyConstraints();
       void filter(const ColumnVector& filterFFT);
       Matrix fitAutoRegressiveModel();

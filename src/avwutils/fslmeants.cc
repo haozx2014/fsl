@@ -324,24 +324,20 @@ int main(int argc,char *argv[])
 	}
       }
     
-      if (verbose.value()) {
+      if (verbose.value()) 
 	cout << "Number of voxels used = " << num << endl;
-      }
-    
       // normalise for number of valid entries if averaging
-      if (!showall.value()) {
-	if (num>0) meants.SubMatrix(1,nt,iter,iter) = meants.SubMatrix(1,nt,iter,iter) / ((float) num);
-      }
-
-      // save the result
-      if (transpose.value()) { meants=meants.t(); }
-      if (outmat.set()) {
-	write_ascii_matrix(meants,outmat.value());
-      } else {
-	cout << meants << endl;
-      }
-      if (transpose.value()) { meants=meants.t(); }
+      if (!showall.value()) 
+	if (num>0) meants.SubMatrix(1,nt,iter,iter) = meants.SubMatrix(1,nt,iter,iter) / ((float) num);  
     }
+  }
+  if ( !eig.value() ) {
+    if (transpose.value())
+      meants=meants.t();
+    if (outmat.set()) 
+      write_ascii_matrix(meants,outmat.value());
+    else 
+      cout << meants << endl; 
   }
   return 0;
 }

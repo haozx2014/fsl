@@ -2112,7 +2112,7 @@ proc feat5:cutoffcalc { } {
 	MxPause "Error: Please press Done in Full Model Setup to regenerate files needed for estimation"
 	return 1
     }
-    set fmri(paradigm_hp) [ exec sh -c "${FSLDIR}/bin/cutoffcalc -t $fmri(tr) -i [ file rootname $fmri(feat_filename)].mat " ]
+    set fmri(paradigm_hp) [ exec sh -c "${FSLDIR}/bin/cutoffcalc --tr=$fmri(tr) -i [ file rootname $fmri(feat_filename)].mat " ]
 }
 
 #}}}
@@ -4671,15 +4671,15 @@ frame $f.initial_highres
 
 checkbutton $f.initial_highres.yn -variable fmri(reginitial_highres_yn) -command "feat5:updatereg_hr_init $w"
 
-label $f.initial_highres.label -text "Expanded structural image"
+label $f.initial_highres.label -text "Expanded functional image"
 
-TitleFrame $f.initial_highres.lf -text "Expanded structural image" -relief groove 
+TitleFrame $f.initial_highres.lf -text "Expanded functional image" -relief groove 
 set fmri(initial_highresf) [ $f.initial_highres.lf getframe ]
 
-FileEntry $fmri(initial_highresf).initial_highressingle -textvariable initial_highres_files(1) -label "" -title "Select expanded structural image" -width 45 -filedialog directory  -filetypes IMAGE -command "feat5:multiple_check $w 3 1 0"
+FileEntry $fmri(initial_highresf).initial_highressingle -textvariable initial_highres_files(1) -label "" -title "Select expanded functional image" -width 45 -filedialog directory  -filetypes IMAGE -command "feat5:multiple_check $w 3 1 0"
 
-button $fmri(initial_highresf).initial_highresmultiple -text "Select expanded structural images" \
-	-command "feat5:multiple_select $w 3 \"Select expanded structural images\" "
+button $fmri(initial_highresf).initial_highresmultiple -text "Select expanded functional images" \
+	-command "feat5:multiple_select $w 3 \"Select expanded functional images\" "
 
 frame $fmri(initial_highresf).opts
 
@@ -4691,16 +4691,13 @@ pack  $fmri(initial_highresf).opts.label $fmri(initial_highresf).opts.search $fm
 
 pack $fmri(initial_highresf).initial_highressingle $fmri(initial_highresf).opts -in $fmri(initial_highresf) -anchor w -side top -pady 2 -padx 3
 pack $f.initial_highres.yn $f.initial_highres.label -in $f.initial_highres -side left
-balloonhelp_for $f.initial_highres "This is the expanded structural image which the low
+balloonhelp_for $f.initial_highres "This is the expanded functional image which the low
 resolution functional data will be registered to, and this in turn
 will be registered to the main highres image. It only makes sense to
 have an expanded image if a main highres image is also
 specified and used in the registration. 
 
-One example of an expanded structural image might be a
-medium-quality structural scan taken during a day's scanning, if a
-higher-quality image has been previously taken for the subject. A
-second example might be a full-brain image with the same MR sequence
+An might be a full-brain image with the same MR sequence
 as the functional data, useful if the actual functional data is only
 partial-brain. It is strongly recommended that this image have
 non-brain structures already removed, for example by using BET.
@@ -4745,7 +4742,7 @@ pack $fmri(highresf).highressingle $fmri(highresf).opts -in $fmri(highresf) -anc
 pack $f.highres.yn $f.highres.label -in $f.highres -side left
 balloonhelp_for $f.highres "This is the main high resolution structural image which the low resolution
 functional data will be registered to (optionally via the \"expanded
-structural image\"), and this in turn will be registered to the
+functional image\"), and this in turn will be registered to the
 standard brain. It is strongly recommended that this image have
 non-brain structures already removed, for example by using BET.
 
@@ -5522,24 +5519,26 @@ proc feat5:proc_film { session } {
     set absbrainthresh [ exec sh -c "cat absbrainthresh.txt" ]
 
     if { $voxelwiseNumbers != "" } {
-	set voxelwiseFilelist  "-vef $voxelwiseFilelist"
-	set voxelwiseNumbers  "-ven $voxelwiseNumbers"
+	set voxelwiseFilelist [ string trimleft $voxelwiseFilelist ]
+ 	set voxelwiseNumbers  [ string trimleft $voxelwiseNumbers ]
+	set voxelwiseFilelist  "--vef=$voxelwiseFilelist"
+	set voxelwiseNumbers  "--ven=$voxelwiseNumbers"
     }
 
     set film_text " with local autocorrelation correction"
-    set film_opts "-sa -ms 5"
+    set film_opts "--sa --ms=5"
     if { $fmri(perfsub_yn) } {
-	set film_opts "$film_opts -mf mean_func -mft design.min"
+	set film_opts "$film_opts --mf=mean_func --mft=design.min"
     }
-    if { [ info exists fmri(susan_bt) ] && [ info exists fmri(tukey_num) ] } { set film_opts "-sa -ms $fmri(susan_ms) -epith $fmri(susan_bt) -v -tukey $fmri(tukey_num)" }
+    if { [ info exists fmri(susan_bt) ] && [ info exists fmri(tukey_num) ] } { set film_opts "--sa --ms=$fmri(susan_ms) --epith=$fmri(susan_bt) -v --tukey=$fmri(tukey_num)" }
     if { ! $fmri(prewhiten_yn) } {
-	set film_opts "-noest"
+	set film_opts "--noest"
 	set film_text ""
     }
 
     new_file stats
     if { ! [ info exists fmri(false_grp_flameo) ] } {
-	fsl:exec "$FSLDIR/bin/film_gls -rn stats $film_opts $voxelwiseNumbers $voxelwiseFilelist filtered_func_data design.mat $absbrainthresh"
+	fsl:exec "$FSLDIR/bin/film_gls --in=filtered_func_data --rn=stats --pd=design.mat --thr=$absbrainthresh $film_opts $voxelwiseNumbers $voxelwiseFilelist"
     } else {
 #new for JB
 fsl:exec "$FSLDIR/bin/fslmaths filtered_func_data -Tmean flameomean"

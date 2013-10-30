@@ -3,7 +3,7 @@
     
     melodic.h - main program header
 
-    Christian F. Beckmann, FMRIB Analysis Group
+    Christian F. Beckmann and Matthew Webster, FMRIB Analysis Group
     
     Copyright (C) 1999-2013 University of Oxford */
 
@@ -126,7 +126,7 @@
 
 namespace Melodic{
 
-const string version = "3.13";  
+const string version = "3.14";  
 
 // The two strings below specify the title and example usage that is	
 // printed out as the help or usage message

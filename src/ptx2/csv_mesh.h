@@ -73,13 +73,16 @@
 #include "meshclass/point.h"
 #include "meshclass/mpoint.h"
 #include "miscmaths/miscmaths.h"
+#include "utils/tracer_plus.h"
 #include "fslsurface/fslsurfaceio.h"
 #include "fslsurface/fslsurface.h"
+
 
 using namespace fslsurface_name;
 using namespace std;
 using namespace MISCMATHS;
 using namespace mesh;
+using namespace Utilities;
 
 int  meshFileType(const string& filename);
 bool meshExists(const string& filename);
@@ -108,7 +111,7 @@ class CsvMpoint {
 
   const Pt&    get_coord() const         {return _coord;}
   void         set_coord(const Pt& coord){_coord=coord;}
-  const int&   get_no() const            {return _no;}
+  inline int          get_no() const            {return _no;}
   void         push_triangle(const int& i){_trID.push_back(i);}
   int          ntriangles()const{return (int)_trID.size();}
   int          get_trID(const int i)const{return _trID[i];}
@@ -155,10 +158,10 @@ class CsvTriangle {
   double dist_to_point(const Vec& x0)const;
 
 
-  const CsvMpoint& get_vertice(const int& i) const{return _vertice[i];}
+  inline const CsvMpoint& get_vertice(const int& i) const{return _vertice[i];}
   const bool intersect(const vector<Pt> & p)const;          // checks if a segment intersects the triangle
   const bool intersect(const vector<Pt> & p,int& ind)const; // checks if a segment intersects the triangle+gives the index of the closest vertex
-  int get_no()const{return _no;}
+  inline int get_no()const{return _no;}
 };
 
 
@@ -201,8 +204,12 @@ class CsvMesh {
 
   int   nvertices() const{return (int)_points.size();}
   int   ntriangles() const{return (int)_triangles.size();}
-  const CsvMpoint&    get_point(int n)const{return _points[n];}
-  const CsvTriangle&  get_triangle(int n)const{return _triangles[n];}
+  inline const CsvMpoint&    get_point(const int& n)const{return _points[n];}
+  inline const CsvTriangle&  get_triangle(const int& n)const{return _triangles[n];}
+  bool triangle_intersect(const vector<Pt>& segment,const int& triid)const{
+    return( _triangles[triid].intersect(segment) );
+  }
+
 
   float get_pvalue(const int& i)const{return _pvalues[i];}
   float get_tvalue(const int& i)const{return _tvalues[i];}
@@ -219,7 +226,11 @@ class CsvMesh {
     for(int i=1;i<=vals.Nrows();i++)
       _pvalues[i-1]=vals(i);
   }
-
+  void set_pvalues(const float& val){
+    for(unsigned int i=0;i<_pvalues.size();i++)
+      _pvalues[i]=val;
+  }
+  
   vector< float > getPointsAsVectors()const{
     vector< float > ret;
     for(int i=0;i<nvertices();i++){

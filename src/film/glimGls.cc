@@ -67,14 +67,17 @@
     innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include <sstream>
-
 #include "glimGls.h"
 #include "miscmaths/miscmaths.h"
 #include "utils/log.h"
+#include "glimGls.h"
+#include "fslsurface/fslsurface.h"
 
 using namespace MISCMATHS;
 using namespace Utilities;
 using namespace NEWIMAGE;
+using namespace fslsurface_name;
+
 
 namespace FILM {
 
@@ -91,6 +94,7 @@ namespace FILM {
   }
   
   void GlimGls::CleanUp()
+
   {
     corrections.CleanUp();
     sigmaSquareds.CleanUp();
@@ -116,38 +120,38 @@ namespace FILM {
       SetCorrection(inv_xx, ind);
     }
 
-  void GlimGls::Save(const volume<float>& mask, const float reftdim=1.0)
+    void GlimGls::Save(const volume<float>& mask, volume4D<float>& saveVolume, fslSurface<float, unsigned int>& saveSurface, const string& saveMode, const float reftdim)
     {
       // Need to save b, sigmaSquareds, corrections and dof 
       Log& logger = LogSingleton::getInstance();
-
-
-      // b:
-      volume4D<float> peVol;
-      copybasicproperties(mask,peVol);
-      for(int i = 1; i <= numParams; i++)
-	{
-	  peVol.setmatrix(b.Row(i),mask);
-	  peVol.set_intent(NIFTI_INTENT_ESTIMATE,0,0,0);
-          peVol.setDisplayMaximumMinimum(peVol.max(),peVol.min());
-	  save_volume(peVol[0],logger.getDir() + "/pe" + num2str(i));
-	}
-
-      // sigmaSquareds:
-      peVol.setmatrix(sigmaSquareds,mask);
-      peVol.setDisplayMaximumMinimum(peVol.max(),peVol.min());
-      save_volume(peVol[0],logger.getDir() + "/sigmasquareds");
-      // dof:
+      for(int i = 1; i <= numParams; i++) //Beta
+	  saveData(logger.getDir() + "/pe" + num2str(i),b.Row(i),saveVolume,mask,true,false,-1,true,NIFTI_INTENT_ESTIMATE,saveSurface,saveMode);
+      saveData(logger.getDir() + "/sigmasquareds",sigmaSquareds,saveVolume,mask,true,false,-1,false,-1,saveSurface,saveMode);
       ColumnVector dofVec(1);
       dofVec = dof;
-      write_ascii_matrix(logger.appendDir("dof"), dofVec);
-      
-      peVol.setmatrix(corrections,mask);
-      peVol.set_intent(NIFTI_INTENT_NONE,0,0,0);
-      peVol.settdim(reftdim); //Possibly just set to a constant 1?
-      peVol.setDisplayMaximumMinimum(peVol.max(),peVol.min());
-      save_volume4D(peVol,logger.getDir() + "/corrections");
+      write_ascii_matrix(logger.appendDir("dof"), dofVec);    
+      saveData(logger.getDir() + "/corrections",corrections,saveVolume,mask,true,true,reftdim,true,NIFTI_INTENT_NONE,saveSurface,saveMode);
     }
+
+  void GlimGls::saveData(const string& outputName, const Matrix& data, volume4D<float>& saveVolume, const volume<float>& volumeMask, const  bool setVolumeRange, const bool setVolumeTdim, const int outputTdim, const bool setIntent, const int intentCode, fslSurface<float, unsigned int>& saveSurface, const string& saveMode)
+  {
+    if ( saveMode=="surface" ) {
+      saveSurface.reinitialiseScalars(data.Nrows());
+      for(unsigned int vertex=0; vertex < saveSurface.getNumberOfVertices(); vertex++)
+	for(unsigned int timepoint=0; timepoint < saveSurface.getNumberOfScalarData(); timepoint++)
+           saveSurface.setScalar(timepoint,vertex,data(timepoint+1,vertex+1));
+      writeGIFTI(saveSurface,outputName+".func.gii",GIFTI_ENCODING_B64GZ);
+    } else { //TODO this is just an example below - expand to fill logic
+      saveVolume.setmatrix(data,volumeMask);
+      if ( setVolumeTdim ) 
+	saveVolume.settdim(outputTdim);
+      if ( setIntent )
+	saveVolume.set_intent(intentCode,0,0,0);
+      if ( setVolumeRange )
+	saveVolume.setDisplayMaximumMinimum(saveVolume.max(),saveVolume.min());
+      save_volume4D(saveVolume,outputName);
+    }
+  }
 
 
   void GlimGls::SetCorrection(const Matrix& corr, const int ind)

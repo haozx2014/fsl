@@ -73,6 +73,6 @@ The basename of the output from topup. Compulsory. <span class="anchor" id="line
 <span class="anchor" id="line-111"></span><span class="anchor" id="line-112"></span><p class="line862">When using --method=jac and the transform x-&gt;x' maps to a point that is not on a voxel centre in the --in volume, the pertinent intensity value will have to be deduced from the intensities at the surrounding voxel centres. This process is known as interpolation. In applytopup there are two choices, tri-linear interpolation of cubic B-spline interpolations. In general, spline interpolation is more accurate at the cost of slightly longer execution time. I would strongly recommend spline interpolations, and hence it is the default. <span class="anchor" id="line-113"></span><span class="anchor" id="line-114"></span><p class="line874">N.B. that spline interpolation can introduce negative values even when given input that has all positive values. Therefore if ones subsequent analysis methods/software assume positive values one should use something like fslmaths my_splinterpolated_images -abs my_positive_splinterpolated_images before proceeding. <span class="anchor" id="line-115"></span><span class="anchor" id="bottom"></span></div>
 </div>
 <hr>
-2013-04-26 13:35
+2013-09-30 13:49
 </body>
 </html>

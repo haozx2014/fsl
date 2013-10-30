@@ -77,9 +77,11 @@
 #include <iostream>
 #include "stdlib.h"
 #include "probtrackxOptions.h"
+#include "utils/tracer_plus.h"
 using namespace std;
 using namespace NEWIMAGE;
 using namespace TRACT;
+using namespace Utilities;
 
 namespace TRACTVOLSX{
   class Tractvolsx
@@ -115,6 +117,29 @@ namespace TRACTVOLSX{
       void reset(const int& fibst_in){
 	init_sample=true;
 	fibst=fibst_in;
+      }
+
+      int sample_fibre(int col,int samp,const ColumnVector& dir){
+	float th,ph;ColumnVector x(3);
+	vector<int> fibvec;
+	for(int fib=0;fib<nfibres;fib++){	    
+	  float ft=fsamples[fib](samp,col);
+	  if(ft>opts.fibthresh.value()){
+	    th=thsamples[fib](samp,col);
+	    ph=phsamples[fib](samp,col);
+	    x<<sin(th)*cos(ph)<<sin(th)*sin(ph)<<cos(th);
+	    if( fabs( x(1)*dir(1)+x(2)*dir(2)+x(3)*dir(3) ) > 0.766 ){ //hard-coded 40 deg threshold
+	      fibvec.push_back(fib);
+	    }
+	  }
+	}
+	if(fibvec.size()==0){
+	  return 0;
+	}
+	else{
+	  float rtmp=(float)rand()/float(RAND_MAX) * float(fibvec.size()-1);
+	  return (fibvec[ (int)round(rtmp) ]);
+	}
       }
 
       int sample_fibre(int col,int samp,const int& mode=2){
@@ -266,6 +291,7 @@ namespace TRACTVOLSX{
 			  const int& sample_fib,int& sampled_fib,
 			  int& newx,int& newy,int& newz){
 
+	//Tracer_Plus tr("sample");
 	////////Probabilistic interpolation
 	int cx =(int) ceil(x),fx=(int) floor(x);
 	int cy =(int) ceil(y),fy=(int) floor(y);
@@ -314,17 +340,23 @@ namespace TRACTVOLSX{
 	      }
 	      int locrule=0;
 	      if(opts.locfibchoice.value()!=""){locrule=locfibchoice(newx,newy,newz);}
-	      if(locrule>0){
+	      if(locrule==1){
 		fibind=sample_fibre(col,samp,1);
 		theta=thsamples[fibind](samp,col);
 		phi=phsamples[fibind](samp,col);
 	      }
-	      else{
+	      else if(locrule==2){ // like locrule=1 but with angle threshold
+		ColumnVector dir(3);dir<<r_x<<r_y<<r_z;
+		fibind=sample_fibre(col,samp,dir);
+		theta=thsamples[fibind](samp,col);
+		phi=phsamples[fibind](samp,col);
+	      }
+	      else{ // pick closest direction
 		for(int fib=0;fib<nfibres;fib++){
 		  if(fsamples[fib](samp,col)>opts.fibthresh.value()){
 		    float phtmp=phsamples[fib](samp,col);
 		    float thtmp=thsamples[fib](samp,col);
-		    dottmp=fabs(sin(thtmp)*cos(phtmp)*prefer_x + sin(thtmp)*sin(phtmp)*prefer_y + cos(thtmp)*prefer_z);
+		    dottmp=fabs(sin(thtmp)*(cos(phtmp)*prefer_x + sin(phtmp)*prefer_y) + cos(thtmp)*prefer_z);
 		    if(dottmp>dotmax){
 		      dotmax=dottmp;
 		      theta=thtmp;

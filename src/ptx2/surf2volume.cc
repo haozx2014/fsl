@@ -88,7 +88,7 @@ int main(int argc, char** argv){
   CSV csv(refvol);
   csv.set_convention(argv[4]);
   csv.load_rois(argv[1]);
-  csv.save_surfvol(argv[3],true);
+  csv.save_surfvol(argv[3],false);
   //  csv.save_normalsAsVol(0,string(argv[3])+"_normal");
 
 

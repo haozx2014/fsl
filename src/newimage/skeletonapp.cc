@@ -146,16 +146,19 @@ int main(int argc,char *argv[])
 	exit(EXIT_FAILURE);
       }
     
-  }  catch(X_OptionError& e) {
+    // Call the local functions
+    return do_work(argc,argv);
+
+  } catch(X_OptionError& e) {
     options.usage();
     cerr << endl << e.what() << endl;
     exit(EXIT_FAILURE);
   } catch(std::exception &e) {
     cerr << e.what() << endl;
+  } catch(Exception &e) {
+    cerr << e.what() << endl;
+  } catch(...) {
+    cerr << "Fatal error" << endl;
   } 
-
-  // Call the local functions
-
-  return do_work(argc,argv);
 }
 

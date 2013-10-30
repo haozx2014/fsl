@@ -14,7 +14,7 @@ XFILES = fslorient fslstats fslmerge \
          fslpspec fslroi fslnvols fsl2ascii fslascii2img  \
          fslsplit fslcc fslinterleave \
          fslhd fslcpgeom fslcreatehd fslcorrecthd fslmaths \
-         fslcomplex fslfft fslmeants fslslice fslswapdim_exe fslchfiletype_exe fslsmoothfill
+         fslcomplex fslfft fslmeants fslslice fslswapdim_exe fslchfiletype_exe calc_grad_perc_dev fslsmoothfill
 
 SCRIPTS = fslval fslchpixdim fslanimate fslsize sliceanimate fslinfo fsledithd avw2fsl fslswapdim fslchfiletype fslreorient2std fslmodhd fsladd
 
@@ -95,6 +95,9 @@ fsldecorr4d: fsldecorr4d.o
 
 fslchfiletype_exe: fslchfiletype.o
 	${CXX} ${CXXFLAGS} ${LDFLAGS} -o fslchfiletype_exe fslchfiletype.o ${LIBS}
+
+calc_grad_perc_dev: calc_grad_perc_dev.o
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o calc_grad_perc_dev calc_grad_perc_dev.o ${LIBS}
 
 fslsmoothfill: fslsmoothfill.o
 	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ fslsmoothfill.o ${LIBS}

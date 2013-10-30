@@ -126,14 +126,16 @@ void nmasks()
 
   srand(opts.rseed.value()); // need to reinitialise random seed because of GIFTI!!
 
+  seedmanager.get_stline().init_network_mat(seeds.nRois());  
+
   // seed from volume-like ROIs
   if(seeds.nVols()>0){
     cout << "Volume seeds" << endl;
     for(int roi=1;roi<=seeds.nVols();roi++){
       cout<<"volume "<<roi-1<<endl;
-
       cnt++;
       seedmanager.get_stline().load_netmasks(opts.seedfile.value(),roiind[cnt]);
+      seedmanager.get_stline().set_seed_id(roiind[cnt]);
 
       for(int z=0;z<seeds.zsize();z++){
 	if(opts.verbose.value()>=1)
@@ -166,6 +168,7 @@ void nmasks()
       cnt++;
       
       seedmanager.get_stline().load_netmasks(opts.seedfile.value(),roiind[cnt]);
+      seedmanager.get_stline().set_seed_id(roiind[cnt]);
 
       // inform user if whole surface is used or not
       if( seeds.nActVertices(i) != seeds.nVertices(i) ){

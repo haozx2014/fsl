@@ -270,7 +270,7 @@ if { [ string compare $spaces example_func ] != 0 } {
     }
 
     if { $coords == 1 } {
-	fsl:exec "${FSLDIR}/bin/fslmaths ${fqroot}/$mask -s 5 ${fqroot}/mask -odt float"
+	fsl:exec "${FSLDIR}/bin/fslmaths $mask -s 5 ${fqroot}/mask -odt float"
     }
 
     if { [ string compare $spaces standard ] == 0 && [ imtest reg/highres2standard_warp ] } {

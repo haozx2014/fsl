@@ -323,7 +323,14 @@ ColumnVector slice_timing(int slicenum, int64_t sx, int64_t sy, int64_t sz, int6
     }
   } else {
     // user provided timings
-    stimes = slicetimingvals.Column(slicenum);
+    ColumnVector usertimes = slicetimingvals.Column(Min(slicenum,slicetimingvals.Ncols()));
+    if (usertimes.Ncols()==stimes.Nrows()) { stimes=usertimes; }
+    else if (usertimes.Ncols()==1) {
+      for (int n=1; n<=stimes.Nrows(); n++) {
+	stimes(n) = usertimes(1) + (n-1)*tr.value();
+      }
+    }
+
   }
   return stimes;
 }
@@ -552,18 +559,22 @@ int do_work(int argc, char* argv[])
   if (verbose.value()) { cout << "Calculating and saving EVs" << endl; }
   double tmean=0;
   string outbase=fslbasename(outname.value());
-  volume4D<float> ev_vol(1,1,nslices,nvols);
+  int nnx=1, nny=1, nnz=1;
+  if (slicedir.value()=="x") nnx=nslices;
+  if (slicedir.value()=="y") nny=nslices;
+  if (slicedir.value()=="z") nnz=nslices;
+  volume4D<float> ev_vol(nnx,nny,nnz,nvols);
   for (int ev=1; ev<=numevs; ev++) {
     for (int ns=1; ns<=nslices; ns++) {
       tmean=0;
       for (int nv=1; nv<=nvols; nv++) {
-	ev_vol(0,0,ns-1,nv-1)=confoundvol(ev-1,ns-1,nv-1);
-	tmean+=ev_vol(0,0,ns-1,nv-1);
+	ev_vol(Min(ns,nnx)-1,Min(ns,nny)-1,Min(ns,nnz)-1,nv-1)=confoundvol(ev-1,ns-1,nv-1);
+	tmean+=ev_vol(Min(ns,nnx)-1,Min(ns,nny)-1,Min(ns,nnz)-1,nv-1);
       }
       // demean EV
       tmean/=nvols;
       for (int nv=1; nv<=nvols; nv++) {
-	ev_vol(0,0,ns-1,nv-1) -= tmean;
+	ev_vol(Min(ns,nnx)-1,Min(ns,nny)-1,Min(ns,nnz)-1,nv-1) -= tmean;
       }      
     }
     

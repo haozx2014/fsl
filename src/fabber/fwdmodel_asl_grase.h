@@ -125,6 +125,7 @@ protected: // Constants
   // scan parameters
   double seqtau; //bolus length as set by the sequence
   double setdelt; //BAT for prior (tissue compartment)
+  double deltprec; //precision for BAT
   int repeats;
   double t1;
   double t1b;

@@ -88,7 +88,7 @@ namespace Melodic{
   void MelodicPCA::perf_pca(Matrix& in, Matrix& weights){    
   	message("Starting PCA  ... ");
 
-    Matrix Corr;
+    SymmetricMatrix Corr;
     Matrix tmpE;
     RowVector tmpD, AdjEV, PercEV;
    
@@ -97,7 +97,6 @@ namespace Melodic{
 		basicGLM tmpglm;
 		tmpglm.olsfit(in,melodat.get_param(),IdentityMatrix(melodat.get_param().Ncols()));
 		std_pca(tmpglm.get_residu(),weights,Corr,tmpE,tmpD);
-//		std_pca(in,weights,Corr,tmpE,tmpD,melodat.get_param());
 	}
 	else{
  		std_pca(in,weights,Corr,tmpE,tmpD); 

@@ -72,7 +72,6 @@
 #include <algorithm>
 #include <map>
 #include <list>
-//#include "fslsurfacefns.h"
 #include "fslsurface_structs.h"
 //extern "C" {	
 //#include <gifti/gifti_io.h>
@@ -87,7 +86,7 @@ namespace fslsurface_name{
 		const char* errmesg;
 		fslSurfaceException(const char* msg)
 		{
-			errmesg=msg;
+		  errmesg=msg;
 		}
 		virtual const char* what() const throw()
 		{
@@ -226,6 +225,9 @@ namespace fslsurface_name{
         
         
 		void setScalars(const int & index );
+		void reinitialiseScalars(const unsigned int fields);
+		void setScalar( const unsigned int & sc_ind, const unsigned int & vert_ind, const T& value ); 
+
         void replaceScalars(const std::vector< std::vector<T> > & scalars , const std::vector< std::string > & sc_names);
         void clearScalars();
 		void insertScalars(const std::vector<T> & scalars, const unsigned int & index, const std::string & sname);

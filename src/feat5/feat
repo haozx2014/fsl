@@ -406,13 +406,29 @@ if { $fmri(featwatcher_yn) } {
 	set prestatsID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -I $session -prestats" -b $howlong -h $regID -h $initID $jobHalt -N feat2_pre -l logs ]
     }
 
+
+     set actualEVs $fmri(evs_real)
+     if { $fmri(motionevsbeta) != "" } {
+	 set actualEVs [ expr $actualEVs + [ exec sh -c "wc -l $fmri(motionevsbeta) | awk '{print \$1}'" ] ]
+     }
+     if { $fmri(motionevs) == 1 } {
+	 set actualEVs [ expr $actualEVs + 6 ] 
+     }
+     if { $fmri(motionevs) == 2 } {
+	 set actualEVs [ expr $actualEVs + 24 ] 
+     }
+     if { $fmri(confoundevs) && [ file exists $confoundev_files($session) ] } {
+	  set actualEVs [ expr $actualEVs + [ exec sh -c "head -1 $confoundev_files($session) | wc -w  | awk '{print \$1}'" ] ]
+     }
+
     if { $fmri(stats_yn) } {
-	set howlong [ expr int( 1 +  ( ( $fmri(totalVoxels) / 1000000 ) * ( $fmri(totalVoxels) / 1000000 ) / 60 ) * int ( 1 + $fmri(evs_real) / 10 ) )  ]
+	#This seems to be an fairly accurate estimate, for old-style feat, revisit when contrast film_gls goes on the system
+	set howlong [ expr int ( $fmri(totalVoxels) *  $fmri(npts)  * $actualEVs / 7000000000 ) + 1 ]
 	set filmID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -I $session -film" -b $howlong -h $prestatsID -N feat3_film -l logs ]
     }
 
     if { $fmri(poststats_yn) } {
-        set howlong [ expr int( $fmri(ncon_real) * $fmri(evs_real) / 4 ) ]
+        set howlong [ expr int( $fmri(ncon_real) * $actualEVs / 4 ) ]
 	set poststatsID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -poststats 0 0" -b $howlong -h $filmID -N feat4_post -l logs ]
     }
 

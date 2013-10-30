@@ -684,6 +684,7 @@ namespace MISCMATHS {
       return matnew;
     }
 
+  bool strict_less_than(pair<double, int> x, pair<double, int> y) { return x.first < y.first; }
 
   vector<int> get_sortindex(const Matrix& vals, const string& mode, int col)
   {
@@ -694,7 +695,7 @@ namespace MISCMATHS {
     for (int n=0; n<length; n++) {
       sortlist[n] = pair<double, int>((double) vals(n+1,col),n+1);
     }
-    sort(sortlist.begin(),sortlist.end());  // O(N.log(N))
+    sort(sortlist.begin(),sortlist.end(),strict_less_than);  // O(N.log(N))
     vector<int> idx(length);
     for (int n=0; n<length; n++) {
       if (mode=="old2new") {
@@ -1792,6 +1793,29 @@ ReturnMatrix sum(const Matrix& mat, const int dim)
   return res;
 }
 
+ReturnMatrix mean(const Matrix& mat, const RowVector& weights, const int dim) //weights are considered to be in the "direction" of dim and normalised to sum 1
+{
+	Matrix res;	
+  	if (dim == 1){
+		res = zeros(1,mat.Ncols());
+		for (int mc=1; mc<=mat.Ncols(); mc++) {
+		    for (int mr=1; mr<=mat.Nrows(); mr++) {
+		      res(1,mc) += weights(mr)*mat(mr,mc);
+		    }
+		}
+  	}
+  	else{
+		res = zeros(mat.Nrows(),1);
+		for (int mr=1; mr<=mat.Nrows(); mr++) {
+		    for (int mc=1; mc<=mat.Ncols(); mc++) {
+		      	res(mr,1) += weights(mc)*mat(mr,mc);
+		    }
+		}
+  	}
+	res.Release();
+	return res;
+}
+
 ReturnMatrix mean(const Matrix& mat, const int dim)
 {
 	Matrix res;	
@@ -1817,6 +1841,7 @@ ReturnMatrix mean(const Matrix& mat, const int dim)
 	res.Release();
 	return res;
 }
+
 
 ReturnMatrix var(const Matrix& mat, const int dim)
 { 
@@ -2098,7 +2123,7 @@ ReturnMatrix remmean(const Matrix& mat, const int dim)
   return res;
 }
 
-/* ReturnMatrix cov(const Matrix& mat, const int norm)
+ReturnMatrix oldcov(const Matrix& mat, const int norm)
 { 
   SymmetricMatrix res;
   Matrix tmp;
@@ -2112,27 +2137,76 @@ ReturnMatrix remmean(const Matrix& mat, const int dim)
   res.Release();
   return res; 
 }
-*/
 
-ReturnMatrix cov(const Matrix& mat, const int norm)
-{ 
+ReturnMatrix cov(const Matrix& data, const bool sampleCovariance, int econ) 
+{
+  //This assumes vectors are stored using column order in data
   SymmetricMatrix res;
-  res << ones(mat.Ncols(),mat.Ncols()); 
-
-  Matrix meanM;
-  int N;
-  meanM = mean(mat);
-  if (norm == 1) {N = mat.Nrows();}
-  else {N = mat.Nrows()-1;}  
-  for (int ctr=1; ctr <= mat.Nrows(); ctr++)
-  res << res + (mat.Row(ctr) - meanM ).t() * (mat.Row(ctr) - meanM);
-  res = res/N;
-
+  res << zeros(data.Ncols(),data.Ncols()); 
+  Matrix meanM(mean(data));
+  int N=data.Nrows();
+  if (sampleCovariance && N>1) 
+    N--;
+  if ( econ < 1 )
+    econ=data.Nrows();
+  for(int startRow=1; startRow <= data.Nrows(); startRow+=econ) {
+    Matrix suba=data.SubMatrix(startRow,Min(startRow+econ-1,data.Nrows()),1,data.Ncols());
+    for (int row=1; row <= suba.Nrows(); row++) 
+      suba.Row(row)-=meanM;
+    res << res + suba.t()*suba/N;
+  }
   res.Release();
   return res; 
 }
 
-ReturnMatrix corrcoef(const Matrix& mat, const int norm)
+
+ReturnMatrix cov_r(const Matrix& data, const bool sampleCovariance, int econ) 
+{
+  //This assumes vectors are stored using row order in data
+  SymmetricMatrix res;
+  res << zeros(data.Nrows(),data.Nrows()); 
+  Matrix meanM(mean(data,2));
+  int N=data.Ncols();
+  if (sampleCovariance && N>1) 
+    N--;
+  if ( econ < 1 )
+    econ=data.Ncols();
+  for(int startCol=1; startCol <= data.Ncols(); startCol+=econ) {
+    Matrix suba=data.SubMatrix(1,data.Nrows(),startCol,Min(startCol+econ-1,data.Ncols()));
+    for (int col=1; col <= suba.Ncols(); col++) 
+       suba.Column(col)-=meanM;
+    res << res + suba*suba.t()/N;
+  }
+  res.Release();
+  return res; 
+}
+
+ReturnMatrix cov_r(const Matrix& data, const Matrix& weights2, int econ) 
+{
+  //This assumes vectors are stored using row order in data, weights are a single "row". No bool flag as biased vs unbiased isn't relevant here
+  RowVector weights=((weights2/weights2.Sum()).AsRow());
+  SymmetricMatrix res;
+  res << zeros(data.Nrows(),data.Nrows()); 
+  Matrix meanM(mean(data,weights,2));
+  double N=(1-weights.SumSquare());//As weights.Sum() is equal to 1
+  if ( econ < 1 )
+    econ=data.Ncols();
+  for(int startCol=1; startCol <= data.Ncols(); startCol+=econ) {
+    Matrix suba=data.SubMatrix(1,data.Nrows(),startCol,Min(startCol+econ-1,data.Ncols()));
+    for (int col=1; col <= suba.Ncols(); col++) {
+       suba.Column(col)-=meanM;
+       suba.Column(col)*=sqrt(weights(startCol+col-1));
+    }
+    res << res + suba*suba.t()/N;
+  }
+  res.Release();
+  return res; 
+}
+
+
+
+
+ReturnMatrix corrcoef(const Matrix& mat, const bool norm)
 { 
   	SymmetricMatrix res;
 	res = cov(mat,norm);

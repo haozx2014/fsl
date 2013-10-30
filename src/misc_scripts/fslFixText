@@ -1,0 +1,25 @@
+#!/bin/sh
+
+if [ $# -ne 2 ] ; then
+  echo "Usage: `basename $0` <input text file> <output text file>"
+  echo "Ensures standard UNIX line endings in output text file"
+  exit 0
+fi
+
+file=$1
+outfile=$2
+
+ftype=`file $file`
+if [ `echo "$ftype" | grep -i "ascii text" | wc -w` -gt 0 ] ; then
+    if [ `echo "$ftype" | grep -i "CRLF line terminators" | wc -w` -gt 0 ] ; then
+	cat $file | tr -d '\r' > $outfile
+    elif [ `echo "$ftype" | grep -i "CR line terminators" | wc -w` -gt 0 ] ; then
+	cat $file | tr '\r' '\n' > $outfile
+    else
+	cp $file $outfile
+    fi
+else
+    echo "File $file is not a text file"
+    exit 1
+fi 
+
