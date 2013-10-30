@@ -87,7 +87,7 @@ Description: Debian build setup and shared libraries
 +	ln -s libprob.so libcprob.so
 --- a/src/fdt/Makefile
 +++ b/src/fdt/Makefile
-@@ -5,7 +5,7 @@
+@@ -10,7 +10,7 @@
  USRINCFLAGS = -I${INC_NEWMAT} -I${INC_NEWRAN} -I${INC_CPROB} -I${INC_PROB} -I${INC_BOOST} -I${INC_ZLIB}
  USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_NEWRAN} -L${LIB_CPROB} -L${LIB_PROB} -L${LIB_ZLIB}
  
@@ -152,7 +152,7 @@ Description: Debian build setup and shared libraries
 +	$(CXX) ${CXXFLAGS} ${LDFLAGS} -o $@ ${TOBJS}
 --- a/src/melodic/Makefile
 +++ b/src/melodic/Makefile
-@@ -59,7 +59,7 @@
+@@ -66,7 +66,7 @@
  all: ggmix fsl_regfilt fsl_glm melodic ${OTHERFILES}
  
  ggmix: ${GGMIX_OBJS}
@@ -274,24 +274,20 @@ Description: Debian build setup and shared libraries
  
  XFILES = 
  AFILES = ${LibraryTarget}
-diff --git a/src/ptx2/Makefile b/src/ptx2/Makefile
-index 010f6a1..762c203 100644
 --- a/src/ptx2/Makefile
 +++ b/src/ptx2/Makefile
-@@ -16,7 +16,7 @@ endif
+@@ -16,7 +16,7 @@
  USRINCFLAGS = -I${INC_NEWMAT} -I${INC_NEWRAN} -I${INC_CPROB} -I${INC_PROB} -I${INC_BOOST} -I${INC_ZLIB}
  USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_NEWRAN} -L${LIB_CPROB} -L${LIB_PROB} -L${LIB_ZLIB}
  
--DLIBS = -lwarpfns -lbasisfield -lfslsurface  -lfslvtkio -lmeshclass -lnewimage -lutils -lmiscmaths -lnewmat -lnewran -lfslio -lgiftiio -lexpat -lfirst_lib -lniftiio -lznz -lcprob -lutils -lprob -lm -lz
+-DLIBS =  -lwarpfns -lbasisfield -lfslsurface  -lfslvtkio -lmeshclass -lnewimage -lutils -lmiscmaths -lnewmat -lnewran -lfslio -lgiftiio -lexpat -lfirst_lib -lniftiio -lznz -lcprob -lutils -lprob -lm -lz
 +DLIBS = -lwarpfns -lbasisfield -lfslsurface  -lfslvtkio -lmeshclass -lnewimage -lutils -lmiscmaths -lnewmat -lfslio -lgiftiio -lexpat -lfirst_lib -lniftiio -lznz -lcprob -lutils -lprob -lm -lz
  
  
  CCOPS=ccops
-diff --git a/src/qboot/Makefile b/src/qboot/Makefile
-index 98960e6..8b9ac3f 100755
 --- a/src/qboot/Makefile
 +++ b/src/qboot/Makefile
-@@ -5,7 +5,7 @@ PROJNAME = qboot
+@@ -5,7 +5,7 @@
  USRINCFLAGS = -I${INC_NEWMAT} -I${INC_NEWRAN} -I${INC_CPROB} -I${INC_PROB} -I${INC_BOOST} -I${INC_ZLIB}
  USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_NEWRAN} -L${LIB_CPROB} -L${LIB_PROB} -L${LIB_ZLIB}
  
@@ -300,15 +296,13 @@ index 98960e6..8b9ac3f 100755
  
  QBOOT=qboot
  
-@@ -19,4 +19,4 @@ XFILES = qboot
+@@ -19,4 +19,4 @@
  
  all: qboot
  ${QBOOT}:	   ${QBOOTOBJS}
 -		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${QBOOTOBJS} ${DLIBS}
 \ No newline at end of file
 +		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${QBOOTOBJS} ${DLIBS}
-diff --git a/src/fslsurface/fslsurfaceio.cc b/src/fslsurface/fslsurfaceio.cc
-index ec2bb32..a80c62f 100644
 --- a/src/fslsurface/fslsurfaceio.cc
 +++ b/src/fslsurface/fslsurfaceio.cc
 @@ -68,7 +68,7 @@
@@ -320,8 +314,6 @@ index ec2bb32..a80c62f 100644
  }
  
  using namespace fslvtkio;
-diff --git a/src/fslsurface/fslsurfaceio.h b/src/fslsurface/fslsurfaceio.h
-index e0728b1..a6672cf 100644
 --- a/src/fslsurface/fslsurfaceio.h
 +++ b/src/fslsurface/fslsurfaceio.h
 @@ -71,7 +71,7 @@
@@ -333,11 +325,9 @@ index e0728b1..a6672cf 100644
  }
  
  
-diff --git a/src/fslvtkio/Makefile b/src/fslvtkio/Makefile
-index 7d9f97c..fe01ff4 100644
 --- a/src/fslvtkio/Makefile
 +++ b/src/fslvtkio/Makefile
-@@ -12,10 +12,10 @@ SHAPEOBJS=fslvtkio.o
+@@ -12,10 +12,10 @@
   
  MODELOBJS=fslvtkio.o
  

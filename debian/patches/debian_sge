@@ -4,30 +4,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  SGE, if not, not.
 --- a/src/fdt/bedpostx
 +++ b/src/fdt/bedpostx
-@@ -64,13 +64,15 @@
- #   University, to negotiate a licence. Contact details are:
- #   innovation@isis.ox.ac.uk quoting reference DE/9564.
- 
--if [ "x$SGE_ROOT" = "x" ] ; then
--    if [ -f /usr/local/share/sge/default/common/settings.sh ] ; then
--	. /usr/local/share/sge/default/common/settings.sh
--    elif [ -f /usr/local/sge/default/common/settings.sh ] ; then
--	. /usr/local/sge/default/common/settings.sh
--    fi
--fi
-+# No need to try detecting SGE, instead rely on FSLPARALLEL to indicate
-+# a present cluster engine. All engine specific code go into fsl_sub
-+#if [ "x$SGE_ROOT" = "x" ] ; then
-+#    if [ -f /usr/local/share/sge/default/common/settings.sh ] ; then
-+#	. /usr/local/share/sge/default/common/settings.sh
-+#    elif [ -f /usr/local/sge/default/common/settings.sh ] ; then
-+#	. /usr/local/sge/default/common/settings.sh
-+#    fi
-+#fi
- 
- Usage() {
-     echo ""
-@@ -189,14 +191,20 @@
+@@ -198,14 +198,20 @@
  mkdir -p ${subjdir}.bedpostX/logs/pid_${$}
  mkdir -p ${subjdir}.bedpostX/xfms
  
@@ -51,7 +28,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  
  # 
  # Need to set off a backgrounded monitoring task
-@@ -271,14 +279,20 @@
+@@ -281,14 +287,20 @@
      fi
      slice=$(($slice + 1))
  done
