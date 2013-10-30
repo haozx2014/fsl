@@ -92,6 +92,11 @@ Usage() {
     echo ""
 }
 
+Version() {
+echo "$Id: quasil,v 1.10 2013/01/10 17:00:39 chappell Exp $"
+exit 0
+}
+
 # deal with options
 
 if [ -z $1 ]; then
@@ -131,7 +136,10 @@ until [ -z $1 ]; do
 	    ;;
 	--ccmds) calibcmds=$2
 	    shift;;
-	--debug) debug=1;; #debugging option
+	--debug) debug=1 #debugging option
+	    ;;
+	--version) Version
+	    ;;
 	*)  Usage
 	    echo "Error! Unrecognised option on command line: $1"
 	    echo ""

@@ -65,7 +65,6 @@
 #   Innovation Limited ("Isis"), the technology transfer company of the
 #   University, to negotiate a licence. Contact details are:
 #   innovation@isis.ox.ac.uk quoting reference DE/9564.
-#
 
 source [ file dirname [ info script ] ]/fslstart.tcl
 
@@ -137,9 +136,24 @@ proc pnm { w } {
 
     pack $w.f.sliceorder.label $w.f.sliceorder.up $w.f.sliceorder.down $w.f.sliceorder.intup $w.f.sliceorder.intdown -in $w.f.sliceorder -side left -padx 3 -pady 3
 
+   # slice direction
+    frame $w.f.slicedir
+
+    label $w.f.slicedir.label -text "Scanner Slice Direction (wrt voxel axes of the current image): "
+
+    set entries($w,slicedir) z
+    radiobutton $w.f.slicedir.x -text "X" \
+	    -variable entries($w,slicedir) -value x -anchor w
+    radiobutton $w.f.slicedir.y -text "Y" \
+	    -variable entries($w,slicedir) -value y -anchor w
+    radiobutton $w.f.slicedir.z -text "Z" \
+	    -variable entries($w,slicedir) -value z -anchor w
+
+    pack $w.f.slicedir.label $w.f.slicedir.x $w.f.slicedir.y $w.f.slicedir.z -in $w.f.slicedir -side left -padx 3 -pady 3
+
     # general pack
 
-    pack $w.f.intrace $w.f.invols $w.f.columns $w.f.triggers $w.f.sliceorder -in $lfinput -side top -anchor w -pady 3 -padx 5
+    pack $w.f.intrace $w.f.invols $w.f.columns $w.f.triggers $w.f.sliceorder $w.f.slicedir -in $lfinput -side top -anchor w -pady 3 -padx 5
 
     #output volume size
 
@@ -284,7 +298,7 @@ proc pnm:csfmask { w } {
 proc pnm:apply { w } {
     global entries
 
-    set status [ pnm:proc $entries($w,intrace) $entries($w,invols) $entries($w,colcard) $entries($w,colresp) $entries($w,coltrig) $entries($w,poxtriggers) $entries($w,samp) $entries($w,tr) $entries($w,sliceorder) $entries($w,outvol) $entries($w,ocard) $entries($w,oresp) $entries($w,omultc) $entries($w,omultr) $entries($w,rvt) $entries($w,hr) $entries($w,csf) $entries($w,csfmask) $entries($w,smoothcard) $entries($w,smoothresp) $entries($w,smoothhr) $entries($w,smoothrvt) $entries($w,cleanup) $entries($w,invresp) $entries($w,invcard)  ]
+    set status [ pnm:proc $entries($w,intrace) $entries($w,invols) $entries($w,colcard) $entries($w,colresp) $entries($w,coltrig) $entries($w,poxtriggers) $entries($w,samp) $entries($w,tr) $entries($w,sliceorder) $entries($w,slicedir) $entries($w,outvol) $entries($w,ocard) $entries($w,oresp) $entries($w,omultc) $entries($w,omultr) $entries($w,rvt) $entries($w,hr) $entries($w,csf) $entries($w,csfmask) $entries($w,smoothcard) $entries($w,smoothresp) $entries($w,smoothhr) $entries($w,smoothrvt) $entries($w,cleanup) $entries($w,invresp) $entries($w,invcard)  ]
 
     update idletasks
     puts "Done"
@@ -293,12 +307,12 @@ proc pnm:apply { w } {
 #}}}
 #{{{ proc
 
-proc pnm:proc { infile invol colcard colresp coltrig poxtrig samprate tr sliceorder outname oc or multc multr rvt hr csf csfmask smoothc smoothr smoothhr smoothrvt cleanup invr invc } {
+proc pnm:proc { infile invol colcard colresp coltrig poxtrig samprate tr sliceorder slicedir outname oc or multc multr rvt hr csf csfmask smoothc smoothr smoothhr smoothrvt cleanup invr invc } {
 
     global FSLDIR
     
-    set poppargs "-i $infile -o ${outname} -s $samprate --tr=$tr --smoothcard=$smoothc --smoothresp=$smoothr --resp=$colresp --cardiac=$colcard --trigger=$coltrig"    
-    set pnmcommand "${FSLDIR}/bin/pnm_evs -i $invol -c ${outname}_card.txt -r ${outname}_resp.txt -o ${outname} --tr=$tr --oc=$oc --or=$or --multc=$multc --multr=$multr --sliceorder=$sliceorder"    
+    set poppargs "-i ${outname}_input.txt -o ${outname} -s $samprate --tr=$tr --smoothcard=$smoothc --smoothresp=$smoothr --resp=$colresp --cardiac=$colcard --trigger=$coltrig"    
+    set pnmcommand "${FSLDIR}/bin/pnm_evs -i $invol -c ${outname}_card.txt -r ${outname}_resp.txt -o ${outname} --tr=$tr --oc=$oc --or=$or --multc=$multc --multr=$multr --sliceorder=$sliceorder --slicedir=$slicedir"    
 
     if { $poxtrig == 1 } { set poppargs "$poppargs --pulseox_trigger" }
     if { $rvt == 1 } { 
@@ -314,14 +328,16 @@ proc pnm:proc { infile invol colcard colresp coltrig poxtrig samprate tr sliceor
     if { $invr == 1 } { set poppargs "$poppargs --invertresp" }
     if { $invc == 1 } { set poppargs "$poppargs --invertcardiac" }
 
+    puts "$FSLDIR/bin/fslFixText $infile ${outname}_input.txt"
     puts "$FSLDIR/bin/pnm_stage1 $poppargs"
-    puts "$pnmcommand"
+    #puts "$pnmcommand"
 
     set pnms3 [open "${outname}_pnm_stage3" "w"] 
     puts $pnms3 "#!/bin/sh"
     puts $pnms3 "$pnmcommand"
     puts $pnms3 "ls -1 `$FSLDIR/bin/imglob -extensions \$\{obase\}ev0*` > ${outname}_evlist.txt"
     close $pnms3
+    fsl:exec "$FSLDIR/bin/fslFixText $infile ${outname}_input.txt"
     fsl:exec "$FSLDIR/bin/pnm_stage1 $poppargs"
 
     # MJ TODO - this doesn't seem to wait until commands are run!

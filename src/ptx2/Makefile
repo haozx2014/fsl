@@ -16,7 +16,7 @@ endif
 USRINCFLAGS = -I${INC_NEWMAT} -I${INC_NEWRAN} -I${INC_CPROB} -I${INC_PROB} -I${INC_BOOST} -I${INC_ZLIB}
 USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_NEWRAN} -L${LIB_CPROB} -L${LIB_PROB} -L${LIB_ZLIB}
 
-DLIBS = -lwarpfns -lbasisfield -lfslsurface  -lfslvtkio -lmeshclass -lnewimage -lutils -lmiscmaths -lnewmat -lnewran -lfslio -lgiftiio -lexpat -lfirst_lib -lniftiio -lznz -lcprob -lutils -lprob -lm -lz
+DLIBS =  -lwarpfns -lbasisfield -lfslsurface  -lfslvtkio -lmeshclass -lnewimage -lutils -lmiscmaths -lnewmat -lnewran -lfslio -lgiftiio -lexpat -lfirst_lib -lniftiio -lznz -lcprob -lutils -lprob -lm -lz
 
 
 CCOPS=ccops
@@ -33,12 +33,15 @@ FTBOBJS=find_the_biggest.o csv_mesh.o
 PJOBJS=proj_thresh.o csv_mesh.o
 FMOOBJS=fdt_matrix_ops.o
 FMSOBJS=fdt_matrix_split.o
-TESTOBJS=testfile.o csv.o csv_mesh.o
+TESTOBJS=testfile.o streamlines.o csv.o csv_mesh.o probtrackxOptions.o
 
 SURFDATA=surf_proj
 SURFDATAOBJS=surf_proj.o csv.o csv_mesh.o
 MATMERGE=fdt_matrix_merge
-MATMERGEOBJS=fdt_matrix_merge.o
+MATMERGEOBJS=fdt_matrix_merge.o streamlines.o csv.o csv_mesh.o probtrackxOptions.o
+MAT42=fdt_matrix_4_to_2
+MAT42OBJS=fdt_matrix_4_to_2.o 
+
 S2S=surf2surf
 S2SOBJS=surf2surf.o csv.o csv_mesh.o
 S2V=surf2volume
@@ -46,10 +49,10 @@ S2VOBJS=surf2volume.o csv.o csv_mesh.o
 L2S=label2surf
 L2SOBJS=label2surf.o csv_mesh.o
 SM=surfmaths
-SMOBJS=surfmaths.o csv_mesh.o
+SMOBJS=surfmaths.o 
 
 
-XFILES = probtrackx2 surfmaths surf2surf surf2volume surf_proj label2surf find_the_biggest proj_thresh
+XFILES = probtrackx2 surf2surf surf2volume surf_proj label2surf find_the_biggest proj_thresh
 
 
 all: ${XFILES} 
@@ -82,6 +85,9 @@ ${SURFDATA}:    ${SURFDATAOBJS}
 
 ${MATMERGE}:    ${MATMERGEOBJS}
 		${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${MATMERGEOBJS} ${DLIBS}
+
+${MAT42}:    	${MAT42OBJS}
+		${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${MAT42OBJS} ${DLIBS}
 
 
 ${S2S}:         ${S2SOBJS}

@@ -144,18 +144,17 @@ int do_slice_correction()
     return -1;
   }
 
-  no_slices = timeseries.zsize();
   no_volumes = timeseries.tsize();
   repeat_time = timeseries.tdim();
   if (repeat_time ==0){
     // cerr << "Zero TR in file header - fixing ... " ;
     repeat_time = repeat.value();
   }
-  // cerr << "TR = " << repeat_time << endl;
-  slice_spacing = repeat_time / no_slices;
 
-  if (direction.value() == 1) timeseries. swapdimensions(3,2,1); // Flip z and x
-  if (direction.value() == 2) timeseries. swapdimensions(1,3,2); // Flip z and y
+  if (direction.value() == 1) timeseries.swapdimensions(3,2,1); // Flip z and x
+  if (direction.value() == 2) timeseries.swapdimensions(1,3,2); // Flip z and y
+  no_slices = timeseries.zsize();
+  slice_spacing = repeat_time / no_slices;
 
   if (tcustom.set()) {
     timings.ReSize(1, timeseries.zsize());

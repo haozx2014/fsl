@@ -301,6 +301,7 @@ namespace Melodic{
       volume<float> Mask;
       volume<float> Mean;
       volume<float> background;
+      Matrix insta_mask;	
 
       Matrix Data;
       Matrix PPCA;

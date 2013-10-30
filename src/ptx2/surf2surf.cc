@@ -108,7 +108,7 @@ Option<string> otype(string("--outputtype"),"GIFTI_BIN_GZ",
 		     string("output type: ASCII, VTK, GIFTI_ASCII, GIFTI_BIN, GIFTI_BIN_GZ (default)"),
 		     false,requires_argument);
 Option<string> vals(string("--values"),"",
-		     string("set output scalar values (e.g. --values=mysurface.func.gii)"),
+		     string("set output scalar values (e.g. --values=mysurface.func.gii or --values=1)"),
 		     false,requires_argument);
 
 
@@ -197,19 +197,24 @@ int main(int argc,char *argv[]){
   }
 
   if(vals.value()!=""){
-    CsvMesh m;
-    m.load(vals.value());
-    OUT(m._pvalues.size());
-    OUT(csv.get_mesh(0).nvertices());
-    if(m.nvertices()!=csv.get_mesh(0).nvertices()){
-      cerr<<"values mesh does not have the correct number of vertices"<<endl;
-      exit(1);
+    if(meshExists(vals.value())){
+      CsvMesh m;
+      m.load(vals.value());
+      //OUT(m._pvalues.size());
+      //OUT(csv.get_mesh(0).nvertices());
+      if((int)m._pvalues.size()!=csv.get_mesh(0).nvertices()){
+	cerr<<"values mesh does not have the correct number of vertices"<<endl;
+	exit(1);
+      }
+      vector<float> v = m.getValuesAsVectors();
+      ColumnVector vv(v.size());
+      for(unsigned int i=0;i<v.size();i++)
+	vv(i+1)=v[i];
+      csv.get_mesh(0).set_pvalues(vv);
     }
-    vector<float> v = m.getValuesAsVectors();
-    ColumnVector vv(v.size());
-    for(unsigned int i=0;i<v.size();i++)
-      vv(i+1)=v[i];
-    csv.get_mesh(0).set_pvalues(vv);
+    else{
+      csv.get_mesh(0).set_pvalues((float)atoi(vals.value().c_str()));
+    }
   }
 
   //csv.save_roi(0,surfout.value());

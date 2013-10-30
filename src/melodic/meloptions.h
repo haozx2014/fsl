@@ -1,4 +1,4 @@
-/*  MELODIC - Multivariate exploratory linear optimized decomposition into 
+ /*  MELODIC - Multivariate exploratory linear optimized decomposition into 
               independent components
     
     meloptions.h - class for command line options
@@ -185,6 +185,7 @@ class MelodicOptions {
   	Option<float> nlconst1;
   	Option<float> nlconst2;
   	Option<float> smooth_probmap;
+	Option<string> insta_fn;
 
   	Option<bool> remove_meanvol;
   	Option<bool> remove_meantc;
@@ -289,7 +290,7 @@ class MelodicOptions {
    approach(string("-a,--approach"),  string("symm"),
 	   string("approach for decomposition, 2D: defl, symm (default), 3D: tica, concat (default)"),
 	   false, requires_argument),
-   nonlinearity(string("--nl"), string("tanh"),
+   nonlinearity(string("--nl"), string("pow3"),
 	   string("\tnonlinearity: gauss, tanh, pow3, pow4"), 
 	   false, requires_argument),
    varnorm(string("--vn,--varnorm"), true,
@@ -451,6 +452,9 @@ class MelodicOptions {
    smooth_probmap(string("--smooth_pm"),  0.0,
 	   string("width of smoothing kernel for probability maps"), 
 	   false, requires_argument, false),
+   insta_fn(string("--insta_fn"), string(""),
+	   string(" mask file name for instacorr calculation"),
+       false, requires_argument, false),
    remove_meanvol(string("--keep_meanvol"), true,
 	   string("do not subtract mean volume"), 
 	   false, no_argument, false),
@@ -556,6 +560,7 @@ class MelodicOptions {
 	    options.add(nlconst1);
 	    options.add(nlconst2);
 	    options.add(smooth_probmap);
+		options.add(insta_fn);
 	    options.add(remove_meanvol);
 	    options.add(remove_meantc);
 	    options.add(remove_endslices);

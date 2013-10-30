@@ -92,6 +92,7 @@ void seedmask()
   CSV seeds(refvol);
   seeds.set_convention(opts.meshspace.value());
   seeds.load_rois(opts.seedfile.value());
+
   cout<<"done."<<endl;
   if(seeds.nVols()==0 && opts.seedref.value()==""){
     cerr<<"Warning: need to set a reference volume when defining a surface-based seed"<<endl;

@@ -541,6 +541,7 @@ double CsvTriangle::dist_to_point(const Vec& x0)const{
   
 
   const bool CsvTriangle::intersect(const vector<Pt> & p,int& ind) const {
+    Tracer_Plus tr("CsvTriangle::intersect");
     Vec    u,v,n;   // triangle vectors
     Vec    dir,w0,w; // ray vectors
     double r, a, b;              // params to calc ray-plane intersect

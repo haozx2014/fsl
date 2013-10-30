@@ -140,7 +140,7 @@ while [ $row -le $maxrow ] ; do
 done
 # form zero contrast vector into a matrix
 ncon=1;
-totcon=`echo ${out}.con.txt | wc -l`;
+totcon=`cat ${out}.con.txt | wc -l`;
 while [ $ncon -le $totcon ] ; do
   echo $zerocon >> ${out}.con.ext
   ncon=`echo $ncon + 1 | bc`;

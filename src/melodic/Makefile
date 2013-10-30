@@ -22,6 +22,8 @@ FSL_SBCA_OBJS = melhlprfns.o fsl_sbca.o
 
 FSL_MVLM_OBJS = melhlprfns.o fsl_mvlm.o
 
+FSL_BWTF_OBJS = melhlprfns.o fsl_bwtf.o
+
 FSL_REGFILT_OBJS = melhlprfns.o fsl_regfilt.o
 
 FSL_SCHURPROD_OBJS = melhlprfns.o fsl_schurprod.o
@@ -30,7 +32,7 @@ MELODIC_OBJS =  meloptions.o melhlprfns.o melgmix.o meldata.o melpca.o melica.o 
 
 TESTXFILES = test
 
-XFILES = fsl_glm fsl_sbca fsl_mvlm fsl_regfilt fsl_schurprod melodic
+XFILES = fsl_glm fsl_sbca fsl_mvlm fsl_regfilt fsl_schurprod fsl_bwtf melodic
 
 OTHERFILES =
 
@@ -42,6 +44,11 @@ endif
 BUILD_MVLM = $(shell [ -f fsl_mvlm.cc ]; echo $$?)
 ifeq ($(BUILD_MVLM), 0)
         OTHERFILES+=fsl_mvlm
+endif
+
+BUILD_BWTF = $(shell [ -f fsl_bwtf.cc ]; echo $$?)
+ifeq ($(BUILD_BPTF), 0)
+        OTHERFILES+=fsl_bwtf
 endif
 
 BUILD_SCHUR = $(shell [ -f fsl_schurprod.cc ]; echo $$?)
@@ -78,6 +85,9 @@ fsl_schurprod: ${FSL_SCHURPROD_OBJS}
 
 fsl_mvlm: ${FSL_MVLM_OBJS}
 		$(CXX) ${CXXFLAGS} ${LDFLAGS} -o $@ ${FSL_MVLM_OBJS} ${LIBS}
+
+fsl_bwtf: ${FSL_BWTF_OBJS}
+		$(CXX) ${CXXFLAGS} ${LDFLAGS} -o $@ ${FSL_BWTF_OBJS} ${LIBS}
 
 fsl_regfilt: ${FSL_REGFILT_OBJS}
 	$(CXX) ${CXXFLAGS} ${LDFLAGS} -o $@ ${FSL_REGFILT_OBJS} ${LIBS}

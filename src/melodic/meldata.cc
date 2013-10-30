@@ -175,6 +175,19 @@ namespace Melodic{
       message(" done" << endl);
     }
 
+	//convert to instacorrs
+	if(opts.insta_fn.value()>""){
+		Matrix vscales = pow(stdev(tmpData,1),-1);
+		varnorm(tmpData,vscales);
+		
+		Matrix tmpTC = tmpData * insta_mask.t();
+		varnorm(tmpTC,pow(stdev(tmpTC),-1));
+		
+		for(int ctr=1; ctr <=tmpData.Ncols();ctr++)
+			tmpData.Column(ctr) = SP(tmpData.Column(ctr),tmpTC);
+
+	}
+
 	tmpData.Release();
 	dbgmsg(string("END: process_file") << endl);	
     return tmpData;
@@ -427,7 +440,8 @@ namespace Melodic{
     	//estimate model order
     	Matrix tmpPPCA;
     	RowVector AdjEV, PercEV;
-    	Matrix Corr, tmpE;
+    	Matrix tmpE;
+	SymmetricMatrix Corr;
     	int order;
 
     	order = ppca_dim(remmean(alldat,2), RXweight, tmpPPCA, AdjEV, PercEV, Corr, pcaE, pcaD, Resels, opts.pca_est.value());	  
@@ -566,7 +580,8 @@ namespace Melodic{
 		//reduce dim down to manageable level
 		if(Data.Nrows() > opts.migp_factor.value()*opts.migpN.value() || ctr==numfiles-1){
 			message("  Reducing data matrix to a  " << opt.migpN.value() << " dimensional subspace " << endl);
-			Matrix pcaE, Corr;
+			Matrix pcaE;
+			SymmetricMatrix Corr;
 			RowVector pcaD;
 			std_pca(Data, RXweight, Corr, pcaE, pcaD, opts.econ.value());
 		    pcaE = pcaE.Columns(pcaE.Ncols()-opts.migpN.value()+1,pcaE.Ncols());
@@ -664,6 +679,19 @@ namespace Melodic{
     if(opts.segment.value().length()>0){
       create_RXweight();
     }
+
+	//set up instacorr mask image
+	if(opts.insta_fn.value()>""){
+		dbgmsg(string(" Setting up instacorr mask") << endl);
+		volume4D<float> tmp_im;
+		read_volume4D(tmp_im,opts.insta_fn.value());
+	
+		if(!samesize(Mean,tmp_im[0])){
+	        	cerr << "ERROR:: instacorr mask and data have different voxel dimensions  \n\n";
+	        	exit(2);
+		}	
+		insta_mask = tmp_im.matrix(Mask); 
+	}
 
     //seed the random number generator
     double tmptime = time(NULL);

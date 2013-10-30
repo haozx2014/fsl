@@ -1,10 +1,10 @@
 #!/bin/sh
 
-# ASL_CALIB: Calibration for GRASE-ASL data
+# ASL_CALIB: Calibration for ASL data
 #
 # Michael Chappell & Brad MacIntosh, FMRIB Image Analysis & Physics Groups
 #
-# Copyright (c) 2008-2011 Univerisity of Oxford
+# Copyright (c) 2008-2013 Univerisity of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -72,8 +72,8 @@
 
 Usage() {
     echo "ASL_CALIB"
-    echo "Version: 1.2b"
-    echo "Calibration for GRASE-ASL data"
+#    echo "Version: 1.2b"
+    echo "Calibration for ASL data"
     echo ""
     echo "Usage (optional parameters in {}):" 
     echo " -c         : specify calibration image (stacked form)"
@@ -102,6 +102,15 @@ Usage() {
     echo " --t1r      : T1 of reference tissue (defaults: csf 4.3, gm 1.3, wm 1.0 s) "
     echo " --t2r      : T2(*) of reference tissue (defaults T2/T2*: csf 750/400, gm 100/60,  wm 50/50  ms)"
     echo " --t2b      : T2(*) of blood (default T2/T2*: 150/50 ms)"
+    echo " --pc       : Partition co-efficient (defaults csf 1.15, gm 0.98,  wm 0.82)"
+    echo ""
+    echo " CSF masking options (only for --tissref csf)"
+    echo "  By default asl_calib extracts CSF from the structural image by segmentation and"
+    echo "  this is then masked using the ventricles in MNI152 space."
+    echo " --csfmaskingoff : turns off the ventricle masking, reference is based on segmentation only."
+    echo "  Registration between structural image and MNI152 is done automatically unless:"
+    echo "  --str2std  : Structural to MNI152 linear registration (.mat)"
+    echo "  --warp     : Structural to MNI152 non-linear registration (warp)"
     echo ""
     echo "MODES:"
     echo "> longtr  Calibration image is a control image with a long TR."
@@ -117,16 +126,22 @@ Usage() {
     echo " {--lfa}     : Lower flip angle (in degrees) for dual FA calibration"
     echo " {--nphases} : Number of phases (repetitions) of higher FA"
     echo ""
-    echo "Coil sensitivity correction (optional):"
+    echo "Coil sensitivity correction:"
     echo " Calculate and apply a voxel-wise correction for coil sensitivity"
+    echo " > using bias field from structural image (default)"
+    echo " {--osen}    : save sensitivity image to specified file."
     echo " > using existing sensitivity image:"
     echo "  --isen     : input coil sensitivity image"
     echo " > using reference images (collected using same parameters):"
     echo "  --cref     : Reference image from coil with minimal variation e.g. body."
     echo "  {--cact}   : Image from coil used for actual ASL acquisition"
     echo "               {default: calibration image - only in longtr mode}"
-    echo "  {--osen}   : save sensitivity image to specified file."
     echo ""
+}
+
+Version() {
+echo "$Id: asl_calib,v 1.24 2013/08/30 13:22:57 chappell Exp $"
+exit 0
 }
 
 if [ -z $1 ]; then
@@ -166,11 +181,15 @@ until [ -z $1 ]; do
 	    shift;;
 	--t2star) t2star=1
 	    ;;
+	--pc) pcin=$2
+	    shift;;
 	--tis) tis=$2
 	    shift;;
 	-m) maskflag=1 mask=$2
 	    shift;;
 	--bmask) bmask=$2
+	    shift;;
+	--refpve) refpve=$2 # this is the PVE image for the reference tissue (in strucural image space)
 	    shift;;
 	--of) offlag=1 outfact=$2
 	    shift;;
@@ -178,6 +197,12 @@ until [ -z $1 ]; do
 	    shift;;
 	--om) omflag=1 outmask=$2
 	    shift;;
+	--str2std) str2std=$2;
+	    shift;;
+	--warp) warp=$2
+	    shift;;
+	--csfmaskingoff) csfmaskingoff=1 # turn off the masking of CSF using MNI152 ventricles
+	    ;;
 	--cgain) cgain=$2
 	shift;;
 	--cref) crefflag=1; crefim=$2
@@ -194,11 +219,11 @@ until [ -z $1 ]; do
 	    shift;;
 	--nphases) nphases=$2
 	    shift;;
-	--stdmaskfnirt) stdmaskfnirt=1
-	    ;;
 	--devel) devel=1
 	    ;;
 	--debug) debug=1
+	    ;;
+	--version) Version
 	    ;;
 	*)  Usage
 	    echo "Error! Unrecognised option on command line: $1"
@@ -232,7 +257,7 @@ if [ -z $mask ]; then
 	echo "ERROR: Structural image has not been supplied (alternatively supply a reference mask with -m)"
 	Usage
     fi
-    if [ -z $calib ]; then
+    if [ -z $trans ]; then
 	echo "ERROR: Transformation matrix has not been supplied (alternatively supply a reference mask with -m)"
 	Usage
     fi
@@ -285,7 +310,7 @@ fi
 
 # if we have a sensitvity map at input copy to right place
 if [ ! -z $senin ]; then
-    echo "Using sensitivity image: $senin"
+    echo "Using sensitivity image: $senin" >> $log
     senson=1
     imcp $senin $temp_calib/sens
 fi
@@ -299,6 +324,12 @@ T1wm=1.0
 T2wm=50
 
 T2b=150
+
+# partition coeffs
+# based on Herscovitch and Raichle 1985
+pccsf=1.15 # a blood water density of 0.87
+pcwm=0.82
+pcgm=0.98
 
 if [ -z $t2star ]; then
 # we need to correct for T2* not T2 so change the defaults
@@ -318,9 +349,9 @@ if [ -z $tissref ]; then
 fi
 
 case $tissref in
-	csf) T1r=$T1csf; T2r=$T2csf; fastpve=0;;
-	wm)  T1r=$T1wm;  T2r=$T2wm;  fastpve=2;;
-	gm)  T1r=$T1gm;  T2r=$T2gm;  fastpve=1;;
+	csf) T1r=$T1csf; T2r=$T2csf; fastpve=0; pc=$pccsf;;
+	wm)  T1r=$T1wm;  T2r=$T2wm;  fastpve=2; pc=$pcwm;;
+	gm)  T1r=$T1gm;  T2r=$T2gm;  fastpve=1; pc=$pcgm;;
 	0)   fastpve=0;;
 	1)   fastpve=1;;
 	2)   fastpve=2;;
@@ -345,6 +376,10 @@ if [ ! -z $T2bin ]; then
     T2b=$T2bin
     echo "Setting T2b from command line: $T2b" >> $log
 fi
+if [ ! -z $pcin ]; then
+    pc=$pcin
+    echo "Setting partition coefficient from command line: $pcin" >> $log
+fi
 
 # make sure the T1 has been set (either by user or above)
 if [ -z $T1r ]; then
@@ -360,8 +395,12 @@ if [ -z $T2r ]; then
     fi
     T2r=1.0 #a default value when TE=0
 fi
+if [ -z $pc ]; then
+    echo "Error! Partition coefficient for reference tissue has not been set."
+    exit 1
+fi
 
-echo "T1r $T1r; T2r $T2r; T2b $T2b" >> $log
+echo "T1r $T1r; T2r $T2r; T2b $T2b; Part co-eff: $pc" >> $log
 
 # sort out the M0 calib brain_mask
 if [ -z $bmask ]; then
@@ -393,10 +432,6 @@ if [ ! -z $crefim ]; then
     
     fslmaths $temp_calib/cactim -div $temp_calib/crefim -mas $bmask $temp_calib/sens
     
-    if [ ! -z $senout ]; then
-        # save sensitivity image
-	imcp $temp_calib/sens $senout
-    fi
 fi
 
 if [ $tissref = "none" ]; then
@@ -408,17 +443,29 @@ if [ $tissref = "none" ]; then
 fi
 
 if [ -z $maskflag ]; then
-# auto create tissue reference mask
-    echo "FAST called to determine a reference tissue mask" >> $log
-
-# segment structural image
-    fast -o $temp_calib/seg -p $struc
 
 # make brain mask from structural
     fslmaths $struc -bin $temp_calib/mask
 
-    if [ $tissref = "csf" ]; then
+    if [ -z $refpve ]; then
+        # auto create tissue reference mask
+	echo "FAST called to determine a reference tissue mask" >> $log
+	
+        # segment structural image
+	fast -b -o $temp_calib/seg -p $struc
+	fasthasrun=1;
+	imcp  $temp_calib/seg_pve_$fastpve $temp_calib/refpve
+
+    else
+	# user supplied PV estimate for reference tissue
+	echo "Using input reference PVE: $refpve" >> $log
+	imcp $refpve $temp_calib/refpve
+    fi
+
+    if [ $tissref = "csf" ] & [ -z $csfmaskingoff ]; then
 	echo "Ventricle selection" >> $log
+	stdmaskfnirt=1  # by deafult now we do FNRIT transformation of ventricle mask
+
 # cut down brain mask so that it only covers middle of brain
 # sort out the roi
 #	xsize=`fslinfo $struc | grep "^dim1" | sed 's:dim1[ ]*::'`
@@ -441,48 +488,71 @@ if [ -z $maskflag ]; then
 	fslmaths $temp_calib/LVentricle -add $temp_calib/RVentricle -thr 0.1 -bin -ero $temp_calib/VentricleMask
 	
         # register structural image to std space using FLIRT
-	echo "Registering structural image to standard space using FLIRT" >> $log
-	flirt -in $struc -ref $FSLDIR/data/standard/MNI152_T1_2mm_brain.nii.gz -omat $temp_calib/struc2std.mat
+	if [ -z $str2std ] & [ -z $warp ]; then
+	    echo "Registering structural image to standard space using FLIRT" >> $log
+	    flirt -in $struc -ref $FSLDIR/data/standard/MNI152_T1_2mm_brain.nii.gz -omat $temp_calib/struc2std.mat
+	else
+	    if [ -f $str2std ]; then
+		cp $str2std $temp_calib/struc2std.mat
+	    else
+		echo "Error $str2std not found"
+		exit 1
+	    fi
+	fi
 	
-	if [ -z $stdmaskfnirt ]; then
+	if [ -z $stdmaskfnirt ] & [ -z $warp ]; then
         # do std space masking with FLIRT registration
-
+	    
 	    convert_xfm -omat $temp_calib/std2struc.mat -inverse $temp_calib/struc2std.mat
 	    flirt -in $temp_calib/VentricleMask -applyxfm -init $temp_calib/std2struc.mat -ref $struc -out $temp_calib/mask
 	else
             # do std space masking using FNIRT registration
             # Register the structural image to standard space using FNIRT
-	    echo "Registering structural image to standard space using FNIRT" >> $log
-	    fnirt --in=$struc --aff=$temp_calib/struc2std.mat --config=T1_2_MNI152_2mm.cnf --cout=$temp_calib/coef_struc2MNI152
+	    if [ -z $warp ]; then
+		echo "Registering structural image to standard space using FNIRT" >> $log
+		fnirt --in=$struc --aff=$temp_calib/struc2std.mat --config=T1_2_MNI152_2mm.cnf --cout=$temp_calib/coef_struc2MNI152
+	    else
+		if [ -f $warp ]; then
+		    cp $warp $temp_calib/coef_struc2MNI152
+		else
+		    echo "Error: $warp not found"
+		    exit 1
+		fi
+	    fi
             # Calculate the inverse warp using INVWARP and apply to standard space ventricle mask
 	    invwarp --ref=$struc --warp=$temp_calib/coef_struc2MNI152 --out=$temp_calib/coef_MNI2struc
 	    applywarp --ref=$struc --in=$temp_calib/VentricleMask --warp=$temp_calib/coef_MNI2struc --out=$temp_calib/mask --interp=nn
 	    
 	fi
-    fi
-    
-#tissue reference mask
-echo "Masking FAST output with standard space derrived ventricle mask" >> $log
-    fslmaths $temp_calib/seg_pve_$fastpve -mas $temp_calib/mask $temp_calib/refmask
-    if [ ! -z $debug ]; then
-	imcp $temp_calib/refmask $temp_calib/refmask_high_unthresh
-    fi
-    
-    
-    if [ ! -z $transflag ]; then
-	echo "Transforming tissue reference mask into perfusion space"
-    #transform CSF mask into perfusion space
-	convert_xfm -omat $temp_calib/high2low.mat -inverse $trans
-    #flirt -in $temp_calib/csf -applyxfm -init $temp_calib/high2low.mat -ref $calib -out $temp_calib/csf
-    # new conversion using applywarp, supersmapling and integration
-	applywarp --ref=$calib --in=$temp_calib/refmask --out=$temp_calib/refmask --premat=$temp_calib/high2low.mat --super --interp=spline --superlevel=4
+	
+	echo "Masking FAST output with standard space derrived ventricle mask" >> $log
+	fslmaths $temp_calib/refpve -mas $temp_calib/mask $temp_calib/refpve
 	if [ ! -z $debug ]; then
-	    imcp $temp_calib/refmask $temp_calib/refmask_low_unthresh
+	    imcp $temp_calib/refmask $temp_calib/refmask_high_unthresh
 	fi
     fi
     
+    echo "Transforming tissue reference mask into perfusion space" >> $log
+    #transform mask into perfusion space
+    convert_xfm -omat $temp_calib/high2low.mat -inverse $trans
+    #flirt -in $temp_calib/csf -applyxfm -init $temp_calib/high2low.mat -ref $calib -out $temp_calib/csf
+    # new conversion using applywarp, supersmapling and integration
+    applywarp --ref=$calib --in=$temp_calib/refpve --out=$temp_calib/refmask --premat=$temp_calib/high2low.mat --super --interp=spline --superlevel=4
+    if [ ! -z $debug ]; then
+	imcp $temp_calib/refmask $temp_calib/refmask_low_unthresh
+    fi
+    
+    if [ ! -z $fasthasrun ] & [ -z $senson ]; then
+        # also extract the bias field and convert to sensitivity image (as long as we have already been supplied by a sensivity iamge or reference)
+	${FSLDIR}/bin/applywarp --ref=$calib --in=$temp_calib/seg_bias --out=$temp_calib/biasfield --premat=$temp_calib/high2low.mat --super --interp=spline --superlevel=4
+	${FSLDIR}/bin/fslmaths $temp_calib/biasfield -recip $temp_calib/sens
+	senson=1
+	echo "Using bias field from structural image for sensitivity correction" >> $log
+    fi
+
+    
 # threshold reference mask
-fslmaths $temp_calib/refmask -thr 0.9 -bin $temp_calib/refmask
+    fslmaths $temp_calib/refmask -thr 0.9 -bin $temp_calib/refmask
     
 # threshold reference mask and then keep top two clusters
 #    cluster -i $temp_calib/refmask -t 0.9 -o $temp_calib/refmask_cluster --no_table
@@ -552,7 +622,7 @@ elif [ $mode = satrecov ]; then
     # Calibration image is control images and we want to do a saturation recovery fit
     # NB only do the fit in the CSF mask
 
-     # sort out cgain setting
+    # sort out cgain setting
     if [ -z $cgain ]; then
 	cgain=1;        # default cgain is 1!
     fi
@@ -568,9 +638,6 @@ elif [ $mode = satrecov ]; then
     done
     echo "TIs: tislist" >> $log
 
-   # data should only be one repeat at each TI
-    asl_file --data=$calib --ntis=$count --iaf=diff --ibf=rpt --mean=$temp_calib/calibmean
-
 # Extra options for Look Locker
 
     if [ ! -z $fa ]; then
@@ -585,8 +652,13 @@ elif [ $mode = satrecov ]; then
     echo "Look-Locker options: $llopts" >> $log
 
     # do fabber within the tissue reference mask with a sensible T1 prior mean
+    if [ ! -z $senson ]; then
+	echo "Apply sensitivity image to data for reference tisse M0 estimation" >> $log
+        # apply sensitivity map to calibration image - ONLY for the reference tissue calculations
+	fslmaths $calib -div $temp_calib/sens $temp_calib/calib_senscorr
+    fi
     echo "FABBER within reference tissue mask" >> $log
-    $fabber --data=$temp_calib/calibmean --mask=$mask --output=$temp_calib/satrecov --data-order=singlefile --model=satrecov --noise=white --method=vb $tislist $llopts --t1=$T1r
+    $fabber --data=$temp_calib/calib_senscorr --mask=$mask --output=$temp_calib/satrecov --data-order=singlefile --model=satrecov --noise=white --method=vb $tislist $llopts --t1=$T1r
 
     # calculate M0 value
     Moval=`fslstats $temp_calib/satrecov/mean_M0t -M` # this is M0 of CSF at the TE of the sequence
@@ -599,9 +671,10 @@ elif [ $mode = satrecov ]; then
     fi
 
     # do fabber again within whole brain to get estimated T1 of tissue and FA correction (if LL)
+    # (note that we do not apply sensitivity correction to the data here - thius is 'built-into' the M0t map)
     echo "FABBER (again) within whole brain mask" >> $log
     if [ ! -z $outdir ]; then #NB we only bother with this if we have an output directory to put the results in
-	$fabber --data=$temp_calib/calibmean --mask=$bmask --output=$temp_calib/satrecovT --data-order=singlefile --model=satrecov --noise=white --method=vb $tislist $llopts
+	$fabber --data=$calib --mask=$bmask --output=$temp_calib/satrecovT --data-order=singlefile --model=satrecov --noise=white --method=vb $tislist $llopts
 
 
         # save useful results to specified output directory
@@ -619,11 +692,11 @@ fi
 #echo "$Moval $te $T2r $cgain $T2bl"
 Moval=`echo "$Moval / e(- $te / $T2r )" | bc -l` # T2 correction for M0 reference
 #echo $Moval
-Moval=`echo "scale=2;$Moval*$cgain*0.87" | bc` # 0.87 based on Hct, this is M0 blood (at TE=0)
+Moval=`echo "scale=2;$Moval*$cgain / $pc" | bc` #  this is M0 blood (at TE=0)
 #echo $Moval
 Moval=`echo "$Moval * e(- $te / $T2b )" | bc -l` # get M0 blood at TE used
-echo "M0b:$Moval"
-echo "M0b: $Moval" >> $log
+echo "M0:$Moval"
+echo "M0: $Moval" >> $log
 
 # apply calibration to input image
 if [ ! -z $inflag ]; then
@@ -633,6 +706,7 @@ if [ ! -z $inflag ]; then
     else
 	imcp $infile $temp_calib/infile
     fi
+
     fslmaths $temp_calib/infile -mul 60 -mul 100 -div $Moval $outfile
 fi
 
@@ -665,6 +739,13 @@ if [ ! -z $offlag ]; then
     echo $factor > $outfact
 fi
 
+if [ ! -z $senout ]; then
+        # save sensitivity image
+    if [ -f $temp_calib/sens.nii.gz ]; then
+	imcp $temp_calib/sens $senout
+	echo "Saving sensitivity image to: $senout" >> $log
+    fi
+fi
 
 if [ ! -z $debug ]; then
     cp -R $temp_calib ./temp_calib

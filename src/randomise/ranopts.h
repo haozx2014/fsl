@@ -106,6 +106,7 @@ class ranopts {
   Option<float> f_thresh;
   Option<float> fmass_thresh;
   Option<float> tfce_height;
+  Option<float> tfce_delta;
   Option<float> tfce_size;
   Option<int> tfce_connectivity;
   Option<float> var_sm_sig;
@@ -214,10 +215,11 @@ class ranopts {
 	  string("~<thresh>\tcarry out f cluster-mass thresholding"),
 	  false, requires_argument),
    tfce_height(string("--tfce_H"), 2, string("~<H>\tTFCE height parameter (default=2)"), false, requires_argument),
+   tfce_delta(string("--tfce_D"), 1, string("~<H>\tTFCE delta parameter overide"), false, requires_argument),
    tfce_size(string("--tfce_E"), 0.5, string("~<E>\tTFCE extent parameter (default=0.5)"), false, requires_argument),
    tfce_connectivity(string("--tfce_C"), 6, string("~<C>\tTFCE connectivity (6 or 26; default=6)"), false, requires_argument),
    var_sm_sig(string("-v"), 0,
-	    string("~<std>\tuse variance smoothing (std is in mm)"),
+	    string("~<std>\tuse variance smoothing for t-stats (std is in mm)"),
 	     false, requires_argument),
    help(string("-h,--help"), false,
 	string("display this message"),
@@ -312,7 +314,8 @@ class ranopts {
        options.add(output_permstat);
        options.add(disableNonConstantMask);
        options.add(randomSeed);
-       options.add(tfce_height);     
+       options.add(tfce_height);   
+       options.add(tfce_delta);  
        options.add(tfce_size);     
        options.add(tfce_connectivity); 
        options.add(voxelwise_ev_numbers);

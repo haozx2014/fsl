@@ -153,11 +153,13 @@ help(string("-h,--help"), false,
 	       string("Input block format:\n          rpt - blocks of measurements that include all TIs\n          tis - blocks of repeated measurements at a single TI"),
 	       false,requires_argument),
    inaslform(string("--iaf,--inaslform"),string("diff"),
-	     string("ASL data form:\n          diff - differenced data {default}\n          tc - Tag-Control pairs (Note: sets --pairs)"),
+	     string("ASL data form:\n          diff - differenced data {default}\n          tc - Tag-Control pairs\n          ct - Control-Tag pairs\n"),
 	     false,requires_argument),
-   ispairs(string("-P,--pairs,--inpairs"),false,
+   ispairs(string("--pairs,--inpairs"),false,
 	   string("Data contains adjacent pairs of measuremnts (e.g. Tag, Control)"),
 	   false,no_argument),
+   
+
    //asaq(string("--asaq"),false,
    //	string("Data is as aquired: same as --blocked --pairs"),
    //	false,no_argument),
@@ -179,14 +181,14 @@ help(string("-h,--help"), false,
        false,requires_argument),
 
    // other output options
-   meanout(string("-m,--mean"),string(""),
+   meanout(string("--mean"),string(""),
 	  string("Output ASL data having taken mean at each TI to file"),
 	   false, requires_argument),
    splitout(string("--split"),string(""),
 	    string("Split data into separate files each each TI, specify filename root\n"),
 	    false, requires_argument),
 
-   epochout(string("-e,--epoch"),string(""),
+   epochout(string("--epoch"),string(""),
 	    string("Output epochs of ASL data (takes mean at each TI within the epoch)"),
 	    false, requires_argument),
    epochlen(string("--elen,--epochlen"),1,
@@ -196,7 +198,7 @@ help(string("-h,--help"), false,
 	     string("Ammount of overlap between epochs in number of repeats"),
 	     false, requires_argument),
    epochunit(string("--eunit,--epochunit"),string("rpt"),
-	     string("Epochs to be determined over:\n      rpt - repeats in the data {default}\n      tis - TIs in the data\n"),
+	     string("Epochs to be determined over:\n          rpt - repeats in the data {default}\n          tis - TIs in the data\n"),
 	     false,requires_argument),
 
    deconvout(string("--deconv"),string(""),
@@ -207,7 +209,7 @@ help(string("-h,--help"), false,
        false,requires_argument),
 
   
-   options("asl_file","asl_file --verbose\n")
+   options("asl_file","asl_file --data=<asldata> --ibf=rpt --iaf=tc --diff --out=<diffdata>\n")
    {
      try {
        options.add(help);

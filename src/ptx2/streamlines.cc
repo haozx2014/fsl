@@ -66,7 +66,164 @@
 #include "warpfns/fnirt_file_reader.h"
 #include "warpfns/warpfns.h"
 
-// Trajectory file writer
+
+  //***************************************** 
+  //************* MatCell_cmpr ************** 
+  void MatCell_cmpr::decode(int64_t incode, int& nsamples, int& fibcnt1, int& fibcnt2, float& length_tot) const{
+    //undo the coding for incode
+    //code = two32*fibre_count + mult*mult*fibre_prop1 + mult*fibre_prop2 + length_val;
+    int64_t fibre_count, fibre_prop1, fibre_prop2, length_val, two32=(1LL<<32), mult=1001, multmult=mult*mult;    
+    
+    fibre_count = incode / two32;
+    incode = incode % two32;
+    fibre_prop1 = incode / multmult;
+    incode = incode % multmult;
+    fibre_prop2 = incode / mult;
+    incode = incode % mult;
+    length_val = incode;
+
+    fibcnt1=(int)round((float)(fibre_prop1*0.001*fibre_count));
+    fibcnt2=(int)round((float)(fibre_prop2*0.001*fibre_count));
+    length_tot=float(length_val*fibre_count);
+    nsamples=(int)fibre_count;
+  } 
+
+  void MatCell_cmpr::encode(const int nsamples, const int fibcnt1, const int fibcnt2, const float length_tot){
+    //store new coding in code2
+    int64_t  fibre_count, fibre_prop1, fibre_prop2, length_val, two32=(1LL<<32), mult=1001;    
+    // fibre_prop1, fibre_prop2 and length_val ***MUST*** BE WITHIN 0 and 1000 INCLUSIVE
+
+    fibre_count = (int64_t)MIN((int64_t)nsamples,two32-1);
+    //Notice that every time we decode and encode there are rounding errors because of the following functions.
+    //We considered using the absolute values instead of proportions or average distances, but then the dynamic range of the values we can code is reduced. 
+    fibre_prop1 = (int64_t)MIN((int64_t)(MISCMATHS::round(float(fibcnt1)/float(nsamples)*1000)),1000); 
+    fibre_prop2 = (int64_t)MIN((int64_t)(MISCMATHS::round(float(fibcnt2)/float(nsamples)*1000)),1000);
+    fibre_prop2 = (int64_t)MIN(fibre_prop2, (int64_t)(1000-fibre_prop1)); //Avoid sum over 1000 due to rounding errors
+    length_val  = (int64_t)MIN((int64_t)(MISCMATHS::round((nsamples!=0?length_tot/float(nsamples):0.0))),1000); 
+    code2 = two32*fibre_count + mult*mult*fibre_prop1 + mult*fibre_prop2 + length_val;
+  }
+
+    
+  void MatCell_cmpr::add_one(float dist,int fib){
+    int nsamples, fibcnt1, fibcnt2; float length_tot;
+    
+    //Undo the coding  for current value
+    decode(code2,nsamples, fibcnt1, fibcnt2, length_tot);
+    
+    //Update Values
+    if (fib==1)
+      fibcnt1+=1;
+    if (fib==2)
+      fibcnt2+=1;
+    length_tot+=dist;
+    nsamples+=1;   
+
+    //Code again
+    encode(nsamples, fibcnt1, fibcnt2, length_tot);
+  }
+
+
+  void MatCell_cmpr::add_n(float dist,vector<float> props,int n){
+    int nsamples, fibcnt1, fibcnt2; float length_tot;
+
+    if(props.size()!=2){
+      cerr<<"MatCell_cmpr::add_n:Only valid with 3 fibres for now"<<endl;
+      exit(1);
+    }
+        
+    //Undo the coding  for current value
+    decode(code2, nsamples, fibcnt1, fibcnt2, length_tot);
+    
+    //Update Values
+    fibcnt1+=(int)round(props[0]*n);
+    fibcnt2+=(int)round(props[1]*n);
+    length_tot+=(dist*n);
+    nsamples+=n;   
+
+    //Code again
+    encode(nsamples, fibcnt1, fibcnt2, length_tot);
+  }
+  
+
+  void MatCell_cmpr::add_n(int64_t newcode2){
+    int nsamples, fibcnt1, fibcnt2; float length_tot;
+    int Newnsamples, Newfibcnt1, Newfibcnt2; float Newlength_tot;
+    
+    //Undo the coding  for current value
+    decode(code2, nsamples, fibcnt1, fibcnt2, length_tot);      
+    
+    //Undo the coding  for new value
+    decode(newcode2, Newnsamples, Newfibcnt1, Newfibcnt2, Newlength_tot);      
+    
+    //Update the values by adding the New ones
+    fibcnt1+=Newfibcnt1;
+    fibcnt2+=Newfibcnt2;
+    length_tot+=Newlength_tot;
+    nsamples+=Newnsamples;
+
+    //Perform coding again 
+    encode(nsamples, fibcnt1, fibcnt2, length_tot);
+  }
+
+
+
+  //************************************** 
+  //************* SpMat_HCP ************** 
+  //Constructor from a file
+  SpMat_HCP::SpMat_HCP(unsigned int m, unsigned int n,const string& basename):SpMat<MatCell_cmpr>::SpMat(m,n){
+      string extension="mtx";
+      string file1=basename+"1."+extension;
+      string file2=basename+"2."+extension;
+      string file3=basename+"3."+extension;
+      ifstream fs1,fs2,fs3;
+      // FIRST FILE (text file of matrix dimensions)
+      try{ fs1.open(file1.c_str()); }
+      catch(...) {
+         throw SpMatHCPException("SpMat_HCP::SpMat_HCP(unsigned int m, unsigned int n,const string& basename): cannot open file1 for reading");
+      }
+      int nrows, ncols;
+      fs1 >> nrows;
+      fs1 >> ncols;
+      fs1.close();
+
+      if(nrows!=(int)Nrows() || ncols!=(int)Ncols()){
+      	cerr<<"SpMat_HCP::SpMat_HCP(unsigned int m, unsigned int n,const string& basename): Incompatible matrix dimensions"<<endl;
+	exit(1);
+      }
+
+      // SECOND FILE (binary file of lengths)
+      try{ fs2.open(file2.c_str(), ios::in | ios::binary); }
+      catch(...) {
+         throw SpMatHCPException("SpMat_HCP::SpMat_HCP(unsigned int m, unsigned int n,const string& basename): cannot open file2 for reading");
+      }
+      ColumnVector colsize(ncols);
+      for(int c=1; c <= ncols; c++) {
+	int64_t sz;
+	fs2.read((char*)&sz,sizeof(sz));
+	colsize(c)=sz;    
+      }
+      fs2.close();
+      
+      // THIRD FILE (binary file of contents, integer coded)
+      try{ fs3.open(file3.c_str(), ios::in | ios::binary); }
+      catch(...) {
+         throw SpMatHCPException("SpMat_HCP::SpMat_HCP(unsigned int m, unsigned int n,const string& basename): cannot open file3 for reading");
+      }
+      int64_t code1, code2;
+      
+      for(int c=0; c < ncols; c++) {
+	for (unsigned int s=1; s <= colsize(c+1); s++) {
+	  fs3.read((char*)&code1,sizeof(code1));
+	  fs3.read((char*)&code2,sizeof(code2));
+	  unsigned int r = code1; 
+	  AddToTraj(r+1,c+1,code2);
+	}
+      }
+      fs3.close();
+    }
+ 
+
+  // Trajectory file writer
   int SpMat_HCP::SaveTrajFile(const string& basename)const
   {
     if ( (basename.size()<1) ) return -1;
@@ -74,23 +231,21 @@
     string file1=basename+"1."+extension;
     string file2=basename+"2."+extension;
     string file3=basename+"3."+extension;
+    ofstream fs1, fs2, fs3;
     // FIRST FILE (text file of matrix dimensions)
-    ofstream fs1(file1.c_str());
-    if (!fs1) { 
-      cerr << "Could not open file " << file1 << " for writing" << endl;
-      return -1;
-    }
+    try{ fs1.open(file1.c_str(), ios::out | ios::binary); }
+    catch(...) {
+      throw SpMatHCPException("SpMat_HCP::SaveTrajFile(const string& basename): cannot open file1 for writing");
+    } 
     fs1 << Nrows() << endl;
     fs1 << Ncols() << endl;
     fs1.close();
 
     // SECOND FILE (binary file of lengths)
-    ofstream fs2(file2.c_str(), ios::out | ios::binary);
-    if (!fs2) { 
-      cerr << "Could not open file " << file2 << " for writing" << endl;
-      return -1;
+    try{ fs2.open(file2.c_str(), ios::out | ios::binary); }
+    catch(...) {
+      throw SpMatHCPException("SpMat_HCP::SaveTrajFile(const string& basename): cannot open file2 for writing");
     }
-
     for(unsigned int c=0; c < Ncols(); c++) {
       int64_t sz = get_ri(c).size();  
       fs2.write((char*)&sz,sizeof(sz));
@@ -98,15 +253,140 @@
     fs2.close();
 
     // THIRD FILE (binary file of contents, integer coded)
-    ofstream fs3(file3.c_str(), ios::out | ios::binary);
-    if (!fs3) { 
-      cerr << "Could not open file " << file3 << " for writing" << endl;
-      return -1;
+    try{ fs3.open(file3.c_str(), ios::out | ios::binary); }
+    catch(...) {
+      throw SpMatHCPException("SpMat_HCP::SaveTrajFile(const string& basename): cannot open file3 for writing");
     }
+    int64_t code1, code2;
+    
+    for(unsigned int c=0; c < Ncols(); c++) {
+      if(get_ri(c).size()){
+	const std::vector<unsigned int>&    ri = get_ri(c);
+	const std::vector<MatCell_cmpr>&   val = get_val(c);
+	for (unsigned int r=0; r<ri.size(); r++) { 	
+	  code1 = ri[r];
+	  code2 = val[r].getcode2();
+	  fs3.write((char*)&code1,sizeof(code1));
+	  fs3.write((char*)&code2,sizeof(code2));
+	}
+      }
+    }  
+    fs3.close();
+    return 0;
+  }
 
+/*
+
+  //Old SpMat_HCP with MattCell (less rounding errors, but takes ~5 times as much memory and ~40% more execution time
+  //Constructor from a file
+  SpMat_HCP::SpMat_HCP(unsigned int m, unsigned int n,const string& basename):SpMat<MatCell>::SpMat(m,n){
+      string extension="mtx";
+      string file1=basename+"1."+extension;
+      string file2=basename+"2."+extension;
+      string file3=basename+"3."+extension;
+      ifstream fs1,fs2,fs3;
+      // FIRST FILE (text file of matrix dimensions)
+      try{ fs1.open(file1.c_str()); }
+      catch(...) {
+         throw SpMatHCPException("SpMat_HCP::SpMat_HCP(unsigned int m, unsigned int n,const string& basename): cannot open file1 for reading");
+      }
+      int nrows, ncols;
+      fs1 >> nrows;
+      fs1 >> ncols;
+      fs1.close();
+
+      if(nrows!=(int)Nrows() || ncols!=(int)Ncols()){
+      	cerr<<"SpMat_HCP::SpMat_HCP(unsigned int m, unsigned int n,const string& basename): Incompatible matrix dimensions"<<endl;
+	exit(1);
+      }
+
+      // SECOND FILE (binary file of lengths)
+      try{ fs2.open(file2.c_str(), ios::in | ios::binary); }
+      catch(...) {
+         throw SpMatHCPException("SpMat_HCP::SpMat_HCP(unsigned int m, unsigned int n,const string& basename): cannot open file2 for reading");
+      }
+      ColumnVector colsize(ncols);
+      for(int c=1; c <= ncols; c++) {
+	int64_t sz;
+	fs2.read((char*)&sz,sizeof(sz));
+	colsize(c)=sz;    
+      }
+      fs2.close();
+      
+      // THIRD FILE (binary file of contents, integer coded)
+      try{ fs3.open(file3.c_str(), ios::in | ios::binary); }
+      catch(...) {
+         throw SpMatHCPException("SpMat_HCP::SpMat_HCP(unsigned int m, unsigned int n,const string& basename): cannot open file3 for reading");
+      }
+      int64_t code1, code2;
+      int64_t two32=(1LL<<32), mult=1001;    
+      
+      for(int c=0; c < ncols; c++) {
+	for (unsigned int s=1; s <= colsize(c+1); s++) {
+	  // fibre_prop1, fibre_prop2 and length_val ***MUST*** BE WITHIN 0 and 1000 INCLUSIVE	  
+	  int64_t fibre_count, fibre_prop1, fibre_prop2, length_val;
+	  fs3.read((char*)&code1,sizeof(code1));
+	  fs3.read((char*)&code2,sizeof(code2));
+	  //Undo this coding: code2 = two32*fibre_count + mult*mult*fibre_prop1 + mult*fibre_prop2 + length_val;
+	  fibre_count = code2 / two32;
+	  code2 = code2 % two32;
+	  fibre_prop1 = code2 / (mult*mult);
+	  code2 = code2 % (mult*mult);
+	  fibre_prop2 = code2 / mult;
+	  code2 = code2 % mult;
+	  length_val = code2;
+	  // Now undo the integer coding of fibre proportions
+	  float fprop1=fibre_prop1 / 1000.0;
+	  float fprop2=fibre_prop2 / 1000.0;
+
+	  // Uncode the row 
+	  unsigned int r = code1;
+	  // update matrix
+	  vector<float> props(2);
+	  props[0]=fprop1;props[1]=fprop2;
+	  AddToTraj(r+1,c+1,(float)length_val,props,fibre_count);
+	}
+      }
+      fs3.close();
+    }
+ 
+
+  // Trajectory file writer
+  int SpMat_HCP::SaveTrajFile(const string& basename)const
+  {
+    if ( (basename.size()<1) ) return -1;
+    string extension="mtx";
+    string file1=basename+"1."+extension;
+    string file2=basename+"2."+extension;
+    string file3=basename+"3."+extension;
+    ofstream fs1, fs2, fs3;
+    // FIRST FILE (text file of matrix dimensions)
+    try{ fs1.open(file1.c_str(), ios::out | ios::binary); }
+    catch(...) {
+      throw SpMatHCPException("SpMat_HCP::SaveTrajFile(const string& basename): cannot open file1 for writing");
+    } 
+    fs1 << Nrows() << endl;
+    fs1 << Ncols() << endl;
+    fs1.close();
+
+    // SECOND FILE (binary file of lengths)
+    try{ fs2.open(file2.c_str(), ios::out | ios::binary); }
+    catch(...) {
+      throw SpMatHCPException("SpMat_HCP::SaveTrajFile(const string& basename): cannot open file2 for writing");
+    }
+    for(unsigned int c=0; c < Ncols(); c++) {
+      int64_t sz = get_ri(c).size();  
+      fs2.write((char*)&sz,sizeof(sz));
+    }
+    fs2.close();
+
+    // THIRD FILE (binary file of contents, integer coded)
+    try{ fs3.open(file3.c_str(), ios::out | ios::binary); }
+    catch(...) {
+      throw SpMatHCPException("SpMat_HCP::SaveTrajFile(const string& basename): cannot open file3 for writing");
+    }
     int64_t code1, code2;
     int64_t two32=(1LL<<32), mult=1001;    
-    //int MAX_LENGTH=1000;
     
     for(unsigned int c=0; c < Ncols(); c++) {
       if(get_ri(c).size()){
@@ -119,8 +399,7 @@
 	  fibre_count = (int64_t)MIN((int64_t)val[r].get_nsamples(),two32-1);
 	  fibre_prop1 = (int64_t)MIN((int64_t)(MISCMATHS::round(val[r].get_fibprop(1)*1000)),1000);
 	  fibre_prop2 = (int64_t)MIN((int64_t)(MISCMATHS::round(val[r].get_fibprop(2)*1000)),1000);
-	  length_val  = (int64_t)MIN((int64_t)(MISCMATHS::round(val[r].get_avg_length())),1000);
-	  
+	  length_val  = (int64_t)MIN((int64_t)(MISCMATHS::round(val[r].get_avg_length())),1000); 
 
 	  code2 = two32*fibre_count + mult*mult*fibre_prop1 + mult*fibre_prop2 + length_val;
 	  fs3.write((char*)&code1,sizeof(code1));
@@ -133,9 +412,7 @@
     return 0;
     
   }
-
-
-
+*/
 
 namespace TRACT{
 
@@ -235,6 +512,18 @@ namespace TRACT{
     y=yy;
   }
 
+  void make_unique(vector<int>& x){
+    sort(x.begin(),x.end());
+    vector<int> xx;
+    for(unsigned int i=0;i<x.size();i++){
+      if(i>0){
+	if( x[i]==x[i-1] )continue;
+      }
+      xx.push_back(x[i]);      
+    }
+    x=xx;
+  }
+
   void make_unique(vector< pair<int,float> >&x){
     sort(x.begin(),x.end());
     vector< pair<int,float> > xx;
@@ -273,7 +562,11 @@ namespace TRACT{
 			       int(ceil(m_mask.zsize()/m_lcrat)+1),3);
       m_loopcheck=0;
     }
-    
+
+    // by default, assume there is no surface (speed)
+    m_surfexists=false;
+    if(m_seeds.nSurfs()>0){surfexists();}
+
     // exclusion mask
     // now in CSV format
     if(opts.rubbishfile.value()!=""){
@@ -297,17 +590,22 @@ namespace TRACT{
       read_volume4D(m_prefdir,opts.prefdirfile.value());
     }    
     
+    // local curvature threshold
+    if(opts.loccurvthresh.value()!=""){
+      read_volume(m_loccurvthresh,opts.loccurvthresh.value());
+    }
+
     // Allow for either matrix transform (12dof affine) or nonlinear (warpfield)
     m_Seeds_to_DTI = IdentityMatrix(4);
     m_DTI_to_Seeds = IdentityMatrix(4);
     m_rotdir       = IdentityMatrix(3);
-
-    m_IsNonlinXfm = false;
+    
+    m_IsNonlinXfm = false;   
     if(opts.seeds_to_dti.value()!=""){
       if(!fsl_imageexists(opts.seeds_to_dti.value())){//presumably ascii file provided
 	m_Seeds_to_DTI = read_ascii_matrix(opts.seeds_to_dti.value());
 	m_DTI_to_Seeds = m_Seeds_to_DTI.i();
-	m_rotdir       = m_Seeds_to_DTI.SubMatrix(1,3,1,3);
+	m_rotdir       = m_Seeds_to_DTI.SubMatrix(1,3,1,3);	
       }
       else{
 	m_IsNonlinXfm = true;
@@ -330,12 +628,18 @@ namespace TRACT{
     vols.initialise(opts.basename.value(),m_mask);
     m_path.reserve(opts.nsteps.value());
     m_diff_path.reserve(opts.nsteps.value());
+    if(m_surfexists)
+      m_crossedvox.reserve(opts.nsteps.value());
+
     m_x_s_init=0;
     m_y_s_init=0;
     m_z_s_init=0;
 
     m_inmask3.reserve(opts.nsteps.value());
-    m_inlrmask3.reserve(opts.nsteps.value());
+    m_inlrmask3.reserve(opts.nsteps.value()); 
+
+
+    
     
   }
   
@@ -369,7 +673,7 @@ namespace TRACT{
   
   int Streamliner::streamline(const float& x_init,const float& y_init,const float& z_init, 
 			      const ColumnVector& dim_seeds,const int& fibst){ 
-    Tracer_Plus tr("Streamliner::streamline");
+    //Tracer_Plus tr("Streamliner::streamline");
     //fibst tells tractvolsx which fibre to start with if there are more than one..
     //x_init etc. are in seed space...
     vols.reset(fibst);
@@ -380,9 +684,10 @@ namespace TRACT{
     xyz_seeds<<x_init<<y_init<<z_init;
     ColumnVector xyz_dti;
     ColumnVector th_ph_f;
-    float xst,yst,zst,x,y,z,tmp2;
+    float xst,yst,zst,x,y,z,tmp2,cthr=opts.c_thr.value();
     float pref_x=0,pref_y=0,pref_z=0;
     int x_s,y_s,z_s;
+    int x_p,y_p,z_p;
     int sampled_fib=fibst;
 
     // find xyz in dti space
@@ -398,13 +703,18 @@ namespace TRACT{
     m_diff_path.clear();
     x=xst;y=yst;z=zst;
     m_part.change_xyz(x,y,z);
-
+    x_p=(int)round(m_part.x());
+    y_p=(int)round(m_part.y());
+    z_p=(int)round(m_part.z());
+    //    x_p=(int)round(x);y_p=(int)round(y);z_p=(int)round(z);
 
     float          pathlength=0;
     bool           rubbish_passed=false;
     bool           wayorder=true;
     vector<int>    waycrossed;
     vector<int>    crossedlocs3;
+    vector<ColumnVector> crossedvox;
+
     int            cnt=-1;
     // loopcheck stuff
     float oldrx,oldry,oldrz;
@@ -419,11 +729,12 @@ namespace TRACT{
 	m_net_passed_flags=0;
       }
     }
-
+    
+    if(m_surfexists){m_crossedvox.clear();}
 
     for(int it=1;it<=opts.nsteps.value()/2;it++){
       
-      if((m_mask((int)round(m_part.x()),(int)round(m_part.y()),(int)round(m_part.z()))!=0)){
+      if((m_mask(x_p,y_p,z_p)!=0)){
 
 	///////////////////////////////////
 	//loopchecking
@@ -444,6 +755,7 @@ namespace TRACT{
 	
 	x=m_part.x();y=m_part.y();z=m_part.z();
 	xyz_dti <<x<<y<<z;
+	x_p=(int)round(x);y_p=(int)round(y);z_p=(int)round(z);
 
 	// now find xyz in seeds space
 	if(cnt>=0){
@@ -451,7 +763,7 @@ namespace TRACT{
 	    xyz_seeds = vox_to_vox(xyz_dti,vols.dimensions(),dim_seeds,m_DTI_to_Seeds);    
 	  else{
 	    xyz_seeds = NewimageCoord2NewimageCoord(m_Seeds_to_DTI_warp,false,m_mask,m_seeds.get_refvol(),xyz_dti);
-	  }
+	    }	  
 	}
 	
 	x_s =(int)round((float)xyz_seeds(1));
@@ -469,13 +781,13 @@ namespace TRACT{
 	int sample_fib = 0;
 	if(opts.prefdirfile.value()!=""){
 	  if(m_prefdir.tsize()==3){
-	    pref_x = m_prefdir((int)x,(int)y,(int)z,0);
-	    pref_y = m_prefdir((int)x,(int)y,(int)z,1);
-	    pref_z = m_prefdir((int)x,(int)y,(int)z,2);
+	    pref_x = m_prefdir(x_p,y_p,z_p,0);
+	    pref_y = m_prefdir(x_p,y_p,z_p,1);
+	    pref_z = m_prefdir(x_p,y_p,z_p,2);
 	  }
 	  else{
 	    if(m_prefdir(x_s,y_s,z_s,0)!=0)
-	      sample_fib = (int)m_prefdir((int)x,(int)y,(int)z,0);
+	      sample_fib = (int)m_prefdir(x_p,y_p,z_p,0);
 	    if(sample_fib>3)sample_fib=3;	    
 	  }
 	}
@@ -496,13 +808,18 @@ namespace TRACT{
 	if(cnt>0)
 	  pathlength += opts.steplength.value();
 
-	
-	
-	
+	// Do this only once as it is the same for all surfaces
+	if(cnt>0 && m_surfexists){
+	  float line[2][3]={{m_path[cnt-1](1),m_path[cnt-1](2),m_path[cnt-1](3)},
+			    {m_path[cnt](1),m_path[cnt](2),m_path[cnt](3)}};
+	  m_seeds.line_crossed_voxels(line,crossedvox); //crossed in voxels
+	  m_crossedvox.push_back(crossedvox);	      
+	}
+		
 	// only test exclusion after at least one step
 	if(opts.rubbishfile.value()!="" && cnt>0){
-	  if(m_rubbish.has_crossed(m_path[cnt-1],m_path[cnt])){
-	    rubbish_passed=1;	
+	  if(m_rubbish.has_crossed(m_path[cnt-1],m_path[cnt],crossedvox)){
+	    rubbish_passed=1;
 	    break;
 	  }
 	}
@@ -511,7 +828,7 @@ namespace TRACT{
 	if(m_way_passed_flags.size()>0){
 	  if(cnt>0){
 	    waycrossed.clear();
-	    m_waymasks.has_crossed_roi(m_path[cnt-1],m_path[cnt],waycrossed);
+	    m_waymasks.has_crossed_roi(m_path[cnt-1],m_path[cnt],crossedvox,waycrossed);
 
 	    for(unsigned int wm=0;wm<waycrossed.size();wm++){
 	      m_way_passed_flags[waycrossed[wm]]=1;
@@ -530,7 +847,7 @@ namespace TRACT{
 	if(opts.network.value()){
 	  if(cnt>0){
 	    waycrossed.clear();
-	    m_netmasks.has_crossed_roi(m_path[cnt-1],m_path[cnt],waycrossed);
+	    m_netmasks.has_crossed_roi(m_path[cnt-1],m_path[cnt],crossedvox,waycrossed);
 
 	    for(unsigned int wm=0;wm<waycrossed.size();wm++){
 	      m_net_passed_flags(waycrossed[wm]+1)=1;
@@ -542,12 +859,12 @@ namespace TRACT{
 	// update locations for matrix3
 	if(opts.matrix3out.value() && cnt>0){
 	  waycrossed.clear();crossedlocs3.clear();
-	  if(m_mask3.has_crossed_roi(m_path[cnt-1],m_path[cnt],waycrossed,crossedlocs3)){	    
+	  if(m_mask3.has_crossed_roi(m_path[cnt-1],m_path[cnt],crossedvox,waycrossed,crossedlocs3)){	    
 	    fill_inmask3(crossedlocs3,pathlength);
 	  }
 	  if(opts.lrmask3.value()!=""){
 	    waycrossed.clear();crossedlocs3.clear();
-	    if(m_lrmask3.has_crossed_roi(m_path[cnt-1],m_path[cnt],waycrossed,crossedlocs3)){	    
+	    if(m_lrmask3.has_crossed_roi(m_path[cnt-1],m_path[cnt],crossedvox,waycrossed,crossedlocs3)){	    
 	      fill_inlrmask3(crossedlocs3,pathlength);
 	    }	  
 	  }
@@ -558,8 +875,7 @@ namespace TRACT{
 
 	// sample a new fibre orientation
 	int newx,newy,newz;	
-	if(opts.skipmask.value() == ""){
-	  Tracer_Plus tr("sample");
+	if(opts.skipmask.value() == ""){	  
 	  th_ph_f = vols.sample(m_part.x(),m_part.y(),m_part.z(),    // sample at this location
 				m_part.rx(),m_part.ry(),m_part.rz(), // choose closest sample to this
 				pref_x,pref_y,pref_z,                // unless we have this prefered direction 
@@ -587,23 +903,26 @@ namespace TRACT{
 	  if(m_path.size()==2 && opts.forcefirststep.value()){
 	    // do nothing
 	  }
-	  else if(m_stop.has_crossed(m_path[cnt-1],m_path[cnt])){
+	  else if(m_stop.has_crossed(m_path[cnt-1],m_path[cnt],crossedvox)){
 	    break;	    
 	  }	  
 	}
 
 
 	// jump
-	tmp2=(float)rand()/(float)RAND_MAX;	
+	tmp2=0;
+	if(opts.usef.value()){tmp2=(float)rand()/(float)RAND_MAX;}
 
-	if(th_ph_f(3)>tmp2){ //volume fraction criterion	  
-	  if(!m_part.check_dir(th_ph_f(1),th_ph_f(2),opts.c_thr.value(),forcedir)){// curvature threshold
-	    //cout<<"curv break"<<endl;
+	if(th_ph_f(3)>tmp2){ //volume fraction criterion
+	  if(opts.loccurvthresh.value()!=""){
+	    cthr=m_loccurvthresh(x_p,y_p,z_p);	    
+	  }
+	  if(!m_part.check_dir(th_ph_f(1),th_ph_f(2),cthr,forcedir)){ // curvature threshold
 	    break;
 	  }
 
 	  if((th_ph_f(1)!=0 && th_ph_f(2)!=0)){
-	    if( (m_mask((int)round(m_part.x()),(int)round(m_part.y()),(int)round(m_part.z())) != 0) ){
+	    if( (m_mask(x_p,y_p,z_p) != 0) ){
 
 	      if(!opts.modeuler.value())
 		m_part.jump(th_ph_f(1),th_ph_f(2),forcedir);
@@ -620,17 +939,21 @@ namespace TRACT{
 		}
 	    }
 	    else{
-	      //cout<<"mask break 1"<<endl;
 	      break; // outside mask	    
 	    }
 	  }
+	  else{
+	    break; // direction=zero
+	  }
+	}
+	else{
+	  break; // volume fraction threshold
 	}
 	
-	  }
+      }
       else{
-	//cout<<"mask break 2"<<endl;
-	break;
-      }// outside mask
+	break; // outside mask
+      }
 
       
     } // Close Step Number Loop (done tracking sample)
@@ -725,6 +1048,8 @@ namespace TRACT{
     m_targetmasks.load_rois(opts.targetfile.value());
     m_targetmasks.reset_values();
 
+    if(m_targetmasks.nSurfs()>0){m_stline.surfexists();}
+
     // seeds are CSV-format
     if(!opts.simple.value()){
       m_s2t_count=m_stline.get_seeds();
@@ -741,6 +1066,33 @@ namespace TRACT{
 
     m_s2trow=1;
     m_targflags.resize(m_targetmasks.nRois());
+
+    if(opts.targetpaths.value()){
+      m_targetpaths.reinitialize(m_prob.xsize(),m_prob.ysize(),m_prob.zsize(),m_targetmasks.nRois());
+      m_targetpaths=0;
+    }
+
+    // init separate tract counters
+    if(opts.targetpaths.value()){
+      m_prob_multi.resize(m_targetmasks.nRois());
+      for(int t=0;t<m_targetmasks.nRois();t++){
+	m_prob_multi[t].reinitialize(m_stline.get_seeds().xsize(),
+				     m_stline.get_seeds().ysize(),
+				     m_stline.get_seeds().zsize());
+	copybasicproperties(m_stline.get_seeds().get_refvol(),m_prob_multi[t]);
+	m_prob_multi[t]=0;  
+      }
+      if(opts.opathdir.set()){
+	m_localdir_multi.resize(m_targetmasks.nRois());
+	for(int t=0;t<m_targetmasks.nRois();t++){
+	  m_localdir_multi[t].reinitialize(m_stline.get_seeds().xsize(),
+					   m_stline.get_seeds().ysize(),
+					   m_stline.get_seeds().zsize(),6);
+	  copybasicproperties(m_stline.get_seeds().get_refvol(),m_localdir_multi[t]);
+	  m_localdir_multi[t]=0;	
+	}
+      }
+    }
   }
   
 
@@ -762,7 +1114,7 @@ namespace TRACT{
 			 << roicind[i];
     
     applycoordchange(CoordMat1, m_stline.get_seeds().get_refvol().niftivox2newimagevox_mat().i());
-      write_ascii_matrix(CoordMat1,logger.appendDir("coords_for_fdt_matrix1"));
+    write_ascii_matrix(CoordMat1,logger.appendDir("coords_for_fdt_matrix1"));
   }
   
   // matrix2 is nseeds X nlrmask
@@ -770,6 +1122,7 @@ namespace TRACT{
     // init lrmask-related 
     read_volume(m_lrmask,opts.lrmask.value());
     m_beenhere2.reinitialize(m_lrmask.xsize(),m_lrmask.ysize(),m_lrmask.zsize());
+    m_beenhere2=0;
     m_lookup2.reinitialize(m_lrmask.xsize(),m_lrmask.ysize(),m_lrmask.zsize());
     copybasicproperties(m_lrmask,m_lookup2);
     m_lookup2=0;
@@ -798,7 +1151,7 @@ namespace TRACT{
 	  }
 
     applycoordchange(CoordMat_tract2, m_lrmask.niftivox2newimagevox_mat().i());
-      write_ascii_matrix(CoordMat_tract2,logger.appendDir("tract_space_coords_for_fdt_matrix2"));
+    write_ascii_matrix(CoordMat_tract2,logger.appendDir("tract_space_coords_for_fdt_matrix2"));
 
     save_volume(m_lookup2,logger.appendDir("lookup_tractspace_fdt_matrix2"));
 
@@ -820,7 +1173,7 @@ namespace TRACT{
 			   << roicind[i];
       
       applycoordchange(CoordMat2, m_stline.get_seeds().get_refvol().niftivox2newimagevox_mat().i());
-	write_ascii_matrix(CoordMat2,logger.appendDir("coords_for_fdt_matrix2"));            
+      write_ascii_matrix(CoordMat2,logger.appendDir("coords_for_fdt_matrix2"));            
 
     }
 
@@ -864,7 +1217,7 @@ namespace TRACT{
     
     applycoordchange(mat, m_stline.get_seeds().get_refvol().niftivox2newimagevox_mat().i());
 
-      write_ascii_matrix(mat,logger.appendDir("coords_for_fdt_matrix3"));
+    write_ascii_matrix(mat,logger.appendDir("coords_for_fdt_matrix3"));
 
     if(opts.lrmask3.value()!=""){
       CSV lrmask3(m_stline.get_lrmask3());
@@ -881,15 +1234,15 @@ namespace TRACT{
 		     << lrroicind[i];
     
       applycoordchange(lrmat, m_stline.get_seeds().get_refvol().niftivox2newimagevox_mat().i());
-      //MISCMATHS::write_ascii_matrix(lrmat,logger.appendDir("tract_space_coords_for_fdt_matrix3"));
-      write_matrix_as_volume(lrmat,logger.appendDir("tract_space_coords_for_fdt_matrix3"));
+      MISCMATHS::write_ascii_matrix(lrmat,logger.appendDir("tract_space_coords_for_fdt_matrix3")); 
     }
 
   }
 
 
  
-  // matrix4 is nseeds X ndtimask
+  // matrix4 is ndtimask X nseeds
+  // unless mask4 is set
   void Counter::initialise_matrix4(){
     if(opts.simple.value()){
       cerr<<"Matrix4 output not compatible with --simple mode"<<endl;
@@ -899,6 +1252,7 @@ namespace TRACT{
     // columns are brain mask in diffusion space
     read_volume(m_dtimask,opts.dtimask.value());
     m_beenhere4.reinitialize(m_dtimask.xsize(),m_dtimask.ysize(),m_dtimask.zsize());
+    m_beenhere4=0;
     m_lookup4.reinitialize(m_dtimask.xsize(),m_dtimask.ysize(),m_dtimask.zsize());
     copybasicproperties(m_dtimask,m_lookup4);
     m_lookup4=0;
@@ -925,28 +1279,37 @@ namespace TRACT{
 	  }
 
     applycoordchange(CoordMat_tract4, m_dtimask.niftivox2newimagevox_mat().i());
-      write_ascii_matrix(CoordMat_tract4,logger.appendDir("tract_space_coords_for_fdt_matrix4"));
+    write_ascii_matrix(CoordMat_tract4,logger.appendDir("tract_space_coords_for_fdt_matrix4"));
     save_volume(m_lookup4,logger.appendDir("lookup_tractspace_fdt_matrix4"));
 
     
     // init matrix4-related
-    m_ConMat4 = new SpMat_HCP(numnz,m_numseeds);    
+    if(opts.mask4.value()==""){
+      m_ConMat4 = new SpMat_HCP(numnz,m_numseeds);
+    }
+    else{
+      m_mask4.reinitialize(m_stline.get_seeds().get_refvol());
+      m_mask4.set_convention(opts.meshspace.value());
+      m_mask4.load_rois(opts.mask4.value());
+      if(m_mask4.nSurfs()>0){m_stline.surfexists();}
 
-    vector<ColumnVector> coords = m_stline.get_seeds().get_locs_coords();
-    vector<int> roicind         = m_stline.get_seeds().get_locs_coord_index();
-    vector<int> roiind          = m_stline.get_seeds().get_locs_roi_index();
+      m_ConMat4 = new SpMat_HCP(numnz,m_mask4.nLocs());
+    }
 
-    Matrix CoordMat4(m_numseeds,5);
-    for (unsigned int i=0;i<coords.size();i++)
-      CoordMat4.Row(i+1) << (float)coords[i](1) 
-			 << (float)coords[i](2)
-			 << (float)coords[i](3)
-			 << roiind[i]
-			 << roicind[i];
+    // COMMENTED OUT SOME OUTPUTS [NOT BEING USED AT THIS STAGE]
+    // vector<ColumnVector> coords = m_stline.get_seeds().get_locs_coords();
+    // vector<int> roicind         = m_stline.get_seeds().get_locs_coord_index();
+    // vector<int> roiind          = m_stline.get_seeds().get_locs_roi_index();
+    // Matrix CoordMat4(m_numseeds,5);
+    // for (unsigned int i=0;i<coords.size();i++)
+    //   CoordMat4.Row(i+1) << (float)coords[i](1) 
+    // 			 << (float)coords[i](2)
+    // 			 << (float)coords[i](3)
+    // 			 << roiind[i]
+    // 			 << roicind[i];
+    // applycoordchange(CoordMat4, m_stline.get_seeds().get_refvol().niftivox2newimagevox_mat().i());
+    // write_ascii_matrix(CoordMat4,logger.appendDir("coords_for_fdt_matrix4"));                  
     
-    applycoordchange(CoordMat4, m_stline.get_seeds().get_refvol().niftivox2newimagevox_mat().i());
-
-      write_ascii_matrix(CoordMat4,logger.appendDir("coords_for_fdt_matrix4"));                    
   }
   
 
@@ -996,12 +1359,15 @@ namespace TRACT{
   }
 
   void Counter::update_pathdist(){
-    Tracer_Plus tr("Counter::update_pathdist");
+    //Tracer_Plus tr("Counter::update_pathdist");
     if(m_path.size()<1){return;}
     int x_s,y_s,z_s;
     float pathlength=0;
     vector<int> crossedrois,crossedlocs;
+    vector<ColumnVector> crossedvox;
     int nlocs=0;
+    int offset=-1;
+    bool restarted=false;
     for(unsigned int i=0;i<m_path.size();i++){
       x_s=(int)round((float)m_path[i](1));
       y_s=(int)round((float)m_path[i](2));
@@ -1010,6 +1376,8 @@ namespace TRACT{
       if(i>0 && (m_path[i]-m_path[0]).MaximumAbsoluteValue()==0){
 	//m_lastpoint(x_s,y_s,z_s)+=1;  
 	pathlength=0;
+	offset-=1;
+	restarted=true;
       }
       if(m_beenhere(x_s,y_s,z_s)==0){
 	if(!opts.pathdist.value())
@@ -1022,9 +1390,16 @@ namespace TRACT{
 	  ColumnVector v(3);
 	  v=m_path[i]-m_path[i-1];
 	  v/=std::sqrt(v.SumSquare());
-	  m_localdir(x_s,y_s,z_s,0)+=v(1);
-	  m_localdir(x_s,y_s,z_s,1)+=v(2);
-	  m_localdir(x_s,y_s,z_s,2)+=v(3);
+	  // Add direction (needs to account for the current direction and flip if necessary)
+	  
+	  // lower diagonal rows (because of the way SymmetricMatrix works)
+	  m_localdir(x_s,y_s,z_s,0)+=v(1)*v(1);
+	  m_localdir(x_s,y_s,z_s,1)+=v(1)*v(2);
+	  m_localdir(x_s,y_s,z_s,2)+=v(2)*v(2);
+	  m_localdir(x_s,y_s,z_s,3)+=v(1)*v(3);
+	  m_localdir(x_s,y_s,z_s,4)+=v(2)*v(3);
+	  m_localdir(x_s,y_s,z_s,5)+=v(3)*v(3);
+	  
 	}
       }
       
@@ -1035,9 +1410,13 @@ namespace TRACT{
       //  2: location has been visited
 
       if(opts.pathfile.set()){
-	if(pathlength>0){
+	if(pathlength>0 && !restarted){
+	  if(m_beenhere_alt.nSurfs()>0){
+	    crossedvox=m_crossedvox[i+offset];
+	  }
+
 	  crossedrois.clear();crossedlocs.clear();
-	  if(m_beenhere_alt.has_crossed_roi(m_path[i-1],m_path[i],crossedrois,crossedlocs)){
+	  if(m_beenhere_alt.has_crossed_roi(m_path[i-1],m_path[i],crossedvox,crossedrois,crossedlocs)){
 	    nlocs+=crossedlocs.size();
 	    for(unsigned int i=0;i<crossedlocs.size();i++){
 	      if(m_beenhere_alt.get_value(crossedlocs[i])==1){	      
@@ -1052,6 +1431,7 @@ namespace TRACT{
 	}
       }
       pathlength+=opts.steplength.value();
+      restarted=false;
       
     }
 
@@ -1062,11 +1442,17 @@ namespace TRACT{
     // z_s=(int)round((float)m_path[i](3));
     // m_lastpoint(x_s,y_s,z_s)+=1;  
 
+    // In network mode, update network matrix
+    if(opts.network.value()){
+      m_stline.update_mat();      
+    }
+
   }
 
   void Counter::reset_beenhere(){
-    int x_s,y_s,z_s;
+    int x_s,y_s,z_s,offset=-1;
     vector<int> crossedlocs,crossedrois;
+    vector<ColumnVector> crossedvox;
     bool hascrossed=false;
     for(unsigned int i=0;i<m_path.size();i++){
       x_s=(int)round((float)m_path[i](1));
@@ -1075,13 +1461,18 @@ namespace TRACT{
       m_beenhere(x_s,y_s,z_s)=0;
 
       // back to first point? keep going
-      if(i>0 && (m_path[i]-m_path[0]).MaximumAbsoluteValue()==0)
+      if(i>0 && (m_path[i]-m_path[0]).MaximumAbsoluteValue()==0){
+	offset-=1;
 	continue;
+      }
 
       // alternative roi
       if(opts.pathfile.set()){
 	if(i>0){
-	  if(m_beenhere_alt.has_crossed_roi(m_path[i-1],m_path[i],crossedrois,crossedlocs))
+	  if(m_beenhere_alt.nSurfs()>0){
+	    crossedvox=m_crossedvox[i+offset];
+	  }
+	  if(m_beenhere_alt.has_crossed_roi(m_path[i-1],m_path[i],crossedvox,crossedrois,crossedlocs))
 	    hascrossed=true;
 	}
       }
@@ -1121,19 +1512,40 @@ namespace TRACT{
   
 
   void Counter::update_seedcounts(){
+    //Tracer_Plus tr("Counter::update_seedcounts");
     vector<int> crossed;
+    vector<ColumnVector> crossedvox;
     float       pathlength=0;
-    int         cnt=0;
+    int         cnt=0,offset=-1;
+
     for(unsigned int i=1;i<m_path.size();i++){
       pathlength+=opts.steplength.value();
       // check here if back to seed
-      if((m_path[i]-m_path[0]).MaximumAbsoluteValue()==0)
+      if((m_path[i]-m_path[0]).MaximumAbsoluteValue()==0){
+	offset-=1;
 	pathlength=0;
+	continue;
+      }
 
       // this would be more efficient if we only checked 
       // masks that haven't been crossed yet...
       crossed.clear();
-      m_targetmasks.has_crossed_roi(m_path[i-1],m_path[i],crossed);
+      if(m_targetmasks.nSurfs()>0){
+	if( ((i+offset) < 0 ) || ((i+offset)>=m_crossedvox.size())){
+	  cout<<"-----------------------"<<endl;
+	  OUT(m_path.size());
+	  OUT(m_crossedvox.size());
+	  OUT(i);
+	  OUT(offset);
+	  for(unsigned int ii=0;ii<m_path.size();ii++)
+	    cout<<m_path[ii](1)<<" "<<m_path[ii](2)<<" "<<m_path[ii](3)<<endl;
+	  cout<<"-----------------------"<<endl;
+	  exit(1);
+	}
+	crossedvox=m_crossedvox[i+offset];//stepcnt++;
+      }
+
+      m_targetmasks.has_crossed_roi(m_path[i-1],m_path[i],crossedvox,crossed);
       for(unsigned int t=0;t<crossed.size();t++){
 	if(m_targflags[crossed[t]])continue;
 
@@ -1150,30 +1562,87 @@ namespace TRACT{
 	  else
 	    m_s2tastext(m_s2trow,crossed[t]+1)+=pathlength;
 	}
-
 	m_targflags[crossed[t]]=true;cnt++;
 
       }
       // stop if they all have been crossed
       if(cnt==m_targetmasks.nRois())break;
+      
+    }
+    // save separate paths
+      if(opts.targetpaths.value()){
+	// WHAT TO DO HERE???
+	// 1st Loop = streamlines (like in m_prob update)
+	// beenhere should be used
+	// when updating, loop over crossed targets
+	reset_beenhere();
+	update_pathdist_multi();
+      }
+  }
+
+  void Counter::update_pathdist_multi(){
+    if(m_path.size()<1){return;}
+    int x_s,y_s,z_s;
+    float pathlength=0;
+    for(unsigned int i=0;i<m_path.size();i++){
+      pathlength+=opts.steplength.value();
+      x_s=(int)round((float)m_path[i](1));
+      y_s=(int)round((float)m_path[i](2));
+      z_s=(int)round((float)m_path[i](3));
+      // check here if back to seed
+      if(i>0 && (m_path[i]-m_path[0]).MaximumAbsoluteValue()==0){
+	pathlength=0;     
+      }
+      if(m_beenhere(x_s,y_s,z_s)==0){
+	for(unsigned int t=0;t<m_targflags.size();t++){
+	  if(!m_targflags[t]){continue;}
+	  if(!opts.pathdist.value())
+	    m_prob_multi[t](x_s,y_s,z_s)+=1; 
+	  else
+	    m_prob_multi[t](x_s,y_s,z_s)+=pathlength;
+
+	  if(opts.opathdir.value() && i>0){
+	    ColumnVector v(3);
+	    v=m_path[i]-m_path[i-1];
+	    v/=std::sqrt(v.SumSquare());
+	    m_localdir_multi[t](x_s,y_s,z_s,0)+=v(1)*v(1);
+	    m_localdir_multi[t](x_s,y_s,z_s,1)+=v(1)*v(2);
+	    m_localdir_multi[t](x_s,y_s,z_s,2)+=v(2)*v(2);
+	    m_localdir_multi[t](x_s,y_s,z_s,3)+=v(1)*v(3);
+	    m_localdir_multi[t](x_s,y_s,z_s,4)+=v(2)*v(3);
+	    m_localdir_multi[t](x_s,y_s,z_s,5)+=v(3)*v(3);
+	  }	  	
+	}
+	m_beenhere(x_s,y_s,z_s)=1;
+	
+	
+      }
     }
   }
 
   void Counter::update_matrix1(){
+    //Tracer_Plus tr("Counter::update_matrix1");
     // use path and has_crossed
     float pathlength=opts.steplength.value(),val=1;
     vector<int> crossedseeds,crossedlocs;
     vector<int> allcrossed;vector<float> allvals;
+    vector<ColumnVector> crossedvox;
+    int offset=-1;
     for(unsigned int i=1;i<m_path.size();i++){
       // check here if back to seed (not a robust way to do it...)
       if((m_path[i]-m_path[0]).MaximumAbsoluteValue()==0){
 	pathlength=opts.steplength.value();
 	val = opts.pathdist.value()?pathlength:1;
+	offset-=1;
 	continue;
       }
       crossedseeds.clear();crossedlocs.clear();
+      if(m_stline.get_seeds().nSurfs()>0){
+	crossedvox=m_crossedvox[i+offset];       
+      }
 
-      if(m_stline.get_seeds().has_crossed_roi(m_path[i-1],m_path[i],crossedseeds,crossedlocs)){
+
+      if(m_stline.get_seeds().has_crossed_roi(m_path[i-1],m_path[i],crossedvox,crossedseeds,crossedlocs)){
 	allcrossed.insert(allcrossed.end(),crossedlocs.begin(),crossedlocs.end());
 	vector<float> vals(crossedlocs.size(),val);
 	allvals.insert(allvals.end(),vals.begin(),vals.end());
@@ -1183,13 +1652,18 @@ namespace TRACT{
       pathlength+=opts.steplength.value();
     }
     // fill matrix1
-    make_unique(allcrossed,allvals);
+    {
+      //Tracer_Plus tr("make_unique");
+      make_unique(allcrossed,allvals);
+    }
     for(unsigned int i=0;i<allcrossed.size();i++){
-      m_ConMat1->AddTo(m_Conrow1,allcrossed[i]+1,allvals[i]);
+      //m_ConMat1->AddTo(m_Conrow1,allcrossed[i]+1,allvals[i]);
+      m_ConMat1->AddTo(m_curloc+1,allcrossed[i]+1,allvals[i]);
     }
   }
   
   void Counter::update_matrix2_row(){
+        //Tracer_Plus tr("Counter::update_matrix2");
     //run this one every streamline - not every voxel..
     float d=opts.steplength.value();
     int x_lr,y_lr,z_lr,Concol2;
@@ -1219,6 +1693,7 @@ namespace TRACT{
   }
 
   void Counter::update_matrix3(){
+    //Tracer_Plus tr("Counter::update_matrix3");
     vector< pair<int,float> >& inmask3 = m_stline.get_inmask3();
     vector< pair<int,float> >& inlrmask3 = m_stline.get_inlrmask3();
     bool uselr = (opts.lrmask3.value()!="");
@@ -1286,28 +1761,78 @@ namespace TRACT{
 
 
   void Counter::update_matrix4_col(){
+    //Tracer_Plus tr("Counter::update_matrix4");
     float d=opts.steplength.value();
     int x,y,z,Conrow4;
     ColumnVector xyz(3);
-    for(unsigned int i=0;i<m_diff_path.size();i++){
-      // check here if back to seed
-      if(i>0 && (m_path[i]-m_path[0]).MaximumAbsoluteValue()==0)
-	d=opts.steplength.value();
+    if(opts.mask4.value()==""){
+      for(unsigned int i=0;i<m_diff_path.size();i++){
+	// check here if back to seed
+	if(i>0 && (m_path[i]-m_path[0]).MaximumAbsoluteValue()==0)
+	  d=opts.steplength.value();
+	
+	xyz<<m_diff_path[i](1)<<m_diff_path[i](2)<<m_diff_path[i](3);
+	x=(int)round((float)xyz(1));
+	y=(int)round((float)xyz(2));
+	z=(int)round((float)xyz(3));
+	Conrow4=m_lookup4(x,y,z);
+	
+	if(Conrow4>0){
+	  if(m_beenhere4(x,y,z)==0){
+	    m_ConMat4->AddToTraj(Conrow4,m_curloc+1,d,(int)m_diff_path[i](4));  
+	    m_beenhere4(x,y,z)=1;
+	    d+=opts.steplength.value();
+	  }
+	}
+      } 
+    }
+    else{ //case where mask4 is set
+      vector<int> rows,cols,vals,crossedrois,crossedlocs;
+      vector<float> ds;
+      bool restarted=false;int offset=-1;
+      vector<ColumnVector> crossedvox;
+      for(unsigned int i=0;i<m_diff_path.size();i++){
+	// check here if back to seed
+	if(i>0 && (m_path[i]-m_path[0]).MaximumAbsoluteValue()==0){
+	  d=opts.steplength.value();restarted=true;
+	  offset-=1;
+	}	
+	x=(int)round(float(m_diff_path[i](1)));
+	y=(int)round(float(m_diff_path[i](2)));
+	z=(int)round(float(m_diff_path[i](3)));
 
-      xyz<<m_diff_path[i](1)<<m_diff_path[i](2)<<m_diff_path[i](3);
-      x=(int)round((float)xyz(1));
-      y=(int)round((float)xyz(2));
-      z=(int)round((float)xyz(3));
-      Conrow4=m_lookup4(x,y,z);
-
-      if(Conrow4>0){
 	if(m_beenhere4(x,y,z)==0){
-	  m_ConMat4->AddToTraj(Conrow4,m_curloc+1,d,(int)m_diff_path[i](4));	  
- 	  m_beenhere4(x,y,z)=1;
- 	  d+=opts.steplength.value();
+	  rows.push_back(m_lookup4(x,y,z));
+	  vals.push_back((int)m_diff_path[i](4));
+	  ds.push_back(d);
+	  m_beenhere4(x,y,z)=1;
+	  d+=opts.steplength.value();
+	}
+
+	if(i>0 && !restarted){
+	  crossedlocs.clear();crossedrois.clear();
+	  if(m_mask4.nSurfs()>0){
+	    crossedvox=m_crossedvox[i+offset];
+	  }
+	  if(m_mask4.has_crossed_roi(m_path[i-1],m_path[i],crossedvox,crossedrois,crossedlocs)){
+	    for(unsigned int j=0;j<crossedlocs.size();j++)
+	      cols.push_back(crossedlocs[j]+1);
+	  }
+	}
+	restarted=false;
+      }
+      // now fill in the matrix
+      make_unique(cols);      
+      for(unsigned int i=0;i<rows.size();i++){
+	if(rows[i]>0){
+	  for(unsigned int j=0;j<cols.size();j++){	 
+	    m_ConMat4->AddToTraj(rows[i],cols[j],ds[i],vals[i]);
+	  }
 	}
       }
-    } 
+      
+    }
+
   }
 
 
@@ -1330,6 +1855,9 @@ namespace TRACT{
   void Counter::save(){
     if(opts.simpleout.value() && !opts.simple.value()){
       save_pathdist();
+    }
+    if(opts.network.value()){
+      m_stline.save_network_mat();
     }
     if(opts.save_paths.value())
       save_paths();
@@ -1363,23 +1891,30 @@ namespace TRACT{
       //m_beenhere_alt.save_rois(logger.appendDir(opts.outfile.value())+"_beenhere");
     }
     if(opts.opathdir.value()){
+      volume4D<float> tmplocdir(m_prob.xsize(),m_prob.ysize(),m_prob.zsize(),3);
+      copybasicproperties(m_prob,tmplocdir);
+      tmplocdir=0;
+      SymmetricMatrix Tens(3);
+      DiagonalMatrix D;Matrix V;
       for(int z=0;z<m_prob.zsize();z++){
 	for(int y=0;y<m_prob.ysize();y++){
 	  for(int x=0;x<m_prob.xsize();x++){
 	    if(m_prob(x,y,z)==0)continue;
-	    double norm=0;
+	    Tens<<m_localdir(x,y,z,0)
+		<<m_localdir(x,y,z,1)
+		<<m_localdir(x,y,z,2)
+		<<m_localdir(x,y,z,3)
+		<<m_localdir(x,y,z,4)
+		<<m_localdir(x,y,z,5);
+	    if(m_prob(x,y,z)!=0)Tens=Tens/m_prob(x,y,z);
+	    EigenValues(Tens,D,V);
 	    for(int t=0;t<3;t++)
-	      norm+=m_localdir(x,y,z,t)*m_localdir(x,y,z,t);
-	    norm=sqrt(norm);
-	    if(norm==0)continue;
-	    for(int t=0;t<3;t++)
-	      m_localdir(x,y,z,t) /= norm;
+	      tmplocdir(x,y,z,t)=V(t+1,3);
 	  }
 	}
       }
-      save_volume(m_prob,logger.appendDir(opts.outfile.value()));
-      m_localdir.setDisplayMaximumMinimum(1,-1);
-      save_volume4D(m_localdir,logger.appendDir(opts.outfile.value()+"_localdir"));
+      tmplocdir.setDisplayMaximumMinimum(1,-1);
+      save_volume4D(tmplocdir,logger.appendDir(opts.outfile.value()+"_localdir"));
     }
   }
   
@@ -1395,6 +1930,8 @@ namespace TRACT{
   }
 
   void Counter::save_seedcounts(){
+    // get target names 
+    vector<string> targetnames;
     for(int m=0;m<m_targetmasks.nRois();m++){
       string tmpname=m_targetmasks.get_name(m);
       int pos=tmpname.find("/",0);
@@ -1407,19 +1944,57 @@ namespace TRACT{
       }      
       //only take things after the last pos
       tmpname=tmpname.substr(lastpos+1,tmpname.length()-lastpos-1);
+      targetnames.push_back(tmpname);
+    }
 
+    for(int m=0;m<m_targetmasks.nRois();m++){
       if(m_s2t_count.nRois()>1){
 	for(int i=0;i<m_s2t_count.nRois();i++)
-	  m_s2t_count.save_map(i,m,logger.appendDir("seeds_"+num2str(i)+"_to_"+tmpname));
+	  m_s2t_count.save_map(i,m,logger.appendDir("seeds_"+num2str(i)+"_to_"+targetnames[m]));
       }
       else{// keep this nomenclature for backward compatibility
-	m_s2t_count.save_map(0,m,logger.appendDir("seeds_to_"+tmpname));
+	m_s2t_count.save_map(0,m,logger.appendDir("seeds_to_"+targetnames[m]));
       }	
     }
 
     if(opts.s2tastext.value()){
-      //write_ascii_matrix(m_s2tastext,logger.appendDir("matrix_seeds_to_all_targets"));
-      write_matrix_as_volume(m_s2tastext,logger.appendDir("matrix_seeds_to_all_targets"));
+      write_ascii_matrix(m_s2tastext,logger.appendDir("matrix_seeds_to_all_targets"));
+      //write_matrix_as_volume(m_s2tastext,logger.appendDir("matrix_seeds_to_all_targets"));
+    }
+
+    if(opts.targetpaths.value()){
+      for(unsigned int t=0;t<m_prob_multi.size();t++){
+	m_prob_multi[t].setDisplayMaximumMinimum(m_prob_multi[t].max(),m_prob_multi[t].min());
+	save_volume(m_prob_multi[t],logger.appendDir("target_paths_"+targetnames[t]));
+      }
+      if(opts.opathdir.value()){
+	volume4D<float> tmplocdir(m_prob.xsize(),m_prob.ysize(),m_prob.zsize(),3);
+	copybasicproperties(m_prob,tmplocdir);
+	for(unsigned int t=0;t<m_prob_multi.size();t++){
+	  tmplocdir=0;
+	  SymmetricMatrix Tens(3);
+	  DiagonalMatrix D;Matrix V;
+	  for(int z=0;z<m_prob.zsize();z++){
+	    for(int y=0;y<m_prob.ysize();y++){
+	      for(int x=0;x<m_prob.xsize();x++){
+		if(m_prob_multi[t](x,y,z)==0)continue;
+		Tens<<m_localdir(x,y,z,0)
+		    <<m_localdir(x,y,z,1)
+		    <<m_localdir(x,y,z,2)
+		    <<m_localdir(x,y,z,3)
+		    <<m_localdir(x,y,z,4)
+		    <<m_localdir(x,y,z,5);
+		if(m_prob_multi[t](x,y,z)!=0)Tens=Tens/m_prob(x,y,z);
+		EigenValues(Tens,D,V);
+		for(int tt=0;tt<3;tt++)
+		  tmplocdir(x,y,z,tt)=V(tt+1,3);
+	      }
+	    }
+	  }
+	  tmplocdir.setDisplayMaximumMinimum(1,-1);
+	  save_volume4D(tmplocdir,logger.appendDir("target_localdir_"+targetnames[t]));
+	}
+      }
     }
 
     

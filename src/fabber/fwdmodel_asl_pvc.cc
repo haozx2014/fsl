@@ -78,7 +78,7 @@ using namespace NEWIMAGE;
 
 string ASL_PVC_FwdModel::ModelVersion() const
 {
-  return "$Id: fwdmodel_asl_pvc.cc,v 1.5 2012/10/19 14:52:35 chappell Exp $";
+  return "$Id: fwdmodel_asl_pvc.cc,v 1.6 2013/09/03 15:08:04 chappell Exp $";
 }
 
 void ASL_PVC_FwdModel::HardcodedInitialDists(MVNDist& prior, 
@@ -367,10 +367,16 @@ void ASL_PVC_FwdModel::Evaluate(const ColumnVector& params, ColumnVector& result
     for(int it=1; it<=tis.Nrows(); it++)
       {
 	ti = tis(it) + slicedt*coord_z; //account here for an increase in the TI due to delays between slices;
-	F = 2*ftiss * exp(-ti/T_1app);
-	Fwm = 2*fwm * exp(-ti/T_1appwm);
 
-
+	if (casl)  {
+	  F = 2*ftiss;
+	  Fwm = 2*fwm;
+	}
+	else {
+	  F = 2*ftiss * exp(-ti/T_1app);
+	  Fwm = 2*fwm * exp(-ti/T_1appwm);
+	}
+	
 
 	  //GRASE -  deal with bolus length (see above) */
 

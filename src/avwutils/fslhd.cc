@@ -147,7 +147,7 @@ void ShowHdr(char *fileName, FSLIO* fslio)
     cout << "datatype       " << hdr->dime.datatype << endl;
     cout << "bitpix         " << hdr->dime.bitpix << endl;
     cout.setf(ios::fixed);  //need cout.setf(ios::fixed) instead of << fixed in stream for tru64 comp
-    for(i=0;i<8;i++) cout << "pixdim" << i << "        " << setprecision(10) << hdr->dime.pixdim[i] << endl;       
+    for(i=0;i<8;i++) cout << "pixdim" << i << "        " << setprecision(6) << hdr->dime.pixdim[i] << endl;       
     cout.precision(4);                                   
     cout << "vox_offset     " << setw(6) << hdr->dime.vox_offset << endl;
     cout << "funused1       " << setw(6) << hdr->dime.funused1 << endl;
@@ -208,7 +208,7 @@ void ShowHdr(char *fileName, FSLIO* fslio)
   cout << "nbyper         " <<  fslio->niftiptr->nbyper << endl;
   cout << "bitpix         " <<  fslio->niftiptr->nbyper * 8 << endl;
   cout.setf(ios::fixed);  //need cout.setf(ios::fixed) instead of << fixed in stream for tru64 comp
-  for(i=0;i<8;i++) cout << "pixdim" << i << "        " << setprecision(10) <<  fslio->niftiptr->pixdim[i] << endl;
+  for(i=0;i<8;i++) cout << "pixdim" << i << "        " << setprecision(6) <<  fslio->niftiptr->pixdim[i] << endl;
   cout << "vox_offset     " <<   fslio->niftiptr->iname_offset << endl;
   cout.precision(4);
   cout << "cal_max        " << setw(6) <<  fslio->niftiptr->cal_max << endl;

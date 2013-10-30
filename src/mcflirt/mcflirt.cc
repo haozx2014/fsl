@@ -74,6 +74,7 @@
 #include <stdio.h>
 #include <string>
 #include <sstream>
+#include <stdexcept>
 
 #include "newimage/newimageall.h"
 #include "miscmaths/optimise.h"
@@ -800,13 +801,13 @@ int main (int argc,char** argv)
 
   if (globalopts. statflag) run_and_save_stats(timeseries);
   if (globalopts. tmpmatflag) {
-    if (globalopts. reffileflag) {
+    if ( globalopts.reffileflag || globalopts.meanvol ) {
       decompose_mats(mat_index, mat_array0, extrefvol);
     } else {
-      cerr << "refnum = " << globalopts.refnum << endl;
-      cerr << "Original_refvol = " << original_refvol << endl;
-      if (globalopts.refnum<0) globalopts.refnum=original_refvol;
-      if (globalopts.refnum<0) globalopts.refnum=0;
+       if (!globalopts. no_reporting) 
+	 cout << "refnum = " << globalopts.refnum << endl << "Original_refvol = " << original_refvol << endl;
+      if (globalopts.refnum<0) 
+	throw(runtime_error("Negative refnum encountered when not in refile/meanvol mode."));
       decompose_mats(mat_index, mat_array0, timeseries[globalopts. refnum]);
     }
   }

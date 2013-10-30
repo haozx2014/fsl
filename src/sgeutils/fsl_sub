@@ -79,8 +79,8 @@
 # "NONE". Note that a user can unset SGE_ROOT if they don't want the
 # cluster to be used.
 ###########################################################################
-
 METHOD=SGE
+unset module
 if [ "x$SGE_ROOT" = "x" ] ; then
 	METHOD=NONE
 fi

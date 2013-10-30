@@ -104,9 +104,9 @@ namespace Melodic{
 
   Matrix convert_to_pbsc(Matrix& Mat);
 
-  RowVector varnorm(Matrix& in, int dim = 30, float level = 1.6, int econ = 0);
+  RowVector varnorm(Matrix& in, int dim = 30, float level = 1.6, int econ = 20000);
        void varnorm(Matrix& in, const RowVector& vars);
-  RowVector varnorm(Matrix& in, Matrix& Corr, int dim = 30, float level = 1.6, int econ = 0);
+  RowVector varnorm(Matrix& in, SymmetricMatrix& Corr, int dim = 30, float level = 1.6, int econ = 20000);
 
   Matrix SP2(const Matrix& in, const Matrix& weights, int econ = 20000);
   void SP3(Matrix& in, const Matrix& weights);
@@ -116,17 +116,14 @@ namespace Melodic{
 
   Matrix corrcoef(const Matrix& in1, const Matrix& in2);
   Matrix corrcoef(const Matrix& in1, const Matrix& in2, const Matrix& part);
-  Matrix calc_corr(const Matrix& in, int econ = 20000);
-  Matrix calc_corr(const Matrix& in, const Matrix& weights, int econ = 20000);
-
   float calc_white(const Matrix& tmpE, const RowVector& tmpD, const RowVector& PercEV, int dim, Matrix& param, Matrix& paramS, Matrix& white, Matrix& dewhite);
   float calc_white(const Matrix& tmpE, const RowVector& tmpD, const RowVector& PercEV, int dim, Matrix& white, Matrix& dewhite);
   void calc_white(const Matrix& tmpE, const RowVector& tmpD, int dim, Matrix& param, Matrix& paramS, Matrix& white, Matrix& dewhite);
   void calc_white(const Matrix& tmpE, const RowVector& tmpD, int dim, Matrix& white, Matrix& dewhite);
-  void calc_white(const Matrix& Corr, int dim, Matrix& white, Matrix& dewhite);
+  void calc_white(const SymmetricMatrix& Corr, int dim, Matrix& white, Matrix& dewhite);
   
-  void std_pca(const Matrix& Mat, Matrix& Corr, Matrix& evecs, RowVector& evals, int econ = 20000);
-  void std_pca(const Matrix& Mat, const Matrix& weights, Matrix& Corr, Matrix& evecs, RowVector& evals, int econ = 20000);
+  void std_pca(const Matrix& Mat, SymmetricMatrix& Corr, Matrix& evecs, RowVector& evals, int econ = 20000);
+  void std_pca(const Matrix& Mat, const Matrix& weights, SymmetricMatrix& Corr, Matrix& evecs, RowVector& evals, int econ = 20000);
   void em_pca(const Matrix& Mat, Matrix& evecs, RowVector& evals, int num_pc = 1, int iter = 20);
   void em_pca(const Matrix& Mat, Matrix& guess, Matrix& evecs, RowVector& evals, int num_pc = 1, int iter = 20);
 
@@ -139,7 +136,7 @@ namespace Melodic{
   void adj_eigspec(const RowVector& in, RowVector& out1, RowVector& out2, RowVector& out3, int& out4, int num_vox, float resels);
   void adj_eigspec(const RowVector& in, RowVector& out1, RowVector& out2);
 
-  int ppca_dim(const Matrix& in, const Matrix& weights, Matrix& PPCA, RowVector& AdjEV, RowVector& PercEV, Matrix& Corr, Matrix& tmpE, RowVector &tmpD, float resels, string which);
+  int ppca_dim(const Matrix& in, const Matrix& weights, Matrix& PPCA, RowVector& AdjEV, RowVector& PercEV, SymmetricMatrix& Corr, Matrix& tmpE, RowVector &tmpD, float resels, string which);
   int ppca_dim(const Matrix& in, const Matrix& weights, Matrix& PPCA, RowVector& AdjEV, RowVector& PercEV, float resels, string which);
   int ppca_dim(const Matrix& in, const Matrix& weights, float resels, string which);
   ColumnVector ppca_select(Matrix& PPCAest, int& dim, int maxEV, string which);

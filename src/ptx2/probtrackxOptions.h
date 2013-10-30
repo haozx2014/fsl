@@ -123,6 +123,7 @@ class probtrackxOptions {
   Option<string>           lrmask3;
   Option<float>            distthresh3;  
   Option<bool>             matrix4out;
+  Option<string>           mask4;
   Option<string>           dtimask;
 
   Option<string>           seeds_to_dti;
@@ -156,6 +157,8 @@ class probtrackxOptions {
   FmribOption<bool>        opathdir;         // like fdt_paths but with average local tract orientation
   FmribOption<bool>        save_paths;       // save paths to ascii file
   FmribOption<string>      locfibchoice;     // inside this mask, define local rules for fibre picking
+  FmribOption<string>      loccurvthresh;    // inside this mask, define local curvature threshold
+  FmribOption<bool>        targetpaths;      // output separate fdt_paths for each target
 
   void parse_command_line(int argc, char** argv,Log& logger);
   void modecheck();
@@ -282,6 +285,9 @@ class probtrackxOptions {
    matrix4out(string("--omatrix4"), false,
 	      string("Output matrix4 - DtiMaskToSeed (special Oxford Sparse Format)"),
 	      false, no_argument), 
+   mask4(string("--colmask4"), string(""),
+	 string("Mask for columns of matrix4 (default=seed mask)"),
+	 false, requires_argument),
    dtimask(string("--target4"), string(""),
 	  string("Brain mask in DTI space\n\n"),
 	  false, requires_argument),
@@ -365,8 +371,14 @@ class probtrackxOptions {
 	      string("Save path coordinates to ascii file"),
 	      false, no_argument),
    locfibchoice(string("--locfibchoice"),string(""),
-	      string("Local rules for fibre choice - 0=closest direction(default), 1=equal prob (f>thr)"),
+	      string("Local rules for fibre choice - 0=closest direction(default), 1=equal prob (f>thr), 2=equal prob with angle threshold (=40 deg)"),
 	      false, requires_argument),
+   loccurvthresh(string("--loccurvthresh"),string(""),
+	      string("Local curvature threshold"),
+	      false, requires_argument),
+   targetpaths(string("--otargetpaths"),false,
+	      string("Output separate fdt_paths for targets (assumes --os2t is on)"),
+	      false, no_argument),
 
    options("probtrackx","probtrackx2 -s <basename> -m <maskname> -x <seedfile> -o <output> --targetmasks=<textfile>\n probtrackx2 --help\n")
    {
@@ -409,6 +421,7 @@ class probtrackxOptions {
        options.add(lrmask3);
        options.add(distthresh3);
        options.add(matrix4out);
+       options.add(mask4);
        options.add(dtimask);
 
        options.add(seeds_to_dti);
@@ -441,6 +454,8 @@ class probtrackxOptions {
        options.add(opathdir);
        options.add(save_paths);
        options.add(locfibchoice);
+       options.add(loccurvthresh);
+       options.add(targetpaths);
 
      }
      catch(X_OptionError& e) {

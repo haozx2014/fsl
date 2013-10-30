@@ -360,12 +360,12 @@ namespace MISCMATHS {
 	    float df=fabs(deltaf(bestm));
 	    if ( (2 * (finit-2*fend+fextrap) * (finit-fend-df)*(finit-fend-df)) < ( (finit-fextrap)*(finit-fextrap)*df ) ) {
 	      if (fextrap<finit) {
-		cerr << "Applying POWELL correction" << endl;
-		cerr << "finit, fend, fextrap = " << finit << " , " << fend << " , " << fextrap << endl;
+		cout << "Applying POWELL correction" << endl;
+		cout << "finit, fend, fextrap = " << finit << " , " << fend << " , " << fextrap << endl;
 		// do another minimisation
 		fval2 = optimise1d(pt,pt-initpt,tol,lit,func,100,fval,bndguess);
 		fval=fval2;
-		cerr << "fval = " << fval << endl;
+		cout << "fval = " << fval << endl;
 		littot += lit;
 		// replace direction of maximum change with pt-initpt
 		for (int m=1; m<=pt.Nrows(); m++) {

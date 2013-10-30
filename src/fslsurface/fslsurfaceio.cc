@@ -437,7 +437,7 @@ namespace fslsurface_name {
 				}
 		//	}else if ( ( intent == NIFTI_INTENT_SHAPE ) || (intent == NIFTI_INTENT_TIME_SERIES ) || ((intent == NIFTI_INTENT_NONE)&&(datatype == NIFTI_TYPE_FLOAT32)) ){
              //   cout<<"done tris"<<endl;
-        }else if ( ( intent == NIFTI_INTENT_SHAPE ) || (intent == NIFTI_INTENT_TIME_SERIES ) || ((intent == NIFTI_INTENT_NONE)&&(datatype == NIFTI_TYPE_FLOAT32)) ){
+			}else if ( ( intent == NIFTI_INTENT_SHAPE ) || (intent == NIFTI_INTENT_TIME_SERIES ) || (intent == NIFTI_INTENT_NORMAL) || ((intent == NIFTI_INTENT_NONE)&&(datatype == NIFTI_TYPE_FLOAT32)) ){
 			  // TODO - FIGURE OUT WHAT IS GOING ON (!!) AND SEE IF COL MAJOR ORDER FIX IS REQUIRED
 				//decide whether vertices have been read already, if not create, if so set to scalar
 				cout<<"read scalar data that is float32"<<endl;
@@ -509,6 +509,8 @@ namespace fslsurface_name {
 						name="NIFTI_INTENT_SHAPE";
 					else if (intent == NIFTI_INTENT_TIME_SERIES )
 						name="NIFTI_INTENT_TIME_SERIES";
+					else if (intent == NIFTI_INTENT_NORMAL )
+						name="NIFTI_INTENT_NORMAL";
 					else if (intent == NIFTI_INTENT_NONE)
 						name="NIFTI_INTENT_NONE";
 					else 

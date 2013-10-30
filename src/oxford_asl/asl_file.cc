@@ -98,6 +98,7 @@ int main(int argc, char *argv[])
     bool isblocked=false; //indicates if data is in blocks of repeats rather than TIs
     bool ispairs=false; //indicates if data contains adjacent pairs of measurments
     bool isdiff=false; //indicates if we have differenced data
+    bool tagfirst=true; //indicates that tag comes first in tag-control pairs
     //ispairs=opts.ispairs.value();
     
     // block format: isblocked indicates if data are in *blocks of repeats*
@@ -109,6 +110,7 @@ int main(int argc, char *argv[])
     string iaf=opts.inaslform.value();
     if      (iaf.compare("diff")==0) isdiff=true;
     else if (iaf.compare("tc")==0)   isdiff=false;
+    else if (iaf.compare("ct")==0)  { isdiff=false; tagfirst=false;}
     else    throw Exception("Unrecognised input asl form");
     
     ispairs=!isdiff; //convienient to have ispairs as a bool
@@ -194,6 +196,7 @@ int main(int argc, char *argv[])
 	//overwrite asldata with differenced data
 	for (int ti=0; ti<ntis; ti++) {
 	  asldata[ti] = asldataeven[ti] - asldataodd[ti];
+	  if (!tagfirst) asldata[ti] *= -1.0; //if control image is first then the sign will be wrong here
 	}
 	outpairs=false;
 

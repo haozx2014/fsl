@@ -200,8 +200,9 @@ namespace PARTICLE{
       }
       //functions
       void jump(const float& theta,const float& phi,bool forcedir=false){
-	float rx_new=cos(phi)*sin(theta);
-	float ry_new=sin(phi)*sin(theta);
+	float tmpsin=sin(theta);
+	float rx_new=cos(phi)*tmpsin;
+	float ry_new=sin(phi)*tmpsin;
 	float rz_new=cos(theta);
 	int sign=1; bool init=false;
 	if(!m_simdiff){
@@ -234,8 +235,9 @@ namespace PARTICLE{
      
 
       void testjump(const float& theta,const float& phi,bool forcedir=false){
-	float rx_new=cos(phi)*sin(theta);
-	float ry_new=sin(phi)*sin(theta);
+	float tmpsin=sin(theta);
+	float rx_new=cos(phi)*tmpsin;
+	float ry_new=sin(phi)*tmpsin;
 	float rz_new=cos(theta);
 	int sign=1;bool init=false;
 	if(!m_simdiff){
@@ -284,8 +286,9 @@ namespace PARTICLE{
       
       bool check_dir(const float& theta,const float& phi, const float& thr,bool forcedir=false){
 	if(m_has_jumped){
-	  float rx_new=cos(phi)*sin(theta);
-	  float ry_new=sin(phi)*sin(theta);
+	  float tmpsin=sin(theta);
+	  float rx_new=cos(phi)*tmpsin;
+	  float ry_new=sin(phi)*tmpsin;
 	  float rz_new=cos(theta);
 	  if(!forcedir){
 	    if(fabs(rx_new*m_rx + ry_new*m_ry + rz_new*m_rz)>thr)

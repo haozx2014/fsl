@@ -292,6 +292,7 @@ namespace MISCMATHS {
   void pow_econ(Matrix& mat, const double exp);
   ReturnMatrix sum(const Matrix& mat, const int dim = 1);
   ReturnMatrix mean(const Matrix& mat, const int dim = 1);
+  ReturnMatrix mean(const Matrix& mat, const RowVector& weights, const int dim=1);
   ReturnMatrix var(const Matrix& mat, const int dim = 1);
   ReturnMatrix max(const Matrix& mat);
   ReturnMatrix max(const Matrix& mat,ColumnVector& index);
@@ -316,8 +317,14 @@ namespace MISCMATHS {
   ReturnMatrix remmean(const Matrix& mat, const int dim = 1);
 
   ReturnMatrix stdev(const Matrix& mat, const int dim = 1);
-  ReturnMatrix cov(const Matrix& mat, const int norm = 0);
-  ReturnMatrix corrcoef(const Matrix& mat, const int norm = 0);
+  ReturnMatrix cov(const Matrix& mat, const bool sampleCovariance = false, const int econ=20000);
+  ReturnMatrix cov_r(const Matrix& mat, const bool sampleCovariance = false, const int econ=20000);
+  ReturnMatrix cov_r(const Matrix& data, const Matrix& weights, int econ=20000);
+
+
+
+  ReturnMatrix oldcov(const Matrix& mat, const bool norm = false);
+  ReturnMatrix corrcoef(const Matrix& mat, const bool norm = false);
   void symm_orth(Matrix &Mat);
   void powerspectrum(const Matrix &Mat1, Matrix &Result, bool useLog);
   void element_mod_n(Matrix& Mat,double n); //represent each element in modulo n (useful for wrapping phases (n=2*M_PI))

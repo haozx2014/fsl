@@ -107,7 +107,7 @@ using namespace Utilities;
 // useful routines for collision detection
 bool triBoxOverlap(float boxcenter[3],float boxhalfsize[3],float triverts[3][3]);
 bool rayBoxIntersection(float origin[3],float direction[3],float vminmax[2][3]);
-bool segTriangleIntersection(float seg[2][3],float tri[3][3],bool verb=false);
+bool segTriangleIntersection(float seg[2][3],float tri[3][3]);
 float triDistPoint(const Triangle& t,const ColumnVector pos);
 
 
@@ -398,6 +398,7 @@ public:
   void  reset_values(const vector<int>& locs);
   ReturnMatrix  get_all_values()const;
   void  set_all_values(const ColumnVector& vals);
+  void  set_all_values(const float& val);
   void  save_values(const int& roi);
   void  loc_info(const int& loc)const;
 
@@ -427,11 +428,11 @@ public:
   }
 
   bool has_crossed(const ColumnVector& x1,const ColumnVector& x2,
-		   bool docount=false,bool docontinue=false,const float& val=1.0);
+		   const vector<ColumnVector>& crossedvox,bool docount=false,bool docontinue=false,const float& val=1.0);
   bool has_crossed_roi(const ColumnVector& x1,const ColumnVector& x2,
-		       vector<int>& crossedrois)const;
+		       const vector<ColumnVector>& crossedvox,vector<int>& crossedrois)const;
   bool has_crossed_roi(const ColumnVector& x1,const ColumnVector& x2,
-		       vector<int>& crossedrois,vector<int>& crossedlocs)const;
+		       const vector<ColumnVector>& crossedvox,vector<int>& crossedrois,vector<int>& crossedlocs)const;
 
 
   int step_sign(const int& loc,const Vec& step)const;
@@ -447,6 +448,15 @@ public:
   void tri_crossed_voxels(float tri[3][3],vector<ColumnVector>& crossed);
   void line_crossed_voxels(float line[2][3],vector<ColumnVector>& crossed)const;
 
+
+  // Operators
+  const CSV& operator=(const float& val){
+    this->set_all_values(val);
+    return *this;
+  }
+  inline float operator()(int loc){
+    return get_value(loc);
+  }
 
   // COPY
   CSV& operator=(const CSV& rhs){

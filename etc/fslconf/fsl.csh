@@ -35,6 +35,11 @@ setenv FSLLOCKDIR
 setenv FSLMACHINELIST 
 setenv FSLREMOTECALL 
 
+# The following variables are used to configure CUDA capable queues - if you
+# are using Grid Engine then this queue will be used to enqueue tasks that
+# support execution on NVIDIA CUDA hardware.
+setenv FSLGECUDAQ cuda.q
+
 # Set up development variables (not for the faint-hearted)
 
 setenv FSLCONFDIR $FSLDIR/config

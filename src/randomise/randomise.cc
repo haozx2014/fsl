@@ -290,9 +290,9 @@ volume4D<float> spatialStatistic, originalSpatialStatistic;
    output.store(clusterLabels,clusterSizes,mask,1,permutationNo,outputPerms);
 }
 
-Matrix tfceStatistic(ParametricStatistic& output, const Matrix& inputStatistic, const volume<float>& mask, float& tfceDelta, const float tfceHeight, const float tfceSize, const int tfceConnectivity, const int permutationNo, const bool isF, const int numContrasts, const vector<float>& dof, const bool outputPerms)
+Matrix tfceStatistic(ParametricStatistic& output, const Matrix& inputStatistic, const volume<float>& mask, float& tfceDelta, const float tfceHeight, const float tfceSize, const int tfceConnectivity, const int permutationNo, const bool isF, const int numContrasts, const vector<float>& dof, const bool outputPerms, const bool overrideDelta)
 {
-  if (permutationNo==1) {
+  if (permutationNo==1 && !overrideDelta) {
      tfceDelta=inputStatistic.Maximum()/100.0;  // i.e. 100 subdivisions of the max input stat height
      if ( tfceDelta <= 0 )
        cout << "Warning: The unpermuted statistic image for the current image contains no positive values, and cannot be processed with TFCE. A blank output image will be created." << endl;
@@ -465,7 +465,6 @@ Matrix calculateFStat(const Matrix& data, const Matrix& model, const Matrix& con
   residuals = sum(SP(residuals,residuals))/dof; //residuals now hold sigmasquared
   estimate = pinv((contrast*pinvModel).t()).t()*contrast*estimate;
   estimate = sum(SP(estimate,estimate))/rank;   
-
   return(SD(estimate,residuals));
 }        
 
@@ -604,6 +603,8 @@ void calculatePermutationStatistics(ranopts& opts, const volume<float>& mask, Ma
   }    
   volume4D<float> tstat4D(mask.xsize(),mask.ysize(),mask.zsize(),1);
   float tfce_delta(0), clusterThreshold(0), massThreshold(0);
+  if ( opts.tfce_delta.set() )
+    tfce_delta=opts.tfce_delta.value();
   if (tstatnum>=0) clusterThreshold=opts.cluster_thresh.value();
   else clusterThreshold=opts.f_thresh.value();
   if (tstatnum>=0) massThreshold=opts.clustermass_thresh.value();
@@ -618,7 +619,7 @@ void calculatePermutationStatistics(ranopts& opts, const volume<float>& mask, Ma
   // prepare smoothed mask for use (as a convolution renormaliser) in variance smoothing if required
   volume<float> smoothedMask;
   if(opts.var_sm_sig.value()>0) 
-    smoothedMask=smooth(mask,opts.var_sm_sig.value());
+    smoothedMask=smooth(binarise(mask,(float)0.5),opts.var_sm_sig.value());
   // containers for different inference distribution
   ParametricStatistic clusters, clusterMasses, clusterNormals, clusterEnhanced, clusterEnhancedNormals, voxels;
   Matrix dmperm, tstat(1,nVoxels), pe(dm.Ncols(),nVoxels), cope(1,nVoxels), varcope(1,nVoxels), sigmaSquared(1,nVoxels), previousTFCEStat;
@@ -685,7 +686,7 @@ void calculatePermutationStatistics(ranopts& opts, const volume<float>& mask, Ma
     voxels.store(tstat,perm,&mask,opts.output_permstat.value());
     if (opts.tfce.value())
     {
-      Matrix tfceOutput=tfceStatistic(clusterEnhanced,tstat,mask,tfce_delta,opts.tfce_height.value(),opts.tfce_size.value(),opts.tfce_connectivity.value(),perm,(tstatnum<0),tc.Nrows(),dof,opts.output_permstat.value());
+      Matrix tfceOutput=tfceStatistic(clusterEnhanced,tstat,mask,tfce_delta,opts.tfce_height.value(),opts.tfce_size.value(),opts.tfce_connectivity.value(),perm,(tstatnum<0),tc.Nrows(),dof,opts.output_permstat.value(), opts.tfce_delta.set());
       if(!lowram && clusterEnhanced.isAveraging ) previousTFCEStat.Row(perm)=tfceOutput.Row(1);
     }
     if ( clusterThreshold > 0 ) 

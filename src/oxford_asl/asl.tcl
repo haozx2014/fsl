@@ -102,6 +102,11 @@ proc asl { w } {
     set Asl(tagControl) 1
     checkbutton $Asl(data).tf.button -variable Asl(tagControl) -anchor w -command "updateAslMode"
 
+    frame $Asl(data).tff
+    label $Asl(data).tff.label -text "Data has control first: "
+    set Asl(tagControlFirst) 0
+    checkbutton $Asl(data).tff.button -variable Asl(tagControlFirst) -anchor w 
+
     labelframe $Asl(data).useStructural -text "Structural image" -labelanchor w -relief flat
     checkbutton $Asl(data).useStructural.button -variable Asl(useStructural) -command "updateRegistration"
     FileEntry $Asl(data).useStructural.file -textvariable Asl(structural) -title "Select the structural image" -width 35 -filedialog directory -filetypes IMAGE
@@ -122,6 +127,8 @@ proc asl { w } {
     pack $Asl(data).lf.label $Asl(data).lf.labeling -side left
     pack $Asl(data).tf -anchor w
     pack $Asl(data).tf.label $Asl(data).tf.button -side left
+    pack $Asl(data).tff -anchor w
+    pack $Asl(data).tff.label $Asl(data).tff.button -side left
     pack $Asl(data).df -anchor w
     pack $Asl(data).df.label $Asl(data).df.order -side left
     pack $Asl(data).sf -anchor w
@@ -357,8 +364,14 @@ proc aslLaunch {  } {
 	set aslFileCommand "$aslFileCommand --ibf=tis" 
     }
 
+    set aslDataForm "--iaf=tc" 
+    if { $Asl(controlFirst) == 1 } {
+	set aslDataForm "--iaf=ct"
+    }
+
+
     if { $Asl(tagControl) == 1 } {  #0 "none" 1 "pairwise"
-	set aslFileCommand "$aslFileCommand --iaf=tc --diff" 
+	set aslFileCommand "$aslFileCommand $aslDataForm --diff" 
     } else {
 	set aslFileCommand "$aslFileCommand --iaf=diff" 
     }
@@ -400,7 +413,7 @@ proc aslLaunch {  } {
     set foundRegTarget 0
 
     if { $Asl(Mode) == 1 || ( $Asl(tagControl) == 1 && $Asl(staticTissue) != "suppressed" ) } {
-	fsl:exec "${FSLDIR}/bin/asl_file --data=$Asl(input) --ntis=$tisListLength --iaf=tc --spairs --out=$Asl(outputdir)/asldata_mc"
+	fsl:exec "${FSLDIR}/bin/asl_file --data=$Asl(input) --ntis=$tisListLength $aslDataForm --spairs --out=$Asl(outputdir)/asldata_mc"
 	if { $Asl(Mode) == 1 } {
 	    set aslCommand "$aslCommand --regfrom $Asl(outputdir)/asldata_mc_odd "
 	} else {
@@ -415,7 +428,7 @@ proc aslLaunch {  } {
 
     puts $aslCommand
     fsl:exec "$aslCommand"
-    if { $Asl(doCalibration } {
+    if { $Asl(doCalibration) } {
 	set aslCalibCommand "$FSLDIR/bin/asl_calib -i $Asl(outputdir)/native_space/perfusion --tissref $Asl(tissueType) --t1r $Asl(ReferenceT1) --t2r $Asl(ReferenceT2) --t2b $Asl(BloodT2) --te $Asl(SequenceTE) -o $Asl(outputdir)/calibration"
 
 	if { $Asl(userefmask) } {

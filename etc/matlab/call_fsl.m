@@ -23,7 +23,7 @@ else
   % setenv('LD_LIBRARY_PATH',fsllibdir);
 end
 
-command = sprintf('/bin/sh -c ". ${FSLDIR}/etc/fslconf/fsl.sh; %s"\n', cmd);
+command = sprintf('/bin/sh -c ''. ${FSLDIR}/etc/fslconf/fsl.sh; %s''', cmd);
 [status,output] = system(command);
 
 if ismac
