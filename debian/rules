@@ -57,12 +57,15 @@ DEB_DESTDIR=$(CURDIR)/debian/tmp
 # trailing colon ends up in LD_LIBRARY_PATH
 DEB_BUILD_ENV=LD_LIBRARY_PATH=$(FSL_LIBRARY_PATH)$${LD_LIBRARY_PATH:+:$${LD_LIBRARY_PATH}} \
 		FSLDIR="$(FSLDIR)" \
+		FSLDEVDIR="$(FSLDIR)" \
 		FSLCONFDIR="$(FSLCONFDIR)" \
 		DEB_DESTDIR="$(DEB_DESTDIR)" \
 		OPTFLAGS="$(OPTFLAGS)" \
 		ANSI_FLAGS="$(CFLAGS) $(CPPFLAGS)" \
 		DEPENDFLAGS="$(CFLAGS)" \
-		ARCHLDFLAGS="$(LDFLAGS)"
+		ARCHLDFLAGS="$(LDFLAGS)" \
+		COMPILE_GPU=1 \
+		CUDA="/usr"
 
 controlfiles:
 	# inject current FSL major version into all templates
