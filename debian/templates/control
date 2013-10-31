@@ -84,12 +84,12 @@ Depends: mozilla-firefox | www-browser,
          bc,
          dc,
          python,
+         fslview,
          ${shlibs:Depends},
          ${misc:Depends}
 Recommends: fsl-#FSLMVERSION#-doc (= ${source:Version}),
             fsl-#FSLMVERSION#-gpu (= ${source:Version}),
-            fsl-atlases,
-            fslview
+            fsl-atlases
 Suggests: fsl-feeds,
           octave | ${octave:Depends},
           mriconvert | dicomnifti,

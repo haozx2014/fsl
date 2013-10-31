@@ -4,5 +4,5 @@
 /usr/share/fsl/data /usr/share/fsl/#FSLMVERSION#/data
 /usr/lib/fsl/#FSLMVERSION# /usr/share/fsl/#FSLMVERSION#/bin
 /usr/lib/fsl/#FSLMVERSION#/fsl_app_wrapper /usr/bin/fsl#FSLMVERSION#-fsl
-#/usr/bin/fslview /usr/lib/fsl/#FSLMVERSION#/fslview
-#/usr/bin/atlasquery /usr/lib/fsl/#FSLMVERSION#/atlasquery
+/usr/bin/fslview /usr/lib/fsl/#FSLMVERSION#/fslview
+/usr/bin/atlasquery /usr/lib/fsl/#FSLMVERSION#/atlasquery
