@@ -4,5 +4,5 @@
     title="FSL #FSLMVERSION#" \
     longtitle="FMRIB Software Library" \
     command="/usr/bin/fsl#FSLMVERSION#-fsl" \
-    icon="fsl-#FSLMVERSION#.xpm" \
+    icon="/usr/share/pixmaps/fsl-#FSLMVERSION#.xpm" \
     hints="MRI,fMRI,FSL"
