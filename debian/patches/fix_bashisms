@@ -59,3 +59,18 @@ Description: Fix bashisms in the code.
 -echo "Now run randomise on the newly created files: all_F1_x_skeletonised etc."
 \ No newline at end of file
 +echo "Now run randomise on the newly created files: all_F1_x_skeletonised etc."
+--- a/src/oxford_asl/oxford_asl
++++ b/src/oxford_asl/oxford_asl
+@@ -1,4 +1,4 @@
+-#!/bin/sh
++#!/bin/bash
+ 
+ # OXFORD_ASL: Converts ASL images in to perfusion maps
+ #
+@@ -1335,4 +1335,4 @@
+ 
+ 
+ echo "Output is $outdir/"
+-echo "OXFORD_ASL - done."
+\ No newline at end of file
++echo "OXFORD_ASL - done."
