@@ -4,6 +4,7 @@ fsl (5.0.5-1) unstable; urgency=low
     binary package fsl-5.0-gpu. They were split into a separate package in
     order to avoid an unnecessary dependency on the CUDA stack for the rest of
     FSL. At this point, the GPU-support needs to be considered experimental.
+    These tools require NVIDIA GPU with compute capability 2.0 or superior.
   * Attachments of the FSL documentation wiki have be moved into the new
     fsl-doc-wikiattachments package, due to their fast growing size
     (now 100MB).
