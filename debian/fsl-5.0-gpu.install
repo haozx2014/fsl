@@ -1,0 +1,2 @@
+debian/tmp/bin/*gpu* usr/lib/fsl/5.0
+lib/*cuda* usr/lib/fsl/5.0

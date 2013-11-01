@@ -1,0 +1,2 @@
+debian/tmp/bin/*gpu* usr/lib/fsl/#FSLMVERSION#
+lib/*cuda* usr/lib/fsl/#FSLMVERSION#
