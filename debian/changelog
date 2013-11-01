@@ -15,6 +15,9 @@ fsl (5.0.5-1) neurodebian; urgency=low
   * Bumped Standard version to 3.9.4 -- no changes necessary.
   * Update fix-bashisms patch: oxford_asl requires bash.
   * Fix location of FSL docs. Move from transitional package to new one.
+  * Add backport patches to disable CUDA support on the Ubuntu platform.
+    It seems that an NVIDIA driver is required to install the CUDA toolkit on
+    Ubuntu.
 
  -- Michael Hanke <mih@debian.org>  Wed, 30 Oct 2013 20:33:24 +0100
 

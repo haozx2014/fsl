@@ -1,0 +1,98 @@
+diff --git a/debian/control b/debian/control
+index 7ca843d..783ac4f 100644
+--- a/debian/control
++++ b/debian/control
+@@ -18,8 +18,7 @@ Build-Depends: debhelper (>= 7),
+                mesa-common-dev,
+                libexpat1-dev | libexpat-dev,
+                libglu1-mesa-dev | libglu-dev,
+-               libgomp1,
+-               nvidia-cuda-toolkit
++               libgomp1
+ Standards-Version: 3.9.3
+ Homepage: http://www.fmrib.ox.ac.uk/fsl/
+ Vcs-Browser: http://git.debian.org/?p=pkg-exppsy/fsl.git
+@@ -89,7 +88,6 @@ Depends: mozilla-firefox | www-browser,
+          ${shlibs:Depends},
+          ${misc:Depends}
+ Recommends: fsl-5.0-doc (= ${source:Version}),
+-            fsl-5.0-gpu (= ${binary:Version}),
+             fsl-atlases
+ Suggests: fsl-feeds,
+           octave | ${octave:Depends},
+@@ -135,19 +133,3 @@ Description: documentation for FSL
+  for FMRI, MRI and DTI brain imaging data.
+  .
+  This package provides the FSL documentation in HTML format.
+-
+-Package: fsl-5.0-gpu
+-Architecture: any
+-Depends: fsl-5.0-core (= ${source:Version}),
+-         ${shlibs:Depends},
+-         ${misc:Depends}
+-Description: GPU-accelerated tools for FSL
+- FSL is a comprehensive library of image analysis and statistical tools
+- for fMRI, MRI and DTI brain imaging data. The suite consists of various
+- command line tools, as well as simple GUIs for its core analysis pipelines.
+- Among others, FSL offers implementations of standard GLM analysis,
+- white matter tractography, tissue segmentation, affine and non-linear
+- co-registration, and independent component analysis.
+- .
+- This package provides accelerated versions of some FSL commands to utilize
+- NVIDIA's CUDA toolkit.
+diff --git a/debian/rules b/debian/rules
+index 31bbf2b..24d342d 100755
+--- a/debian/rules
++++ b/debian/rules
+@@ -63,8 +63,7 @@ DEB_BUILD_ENV=LD_LIBRARY_PATH=$(FSL_LIBRARY_PATH)$${LD_LIBRARY_PATH:+:$${LD_LIBR
+ 		OPTFLAGS="$(OPTFLAGS)" \
+ 		ANSI_FLAGS="$(CFLAGS) $(CPPFLAGS)" \
+ 		DEPENDFLAGS="$(CFLAGS)" \
+-		ARCHLDFLAGS="$(LDFLAGS)" \
+-		COMPILE_GPU=1 \
++		ARCHLDFLAGS="$(LDFLAGS)"
+ 		CUDA="/usr"
+ 
+ controlfiles:
+diff --git a/debian/templates/control b/debian/templates/control
+index ddc9f98..c04f6c6 100644
+--- a/debian/templates/control
++++ b/debian/templates/control
+@@ -18,8 +18,7 @@ Build-Depends: debhelper (>= 7),
+                mesa-common-dev,
+                libexpat1-dev | libexpat-dev,
+                libglu1-mesa-dev | libglu-dev,
+-               libgomp1,
+-               nvidia-cuda-toolkit
++               libgomp1
+ Standards-Version: 3.9.3
+ Homepage: http://www.fmrib.ox.ac.uk/fsl/
+ Vcs-Browser: http://git.debian.org/?p=pkg-exppsy/fsl.git
+@@ -89,7 +88,6 @@ Depends: mozilla-firefox | www-browser,
+          ${shlibs:Depends},
+          ${misc:Depends}
+ Recommends: fsl-#FSLMVERSION#-doc (= ${source:Version}),
+-            fsl-#FSLMVERSION#-gpu (= ${binary:Version}),
+             fsl-atlases
+ Suggests: fsl-feeds,
+           octave | ${octave:Depends},
+@@ -135,19 +133,3 @@ Description: documentation for FSL
+  for FMRI, MRI and DTI brain imaging data.
+  .
+  This package provides the FSL documentation in HTML format.
+-
+-Package: fsl-#FSLMVERSION#-gpu
+-Architecture: any
+-Depends: fsl-#FSLMVERSION#-core (= ${source:Version}),
+-         ${shlibs:Depends},
+-         ${misc:Depends}
+-Description: GPU-accelerated tools for FSL
+- FSL is a comprehensive library of image analysis and statistical tools
+- for fMRI, MRI and DTI brain imaging data. The suite consists of various
+- command line tools, as well as simple GUIs for its core analysis pipelines.
+- Among others, FSL offers implementations of standard GLM analysis,
+- white matter tractography, tissue segmentation, affine and non-linear
+- co-registration, and independent component analysis.
+- .
+- This package provides accelerated versions of some FSL commands to utilize
+- NVIDIA's CUDA toolkit.
