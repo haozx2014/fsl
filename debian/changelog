@@ -1,3 +1,22 @@
+fsl (5.0.5-1) neurodebian; urgency=low
+
+  * New upstream release.
+    - Bedpostx is now CUDA capable for GPU-equipped clusters.
+    - Bedpostx now has a gradient non-linearity option.
+    - Probtrackx2 can now output an ROIxROI network matrix.
+    - Several bugfixes for MELODIC.
+    - Multishell qboot bugfix.
+  * Re-add dependency on fslview and re-add symlinks (originally removed
+    in 4.1.9-1).
+  * Add new package fsl-5.0-gpu for the new GPU-accelerated FSL tools.
+  * Remove doc wiki attachments from the main source tree (grew to 100MB).
+    They are now available from the fsldata source package.
+  * Fix bug of using relative paths for menu icons.
+  * Bumped Standard version to 3.9.4 -- no changes necessary.
+  * Update fix-bashisms patch: oxford_asl requires bash.
+
+ -- Michael Hanke <mih@debian.org>  Wed, 30 Oct 2013 20:33:24 +0100
+
 fsl (5.0.4-1) neurodebian; urgency=low
 
   * New upstream release (skipped short-lived 5.0.3):
