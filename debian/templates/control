@@ -120,7 +120,8 @@ Package: fsl-#FSLMVERSION#-doc
 Section: non-free/doc
 Architecture: all
 Depends: ${misc:Depends}
-Recommends: fslview-doc, fsl-#FSLMVERSION#-doc-wikiattachments
+Recommends: fslview-doc
+Suggests: fsl-#FSLMVERSION#-doc-wikiattachments
 Provides: fsl-doc
 Replaces: fsl-doc-#FSLMVERSION# (<< 5.0.3)
 Breaks: fsl-doc-#FSLMVERSION# (<< 5.0.3)

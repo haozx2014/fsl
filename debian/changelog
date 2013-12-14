@@ -1,3 +1,16 @@
+fsl (5.0.6-1) neurodebian; urgency=low
+
+  * New upstream bugfix release:
+    - An error with voxelwise regressors in lower-level FEAT introduced in
+      FSL 5.0.5 has been fixed. It is stringly recommend to re-run any
+      lower-level FEAT analysis that used voxelwise regressors (e.g. PNM)
+      generated with FSL 5.0.5.
+    - Bugfixes for POSSUM and the ASL GUI.
+  * Downgrade -doc dependency on wikiattachments package from recommended
+    to suggested.
+
+ -- Michael Hanke <mih@debian.org>  Fri, 01 Nov 2013 18:16:59 +0100
+
 fsl (5.0.5-1) neurodebian; urgency=low
 
   * New upstream release.
