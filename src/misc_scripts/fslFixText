@@ -9,7 +9,7 @@ fi
 file=$1
 outfile=$2
 
-ftype=`file $file`
+ftype=`file -e soft $file`
 if [ `echo "$ftype" | grep -i "ascii text" | wc -w` -gt 0 ] ; then
     if [ `echo "$ftype" | grep -i "CRLF line terminators" | wc -w` -gt 0 ] ; then
 	cat $file | tr -d '\r' > $outfile

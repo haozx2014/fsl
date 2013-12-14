@@ -97,6 +97,7 @@ proc fsl:echo { thefilename thestring args } {
 # -h <job-hold-id>  : ID of SGE job that must finish before this job gets run
 # -N <job_name>     : the job will have the name <job_name> on the SGE submission
 # -l <logdir>       : output logs in <logdir>
+# -i                : ignore errors ( return exit status 0 to calling script )
 
 proc fsl:exec { thecommand args } {
 
@@ -110,6 +111,7 @@ proc fsl:exec { thecommand args } {
     set job_holds ""
     set job_name ""
     set runtime 300
+    set ignoreErrors 0
     set args [ join $args ]
     set logdir ""
     for { set argindex 0 } { $argindex < [ llength $args ] } { incr argindex 1 } {
@@ -150,6 +152,12 @@ proc fsl:exec { thecommand args } {
 	    incr argindex 1
 	    set runtime [ lindex $args $argindex ]
 	}
+
+	if { $thearg == "-i" } {
+	    set ignoreErrors 1
+	}
+
+
     }
 
     # add runfsl call if required
@@ -183,6 +191,10 @@ proc fsl:exec { thecommand args } {
 	}
     } else {
 	set errorCode [ catch { exec sh -c $thecommand } errmsg ]
+    }
+
+    if { $ignoreErrors == 1 } {
+	set errorCode 0
     }
 
     # now return errmsg in case the exec call needs to know the output

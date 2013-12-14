@@ -238,7 +238,7 @@ date
 command="$command --nproc=${nproc}"
 [ -f ${subjdir}/possum.com ] && rm ${subjdir}/possum.com
 procnum=0
-while [ $procnum -le $nproc ]
+while [ $procnum -lt $nproc ]
 do
     echo "${POSSUMDIR}/bin/possum $command --procid=${procnum}  -o ${subjdir}/diff_proc/signal_proc_${procnum}" >> ${subjdir}/possum.com
     procnum=$(($procnum + 1))
