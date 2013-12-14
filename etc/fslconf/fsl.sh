@@ -48,11 +48,11 @@ FSLGECUDAQ=cuda.q
 export FSLGECUDAQ
 
 # Set up development variables (not for the faint-hearted)
+# Uncomment the following if you wish to compile FSL source code
+#FSLCONFDIR=$FSLDIR/config
+#FSLMACHTYPE=`$FSLDIR/etc/fslconf/fslmachtype.sh`
 
-FSLCONFDIR=$FSLDIR/config
-FSLMACHTYPE=`$FSLDIR/etc/fslconf/fslmachtype.sh`
-
-export FSLCONFDIR FSLMACHTYPE
+#export FSLCONFDIR FSLMACHTYPE
 
 
 ###################################################

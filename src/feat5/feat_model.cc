@@ -204,19 +204,28 @@ ReturnMatrix estimate_X_heights(const Matrix real_X)
 
 // }}}
 // {{{ feat_svd 
-
 ReturnMatrix feat_svd(const Matrix real_X)
 {
   DiagonalMatrix eigenvals(1);
       
   if (real_X.Ncols()>1)
     {
-      SVD(real_X,eigenvals);
+      if ( real_X.Ncols() > real_X.Nrows() )
+	SVD(real_X.t(),eigenvals);
+      else 
+	SVD(real_X,eigenvals);	
 
       SortDescending(eigenvals);
-
       float inv_condition = eigenvals.Minimum() / eigenvals.Maximum();
 
+      if ( real_X.Ncols() > real_X.Nrows() ) {
+	DiagonalMatrix eigenvalues( real_X.Ncols() );
+	eigenvalues=0;
+	for ( int i=1; i<= eigenvals.Nrows() ; i++ )
+	  eigenvalues(i)=eigenvals(i);
+	eigenvals=eigenvalues;
+
+      }
       //cout << "eigenvals = " << eigenvals << endl;
       //cout << "inv_condition = " << inv_condition << endl;
 
@@ -231,7 +240,6 @@ ReturnMatrix feat_svd(const Matrix real_X)
   eigenvals.Release();
   return eigenvals;
 }
-
 // }}}
 // {{{ renorm kernel 
 
@@ -305,10 +313,9 @@ char *find_line(const string filename, const string key, char *fl)
 {
   FILE *fd;
   char *return_ptr=NULL, tmp_fl[10000];
-
+  
   fd=fopen( filename.c_str() , "rb" );
-
-  while ( fgets(tmp_fl, 1000, fd) != NULL )
+  while ( fgets(tmp_fl, 1000, fd) != NULL ) 
     if (strncmp(tmp_fl,"set ",4)==0)
       for(int j=4; tmp_fl[j]!=0; j++)
 	if (strncmp(key.c_str(),tmp_fl+j,key.size())==0)
@@ -838,20 +845,24 @@ int main(int argc, char **argv)
       {
 	//tokenize tmp_vals...
 	int con=atoi(strtok(tmp_fl+22,") "));
-	contrasts.name[con-1]=string(strtok(NULL,"\n\r\f"));
-	size_t found( contrasts.name[con-1].find_first_of('\"') );
-	if ( found != string::npos ) //These lines are to match the output of the previous feat_model ( spacing the png and removing quotes etc )
-	  contrasts.name[con-1].erase(contrasts.name[con-1].begin(),contrasts.name[con-1].begin()+found+1);
-	found = contrasts.name[con-1].find_last_of('\"');
-	if ( found != string::npos )
-	  contrasts.name[con-1].replace(found,1,1,' ');
+	if ( con <= nContrasts ) {
+	  contrasts.name[con-1]=string(strtok(NULL,"\n\r\f"));
+	  size_t found( contrasts.name[con-1].find_first_of('\"') );
+	  if ( found != string::npos ) //These lines are to match the output of the previous feat_model ( spacing the png and removing quotes etc )
+	    contrasts.name[con-1].erase(contrasts.name[con-1].begin(),contrasts.name[con-1].begin()+found+1);
+	  found = contrasts.name[con-1].find_last_of('\"');
+	  if ( found != string::npos )
+	    contrasts.name[con-1].replace(found,1,1,' ');
+	}
       }
     if (strncmp(tmp_fl,"set fmri(con_real",17)==0)
       {
 	//tokenize tmp_vals...
 	int con=atoi(strtok(tmp_fl+17,"."));// before period is contrastnum
-	real_ev=atoi(strtok(NULL,") "));//between period and ") " is real_ev num
-	contrasts.C(real_ev,con)=atof(strtok(NULL," \0\n\t")); // rest is value
+	if ( con <= nContrasts ) {
+	  real_ev=atoi(strtok(NULL,") "));//between period and ") " is real_ev num
+	  contrasts.C(real_ev,con)=atof(strtok(NULL," \0\n\t")); // rest is value
+	}
       }
     if (nftests>0)
       if (strncmp(tmp_fl,"set fmri(ftest_real",19)==0)
@@ -859,7 +870,8 @@ int main(int argc, char **argv)
 	  //tokenize tmp_vals...
 	  f=atoi(strtok(tmp_fl+19,"."));// before period is f-testnum
 	  int con=atoi(strtok(NULL,") "));//between period and ") " is contrast num
-	  F(f,con)=atof(strtok(NULL," \0\n\t")); // rest is value
+	  if ( con <= nContrasts ) 
+	    F(f,con)=atof(strtok(NULL," \0\n\t")); // rest is value
 	}
   }
   fclose(fd);
@@ -1400,9 +1412,8 @@ int main(int argc, char **argv)
   vector<string> fileList;
   ifstream inputFile("vef.dat");
   if ( inputFile.is_open() ) {
-    while (!inputFile.eof() ) {
-      string input;
-      inputFile >> skipws >> input >> skipws;
+    string input;
+    while (getline(inputFile,input,',')) {
       if ( input.size() != 0 )
 	fileList.push_back(input);
     }

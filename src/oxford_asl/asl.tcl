@@ -95,7 +95,8 @@ proc asl { w } {
     LabelSpinBox $Asl(data).bolus -label "Bolus duration "  -textvariable Asl(bolusDuration) -range { 0.1 10.0 .1 } -width 5 
     frame $Asl(data).lf
     label $Asl(data).lf.label -text "Labelling: "
-    optionMenu2 $Asl(data).lf.labeling Asl(labeling)  0 "pASL" 1 "cASl/pcASL" 
+    set Asl(labeling) 0
+    optionMenu2 $Asl(data).lf.labeling Asl(labeling) -command "set Asl(inversionEfficiency) 0.98; if { \$Asl(labeling) == 1 } { set Asl(inversionEfficiency) 0.85 }" 0 "pASL" 1 "cASl/pcASL" 
 
     frame $Asl(data).tf
     label $Asl(data).tf.label -text "Data is tag-control pairs: "
@@ -104,12 +105,16 @@ proc asl { w } {
 
     frame $Asl(data).tff
     label $Asl(data).tff.label -text "Data has control first: "
-    set Asl(tagControlFirst) 0
-    checkbutton $Asl(data).tff.button -variable Asl(tagControlFirst) -anchor w 
+    set Asl(controlFirst) 0
+    checkbutton $Asl(data).tff.button -variable Asl(controlFirst) -anchor w 
 
     labelframe $Asl(data).useStructural -text "Structural image" -labelanchor w -relief flat
     checkbutton $Asl(data).useStructural.button -variable Asl(useStructural) -command "updateRegistration"
     FileEntry $Asl(data).useStructural.file -textvariable Asl(structural) -title "Select the structural image" -width 35 -filedialog directory -filetypes IMAGE
+
+    set Asl(betStructural) 1
+    labelframe $Asl(data).betStructural -text "Run BET on Structural image" -labelanchor w -relief flat
+    checkbutton $Asl(data).betStructural.button -variable Asl(betStructural) -command "updateRegistration"
 
     frame $Asl(data).df
     label $Asl(data).df.label -text "Data order (grouped by): "
@@ -135,6 +140,7 @@ proc asl { w } {
     pack $Asl(data).sf.label $Asl(data).sf.type -side left
     pack $Asl(data).useStructural -anchor w
     pack $Asl(data).useStructural.button  -side left
+    pack $Asl(data).betStructural.button -anchor w
 
     set Asl(analysis) [ $w.nb getframe analysis ]
     FileEntry $Asl(analysis).outputdir -textvariable Asl(outputdir) -label "Output directory" -title "Name the output directory" -width 35 -filedialog directory -filetypes { }
@@ -148,6 +154,8 @@ proc asl { w } {
     LabelSpinBox $Asl(analysis).t1 -label "T1   "  -textvariable Asl(t1) -range {0.1 10.0 .1 } -width 5 
     set Asl(t1b) 1.6
     LabelSpinBox $Asl(analysis).t1b -label "T1b "  -textvariable Asl(t1b) -range {0.1 10.0 .1 } -width 5
+    set Asl(inversionEfficiency) 0.98
+    LabelSpinBox $Asl(analysis).invE -label "Inversion efficiency "  -textvariable Asl(inversionEfficiency) -range {0.0 1.0 .01 } -width 5
     labelframe $Asl(analysis).adaptiveSmoothing -text "Use adaptive spatial smoothing on CBF" -labelanchor w -relief flat
     checkbutton $Asl(analysis).adaptiveSmoothing.button -variable Asl(adaptiveSmoothing) 
     labelframe $Asl(analysis).useUncertainty -text "Incorporate T1 value uncertainty" -labelanchor w -relief flat
@@ -164,6 +172,7 @@ proc asl { w } {
     pack $Asl(analysis).bolusArrival -anchor w
     pack $Asl(analysis).t1 -anchor w
     pack $Asl(analysis).t1b -anchor w
+    pack $Asl(analysis).invE -anchor w
     pack $Asl(analysis).adaptiveSmoothing.button
     pack $Asl(analysis).adaptiveSmoothing -anchor w
     pack $Asl(analysis).useUncertainty.button
@@ -185,14 +194,9 @@ proc asl { w } {
     checkbutton $Asl(registration).useStandard.button -variable Asl(useStandard) -command "pack forget $Asl(registration).useStandard.file; if { \$Asl(useStandard) } { pack $Asl(registration).useStandard.file -side left -anchor w}; $w.nb compute_size "
     FileEntry $Asl(registration).useStandard.file -textvariable Asl(standard) -title "Select the alternate standard image" -width 35 -filedialog directory -filetypes IMAGE
 
-    labelframe $Asl(registration).useLowStructural -text "Low-resolution structural image" -labelanchor w -relief flat
-    checkbutton $Asl(registration).useLowStructural.button -variable Asl(useLowStructural) -command "pack forget $Asl(registration).useLowStructural.file; if { \$Asl(useLowStructural) } { pack $Asl(registration).useLowStructural.file -side left -anchor w}; $w.nb compute_size"
-    FileEntry $Asl(registration).useLowStructural.file -textvariable Asl(lowStructural) -title "Select the low-resolution structural image" -width 35 -filedialog directory -filetypes IMAGE
-
     pack $Asl(registration).needStructural
     pack $Asl(registration).useTransform.button -side left
     pack $Asl(registration).useStandard.button -side left
-    pack $Asl(registration).useLowStructural.button -side left
 
     set Asl(calibration) [ $w.nb getframe calibration ]
     set Asl(doCalibration) 0
@@ -217,7 +221,7 @@ proc asl { w } {
 
     labelframe $Asl(calibration).sequence -text "Sequence parameters" -labelanchor n
     set Asl(SequenceTR) 3.2
-    LabelSpinBox $Asl(calibration).sequence.tr -textvariable Asl(SequenceTR) -label "Sequence TR(s)" -range {0.0 10.0 0.1 } 
+    LabelSpinBox $Asl(calibration).sequence.tr -textvariable Asl(SequenceTR) -label "Sequence TR(s)" -range {0.0 30.0 0.1 } 
     set Asl(SequenceTE) 0.0
     LabelSpinBox $Asl(calibration).sequence.te -textvariable Asl(SequenceTE) -label "Sequence TE(s)" -range {0.0 10.0 0.1 } 
 
@@ -235,7 +239,7 @@ proc asl { w } {
     FileEntry $Asl(calibration).mode.useCoil.file -textvariable Asl(coilImage) -title "Select the mask image" -width 35 -filedialog directory -filetypes IMAGE
 
     set Asl(calibrationGain) 1.0
-    LabelSpinBox $Asl(calibration).mode.gain -textvariable Asl(calibrationGain) -label "Calibration Gain" -range {0.0 10.0 0.1 } 
+    LabelSpinBox $Asl(calibration).mode.gain -textvariable Asl(calibrationGain) -label "Calibration Gain" -range {0.0 30.0 0.1 } 
 
     pack $Asl(calibration).useCalibration.button -side left
     pack $Asl(calibration).useCalibration -anchor w
@@ -280,11 +284,12 @@ proc updateCalibration { } {
 
 proc updateRegistration { } {
     global FSLDIR Asl FSLDEVDIR 
-    pack forget $Asl(data).useStructural.file $Asl(registration).needStructural $Asl(registration).useTransform $Asl(registration).useStandard $Asl(registration).useLowStructural
+    pack forget $Asl(data).useStructural.file $Asl(data).betStructural $Asl(registration).needStructural $Asl(registration).useTransform $Asl(registration).useStandard
 
     if { $Asl(useStructural) } {
 	pack $Asl(data).useStructural.file -side left -anchor w
-	pack $Asl(registration).useTransform $Asl(registration).useStandard $Asl(registration).useLowStructural -anchor w
+	pack $Asl(data).betStructural -side left -anchor w
+	pack $Asl(registration).useTransform $Asl(registration).useStandard -anchor w
     } else {
 	pack $Asl(registration).needStructural
     }
@@ -307,12 +312,13 @@ proc updateAslMode { } {
     global FSLDIR Asl FSLDEVDIR 
     $Asl(calibration).mode.mf.control.menu entryconfigure 0 -state normal
     $Asl(calibration).mode.mf.control.menu entryconfigure 1 -state normal
-    pack forget optionMenu2 $Asl(data).sf $Asl(data).useStructural
+    pack forget optionMenu2 $Asl(data).sf $Asl(data).useStructural $Asl(data).betStructural
 
     if  {  $Asl(tagControl) == 1 } { 
 	pack $Asl(data).sf -anchor w
     }
     pack $Asl(data).useStructural -anchor w
+    pack $Asl(data).betStructural -anchor w
 
     if {  $Asl(tagControl) == 1 && $Asl(staticTissue) == "normal" } { 
 	set Asl(Mode) 0
@@ -383,7 +389,7 @@ proc aslLaunch {  } {
     if { $Asl(outputVariance) } {
 	set aslCommand "$aslCommand --vars "
     }
-    set aslCommand "$aslCommand --bolus $Asl(bolusDuration) --bat $Asl(bolusArrival) --t1 $Asl(t1) --t1b $Asl(t1b) "
+    set aslCommand "$aslCommand --bolus $Asl(bolusDuration) --bat $Asl(bolusArrival) --t1 $Asl(t1) --t1b $Asl(t1b) --alpha $Asl(inversionEfficiency)"
     if { $Asl(adaptiveSmoothing) } {
 	set aslCommand "$aslCommand --spatial "
     }
@@ -399,31 +405,41 @@ proc aslLaunch {  } {
     if { $Asl(brainMask) != "" } {
 	set aslCommand "$aslCommand -m $Asl(brainMask) "
     }
+    if { $Asl(labeling) } {
+	set aslCommand "$aslCommand  --casl "
+    }
     if { $Asl(useStructural) } {
-	set aslCommand "$aslCommand -s $Asl(structural) "
+	if { $Asl(betStructural) } {
+	    fsl:exec "${FSLDIR}/bin/bet $Asl(structural) $Asl(outputdir)/structural_brain"
+	} else {
+	    fsl:exec "$FSLDIR/bin/imcp $Asl(structural) $Asl(outputdir)/structural_brain"
+	}
+
+	set aslCommand "$aslCommand -s $Asl(outputdir)/structural_brain"
 	if { $Asl(useStandard) } {
-	    set aslCommand "$aslCommand  -t $Asl(transform) -S $Asl(standard) " 
+	    set aslCommand "$aslCommand  -t $Asl(transform) -S $Asl(standard) "
 	}
     }
 
-    if { $Asl(useLowStructural) } {
-	set aslCommand "$aslCommand -r $Asl(lowStructural) " 
-    }
+
 
     set foundRegTarget 0
 
     if { $Asl(Mode) == 1 || ( $Asl(tagControl) == 1 && $Asl(staticTissue) != "suppressed" ) } {
 	fsl:exec "${FSLDIR}/bin/asl_file --data=$Asl(input) --ntis=$tisListLength $aslDataForm --spairs --out=$Asl(outputdir)/asldata_mc"
 	if { $Asl(Mode) == 1 } {
-	    set aslCommand "$aslCommand --regfrom $Asl(outputdir)/asldata_mc_odd "
+	    fsl:exec "${FSLDIR}/bin/bet $Asl(outputdir)/asldata_mc_odd $Asl(outputdir)/asldata_mc_odd_brain"
+	    set aslCommand "$aslCommand --regfrom $Asl(outputdir)/asldata_mc_odd_brain "
 	} else {
-	    set aslCommand "$aslCommand --regfrom $Asl(outputdir)/asldata_mc_even "
+	    fsl:exec "${FSLDIR}/bin/bet $Asl(outputdir)/asldata_mc_even $Asl(outputdir)/asldata_mc_even_brain"
+	    set aslCommand "$aslCommand --regfrom $Asl(outputdir)/asldata_mc_even_brain "
 	}
 	set foundRegTarget 1
     }
 
     if { $Asl(doCalibration) && !$foundRegTarget } {
-	set aslCommand "$aslCommand --regfrom $Asl(M0image)"
+	fsl:exec "${FSLDIR}/bin/bet $Asl(M0image) $Asl(outputdir)/MOimage_brain"
+	set aslCommand "$aslCommand --regfrom  $Asl(outputdir)/MOimage_brain"
     }
 
     puts $aslCommand
@@ -434,7 +450,6 @@ proc aslLaunch {  } {
 	if { $Asl(userefmask) } {
 	    set aslCalibCommand "$aslCalibCommand -m $Asl(mask)"
 	} else {
-	    fsl:exec "${FSLDIR}/bin/bet $Asl(structural) $Asl(outputdir)/structural_brain"
 	    set aslCalibCommand "$aslCalibCommand -s $Asl(outputdir)/structural_brain -t $Asl(outputdir)/native_space/asl2struct.mat"
 	}
 

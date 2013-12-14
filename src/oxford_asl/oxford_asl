@@ -165,7 +165,7 @@ Usage() {
 }
 
 Version() {
-echo "$Id: oxford_asl,v 1.33 2013/09/13 11:48:32 chappell Exp $"
+echo "$Id: oxford_asl,v 1.35 2013/11/11 13:09:13 chappell Exp $"
 exit 0
 }
 
@@ -1288,12 +1288,13 @@ fi
 #OUTPUTS
 # Setup option outputs - anything that would be common to all epochs
 # note that we now do directory creation right at the start
-#if [ ! -z $nativeout ] && [ ! -d $outdir/native_space ]; then
+#if [ ! -z $nativeout ]; then
 #fi
-if [ ! -z $structout ] && [ ! -d $outdir/struct_space ]; then
-    cp $tempdir/asl2struct.mat $outdir/struct_space/asl2struct.mat #also provide the transformation matrix for reference
+if [ ! -z $structout ]; then
+    #cp $tempdir/asl2struct.mat $outdir/struct_space/asl2struct.mat
+    cp $tempdir/asl2struct.mat $outdir/native_space/asl2struct.mat #also provide the transformation matrix for reference
 fi
-#if [ ! -z $advout ] && [ ! -d $outdir/advanced ]; then
+#if [ ! -z $advout ]; then
 #fi
 
 #if [ -z $epoch ]; then

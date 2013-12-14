@@ -90,8 +90,11 @@ int main(int argc, char **argv)
 
   for( unsigned int currentRegressor=0; currentRegressor < fileList.size(); currentRegressor++ )
   {
-    fileNumbers << currentRegressor+startingColumn+1 << " ";
-    fileNames << "confoundEV"+num2str(currentRegressor+1) << " ";
+    string seperator;
+    if ( currentRegressor != fileList.size()-1 )
+      seperator=",";
+    fileNumbers << currentRegressor+startingColumn+1 << seperator;
+    fileNames << "confoundEV"+num2str(currentRegressor+1) << seperator;
     volume4D<double> inputImage;
     read_volume4D(inputImage,fileList[currentRegressor]);
     save_volume4D(inputImage,"confoundEV"+num2str(currentRegressor+1));

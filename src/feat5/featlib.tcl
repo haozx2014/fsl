@@ -4697,7 +4697,7 @@ will be registered to the main highres image. It only makes sense to
 have an expanded image if a main highres image is also
 specified and used in the registration. 
 
-An might be a full-brain image with the same MR sequence
+An example might be a full-brain image with the same MR sequence
 as the functional data, useful if the actual functional data is only
 partial-brain. It is strongly recommended that this image have
 non-brain structures already removed, for example by using BET.
@@ -5126,7 +5126,7 @@ if { $fmri(mc) != 0 } {
     if { [ imtest reg/unwarp/EF_D_example_func ] } {
 	set refvol reg/unwarp/EF_D_example_func
     }
-    fsl:exec "${FSLDIR}/bin/mcflirt -in $funcdata -out prefiltered_func_data_mcf -mats -plots -reffile $refvol -rmsrel -rmsabs"
+    fsl:exec "${FSLDIR}/bin/mcflirt -in $funcdata -out prefiltered_func_data_mcf -mats -plots -reffile $refvol -rmsrel -rmsabs -spline_final"
     if { ! $fmri(regunwarp_yn) } {
 	set funcdata prefiltered_func_data_mcf
     }
@@ -5195,12 +5195,12 @@ if { [ file exists mc/prefiltered_func_data_mcf.mat/MAT_0000 ] } {
     fsl:exec "${FSLDIR}/bin/fslsplit $funcdata grot"
     for { set i 0 } { $i < $total_volumes } { incr i 1 } {
 	set pad [format %04d $i]
-	fsl:exec "${FSLDIR}/bin/applywarp -i grot$pad -o grot$pad --premat=mc/prefiltered_func_data_mcf.mat/MAT_$pad -w reg/example_func2highres_warp.nii.gz -r example_func --rel --postmat=reg/highres2example_func.mat"
+	fsl:exec "${FSLDIR}/bin/applywarp -i grot$pad -o grot$pad --premat=mc/prefiltered_func_data_mcf.mat/MAT_$pad -w reg/example_func2highres_warp.nii.gz -r example_func --rel --postmat=reg/highres2example_func.mat --interp=spline"
     }
     fsl:exec "${FSLDIR}/bin/fslmerge -t prefiltered_func_data_unwarp [ imglob grot* ]"
     fsl:exec "/bin/rm -f grot*"
 } else {
-    fsl:exec "${FSLDIR}/bin/applywarp -i $funcdata -r example_func -o prefiltered_func_data_unwarp -w reg/example_func2highres_warp.nii.gz --postmat=reg/highres2example_func.mat --rel"
+    fsl:exec "${FSLDIR}/bin/applywarp -i $funcdata -r example_func -o prefiltered_func_data_unwarp -w reg/example_func2highres_warp.nii.gz --postmat=reg/highres2example_func.mat --rel --interp=spline"
 }
 
 set funcdata prefiltered_func_data_unwarp
@@ -5476,11 +5476,11 @@ proc feat5:proc_film { session } {
     for { set evs 1 } { $evs <= $fmri(evs_orig) } { incr evs 1 } {
         
 	if { $fmri(shape${evs}) == 2 || $fmri(shape${evs}) == 3 } {
-	    fsl:exec "mkdir -p custom_timing_files ; /bin/cp $fmri(custom${evs}) custom_timing_files/ev${evs}.txt"
+	    fsl:exec "mkdir -p custom_timing_files ; $FSLDIR/bin/fslFixText $fmri(custom${evs}) custom_timing_files/ev${evs}.txt"
 	}
 	if { $fmri(shape${evs}) == 9 } {
-	    set voxelwiseFilelist "$voxelwiseFilelist designVoxelwiseEV${evs}"
-	    set voxelwiseNumbers "$voxelwiseNumbers [expr $evs + $offset ]"
+	    set voxelwiseFilelist "$voxelwiseFilelist,designVoxelwiseEV${evs}"
+	    set voxelwiseNumbers "$voxelwiseNumbers,[expr $evs + $offset ]"
 	    incr voxelwiseInput 1
 	}
 	if { $fmri(deriv_yn${evs}) } {
@@ -5493,8 +5493,8 @@ proc feat5:proc_film { session } {
     set confoundSourceList ""
     if { $fmri(motionevsbeta) != "" } {
 	fsl:exec "${FSLDIR}/bin/generateConfounds $fmri(motionevsbeta)"
-	set voxelwiseFilelist "$voxelwiseFilelist [ exec sh -c "cat vef.dat" ]"
-	set voxelwiseNumbers "$voxelwiseNumbers [ exec sh -c "cat ven.dat" ]"
+	set voxelwiseFilelist "$voxelwiseFilelist,[ exec sh -c "cat vef.dat" ]"
+	set voxelwiseNumbers "$voxelwiseNumbers,[ exec sh -c "cat ven.dat" ]"
 	set confoundSourceList meanConfounds.dat
     }
     if { [ file exists mc/prefiltered_func_data_mcf_final.par ] } {
@@ -5521,6 +5521,9 @@ proc feat5:proc_film { session } {
     if { $voxelwiseNumbers != "" } {
 	set voxelwiseFilelist [ string trimleft $voxelwiseFilelist ]
  	set voxelwiseNumbers  [ string trimleft $voxelwiseNumbers ]
+	set voxelwiseFilelist [ string trimleft $voxelwiseFilelist ,]
+ 	set voxelwiseNumbers  [ string trimleft $voxelwiseNumbers ,]
+
 	set voxelwiseFilelist  "--vef=$voxelwiseFilelist"
 	set voxelwiseNumbers  "--ven=$voxelwiseNumbers"
     }
@@ -5567,7 +5570,7 @@ fsl:exec "$FSLDIR/bin/flameo --cope=filtered_func_data --mask=mask --dm=design.m
     }
 
     # spatial smoothnes estimation
-    fsl:exec "$FSLDIR/bin/smoothest -d [ exec sh -c "cat stats/dof" ] -m mask -r stats/res4d > stats/smoothness"
+    fsl:exec "$FSLDIR/bin/smoothest -d [ exec sh -c "cat stats/dof" ] -m mask -r stats/res4d > stats/smoothness" -i
 
     #{{{ finish up
 
@@ -5673,7 +5676,7 @@ foreach rawstats $rawstatslist {
 	set fmri(DLH$rawstats)     [ exec sh -c " grep DLH    stats/smoothness | awk '{ print \$2 }'" ]
 	set fmri(RESELS$rawstats)  [ exec sh -c " grep RESELS stats/smoothness | awk '{ print \$2 }'" ]
     } else {
-	fsl:exec "$FSLDIR/bin/smoothest -m mask -z stats/$rawstats > stats/${rawstats}.smoothness"
+	fsl:exec "$FSLDIR/bin/smoothest -m mask -z stats/$rawstats > stats/${rawstats}.smoothness" -i
 	set fmri(DLH$rawstats)     [ exec sh -c " grep DLH    stats/${rawstats}.smoothness | awk '{ print \$2 }'" ]
 	set fmri(RESELS$rawstats)  [ exec sh -c " grep RESELS stats/${rawstats}.smoothness | awk '{ print \$2 }'" ]
     }
@@ -6627,7 +6630,7 @@ if { [ file exists stats0000 ] } {
 fsl:exec "/bin/rm -f stats/zem* stats/zols* stats/mask* ; /bin/mv dof stats"
 
 if { [ imtest stats/res4d ] } {
-    fsl:exec "$FSLDIR/bin/smoothest -d [ exec sh -c "cat stats/dof" ] -m mask -r stats/res4d > stats/smoothness"
+    fsl:exec "$FSLDIR/bin/smoothest -d [ exec sh -c "cat stats/dof" ] -m mask -r stats/res4d > stats/smoothness" -i
 }
 
 #}}}
