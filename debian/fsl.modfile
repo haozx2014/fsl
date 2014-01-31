@@ -1,0 +1,88 @@
+#%Module#
+#
+# FSL 5.0
+#
+# Ported to Environment Modules by Alex Waite <Alexqw85@gmail.com>
+# Derived from the modified fsl.sh for Debian by Michael Hanke <michael.hanke@gmail.com>
+# Original fsl.sh written by Mark Jenkinson, FMRIB Analysis Group, University of Oxford
+
+## Short description of package:
+module-whatis 	"FSL is a comprehensive library of image analysis and statistical tools for fMRI, MRI, and DTI brain imaging data."
+
+## URL of application homepage:
+set appurl     	http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/
+
+proc ModulesHelp { } {
+    puts stderr "Sets up the paths and environment variables for FSL 5.0."
+}
+
+## Local variables
+set		root_share		/usr/share/fsl/5.0/
+set		root_lib		/usr/lib/fsl/5.0/
+
+## Environment variables
+# Debian has a fixed FSLDIR
+setenv		FSLDIR			$root_share
+
+# Possum is installed in the same directory
+setenv		POSSUMDIR		$root_share
+
+# add the fsl binary path to the search path
+prepend-path	PATH			$root_lib
+
+# Configure the linker search path for Debian FSLs internal shared libraries
+prepend-path	LD_LIBRARY_PATH		$root_lib
+
+# The following variable selects the default output image type
+# Legal values are:
+# NIFTI, NIFTI_PAIR, NIFTI_GZ, NIFTI_PAIR_GZ
+# This would typically be overwritten in by a script
+# or in ${HOME}/privatemodules/ if the user wished to write files with
+# a different format
+setenv		FSLOUTPUTTYPE		NIFTI_GZ
+
+# Comment out the definition of FSLMULTIFILEQUIT to enable
+#  FSL programs to soldier on after detecting multiple image
+#  files with the same basename ( e.g. epi.hdr and epi.nii )
+setenv		FSLMULTIFILEQUIT	TRUE
+
+# The following variables specify paths for programs and can be changed
+# or replaced by different programs, by default set sensible Debian-defaults
+setenv		FSLTCLSH		/usr/bin/tclsh
+setenv		FSLWISH			/usr/bin/wish
+setenv		FSLBROWSER		/etc/alternatives/x-www-browser
+
+# The following variables are used for running code in parallel across
+#  several machines ( i.e. for FDT )
+# for a cluster engine setup see below
+setenv		FSLLOCKDIR		''
+setenv		FSLMACHINELIST		''
+setenv		FSLREMOTECALL		''
+
+# If set, tell FSL to use Sun Gridengine to submit jobs instead of running them
+# directly on the machine. If unset, no attempt will be made to utilize
+# gridengine, even if it is running. By default SGE is not utilized.
+#setenv		FSLPARALLEL		1
+
+# Mail setup for gridengine jobs. See man qsub (-m option) for all possible
+# settings. By default no email is sent.
+setenv		FSLCLUSTER_MAILOPTS	"n"
+
+# default queue for job submissions
+#setenv		FSLCLUSTER_DEFAULT_QUEUE	"all.q"
+
+# Warn if user has a legacy fsl.sh config that we won't be reading.
+set		legacy_user_conf	$env(HOME)/.fslconf/fsl.sh
+
+if { [ file exists "$legacy_user_conf" ] } {
+	puts stderr "\n#######################################################"
+	puts stderr "# Legacy $legacy_user_conf config file detected!"
+	puts stderr "# - Modules cannot parse this config file; it will be ignored."
+	puts stderr "# - If you need to override default values, either overwrite"
+	puts stderr "# -   them in your shell now or write a privatemodule to load this"
+	puts stderr "# -   module and `setenv` over the offending variables."
+	puts stderr "#######################################################\n"
+	puts stderr "FSL loaded successfully."
+}
+
+## EOB
