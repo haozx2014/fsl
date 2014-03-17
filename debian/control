@@ -85,11 +85,11 @@ Depends: mozilla-firefox | www-browser,
          bc,
          dc,
          python,
-         fslview,
          ${shlibs:Depends},
          ${misc:Depends}
 Recommends: fsl-5.0-doc (= ${source:Version}),
             fsl-5.0-gpu (= ${binary:Version}),
+            fslview,
             fsl-atlases
 Suggests: fsl-feeds,
           octave | ${octave:Depends},

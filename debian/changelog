@@ -2,6 +2,8 @@ fsl (5.0.6-2) UNRELEASED; urgency=medium
 
   * debian/control
     - limit build-depends on nvidia-cuda-toolkit only for x86 architectures
+    - move fslview from Depends to Recommends since many fsl tools can work
+      just fine without fslview
 
  -- Yaroslav Halchenko <debian@onerussian.com>  Mon, 17 Mar 2014 13:31:04 +0000
 
