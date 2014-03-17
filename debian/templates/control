@@ -19,7 +19,7 @@ Build-Depends: debhelper (>= 7),
                libexpat1-dev | libexpat-dev,
                libglu1-mesa-dev | libglu-dev,
                libgomp1,
-               nvidia-cuda-toolkit
+               nvidia-cuda-toolkit [amd64 i386],
 Standards-Version: 3.9.3
 Homepage: http://www.fmrib.ox.ac.uk/fsl/
 Vcs-Browser: http://git.debian.org/?p=pkg-exppsy/fsl.git

@@ -52,6 +52,9 @@ FSL_LIBRARY_PATH=$(CURDIR)/lib
 # install into this directory
 DEB_DESTDIR=$(CURDIR)/debian/tmp
 
+# compile GPU only if building on x86 platform where nvcc present
+COMPILE_GPU:=$(shell which nvcc >/dev/null 2>&1 && echo 1 || echo 0)
+
 # define common environment setup for all make calls
 # complicated LD_LIBRARY expression ensures that no
 # trailing colon ends up in LD_LIBRARY_PATH
@@ -64,7 +67,7 @@ DEB_BUILD_ENV=LD_LIBRARY_PATH=$(FSL_LIBRARY_PATH)$${LD_LIBRARY_PATH:+:$${LD_LIBR
 		ANSI_FLAGS="$(CFLAGS) $(CPPFLAGS)" \
 		DEPENDFLAGS="$(CFLAGS)" \
 		ARCHLDFLAGS="$(LDFLAGS)" \
-		COMPILE_GPU=1 \
+		COMPILE_GPU="$(COMPILE_GPU)" \
 		CUDA="/usr"
 
 controlfiles:
