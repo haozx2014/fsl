@@ -85,11 +85,11 @@ Depends: mozilla-firefox | www-browser,
          bc,
          dc,
          python,
-         fslview,
          ${shlibs:Depends},
          ${misc:Depends}
 Recommends: fsl-#FSLMVERSION#-doc (= ${source:Version}),
             fsl-#FSLMVERSION#-gpu (= ${binary:Version}),
+            fslview,
             fsl-atlases
 Suggests: fsl-feeds,
           octave | ${octave:Depends},
@@ -138,7 +138,7 @@ Description: documentation for FSL
  This package provides the FSL documentation in HTML format.
 
 Package: fsl-#FSLMVERSION#-gpu
-Architecture: any
+Architecture: amd64 i386
 Depends: fsl-#FSLMVERSION#-core (= ${source:Version}),
          ${shlibs:Depends},
          ${misc:Depends}
