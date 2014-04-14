@@ -32,8 +32,12 @@ Depends: fsl-core,
          ${misc:Depends},
 Section: non-free/oldlibs
 Description: transitional dummy package
- This is a transitional dummy package. Its only purpose is to install the
- 'fsl-core' package which replaces 'fsl'. It can safely be removed.
+ The only purpose of this package is to enable upgrades to the new 'fsl-core'
+ package which replaces 'fsl'. This package can safely be removed.
+ .
+ Users aiming to perform a complete FSL installation (including all data
+ components) are advised to install the 'fsl-complete' package from
+ NeuroDebian.
 
 Package: fsl-5.0
 Architecture: all
@@ -41,9 +45,13 @@ Depends: fsl-5.0-core,
          ${misc:Depends}
 Section: non-free/oldlibs
 Description: transitional dummy package
- This is a transitional dummy package. Its only purpose is to install the
+ The only purpose of this package is to enable upgrades to the new
  'fsl-5.0-core' package which replaces 'fsl-5.0'.
- It can safely be removed.
+ This package can safely be removed.
+ .
+ Users aiming to perform a complete FSL 5.0 installation (including
+ all data components) are advised to install the 'fsl-5.0-complete'
+ package from NeuroDebian.
 
 Package: fsl-doc-5.0
 Architecture: all
@@ -51,9 +59,13 @@ Depends: fsl-5.0-doc,
          ${misc:Depends}
 Section: non-free/oldlibs
 Description: transitional dummy package
- This is a transitional dummy package. Its only purpose is to install the
+ The only purpose of this package is to enable upgrades to the new
  'fsl-5.0-doc' package which replaces 'fsl-doc-5.0'.
- It can safely be removed.
+ This package can safely be removed.
+ .
+ Users aiming to perform a complete FSL 5.0 installation (including
+ all data components) are advised to install the 'fsl-5.0-complete'
+ package from NeuroDebian.
 
 Package: fsl-core
 Architecture: all
@@ -73,6 +85,10 @@ Description: metapackage for the latest version of FSL
  fsl-first-data, fsl-possum-data) that are currently available from the
  NeuroDebian repository only. For more information on how to obtain these
  data packages visit http://neuro.debian.net.
+ .
+ Users aiming to perform a complete FSL installation (including
+ all data components) are advised to install the 'fsl-complete'
+ package from NeuroDebian.
 
 Package: fsl-5.0-core
 Architecture: any
@@ -111,6 +127,10 @@ Description: analysis tools for FMRI, MRI and DTI brain imaging
  fsl-first-data, fsl-possum-data) that are currently available from the
  NeuroDebian repository only. For more information on how to obtain these
  data packages visit http://neuro.debian.net.
+ .
+ Users aiming to perform a complete FSL 5.0 installation (including
+ all data components) are advised to install the 'fsl-5.0-complete'
+ package from NeuroDebian.
  .
  FSL interoperates well with other brain imaging related software. This includes
  Caret, FreeSurfer (cortical flattening and modelling). All FSL tools support
