@@ -1,4 +1,4 @@
-fsl (5.0.6-3) UNRELEASED; urgency=medium
+fsl (5.0.6-2) unstable; urgency=medium
 
   [ Yaroslav Halchenko ]
   * debian/control
