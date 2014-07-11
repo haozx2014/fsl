@@ -78,7 +78,7 @@ controlfiles:
 	done
 	# renamed files that need to have a version-specific name
 	for suffix in 1 desktop dirs install links lintian-overrides manpages menu docs; do \
-		for prefix in 'core' 'doc' 'gpu'; do \
+		for prefix in 'core' 'gpu'; do \
 		[ -f debian/fsl-$$prefix.$$suffix ] &&  \
 			mv debian/fsl-$$prefix.$$suffix debian/fsl-$(FSLMAJORVERSION)-$$prefix.$$suffix || true ; \
 		done ; \
@@ -96,7 +96,7 @@ cleancontrolfiles:
 	done
 	rm -f debian/fsl-core.preinst
 	# versioned files
-	rm -f debian/fsl-$(FSLMAJORVERSION)-{core,doc}.{1,desktop,dirs,install,links,lintian-overrides,manpages,menu,preinst,docs}
+	rm -f debian/fsl-$(FSLMAJORVERSION)-core.{1,desktop,dirs,install,links,lintian-overrides,manpages,menu,preinst,docs}
 
 # build and install extra
 biextra-%:

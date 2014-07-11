@@ -1,3 +1,11 @@
+fsl (5.0.6-3) UNRELEASED; urgency=medium
+
+  * Remove the documentation package due to a number of files with unclear
+    origin and license. Upstream confirms that documentation is best
+    consumed from the live wiki on the project homepage.
+
+ -- Michael Hanke <mih@debian.org>  Fri, 11 Jul 2014 17:22:13 +0200
+
 fsl (5.0.6-2) unstable; urgency=medium
 
   [ Yaroslav Halchenko ]
