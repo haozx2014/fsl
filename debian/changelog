@@ -1,8 +1,10 @@
-fsl (5.0.6-3) UNRELEASED; urgency=medium
+fsl (5.0.6-3) unstable; urgency=medium
 
-  * Remove the documentation package due to a number of files with unclear
-    origin and license. Upstream confirms that documentation is best
-    consumed from the live wiki on the project homepage.
+  * Remove the documentation from the source package due to a number of files
+    with unclear origin and license. Consequently, the -doc has been removed
+    as well. Upstream confirms that documentation is best consumed from the
+    live wiki on the project homepage.
+  * Bumped Standard version to 3.9.5 -- no changes necessary.
 
  -- Michael Hanke <mih@debian.org>  Fri, 11 Jul 2014 17:22:13 +0200
 
