@@ -123,7 +123,7 @@ Description: analysis tools for FMRI, MRI and DTI brain imaging
 
 Package: fsl-5.0-gpu
 Architecture: amd64 i386
-Depends: fsl-5.0-core (= ${source:Version}),
+Depends: fsl-5.0-core (= ${binary:Version}),
          ${shlibs:Depends},
          ${misc:Depends}
 Description: GPU-accelerated tools for FSL
