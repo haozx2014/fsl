@@ -116,6 +116,16 @@ namespace Melodic{
     	tmpData = RawData.matrix(Mask);
 		memmsg(" after reshape ");	  
 	}    
+
+  // If a time series model design was specified, check 
+  // that the data dimensions match the model dimensions
+  if (Tdes.Storage() && (tmpData.Nrows() != Tdes.Nrows())) {
+
+    cerr << "ERROR: " << fname << " " << 
+      "- data dimensions (" << tmpData.Nrows() << ") "  << 
+      "do not match model dimensions (" << Tdes.Nrows() << ")" << endl;
+    exit(2);
+  } 
         
     //convert to percent BOLD signal change
     if(opts.pbsc.value()){
@@ -730,8 +740,20 @@ namespace Melodic{
 		TconF = read_ascii_matrix(opts.fn_TconF.value());
 	if(opts.fn_SconF.value().length()>0)
 		SconF = read_ascii_matrix(opts.fn_SconF.value());
-		
-	if(numfiles>1 && Sdes.Storage() == 0){
+
+  // Check that the number of input 
+  // files matches the session design
+  if (Sdes.Storage()) {
+    if (Sdes.Nrows() != numfiles) {
+      cerr << "ERROR: Number of input files (" << numfiles << ") " <<
+        "does not match subject/session design (" << Sdes.Nrows() << ")" << endl;
+      exit(2);
+    }
+  }			
+  
+  // Or create a default session design 
+  // if one was not specified
+  else if(numfiles>1){		
  		Sdes = ones(numfiles,1);
 		if(Scon.Storage() == 0){
 			Scon = ones(1,1);

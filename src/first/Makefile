@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.27 2009/03/24 13:55:27 mark Exp $
+# $Id: Makefile,v 1.27.4.1 2014/05/01 14:58:50 mwebster Exp $
 include ${FSLCONFDIR}/default.mk
 
 PROJNAME = first
@@ -14,7 +14,7 @@ FMBLIBS= -lnewimage -lmiscmaths -lfslio -lniftiio -lznz -lnewmat  -lutils -lz
 
 XFILES= first first_utils first_mult_bcorr
 
-SCRIPTS = run_first run_first_all first_flirt concat_bvars first_roi_slicesdir first_boundary_corr surface_fdr
+SCRIPTS = run_first run_first_all first_flirt concat_bvars first_roi_slicesdir first_boundary_corr surface_fdr first3Dview
 
 all: ${XFILES}
 

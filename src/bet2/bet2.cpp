@@ -872,6 +872,7 @@ int main(int argc, char *argv[]) {
   if (mask.value())
     {
       string maskstr = out+"_mask";
+      brainmask.setDisplayMaximumMinimum(1,0);
       if (save_volume((short)1-brainmask, maskstr.c_str())<0)  return -1;
     }
   

@@ -53,7 +53,6 @@ class Preconditioner;
 template<class T>
 class Accumulator;
 
-
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 //
 // Class SpMat:
@@ -146,6 +145,39 @@ public:
   const SpMat<T> t() const;                                                        // Returns transpose(*this). Avoid, if at all possible.
   
   friend class Accumulator<T>; 
+
+  //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+  //
+  // Class ColumnIterator
+  //
+  // This implements a const forward iterator for a given column
+  //
+  //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+  // template<class TT>
+  class ColumnIterator
+  {
+  public:
+    ColumnIterator(const SpMat<T>& mat, unsigned int col, bool end=false) {
+      if (end) { _ri_it = mat._ri[col-1].end(); _val_it = mat._val[col-1].end(); }
+      else { _ri_it = mat._ri[col-1].begin(); _val_it = mat._val[col-1].begin(); }
+    }
+    ~ColumnIterator() {}
+    T operator*() const { return(*_val_it); }
+    unsigned int Row() const { return((*_ri_it)+1); }
+    bool operator==(const ColumnIterator& rhs) const { return(_val_it == rhs._val_it); }
+    bool operator!=(const ColumnIterator& rhs) const { return(!(*this == rhs)); }
+    // Prefix increment. Use whenever possible
+    ColumnIterator& operator++() { ++_ri_it; ++_val_it; return(*this); }
+    // Postfix increment. Avoid.
+    ColumnIterator& operator++(int dummy) { ColumnIterator clone(*this); ++_ri_it; ++_val_it; return(clone); }
+  private:
+    typename std::vector<T>::const_iterator    _val_it;
+    std::vector<unsigned int>::const_iterator  _ri_it;
+  };
+
+  ColumnIterator begin(unsigned int col) const { if (col>_n) throw SpMatException("ColumnIterator: col out of range"); return(ColumnIterator(*this,col)); }
+  ColumnIterator end(unsigned int col) const { if (col>_n) throw SpMatException("ColumnIterator: col out of range"); return(ColumnIterator(*this,col,true)); }
 
   template<class TT>
   friend const SpMat<TT> operator*(const SpMat<TT>& lh, const SpMat<TT>& rh);      // Multiplication of two sparse matrices
@@ -1229,7 +1261,7 @@ template<class T>
 const Accumulator<T>& Accumulator<T>::ExtractCol(const SpMat<T>& M, unsigned int c)
 {
   if (_sz != M._m) throw ;
-  if (c<0 || c>(M._n-1)) throw ;
+  if (c>(M._n-1)) throw ;
   if (_no) Reset();
   const std::vector<unsigned int>&      ri = M._ri[c];
   const std::vector<T>&                 val = M._val[c];

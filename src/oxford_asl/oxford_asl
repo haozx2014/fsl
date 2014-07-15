@@ -67,6 +67,7 @@
 #   Innovation Limited ("Isis"), the technology transfer company of the
 #   University, to negotiate a licence. Contact details are:
 #   innovation@isis.ox.ac.uk quoting reference DE/9564.
+export LC_NUMERIC=C
 
 Usage() {
     echo "OXFORD_ASL"
@@ -119,7 +120,7 @@ Usage() {
     echo " -c          : M0 calibration image"
     echo "  --csf      : Manually specify csf mask for calibration"
     echo " --cgain     : Relative gain between calibration and ASL image - {default: 1}"
-    echo " --alpha     : Inversion efficiency - {default: 0.85 (pASL); 0.98 (cASL)}"
+    echo " --alpha     : Inversion efficiency - {default: 0.98 (pASL); 0.85 (cASL)}"
     echo "--tr         : TR of calibration data - {defailt: 3.2 s}"
     echo " --t1csf     : T1 of CSF (s) - {for default see asl_calib}"
     echo " --te        : Echo time for the readout (to correct for T2/T2* effect in calibration)"
@@ -165,7 +166,7 @@ Usage() {
 }
 
 Version() {
-echo "$Id: oxford_asl,v 1.35 2013/11/11 13:09:13 chappell Exp $"
+echo "$Id: oxford_asl,v 1.40 2014/04/24 16:08:39 chappell Exp $"
 exit 0
 }
 
@@ -736,6 +737,7 @@ takeargs=0;
 	    exit 1;;
     esac
 
+
     # sort out a shift required by a command line option that takes arguments
     if [ -z $arg ]; then
 	if [ $takeargs -eq 1 ]; then
@@ -907,9 +909,10 @@ if [ ! -z $regfrom ]; then
     Log "Mask generated from regfrom image"
 # next option is to use betted version of mean M0 calib image as mask
 elif [ ! -z $calib ]; then
-    fslmaths $tempdir/calib -bin $tempdir/mask
+    bet $tempdir/calib $tempdir/calib_bet -f 0.2 
+    fslmaths $tempdir/calib_bet -bin $tempdir/mask
     Log "Mask generated from calibration image (post BET)"
- # use the low resolution strucutral image to create mask
+ # use the low resolution strucutral image to create mask (ahould already be BETed)
 elif [ ! -z $lowstrucflag ]; then
  # resample
     flirt -in $tempdir/lowstruc -applyxfm -init $FSLDIR/etc/flirtsch/ident.mat -out $tempdir/mask -paddingsize 0.0 -interp trilinear -ref $infile
@@ -1030,9 +1033,9 @@ fi
 if [ -z $alpha ]; then
         # based on the ASL white paper
     if [ -z $casl ]; then
-	alpha=0.85;
-    else
 	alpha=0.98;
+    else
+	alpha=0.85;
     fi
 fi
 
@@ -1176,21 +1179,21 @@ else
 fi
 
 #deal with BAT
-if [ ! -z $bat ]; then
-    echo "--bat=$bat" >> $tempdir/basil_options.txt  
-else 
+if [ -z $bat ]; then
     if [ -z $casl ]; then
 	bat=0.7 #PASL default
     else
 	bat=1.3 #CASL default
     fi
 fi
+echo "--bat=$bat" >> $tempdir/basil_options.txt  
+
 if [ -z $fixbat ]; then
     Log "Variable arterial arrival time"
     Log "Setting prior/initial bolus arrival time to $bat"
     if [ ! -z $batsd ]; then
 	Log "Setting std dev of the BAT prior to $batsd"
-	basil_options=$basil_options"--batsd=$batsd "
+	echo "--batsd=$batsd" >> $tempdir/basil_options.txt 
     fi
 else
     basil_options=$basil_options"--fixbat " 
@@ -1230,7 +1233,7 @@ cp $tempdir/basil_options.txt $tempdir/basil_options_core.txt # keep a copy of t
 echo "--repeats=$repeats" >> $tempdir/basil_options.txt
 echo "$tislist" >> $tempdir/basil_options.txt
 
-echo "Calling BASIL on full data"
+echo "Calling BASIL on data"
 Dobasil $datafile $tempdir
 
 if [ ! -z $epoch ]; then

@@ -12,7 +12,7 @@ XFILES = cutoffcalc feat_model tsplot prewhiten generateConfounds popp pnm_evs
 
 RUNTCLS = Feat Renderhighres Featquery Glm Pnm
 
-SCRIPTS = easythresh feat mccutup renderhighres featregapply featquery fslerrorreport invfeatreg updatefeatreg estnoise perfusion_subtract match_smoothing fsl_motion_outliers feat_gm_prepare mp_diffpow.sh pnm_stage1 mainfeatreg checkFEAT setFEAT
+SCRIPTS = easythresh feat mccutup renderhighres featregapply featquery fslerrorreport invfeatreg updatefeatreg estnoise perfusion_subtract match_smoothing fsl_motion_outliers feat_gm_prepare mp_diffpow.sh pnm_stage1 mainfeatreg checkFEAT setFEAT autoaq
 
 all: ${XFILES} defaultfiles
 

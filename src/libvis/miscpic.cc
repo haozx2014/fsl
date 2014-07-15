@@ -166,7 +166,7 @@ int miscpic::add_title(int width)
       int strlen=0, numns = 1; 
 
       //work out number of lines etc
-      while(tmptitle.find("\n")>=0 && tmptitle.find("\n")<tmptitle.length()){
+      while(tmptitle.find("\n")!=string::npos && tmptitle.find("\n")<tmptitle.length()){
 	strlen = max(strlen,(int)tmptitle.find("\n"));
 	string tmp = tmptitle;
 	tmp=tmp.erase(tmptitle.find("\n"),tmptitle.length());
@@ -185,7 +185,7 @@ int miscpic::add_title(int width)
 
       tmptitle = title;
       int xcoor = linebrk, ycoor = 2*linebrk; 
-      while(tmptitle.find("\n")>=0 && tmptitle.find("\n")<tmptitle.length()){
+      while(tmptitle.find("\n")!=string::npos && tmptitle.find("\n")<tmptitle.length()){
 	strlen = (int)tmptitle.find("\n");
 	string tmp = tmptitle;
 	tmp=tmp.erase(tmptitle.find("\n"),tmptitle.length());
@@ -1165,9 +1165,9 @@ inp1.setxdim(inp1.xdim()/scale);
 inp1.setydim(inp1.ydim()/scale);
 inp1.setzdim(inp1.zdim()/scale);
   
-x_size_pic = (int)round(x_size*inp1.xdim());
-y_size_pic = (int)round(y_size*inp1.ydim());
-z_size_pic = (int)round(z_size*inp1.zdim());
+x_size_pic = (int)MISCMATHS::round(x_size*inp1.xdim());
+y_size_pic = (int)MISCMATHS::round(y_size*inp1.ydim());
+z_size_pic = (int)MISCMATHS::round(z_size*inp1.zdim());
 
 /*if(debug)
   printf("%f %f %f %d %d %d\n",inp1.xdim(),inp1.ydim(),inp1.zdim(),x_size_pic,y_size_pic,z_size_pic);*/
@@ -1664,9 +1664,9 @@ inp1.setxdim(inp1.xdim()/scale);
 inp1.setydim(inp1.ydim()/scale);
 inp1.setzdim(inp1.zdim()/scale);
   
-x_size_pic = (int)round(x_size*inp1.xdim());
-y_size_pic = (int)round(y_size*inp1.ydim());
-z_size_pic = (int)round(z_size*inp1.zdim());
+x_size_pic = (int)MISCMATHS::round(x_size*inp1.xdim());
+y_size_pic = (int)MISCMATHS::round(y_size*inp1.ydim());
+z_size_pic = (int)MISCMATHS::round(z_size*inp1.zdim());
 
 /*if(debug)
   printf("%f %f %f %d %d %d\n",inp1.xdim(),inp1.ydim(),inp1.zdim(),x_size_pic,y_size_pic,z_size_pic);*/

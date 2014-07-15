@@ -202,8 +202,8 @@ TopupFileWriter::TopupFileWriter(const std::string&                    fname,
 {
   NEWMAT::Matrix  omat(M.size()*M[0].Nrows(),M[0].Ncols());
   for (unsigned int i=0; i<M.size(); i++) {
-    if (M[i].Nrows() != M[0].Nrows() || M[i].Ncols() != M[0].Ncols()) ;
-    omat.Rows((i-1)*M[0].Nrows()+1,i*M[0].Nrows()) = M[i];
+    if (M[i].Nrows() != M[0].Nrows() || M[i].Ncols() != M[0].Ncols())
+      omat.Rows((i-1)*M[0].Nrows()+1,i*M[0].Nrows()) = M[i];
   }
   if (write_ascii_matrix(fname,omat) < 0) throw TopupFileIOException(string("TopupFileWriter::TopupFileWriter: Failed to write matrix file ")+fname);
 }

@@ -126,18 +126,22 @@ namespace MISCMATHS {
     return true; 
   } 
 
+  // Use this to skip all lines that contain non-numeric entries, and return the first line starting with a number
+  //  and the file pointer is reset to the beginning of the first line that starts with a number
   string skip_alpha(ifstream& fs) 
   {
     string cline;
     while (!fs.eof()) {
       streampos curpos = fs.tellg();
+      // read a line, then turn it into a stream in order to read out the first token
       getline(fs,cline);
-      cline += " "; // force extra entry in parsing
+      cline += " "; // force extra entry in parsing (ensure at least one token is read)
       istringstream ss(cline.c_str());
       string firstToken="";
-      ss >> firstToken; //Put first non-whitespace sequence into cc
+      ss >> firstToken; // Put first non-whitespace sequence into firstToken
       if (isNumber(firstToken)) {
-	if (!fs.eof()) { fs.seekg(curpos); } else { fs.clear(); fs.seekg(0,ios::beg); }
+	if (fs.eof()) { fs.clear(); }  // should only be executed if the file had no valid line terminators
+	fs.seekg(curpos); 
 	return cline;
       }
     }
@@ -177,17 +181,21 @@ namespace MISCMATHS {
     Matrix mat(nrows,ncols);
     mat = 0.0;
     string ss="";
-  
+    double newnum;
+
     ss = skip_alpha(fs);
     for (int r=1; r<=nrows; r++) {
+      istringstream sline(ss.c_str());
       for (int c=1; c<=ncols; c++) {
-	if (!fs.eof()) {
-	  fs >> ss;
-	  while ( !isNumber(ss) && !fs.eof() ) {
-	    fs >> ss;
-	  }
-	  mat(r,c) = atof(ss.c_str());
+	sline >> newnum;
+	if ( sline.eof() ) {
+	  throw Exception("Could not find enough numbers in matrix file");
 	}
+	mat(r,c) = newnum;
+      }	
+      if ( r!=nrows ) {				
+	getline(fs,ss);  // this is processed now, so move the stream past it
+	ss = skip_alpha(fs);
       }
     }
     mat.Release();
@@ -230,14 +238,14 @@ namespace MISCMATHS {
     }
     nColumns--;
 
+    // count the number of lines that start with a number (don't worry if they don't have enough numbers at this stage)
     do {
       getline(fs,currentLine);
       currentLine += " "; // force extra entry in parsing
       istringstream ss(currentLine.c_str()); 
       string firstToken("");
       ss >> firstToken; //Put first non-whitespace sequence into cc
-      if (!isNumber(firstToken)) break;  // stop processing when non-numeric line found
-      nRows++;  // add new row to matrix
+      if (isNumber(firstToken)) nRows++;  // add new row to matrix
     } while (!fs.eof());
     
     // now know the size of matrix

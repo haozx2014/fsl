@@ -1,3 +1,9 @@
+/*! \file ECModels.h
+    \brief Contains declaration of classes that implements models for fields from eddy currents.
+
+    \author Jesper Andersson
+    \version 1.0b, Sep., 2012.
+*/
 // Declarations of classes that implements a hirearchy
 // of models for fields from eddy currents induced by
 // diffusion gradients.
@@ -25,15 +31,19 @@
 
 namespace EDDY {
 
-//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-//
-// Class ScanECModel (Scan Eddy Current Model)
-//
-// This is a virtual base class that defines the minimum
-// functionality for our Eddy Current models. 
-//
-// {{{ @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
+/****************************************************************//**
+*
+* \brief Virtual base class for classes used to model the fields
+* that may result from eddy currents.
+*
+* The classes in this hierarchy manages eddy current (EC) parameters
+* and movement parameters for one scan. We can set the parameters 
+* with one call and obtain the resulting field with another. By
+* deriving a set of classes from a virtual base class we are able
+* to use the same code to estimate the parameters for different 
+* EC-models.
+*
+********************************************************************/ 
 class ScanECModel
 {
 public:
@@ -42,9 +52,11 @@ public:
               const NEWMAT::ColumnVector& ep) : _mp(mp), _ep(ep) {}
   virtual ~ScanECModel() {}
 
-  // Indicates if a field offset is modeled or not.
+  /// Indicates if a field offset is modeled or not.
   virtual bool HasFieldOffset() const = 0;
+  /// Returns the field offset.
   virtual double GetFieldOffset() const = 0;
+  /// Set field offset.
   virtual void SetFieldOffset(double ofst) = 0;
 
   // Returns linear parameters used for modelling a field offset
@@ -56,14 +68,13 @@ public:
     return(_mp.Nrows() + _ep.Nrows()); // To silence warning
   }
 
-  // Get all parameters
+  /// Get all parameters for the category given by mp.
   NEWMAT::ColumnVector GetParams(Parameters wp=ALL) const { 
     switch(wp) { case MOVEMENT: return(_mp); case EC: return(_ep); case ALL: return(_mp & _ep); }
     return(_mp & _ep);  // To silence warning
   }
 
-  // Get parameter given by indx, where indx numbers all parameters
-  // zero-offset starting with the movement parameters
+  /// Get parameter given by indx, where indx numbers parameters starting with the movement parameters
   double GetParam(unsigned int indx, Parameters wp=ALL) const {
     try { switch(wp) {
       case MOVEMENT: return(mov_index2ref(indx));

@@ -93,7 +93,7 @@ using namespace boost;
 namespace NEWIMAGE {
 
 FnirtFileWriter::FnirtFileWriter(const string&                            fname, 
-                                 const vector<shared_ptr<basisfield> >&   fields,
+                                 const vector<boost::shared_ptr<basisfield> >&   fields,
                                  Matrix                                   aff)
 {
   if (fields.size() != 3 || !fields[0] || !fields[1] || !fields[2]) {
@@ -180,7 +180,7 @@ void FnirtFileWriter::common_coef_construction(const string&            fname,
   qform(3,4) = fieldx.FieldSz_z();
   coefs.set_qform(NIFTI_XFORM_SCANNER_ANAT,qform);
   coefs.set_sform(NIFTI_XFORM_SCANNER_ANAT,aff);
-  vector<shared_ptr<ColumnVector> > coefp(3);
+  vector<boost::shared_ptr<ColumnVector> > coefp(3);
   coefp[0]=fieldx.GetCoef(); coefp[1]=fieldy.GetCoef(); coefp[2]=fieldz.GetCoef();  
   for (unsigned int v=0; v<3; v++) {
     ColumnVector  c = *(coefp[v]);
@@ -216,7 +216,7 @@ void FnirtFileWriter::common_field_construction(const string&            fname,
 
   Matrix M;
   bool   add_affine = false;
-  if (add_affine = ((aff-IdentityMatrix(4)).MaximumAbsoluteValue() > 1e-6)) { // Add affine part to fields
+  if ((add_affine = ((aff-IdentityMatrix(4)).MaximumAbsoluteValue() > 1e-6))) { // Add affine part to fields
     M = (aff.i() - IdentityMatrix(4))*ref.sampling_mat();
   }
 

@@ -137,8 +137,8 @@ void NLLSInferenceTechnique::DoCalculations(const DataSet& allData)
       
  
       try {
-	NonlinOut status = nonlin(nlinpar,costfn);
-
+	 __attribute__((unused)) NonlinOut status = nonlin(nlinpar,costfn);
+	 // Status is unused - unsure if nonlin has any effect so telling compiler to ignore the status variable
 
 	/*cout << "The solution is: " << nlinpar.Par() << endl;
 	cout << "and this is the process " << endl;

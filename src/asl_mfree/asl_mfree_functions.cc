@@ -369,7 +369,7 @@ namespace OXASL {
       dgrad = smoothdata.Rows(2,ntpts) - smoothdata.Rows(1,ntpts-1);
       float gthresh = 0.2*dgrad.Maximum();
       int i=1; bool cont=true;
-      while (i<ntpts & cont) {
+      while ((i<ntpts) & cont) {
 	if (dgrad(i)>gthresh) cont=false;
 	else i++;
 	       }

@@ -67,6 +67,7 @@
 #   Innovation Limited ("Isis"), the technology transfer company of the
 #   University, to negotiate a licence. Contact details are:
 #   innovation@isis.ox.ac.uk quoting reference DE/9564.
+export LC_NUMERIC=C
 
 Usage() {
     echo ""
@@ -88,7 +89,12 @@ Usage() {
     echo "In case there is a cluster enviroment (e.g. SGE):"
     echo "-n (number of processors, default 1)"   
     echo "-t (estimated running time per processor (minutes), default 2000)"
+    echo "-s (marix segment size [default 10000], purely for memory efficiency)"
     echo "-a (architecture [e.g., darwin or lx24-amd64])"
+# tejas-add 05.11.12
+    echo "-v verbose"
+    echo "-j (place hold for till this job finishes)"
+# tejas-end
     exit 1
 }
 
@@ -96,14 +102,20 @@ nargs=$#
 if [ $nargs -eq 0 ] ; then
   Usage
 fi
+# For all the users POSSUMDIR will be empty and therefore automatically become FSLDIR
+# For me POSSUMDIR is my FSLDEVDIR directory. This allows me to run POSSUM on the cluster 
+# without having to make it stable and wait for a day or find way to run my binaries. 
+# It just seemed the easiest way to get around this. It is in all POSSUM scripts so please
+# leave it that way if possible.
 
-echo "POSSUMDIR (before)" $POSSUMDIR
-if [ "${POSSUMDIR}" == "${FSLDEVDIR}" ] ; then
-   echo "POSSUMDIR (during)" $POSSUMDIR
-else
-    export POSSUMDIR=$FSLDIR
+# tejas-edit 05.11.12
+# echo "POSSUMDIR (before)" $POSSUMDIR
+if [ x${POSSUMDIR} = x ] ; then
+   export POSSUMDIR=$FSLDIR
 fi
-echo "POSSUMDIR (after)" $POSSUMDIR
+# echo "POSSUMDIR (after)" $POSSUMDIR
+
+# tejas-end
 
 make_absolute(){
     dir=$1;
@@ -127,17 +139,25 @@ run(){
 }
 
 subjdir=`make_absolute $1`
-subjdir=`echo $subjdir | sed 's/\/$/$/g'`
+# tejas-edit 05.11.12
+subjdir=`echo $subjdir | sed 's/\/$/$/g'` 1>/dev/null
+# tejas-end
 echo subjectdir is $subjdir
 
 nproc=1
 ntime=2000
+segs=1000
+#tejas:added option "-j" to hold jobs; secret option userf: -r
 while [ ! -z "$2" ]
 do
   case "$2" in
       -n) nproc=$3;shift;;
       -t) ntime=$3;shift;;
+      -s) segs=$3;shift;;
       -a) arch="-a $3";shift;;
+      -v) ver="-v";shift;;
+      -j) holdjb="$3";shift;;
+      -r) dontuserf="dontdoit";shift;;
       *) break;;
   esac
   shift
@@ -180,7 +200,7 @@ else
   command="-i ${subjdir}/brain"
 fi
 
-command="$command -x ${subjdir}/MRpar -f ${subjdir}/slcprof -p ${subjdir}/pulse -m ${subjdir}/motion "
+command="$command -x ${subjdir}/MRpar -f ${subjdir}/slcprof -p ${subjdir}/pulse -m ${subjdir}/motion $ver "
 
 if [ `${FSLDIR}/bin/imtest ${subjdir}/RFtrans` -eq 1 ]; then
 	command="$command -s ${subjdir}/RFtrans"
@@ -232,21 +252,33 @@ mkdir -p ${subjdir}/diff_proc
 mkdir -p ${subjdir}/logs
 mkdir -p ${subjdir}/logs/pid_${$}
 mailto=`whoami`@fmrib.ox.ac.uk
-    
+
+echo Preprocessing stage
+echo "${POSSUMDIR}/bin/possum_matrix -p ${subjdir}/pulse -m ${subjdir}/motion --seg=$segs -o ${subjdir}/matrix"
+# tejas-edit 05.11.12
+${POSSUMDIR}/bin/possum_matrix -p ${subjdir}/pulse -m ${subjdir}/motion --seg=$segs -o ${subjdir}/matrix >> ${subjdir}/possum_matrix.log 2>${subjdir}/possum_matrix.err
+# tejas-end
+
 echo Processing stage 
 date
 command="$command --nproc=${nproc}"
 [ -f ${subjdir}/possum.com ] && rm ${subjdir}/possum.com
 procnum=0
+if [ ! -z $dontuserf ]; then dontuserf="--rfavg";fi
 while [ $procnum -lt $nproc ]
 do
-    echo "${POSSUMDIR}/bin/possum $command --procid=${procnum}  -o ${subjdir}/diff_proc/signal_proc_${procnum}" >> ${subjdir}/possum.com
+    echo "${POSSUMDIR}/bin/possum $command -e ${subjdir}/matrix --procid=${procnum} -o ${subjdir}/diff_proc/signal_proc_${procnum} $dontuserf" >> ${subjdir}/possum.com
     procnum=$(($procnum + 1))
 done
 
-echo "${FSLDIR}/bin/fsl_sub -T $ntime -l ${subjdir}/logs $arch -M $mailto -N possum -t ${subjdir}/possum.com"
+#tejas-add
+if [ ! -z $holdjb ]; then hold="-j $holdjb "; fi
 
-possumid=`${FSLDIR}/bin/fsl_sub -T $ntime -l ${subjdir}/logs $arch -M $mailto -N possum -t ${subjdir}/possum.com ` 
+echo "${FSLDIR}/bin/fsl_sub -T $ntime -l ${subjdir}/logs $arch -M $mailto -N possum -t ${subjdir}/possum.com"
+unset LD_LIBRARY_PATH DYLD_LIBRARY_PATH DYLD_FALLBACK_LIBRARY_PATH
+possumid=`${FSLDIR}/bin/fsl_sub -T $ntime ${hold}-l ${subjdir}/logs $arch -M $mailto -N possum -t ${subjdir}/possum.com` 
+#tejas-end
+
 
 echo Post processing stage
 date
@@ -254,6 +286,11 @@ date
 echo "${FSLDIR}/bin/fsl_sub -T 10 -j $possumid -F -l ${subjdir}/logs $arch ${POSSUMDIR}/bin/possumX_postproc.sh $subjdir $nproc"
 
 mergeid=`${FSLDIR}/bin/fsl_sub -T 10 -j $possumid -F -l ${subjdir}/logs $arch ${POSSUMDIR}/bin/possumX_postproc.sh $subjdir $nproc`
+
+## Tejas-edit 05.11.12 : CHANGE THIS!
+echo "possumX-possumID $possumid"
+echo "possumX-mergeID $mergeid"
+## Tejas-end
 
 echo Done
 date

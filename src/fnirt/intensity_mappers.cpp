@@ -801,10 +801,10 @@ vector<double> IntensityMapperReader::LocalFieldVoxelSize() const
   return(rvec);
 }
 
-vector<shared_ptr<basisfield> > IntensityMapperReader::GetLocalAsSplinefieldVector(const vector<unsigned int>& ksp) const
+vector<boost::shared_ptr<basisfield> > IntensityMapperReader::GetLocalAsSplinefieldVector(const vector<unsigned int>& ksp) const
 {
   if (!_has_local) throw IntensityMapperReaderException("GetLocalAsSplinefieldVector: No local intensity mapping info available.");
-  vector<shared_ptr<basisfield> >  rvec(_local.tsize());
+  vector<boost::shared_ptr<basisfield> >  rvec(_local.tsize());
   vector<unsigned int>             size(3,0);
   vector<double>                   vxs(3,0.0);
   size[0] = static_cast<unsigned int>(_local.xsize());
@@ -812,7 +812,7 @@ vector<shared_ptr<basisfield> > IntensityMapperReader::GetLocalAsSplinefieldVect
   size[2] = static_cast<unsigned int>(_local.zsize());
   vxs[0] = _local.xdim(); vxs[1] = _local.ydim(); vxs[2] = _local.zdim(); 
   for (int i=0; i<_local.tsize(); i++) {
-    rvec[i] = shared_ptr<basisfield>(new splinefield(size,vxs,ksp));
+    rvec[i] = boost::shared_ptr<basisfield>(new splinefield(size,vxs,ksp));
     rvec[i]->Set(_local[i]);
   }
   return(rvec);

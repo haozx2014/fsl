@@ -714,12 +714,13 @@ void fslvtkIO::save(string s)
 	{
 		fshape<<"FIELD FieldData"<<" "<<fieldDataNum.size()+fieldDataStr.size()<<endl;
 		//write out numerixc field data
-		if (fieldDataNum.size()>0)
+		if (fieldDataNum.size()>0) {
 			for (unsigned int i=0; i<fieldDataNum.size();i++)
 				if ((MAX_SET) && (static_cast<unsigned int>(fieldDataNum.at(i).Ncols())>MAX) ) //Maximum limits the number of allowable columns in the field data (used to limit saved modes of variation)
 					writeNumericField<float>(fshape, fieldDataNumName.at(i), "float", fieldDataNum.at(i).SubMatrix(1,fieldDataNum.at(i).Nrows(),1,MAX));
 				else
 					writeNumericField<float>(fshape, fieldDataNumName.at(i), "float", fieldDataNum.at(i));
+		}
 	}
 	
 				vector<string>::iterator name_i=fieldDataStrName.begin();

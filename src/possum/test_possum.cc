@@ -93,7 +93,7 @@ using namespace MISCMATHS;
 using namespace Utilities;
 //using namespace std;
 
-string title="\nCopyright(c) 2003, University of Oxford (Ivana Drobnjak)";
+string title="test_possum\nCopyright(c) 2003, University of Oxford (Ivana Drobnjak)";
 string examples="test_possum ";
 
 Option<bool>   verbose(string("-v,--verbose"), false, 

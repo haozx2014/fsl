@@ -1347,6 +1347,7 @@ template <class T, class S>
       affmask = vout;
       affmask = (T) 1;
       affine_transform_mask(vin,affmask,aff,padding,(T) 0);
+      return(affmask);
     }
 
 
@@ -2047,7 +2048,7 @@ volume<S> extractpart(const volume<T>& v1, const volume<S>& v2, const volume<U>&
 }
 
   template <class T, class S> 
-    volume4D<T> generic_convolve(const volume4D<T>& source, const volume<S>& kernel, bool seperable=false, bool renormalise=true) 
+    volume4D<T> generic_convolve(const volume4D<T>& source, const volume<S>& kernel, bool seperable, bool renormalise) 
   { 
       volume4D<T> result(source);
       if (seperable)
@@ -2295,7 +2296,6 @@ volume<S> extractpart(const volume<T>& v1, const volume<S>& v2, const volume<U>&
    template <class T>
      volume4D<T> bandpass_temporal_filter(volume4D<T>& source,double hp_sigma, double lp_sigma)
       { 
-	//cout << "hp " << hp_sigma << "lp " << lp_sigma << endl;
          int hp_mask_size_PLUS, lp_mask_size_PLUS, hp_mask_size_MINUS, lp_mask_size_MINUS;
          double *hp_exp=NULL, *lp_exp=NULL, *array, *array2;
          volume4D<T> result(source);
@@ -2345,6 +2345,8 @@ volume<S> extractpart(const volume<T>& v1, const volume<S>& v2, const volume<U>&
                {
                  int done_c0=0;
                  double c0=0;
+		 double mean(0);
+
                  for(int t=0; t<source.tsize(); t++)
                  {
                     int tt;
@@ -2371,8 +2373,13 @@ volume<S> extractpart(const volume<T>& v1, const volume<S>& v2, const volume<U>&
 	               array2[t] = c0 + array[t] - c;
 	             }
 	             else  array2[t] = array[t];
+		     mean+=array2[t];
 	          }
-                  memcpy(array,array2,sizeof(double)*source.tsize());
+		 //Demean timeseries
+		 mean/=source.tsize();
+                 for(int t=0; t<source.tsize(); t++)
+		   array2[t]-=mean;
+                 memcpy(array,array2,sizeof(double)*source.tsize());
 	       }
 	       /* {{{ apply lowpass filter to 1D array */
                if (lp_sigma>0)
@@ -2396,8 +2403,9 @@ volume<S> extractpart(const volume<T>& v1, const volume<S>& v2, const volume<U>&
 		      array2[t] = total/sum;
 		    else
 		      array2[t] = total;
-                 }
-                  memcpy(array,array2,sizeof(double)*source.tsize());
+		 }
+		 memcpy(array,array2,sizeof(double)*source.tsize());
+
 	       }
 	  /* {{{ write 1D array back to input 4D data */
                for(int t=0; t<source.tsize(); t++) result.value(x,y,z,t)= (T)array[t];

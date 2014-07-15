@@ -104,7 +104,7 @@ proc balloonhelp_cancel {} {
 proc balloonhelp_show {win} {
     global bhInfo
   
-    if {$bhInfo(active)} {
+    if { $bhInfo(active) && [ winfo exists $win ] } {
     .balloonhelp.info configure -text $bhInfo($win)
 #Define initial position + screensize
     set x [expr [winfo rootx $win]+[winfo width $win]]

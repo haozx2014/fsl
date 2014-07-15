@@ -439,18 +439,18 @@ ReturnMatrix calc_tcorr(int in){
     		partial_conf |= ttcs.at(ctr);
       }
 
-    if(ttcs.at(in).Ncols()>1)
-      if(partial_conf.Storage()>0)
-        partial_conf = ttcs.at(in).Columns(2,ttcs.at(in).Ncols()) | partial_conf;
-      else
-		partial_conf = ttcs.at(in).Columns(2,ttcs.at(in).Ncols());
-		
- 	if(confounds.Storage() > 0)
-      if(partial_conf.Storage()>0)
-        partial_conf |= confounds;	
-      else
-        partial_conf = confounds;	
-
+	if(ttcs.at(in).Ncols()>1) {
+	  if(partial_conf.Storage()>0)
+	    partial_conf = ttcs.at(in).Columns(2,ttcs.at(in).Ncols()) | partial_conf;
+	  else
+	    partial_conf = ttcs.at(in).Columns(2,ttcs.at(in).Ncols());
+	}
+ 	if(confounds.Storage() > 0) {
+	  if(partial_conf.Storage()>0)
+	    partial_conf |= confounds;	
+	  else
+	    partial_conf = confounds;	
+	}
     if(debug.value() && partial_conf.Storage()>0) 
       cerr << "DBG: partial_conf " << partial_conf.Nrows() << " x " << partial_conf.Ncols() << endl;
 

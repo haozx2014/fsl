@@ -84,7 +84,7 @@ using namespace Utilities;
 // The two strings below specify the title and example usage that is
 //  printed out as the help or usage message
 
-string title="possum_sum \nCopyright(c) 2006, University of Oxford (Ivana Drobnjak)";
+string title="possum_sum\nCopyright(c) 2006, University of Oxford (Ivana Drobnjak)";
 string examples="possum_sum -i <inname> -o <outname> -n <nproc> ";
 
 

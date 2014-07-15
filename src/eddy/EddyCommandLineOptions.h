@@ -25,6 +25,7 @@ public:
   std::string IOutFname() const { return(_out.value()); }
   std::string ECFOutFname() const { return(_out.value()+std::string(".eddy_fields")); }
   std::string OLReportFname() const { return(_out.value()+std::string(".eddy_outlier_report")); }
+  std::string OLFreeDataFname() const { return(_out.value()+std::string(".eddy_outlier_free_data")); } 
   std::string DwiMssHistoryFname() const { return(_out.value()+std::string(".eddy_dwi_mss_history")); }
   std::string DwiParHistoryFname() const { return(_out.value()+std::string(".eddy_dwi_parameter_history")); }
   std::string B0MssHistoryFname() const { return(_out.value()+std::string(".eddy_b0_mss_history")); }
@@ -37,6 +38,7 @@ public:
   unsigned int Index(unsigned int i) const { return(_indvec[i]); }
   EDDY::ECModel FirstLevelModel() const;
   bool ReplaceOutliers() const { return(_rep_ol.value()); }
+  bool WriteOutlierFreeData() const { return(_rep_ol.value()); }
   double OLNStdev() const { return(_ol_nstd.value()); }
   unsigned int OLNVox() const { return(_ol_nvox.value()); }
   bool RegisterDWI() const { return(_rdwi); }

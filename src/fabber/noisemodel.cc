@@ -126,3 +126,58 @@ NoiseModel* NoiseModel::NewFromName(const string& name, ArgsType& args)
       throw Invalid_option("Unrecognized noise model '" + name + "'");
     }
 }
+
+// ARD stuff
+double NoiseModel::SetupARD(vector<int> ardindices,
+			  const MVNDist& theta,
+			  MVNDist& thetaPrior) const {
+  Tracer_Plus tr("Noisemodel::SetupARD");
+  double Fard=0;
+
+  if (~ardindices.empty()) {
+    SymmetricMatrix PriorPrec;
+    PriorPrec = thetaPrior.GetPrecisions();
+    SymmetricMatrix PostCov = theta.GetCovariance();
+
+    for (int i=1; i<= ardindices.size(); i++)
+      {
+	PriorPrec(ardindices[i],ardindices[i]) = 1e-12; //set prior to be initally non-informative
+	thetaPrior.means(ardindices[i]) = 0;
+	
+	//set the Free energy contribution from ARD term
+	double b = 2/(theta.means(ardindices[i])*theta.means(ardindices[i]) + PostCov(ardindices[i],ardindices[i]));
+	Fard += -1.5*(log(b) + digamma(0.5)) - 0.5 - gammaln(0.5) - 0.5*log(b); //taking c as 0.5 - which it will be!
+      }
+
+	thetaPrior.SetPrecisions(PriorPrec);
+  }
+
+  return Fard;
+}
+
+double NoiseModel::UpdateARD(vector<int> ardindices,
+			  const MVNDist& theta,
+			  MVNDist& thetaPrior) const {
+  Tracer_Plus tr("Noisemodel::UpdateARD");
+  double Fard=0;
+
+  if (~ardindices.empty()) {
+    SymmetricMatrix PriorCov;
+      SymmetricMatrix PostCov;
+      PriorCov = thetaPrior.GetCovariance();
+      PostCov = theta.GetCovariance();
+
+    for (int i=1; i<= ardindices.size(); i++)
+      {
+	PriorCov(ardindices[i],ardindices[i]) = theta.means(ardindices[i])*theta.means(ardindices[i]) + PostCov(ardindices[i],ardindices[i]);
+	
+	//set the Free energy contribution from ARD term
+	double b = 2/(theta.means(ardindices[i])*theta.means(ardindices[i]) + PostCov(ardindices[i],ardindices[i]));
+	Fard += -1.5*(log(b) + digamma(0.5)) - 0.5 - gammaln(0.5) - 0.5*log(b); //taking c as 0.5 - which it will be!
+      }
+
+	thetaPrior.SetCovariance(PriorCov);
+  }
+
+  return Fard;
+}

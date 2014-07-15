@@ -53,6 +53,22 @@ for fname in $@ ; do
     rm -f $fname.copytmp
     sed -n $com1 $fname > $fname.copytmp
     cat ${FSLCONFDIR}/common/copyrights/shcopyright.sh >> $fname.copytmp
+    echo "export LC_NUMERIC=C" >> $fname.copytmp
+    sed -n $com2 $fname >> $fname.copytmp
+    cp -f $fname.copytmp $fname
+    rm -f $fname.copytmp
+  fi
+
+  # Insert SHBASECOPYRIGHT message                                                                                                                                                              
+  num=`grep -n SHBASECOPYRIGHT $fname | head -1 | cut -d':' -f1 `; export num
+  if [ "X${num}X" != XX ] ; then
+    num1=`echo "$num 1 - p" | dc`; export num1
+    com1="1,${num1}p"; export com1
+    num2=`echo "$num 1 + p" | dc`; export num2
+    com2="${num2},\$p"; export com2
+    rm -f $fname.copytmp
+    sed -n $com1 $fname > $fname.copytmp
+    cat ${FSLCONFDIR}/common/copyrights/shcopyright.sh >> $fname.copytmp
     sed -n $com2 $fname >> $fname.copytmp
     cp -f $fname.copytmp $fname
     rm -f $fname.copytmp

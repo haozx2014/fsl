@@ -161,12 +161,44 @@ void convert_fov_coord2nifti(int& minx, int& maxx, int& miny, int& maxy, int& mi
   if (minz>maxz) { int tmp=minz; minz=maxz; maxz=tmp; }
 }
 
-// for example ... print difference of COGs between 2 images ...
+template <class T>
+bool is_int_image(const volume<T>& im)
+{
+  if ((im.max()>im.min()) && (im.max()-im.min()<1.0)) return false;  // small floating-point range
+  double fracsum=0.0;
+  float val=0.0, frac=0.0;
+  int nvox=0;
+  for (int z=im.minz(); z<=im.maxz(); z++) {
+    for (int y=im.miny(); y<=im.maxy(); y++) {
+      for (int x=im.minx(); x<=im.maxx(); x++) {
+	val=im(x,y,z);
+	if (val>1e-8) {
+	  nvox++;
+	  frac=fabs(val - MISCMATHS::round(val));
+	  fracsum+= frac;
+	}
+      }
+    }
+  }
+  if (nvox>0) fracsum /= nvox;
+  return (fracsum<1e-5);   // somewhat arbitrary threshold, but non-integer images should very rarely pass this
+}
+
+////////////////////////////////////////////////////////////////////////////
+
+// do main work
+
 int do_work(int argc, char* argv[]) 
 {
   volume<float> vol;
   read_volume(vol,inname.value());
-  vol -= vol.min();   // cope with images set in a negative range
+  if (vol.min()>0) { // cope with images set in a negative range
+    volume<float> mask(vol);
+    mask.binarise(0,vol.max()+1,exclusive);
+    vol -= vol.min();  // make everything non-negative
+    vol *= mask;  // keep previous zeros as zeros
+  }
+  bool is_int_im = is_int_image(vol);
   int xmax, ymax, zmax;
   xmax=vol.xsize()-1;
   ymax=vol.ysize()-1;
@@ -224,7 +256,10 @@ int do_work(int argc, char* argv[])
 	    p99=copyv.percentile(1-0.01*nzsum(row)/nslicevox);
 	    thresh=0.1*(p99-p1)+p1;  // 10% of the value from 1st percentile to 99th percentile
 	    copyv.binarise(thresh);
-	    frac(row)=copyv.sum()/nzsum(row);
+	    frac(row)=copyv.sum()/nzsum(row);   // percentage of super-threshold voxels (of non-zero voxels)
+	    if ((is_int_im) && (p99-p1<5)) {  // check for very low dynamic range of int (indicates heavy quantisation)
+	      frac(row)=0.85;  // use value appropriate to pure Gaussian noise
+	    }
 	    threshvals(row)=thresh;
 	  } else {
 	    frac(row)=1;
@@ -255,10 +290,12 @@ int do_work(int argc, char* argv[])
   for (int q=qmax-gap; q>=brainlen*2/3; q--) {
     if (!foundbest) {
       baseval=frac(q+gap+1);
-      if ( (nzsum(q+gap+1)>minvox) && (nzsum(q+1)>minvox) && (frac(q+1)<baseval-minchange) ) { 
+      if ( (nzsum(q+1)>minvox) && (frac(q+1)<baseval-minchange) ) { 
+	//if ( (nzsum(q+gap+1)>minvox) && (nzsum(q+1)>minvox) && (frac(q+1)<baseval-minchange) ) { 
 	// TODO add a test for threshold values? (avoid artefact being identified as brain in superior slices ala Marco's data)
 	//   something like threshold must be > 0.5 * max threshold found   (but don't want bias field to stop proper slices being found!)
-	if (verbose.value()) { cout << "Testing stability of q = " << q << endl; }
+	if (verbose.value()) { cout << "Testing stability of q = " << q << " versus value " << baseval - minchange << endl; }
+	// check that the frac isn't a fluke and is no worse for a continuous stretch (minlen)
 	bool stable=true;
 	for (int q0=q; q0>=q-minlen; q0--) {
 	  if (frac(q0+1)>=baseval-minchange) stable=false;
@@ -266,12 +303,12 @@ int do_work(int argc, char* argv[])
 	if (stable) {
 	  if (verbose.value()) { cout << "Chosen q = " << q << endl; }
 	  qbest=q;
-	  foundbest=true;
+	  foundbest=true; // effectively break from loop (but retain this info)
 	}
       }
     }
   }
-  if (!foundbest) qbest=qmax;
+  if (!foundbest) qbest=qmax;  // if nothing found, assume that there is brain in the top slice
   if (verbose.value()) { cout << "Found best change at: " << qbest << endl; }
   fov=calc_FOV(qbest,brainlen,xmax,ymax,zmax,dim);
 

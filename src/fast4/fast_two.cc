@@ -515,7 +515,7 @@ int main(int argc,char *argv[])
       options.add(outputProbabilities);
       // line below stops the program if the help was requested or 
       // a compulsory option was not set
-      options.parse_command_line(argc, argv);
+      options.parse_command_line(argc, argv, 0, true);
       if ( argc<2 || (help.value()) || (!options.check_compulsory_arguments(true)) )
       {
 	options.usage();

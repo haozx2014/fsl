@@ -71,7 +71,7 @@
 #else
 #include <OpenGL/gl.h>
 #endif
-//#include <cmath>
+#include <cmath>
 
 namespace fslsurface_name{
 	enum MarchingCubesMode {EQUAL_TO, GREATER_THAN, GREATER_THAN_EQUAL_TO};

@@ -1077,7 +1077,7 @@ void conjGradient(const volume<float> & image, const shapeModel & model1,vector<
 				cout<<endl;
 			}
 			
-			if ((tmpVar==0))
+			if (tmpVar==0)
 			{
 				//play with this maaybe no chane in res
 				searchRes=searchRes/2;

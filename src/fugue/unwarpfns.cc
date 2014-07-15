@@ -778,7 +778,7 @@ void calc_constraint(constraint& con)
     K = 0.0;
   }
   con.K = K;
-  con.C = N*(0.5 - fabs(round(K) - K));
+  con.C = N*(0.5 - fabs(MISCMATHS::round(K) - K));
 }
 
 void make_constraints(const volume<float>& phasemap, const volume<int>& label, 
@@ -986,7 +986,7 @@ volume<float> unwrap(const volume<float>& phasemap,
     int r,s;
     r = (*it).first.first;
     s = (*it).first.second;
-    int Krs = round((*it).second.K);
+    int Krs = MISCMATHS::round((*it).second.K);
     conmap.erase(it);
     // merge s into r (note that r<s due to insertion into constraintmap)
     for (int p=1; p<=nclass; p++) {
@@ -1207,7 +1207,7 @@ volume<float> limit_pixshift(const volume<float>& pixshift,
 	}
       }
       if (n>2) {
-	ycom = round(sum/((float) n));
+	ycom = MISCMATHS::round(sum/((float) n));
       }
 	
       for (int y=ycom; y<pixshift.ysize()-1; y++) {

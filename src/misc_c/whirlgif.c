@@ -274,7 +274,7 @@ void GifReadFile(FILE *fout, char *fname, int firstImage)
 	Xgetc(fp); /* the extension code */
 	for ( i = Xgetc(fp); i > 0; i-- ) Xgetc(fp);
 	while ( ( i = Xgetc(fp) ) > 0 ) {
-	  for ( i = i ; i > 0; i-- ) Xgetc(fp);
+	  for ( ; i > 0; i-- ) Xgetc(fp);
 	}
 	break;
       default:

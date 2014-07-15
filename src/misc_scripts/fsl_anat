@@ -68,6 +68,7 @@
 #   Innovation Limited ("Isis"), the technology transfer company of the
 #   University, to negotiate a licence. Contact details are:
 #   innovation@isis.ox.ac.uk quoting reference DE/9564.
+export LC_NUMERIC=C
 
 set -e
 LOGFILE=log.txt
@@ -625,7 +626,7 @@ if [ $do_subcortseg = yes ] ; then
     # rather complicated way of making a link to a non-existent file or files (as FIRST may run on the cluster) - the alernative would be fsl_sub and job holds...
     names=`$FSLDIR/bin/imglob -extensions ${T1}`;
     for fn in $names ; do ext=`echo $fn | sed "s/${T1}.//"`;
-      run ln -s first_results/${T1}_first_all_fast_firstseg.${ext} ${T1}_subcort_seg.${ext}
+      run cp -r first_results/${T1}_first_all_fast_firstseg.${ext} ${T1}_subcort_seg.${ext}
     done
 fi
 

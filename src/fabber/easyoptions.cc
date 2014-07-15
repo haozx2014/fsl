@@ -71,8 +71,63 @@
 using namespace Utilities;
 #include <fstream>
 #include <sstream>
- 
-EasyOptions::EasyOptions(int argc, char** argv)
+#include "miscmaths/miscmaths.h"
+using namespace MISCMATHS;
+
+// Why yes, these are basically global variables.  They're only used in fabber_library mode, and they are only accessed
+// by a few select file-loading/saving functions that are friends of EasyOptions.
+const map<string,const Matrix*>* EasyOptions::inMatrices = NULL;
+map<string,Matrix>* EasyOptions::outMatrices = NULL;
+
+string unescapeFilename(const string& filename)
+{
+   if (filename[0]=='<' && filename[filename.size()-1]=='>' && filename.size()>2)
+	return filename.substr(1,filename.size()-2); // Simple "<basisSet1>" format for input matrices
+   if (filename.substr(0,3) == "<>/" && filename.size()>3)
+	return filename.substr(3); // Hacky "<>/output1" form for output matrices
+   return ""; // unambigously means that this wasn't an escaped filename; i.e. it's presumably a real filename.
+}
+
+bool isEscapedFilename(const string& filename)
+{
+   bool b = unescapeFilename(filename) != "";
+   return b;
+}
+
+
+Matrix read_vest_fabber(const string& filename)
+{
+   Tracer_Plus("read_vest_fabber");
+   if (isEscapedFilename(filename))
+     {
+	return EasyOptions::InMatrix(unescapeFilename(filename));
+     }
+   else
+     {
+        return read_vest(filename);
+     }
+}
+
+
+const Matrix& EasyOptions::InMatrix(const string& filename)
+{
+   if (!isEscapedFilename(filename))
+      throw Invalid_option("Should be an escaped matrix name: " + filename);
+   string s = unescapeFilename(filename);
+   if (inMatrices->find(s) == inMatrices->end())
+      throw Invalid_option("Missing input matrix " + s);
+   else
+      return *(inMatrices->find(s)->second);
+}
+   
+Matrix& EasyOptions::OutMatrix(const string& filename) 
+{ 
+   if (!isEscapedFilename(filename))
+      throw Invalid_option("Should be an escaped matrix name: " + filename);
+   return (*outMatrices)[unescapeFilename(filename)]; 
+}
+
+EasyOptions::EasyOptions(int argc, char** argv) 
 {
     Tracer_Plus tr("EasyOptions::EasyOptions");
     // Parse argv into key-value pairs

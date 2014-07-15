@@ -94,6 +94,11 @@ class VariationalBayesInferenceTechnique : public InferenceTechnique {
       const MVNDist* initialFwdPosterior;
       const NoiseParams* initialNoisePrior;
       const NoiseParams* initialNoisePosterior;
+
+      // specificaiont of priors from command line
+      vector<unsigned int> PSPidx;
+      string PriorsTypes;
+      vector<string> imagepriorstr;
       
       // These are used for resuming a previous calculation
       string continueFromFile; // if empty, use initial posterior dists above

@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.56 2007/11/15 09:15:01 ivana Exp $
+# $Id: Makefile,v 1.63 2012/12/26 20:38:37 ivana Exp $
 include ${FSLCONFDIR}/default.mk
 
 PROJNAME = possum
@@ -19,16 +19,19 @@ SOBJS=spharm_rm.o
 IOBJS=possum.o possumfns.o 
 SIOBJS=signal2image.o
 PSOBJS=test_possum.o
-AOBJS=pulse.o 
-BSOBJS=b0sim.o
+AOBJS=pulse.o possumfns.o
 SNOBJS=systemnoise.o
 PAROBJS=possum_sum.o
+RIXOBJS=possum_matrix.o possumfns.o
+THEORYOBJ=tcalc.o
 
 RUNTCLS=Possum
-XFILES=possum spharm_rm signal2image pulse systemnoise possum_sum b0calc
-TESTXFILES=b0sim test_possum
-SCRIPTS = possumX possumX_postproc.sh generate_b0 generate_brain
+XFILES=possum spharm_rm signal2image pulse systemnoise possum_sum b0calc possum_matrix tcalc
+TESTXFILES=test_possum 
+SCRIPTS=possumX possumX_postproc.sh generate_b0 generate_brain generate_b0calc
 MFILES=read_pulse.m write_pulse.m
+
+DBGFLAGS=-DNDEBUG
 
 all: ${XFILES} matlabfiles
 
@@ -50,14 +53,17 @@ test_possum:   ${PSOBJS}
 pulse:   ${AOBJS}
 	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${AOBJS} ${LIBS} 
 
-b0sim:	${BSOBJS}
-	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${BSOBJS} ${LIBS} 
-
 systemnoise:	${SNOBJS}
 	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${SNOBJS} ${LIBS} 
 
 possum_sum: ${PAROBJS}
 	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${PAROBJS} ${LIBS} 
+
+possum_matrix: ${RIXOBJS}
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${RIXOBJS} ${LIBS}
+
+tcalc: ${THEORYOBJ}
+	${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${THEORYOBJ} ${LIBS}
 
 matlabfiles:
 	@if [ ! -d ${DESTDIR}/etc/matlab ] ; then ${MKDIR} -p ${DESTDIR}/etc/matlab ; ${CHMOD} -R g+w ${DESTDIR}/etc ; fi

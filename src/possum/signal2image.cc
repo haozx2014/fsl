@@ -79,10 +79,14 @@ using namespace MISCMATHS;
 using namespace NEWIMAGE;
 using namespace Utilities;
 
+//Tejas-apod
+#define pi 3.1416
+//Tejas-end
+
 // The two strings below specify the title and example usage that is
 //  printed out as the help or usage message
 
-string title="signal2image \nCopyright(c) 2003, University of Oxford (Mark Jenkinson & Ivana Drobnjak)";
+string title="signal2image\nCopyright(c) 2003, University of Oxford (Mark Jenkinson & Ivana Drobnjak)";
 string examples="signal2image [options] -i <signal> -p <pulse> -o <image> \n signal2image -p <pulse> -c <kcoord>";
 
 
@@ -113,7 +117,145 @@ Option<string> opt_kcoord(string("-c, --kcoord"), string(""),
 Option<bool> opt_homo(string("--homo"), false,
 		  string("do the homodyne reconstruction"),
 		  false, no_argument);
+
+//Tejas-apod
+Option<bool> opt_doapod(string("-z,--apodize"),false,
+			string("Do apodization"),
+			false,no_argument);
+
+Option<int> opt_cutoff(string("-l,--limit"),100,
+			string("Apodization with this cutoff; default 100"),
+			false,requires_argument);
+
+Option<int> opt_rolloff(string("-r,--roll"),10,
+			string("Apodization with this rolloff; default 10"),
+			false,requires_argument);
+
+//Debug
+Option<string> opt_savewindow(string("-s,--save"),string(""),
+				string("(DEBUG!) Save window as ascii matrix"),
+				false,requires_argument);
+//Tejas-end
 int nonoptarg;
+
+//TEJAS-apodization!
+int do_apodization(Matrix& signal, const int sizeX, const int sizeY, const int sizeZ)
+{
+	int kc = opt_cutoff.value();
+	int rolloff = opt_rolloff.value();
+	int midpointX = sizeX / 2;
+	int midpointY = sizeY / 2;
+	double width;
+	long counter = 1;
+
+	string savewindow = opt_savewindow.value();
+	bool dosave = !(savewindow.empty());
+
+	//UPDATE values according to hanning window
+	Matrix window(sizeX,sizeY);
+	window = 0;
+
+	//Check rolloff value. Should not exceed the gap between kc & boundary
+	if ( rolloff > (int)(sizeX-kc)/2 )
+		rolloff = (sizeX-kc)/2 - 1;
+	if ( rolloff > (int) (sizeY-kc)/2 )
+		rolloff = (sizeY-kc)/2 - 1;
+
+	// Check if the cutoff is too large
+	if (kc > sizeX || kc > sizeY)
+	{
+		cout << "ERROR! Cutoff cannot exceed image dimensions!" << endl;
+		exit(1);
+	}
+
+	if (verbose.value())	cout << "Apodization: kc=" << kc << ";rolloff=" << rolloff << endl;
+
+	//Use hanning window expression to calculate rolloff regions
+	//Calculate the rolloff region: Along X
+	width = rolloff;
+
+	for (int j=1; j<=sizeY; j++)
+	{
+		//Values: hanning Left hand side
+		for (double i=midpointX-kc/2-width; i<=midpointX-kc/2; i++)
+		{
+			window((int)i,j) = 0.5*(1-cos(pi*((i-midpointX-kc/2-width-1)/width)));
+		}
+
+		//Values: cos Right hand side
+		for (double i=midpointX+kc/2+width; i>=midpointX+kc/2; i--)
+		{
+			window((int)i,j) = 0.5*(1-cos(pi*((i-midpointX+kc/2+width-1)/width)));
+		}
+	}
+
+	//Calculate the rolloff region: Along Y
+	for (int i=1; i<sizeX; i++)
+	{
+		//Values: Top
+		for (double j=midpointY-kc/2-width; j<=midpointY-kc/2; j++)
+		{
+			if (window(i,(int)j) != 0)
+				window((int)i,(int)j) *= 0.5*(1-cos(pi*((j-midpointY-kc/2-width-1)/width)));
+			else
+				window(i,(int)j) = 0.5*(1-cos(pi*((j-midpointY-kc/2-width-1)/width)));
+		}
+		//Values: Bottom
+		for (double j=midpointY+kc/2+width; j>=midpointY+kc/2; j--)
+		{
+			if (window(i,(int)j) != 0)
+				window(i,(int)j) *= 0.5*(1-cos(pi*((j-midpointY+kc/2+width-1)/width)));
+			else
+				window(i,(int)j) = 0.5*(1-cos(pi*((j-midpointY+kc/2+width-1)/width)));
+		}
+	}
+
+	//Rewrite 0's to ensure 0 as outer values of window
+	for (int i=1; i<=sizeX; i++)
+	{
+		for (int j=1; j<=sizeY; j++)
+		{
+			if ((i < midpointX-kc/2-width) || (i > midpointX+kc/2+width))
+				window(i,j) = 0;
+			if ((j < midpointY-kc/2-width) || (j > midpointY+kc/2+width))
+				window(i,j) = 0;
+		}
+	}
+
+	//Re-write 1's to ensure 1 from mid-point to kc/2 in both directions
+	for (int i=midpointX-kc/2; i<=midpointX+kc/2; i++)
+	{
+		for (int j=midpointY-kc/2; j<=midpointY+kc/2 ; j++)
+		{
+			window(i,j) = 1;
+		}
+	}
+
+	//Apply window to signal === ONLY WORKS FOR GE & EPI
+	for (int k=1; k<=sizeZ; k++)
+	{
+		for (int j=1; j<=sizeY; j++)
+		{
+			for(int i=1; i<=sizeX; i++)
+			{
+				signal(1,counter) *= window(i,j);
+				signal(2,counter) *= window(i,j);
+				counter++;
+			}
+		}
+	}
+
+	//Write window as ascii matrix
+	if (dosave)
+	{
+		write_ascii_matrix(window,savewindow,1);
+		if (verbose.value()) cout << "window in ascii file '" << savewindow << "'" << endl;
+	}
+
+	return 0;
+}
+//Tejas-end
+
 
 ////////////////////////////////////////////////////////////////////////////
 
@@ -218,8 +360,8 @@ int ReshapeGradEchoSignal(const Matrix& signal,const int slcdir,const int nslc,c
   for (int nn=1;nn<=n;nn++){
     for (int nzz=1;nzz<=nslc;nzz++){
       for (int nyy=1;nyy<=nphase;nyy++){
-	for (int nxx=1;nxx<=nread;nxx++){
-	  if (abs(slcdir)==1) zdir=slchelp+simdir*(nzz-1);
+	    for (int nxx=1;nxx<=nread;nxx++){
+	      if (abs(slcdir)==1) zdir=slchelp+simdir*(nzz-1);
           if (abs(slcdir)==2) ydir=slchelp+simdir*(nzz-1);
           if (abs(slcdir)==3) xdir=slchelp+simdir*(nzz-1);
           if (phasedir==1) zdir=nyy-1;
@@ -228,10 +370,11 @@ int ReshapeGradEchoSignal(const Matrix& signal,const int slcdir,const int nslc,c
           if (readdir==1)  zdir=nxx-1;
           if (readdir==2)  ydir=nxx-1;
           if (readdir==3)  xdir=nxx-1;
-	  kspace_real(xdir,ydir,zdir,nn-1)=signal(1,counter);
-	  kspace_imag(xdir,ydir,zdir,nn-1)=signal(2,counter);
-	  counter=counter+1;
-	}
+	      kspace_real(xdir,ydir,zdir,nn-1)=signal(1,counter);
+	      kspace_imag(xdir,ydir,zdir,nn-1)=signal(2,counter);
+          if (verbose.value()) { cout << signal(1,counter) << "  "<< signal(2,counter) << endl; }
+	      counter=counter+1;
+        }
       }
     }
   }
@@ -272,12 +415,12 @@ int setdir(int& xdir, int& ydir, int& zdir, const int x, const int y, const int 
 
 int do_work(int argc, char* argv[]) 
 {
-  RowVector pulseinfo;
+  RowVector pulseinfo	;
   pulseinfo=read_ascii_matrix(opt_pulse.value()+".info");
   int n=(int) (pulseinfo(12));
   int nslc=(int) (pulseinfo(13));//Nslc
   double dt=pulseinfo(3);//TR
-  double dslc=(pulseinfo(14)+pulseinfo(16))*1e03;//slcthk (mm);
+  double dslc=pulseinfo(14)*1e03;//slcthk (mm)
   double dread=pulseinfo(7)*1e03;//read
   double dphase=pulseinfo(8)*1e03;//phase
   int nread=(int) (pulseinfo(5));
@@ -362,6 +505,16 @@ int do_work(int argc, char* argv[])
   if (inname.set()){
     Matrix signal;
     signal=read_binary_matrix(inname.value());
+
+//Tejas-apod
+	//Call apodization here
+	if (opt_doapod.value())
+	{
+		cout << "Doing apodization..." << endl;
+		do_apodization(signal,nread,nphase,nslc);
+	}
+//Tejas-end
+
     volume4D<double> kspace_real(nx,ny,nz,n);
     volume4D<double> kspace_imag(nx,ny,nz,n);
     kspace_real.setxdim(dx);
@@ -681,6 +834,15 @@ int main(int argc,char *argv[])
     options.add(verbose);
     options.add(help);
     options.add(opt_pulse);
+
+//Tejas-apod
+	options.add(opt_doapod);
+	options.add(opt_cutoff);
+	options.add(opt_rolloff);
+	//Debug
+	options.add(opt_savewindow);
+//Tejas-end
+
     nonoptarg = options.parse_command_line(argc, argv);
     // line below stops the program if the help was requested or 
     //  a compulsory option was not set

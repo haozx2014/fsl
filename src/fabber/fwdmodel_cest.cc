@@ -78,7 +78,7 @@ using namespace NEWIMAGE;
 
 string CESTFwdModel::ModelVersion() const
 {
-  return "$Id: fwdmodel_cest.cc,v 1.6 2013/04/12 10:53:20 chappell Exp $";
+  return "$Id: fwdmodel_cest.cc,v 1.7 2014/02/06 17:00:14 mwebster Exp $";
 }
 
 void CESTFwdModel::HardcodedInitialDists(MVNDist& prior, 
@@ -553,7 +553,7 @@ CESTFwdModel::CESTFwdModel(ArgsType& args)
       T12master = (poolmat.SubMatrix(1,npool,3,4)).t();
 
       // check that the method chosen is possible
-      if (npool>1 & lorentz) throw invalid_argument("Lorentzian (analytic) solution only compatible with single pool");
+      if ((npool>1) & lorentz) throw invalid_argument("Lorentzian (analytic) solution only compatible with single pool");
 
       /* OLD
     //initialization

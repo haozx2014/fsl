@@ -73,7 +73,9 @@ using namespace Utilities;
 
 #define NOCACHE 1
 
+#ifndef __FABBER_LIBRARYONLY
 using namespace NEWIMAGE;
+#endif
 
 void SpatialVariationalBayes::Setup(ArgsType& args)
 {
@@ -175,6 +177,93 @@ void SpatialVariationalBayes::Setup(ArgsType& args)
     imagepriorstr[k-1] = args.Read("image-prior"+stringify(k));
     }
   }
+
+// deal with the spatial prior string, expand the '+' if it has been used
+const int Nparams = model->NumParams();
+const string::size_type thePlus = spatialPriorsTypes.find_first_of("+",1);
+if (thePlus != string::npos)
+{
+assert(spatialPriorsTypes.find_last_of("+") == thePlus);
+string before(spatialPriorsTypes, 0, thePlus-1);
+string after(spatialPriorsTypes, thePlus+1, Nparams);
+char repeatme = spatialPriorsTypes[thePlus-1];
+//cout << "before == " << before << "\nafter == " << after
+//   << "\nrepeatme == " << repeatme << "\nthePlus == " << thePlus
+//   << endl;
+spatialPriorsTypes = before;
+for (int k = before.length()+after.length(); k < Nparams; k++)
+  {spatialPriorsTypes += repeatme;   }
+spatialPriorsTypes += after;
+
+
+// deal with the shifting of image prior file names from expanding the +
+ int nins = Nparams-before.length()-after.length()-2; // -2 accoutns for the letter and + in the original string
+  for (unsigned int k = Nparams; k> (Nparams-after.length()) ; k--)
+   {
+     imagepriorstr[k-1] = imagepriorstr[k-1-nins];
+     if (nins>0) imagepriorstr[k-1-nins] = ""; //clear old entry
+   }
+ }
+
+// Deal with priors specified on the command line using the PSP_byname syntax
+// NOTE: the section the queries the command line options is now in the inferencevb steup routine
+// Here we just copy across any entries from PriorsTypes to spatialPriorsTypes
+ if ( !PSPidx.empty() ) {
+   for (unsigned int k=0; k<PSPidx.size(); k++) {
+     spatialPriorsTypes[PSPidx[k]] = PriorsTypes[PSPidx[k]];
+     //cout << "Copy " << k << " for parameter " << PSPidx[k] << endl;
+   }
+ }
+
+// Section in which spatial priors can be specified by parameter name on command line
+// param_spatial_priors_bymane (PSP_byname)
+// this overwrites any existing entries in the string
+ // vector<string> modnames; //names of model parameters
+ // model->NameParams(modnames);
+ // int npspnames=0;
+ // while (true)
+ //   {
+ //     npspnames++;
+ //     cout << "PSP_byname"+stringify(npspnames) << endl;
+ //     string bytypeidx = args.ReadWithDefault("PSP_byname"+stringify(npspnames),"stop!");
+ //     LOG_ERR("PSP_byname: " << bytypeidx << endl);
+ //     if (bytypeidx == "stop!") break; //no more spriors have been specified
+
+ //     // deal with the specification of this sprior (by name)
+ //     //compare name to those in list of model names
+ //     bool found=false;
+ //     for (int p=0; p<model->NumParams(); p++) {
+ //       if (bytypeidx == modnames[p]) {
+ // 	 found = true;
+ // 	 char pspstype = convertTo<char>(args.Read("PSP_byname"+stringify(npspnames)+"_type"));
+ // 	 spatialPriorsTypes[p]=pspstype;
+ // 	 
+
+ // 	 // now read in file name for an image prior (if appropriate)
+ // 	 if (pspstype == 'I') {
+ // 	   imagepriorstr[p] = args.Read("PSP_byname"+stringify(npspnames)+"_image");
+ // 	 }
+ //       }
+ //     }
+ //     if (!found) {
+ //       throw Invalid_option("ERROR: Spatial prior specification by name, parameter " + bytypeidx + " does not exist in the model\n");
+ //   }
+ //   }
+
+
+// finally check that there are the right number of spatial priors specified and write full expanded string to the log
+if ((int)spatialPriorsTypes.length() != Nparams)// && !useShrinkageMethod)
+{
+throw Invalid_option("--param-spatial-priors=" + spatialPriorsTypes 
+		   + ", but there are " + stringify(Nparams)
+		   + " parameters!\n");
+}
+else
+{
+LOG_ERR("Expanded, --param-spatial-priors=" 
+      << spatialPriorsTypes << endl);
+}
+
 }
 
 void SpatialVariationalBayes::DoCalculations(const DataSet& allData)
@@ -182,11 +271,24 @@ void SpatialVariationalBayes::DoCalculations(const DataSet& allData)
 Tracer_Plus tr("SpatialVariationalBayes::DoCalculations");
 const Matrix& data = allData.GetVoxelData();
 const Matrix & coords = allData.GetVoxelCoords();
+const Matrix & suppdata = allData.GetVoxelSuppData();
 const int Nvoxels = data.Ncols();
 // Rows are volumes
 // Columns are (time) series
 // num Rows is size of (time) series
 // num Cols is size of volumes       
+
+  // pass in some (dummy) data/coords here just in case the model relies upon it
+  // use the first voxel values as our dummies
+  if (suppdata.Ncols() > 0) {
+    model->pass_in_data( data.Column(1) , suppdata.Column(1) );
+  }
+  else {
+    model->pass_in_data( data.Column(1) );
+  }
+  model->pass_in_coords(coords.Column(1));
+
+
 const int Nparams = model->NumParams();
 
 // Added to diagonal to make sure the spatial precision matrix
@@ -210,11 +312,26 @@ assert(resultFs.empty());
 
 // Make the neighbours[] lists if required
 if (spatialPriorsTypes.find_first_of("mMpPSZ") != string::npos)
-  CalcNeighbours(allData.GetMask());
+{
+#ifndef __FABBER_LIBRARYONLY
+	if (allData.GetMask().nvoxels()>0)
+  	    CalcNeighbours(allData.GetMask());
+	else 
+#endif // __FABBER_LIBRARYONLY
+	    CalcNeighbours(allData.GetVoxelCoords());
+}
 
 // Make distance matrix if required
 if (spatialPriorsTypes.find_first_of("RDF") != string::npos)
-  covar.CalcDistances(allData.GetMask(), distanceMeasure);
+{
+#ifndef __FABBER_LIBRARYONLY
+	if (allData.GetMask().nvoxels()>0)
+  	    covar.CalcDistances(allData.GetMask(), distanceMeasure);
+	else
+#endif //__FABBER_LIBRARYONLY
+	    covar.CalcDistances(allData.GetVoxelCoords(), distanceMeasure); // Note: really ought to know the voxel dimensions and multiply by those, because CalcDistances expects an input in mm, not index.
+}
+
 // If we haven'd done this, then covar is invalid and it'll return a 
 // zero-size matrix for GetC, etc!
 
@@ -257,7 +374,11 @@ if (lockedLinearEnabled)
 LOG_ERR("Loading fixed linearization centres from the MVN '" 
       << lockedLinearFile << "'\nNOTE: This does not check if the correct number of parameters is present!\n");
 vector<MVNDist*> lockedLinearDists;
+#ifndef __FABBER_LIBRARYONLY
 MVNDist::Load(lockedLinearDists, lockedLinearFile, allData.GetMask());
+#else
+throw Logic_error("lockedLinearEnabled not supported yet for fabber_library");
+#endif
 lockedLinearCentres.ReSize(Nparams, Nvoxels);
 
 for (int v = 1; v <= Nvoxels; v++)
@@ -324,44 +445,7 @@ noise->Precalculate( *noiseVox[v-1], *noiseVoxPrior[v-1], data.Column(v) );
 DiagonalMatrix akmean(Nparams); akmean = 1e-8;
 
 
-// New spatial priors:
-const string::size_type thePlus = spatialPriorsTypes.find_first_of("+",1);
-if (thePlus != string::npos)
-{
-assert(spatialPriorsTypes.find_last_of("+") == thePlus);
-string before(spatialPriorsTypes, 0, thePlus-1);
-string after(spatialPriorsTypes, thePlus+1, Nparams);
-char repeatme = spatialPriorsTypes[thePlus-1];
-//cout << "before == " << before << "\nafter == " << after
-//   << "\nrepeatme == " << repeatme << "\nthePlus == " << thePlus
-//   << endl;
-spatialPriorsTypes = before;
-for (int k = before.length()+after.length(); k < Nparams; k++)
-  {spatialPriorsTypes += repeatme;   }
-spatialPriorsTypes += after;
 
-
-// deal with the shifting of image prior file names from expanding the +
- int nins = Nparams-before.length()-after.length()-2; // -2 accoutns for the letter and + in the original string
-  for (unsigned int k = Nparams; k> (Nparams-after.length()) ; k--)
-   {
-     imagepriorstr[k-1] = imagepriorstr[k-1-nins];
-     if (nins>0) imagepriorstr[k-1-nins] = ""; //clear old entry
-   }
- }
-
-
-if ((int)spatialPriorsTypes.length() != Nparams)// && !useShrinkageMethod)
-{
-throw Invalid_option("--param-spatial-priors=" + spatialPriorsTypes 
-		   + ", but there are " + stringify(Nparams)
-		   + " parameters!\n");
-}
-else
-{
-LOG_ERR("Expanded, --param-spatial-priors=" 
-      << spatialPriorsTypes << endl);
-}
 
 DiagonalMatrix delta(Nparams); 
 DiagonalMatrix rho(Nparams);
@@ -392,12 +476,25 @@ const double globalF = 1234.5678; // no sensible updates yet
 
 // sort out loading for 'I' prior
 vector<ColumnVector> ImagePrior(Nparams);
+#ifndef __FABBER_LIBRARYONLY
 volume4D<float> imagevol;
+#endif
 for (int k=1; k<=Nparams; k++) {
   if (spatialPriorsTypes[k-1] == 'I') {
     LOG_ERR("Reading Image prior ("<<k<<"): " << imagepriorstr[k-1] << endl);
-    read_volume4D(imagevol,imagepriorstr[k-1]);
-    ImagePrior[k-1] = (imagevol.matrix(allData.GetMask())).AsColumn();
+    if (EasyOptions::UsingMatrixIO())
+      {
+        ImagePrior[k-1] = EasyOptions::InMatrix(imagepriorstr[k-1]);
+      }
+    else
+      {
+#ifdef __FABBER_LIBRARYONLY
+	throw Logic_error("Should not reach this point!");
+#else
+        read_volume4D(imagevol,imagepriorstr[k-1]);
+        ImagePrior[k-1] = (imagevol.matrix(allData.GetMask())).AsColumn();
+#endif //__FABBER_LIBRARYONLY
+      }
   }
  }
 
@@ -939,7 +1036,12 @@ Tracer tr("SpatialVariationalBayes::DoCalculations - delta updates");
     for (int v = 1; v <= Nvoxels; v++)
       {
 	// some models may want extra information about the data
-	model->pass_in_data( data.Column(v) );
+	if (suppdata.Ncols() > 0) {
+	  model->pass_in_data(  data.Column(v) ,  suppdata.Column(v) );
+	}
+	else {
+	  model->pass_in_data(  data.Column(v) );
+	}
 	model->pass_in_coords(coords.Column(v));
 	double &F = resultFs.at(v-1);  // short name
 
@@ -1528,7 +1630,12 @@ Tracer tr("SpatialVariationalBayes::DoCalculations - delta updates");
     for (int v = 1; v <= Nvoxels; v++)
       {
 	// some models may want extra information about the data
-	model->pass_in_data( data.Column(v) );
+	if (suppdata.Ncols() > 0) {
+	  model->pass_in_data(  data.Column(v) ,  suppdata.Column(v) );
+	}
+	else {
+	  model->pass_in_data(  data.Column(v) );
+	}
 	model->pass_in_coords(coords.Column(v));
 
 	double &F = resultFs.at(v-1);  // short name
@@ -1664,6 +1771,9 @@ Tracer tr("SpatialVariationalBayes::DoCalculations - delta updates");
   // Save Sinvs if possible
   if (alsoSaveSpatialPriors) 
     {
+#ifdef __FABBER_LIBRARYONLY
+	throw Logic_error("Not implemented for fabber_library");
+#else
       // Copied from MVNDist::Save.  There are enough subtle differences 
       // to justify duplicating the code here.
 
@@ -1686,6 +1796,7 @@ Tracer tr("SpatialVariationalBayes::DoCalculations - delta updates");
       cout << vols.Nrows() << "," << vols.Ncols() << endl;
       
       save_volume4D(output,outputDir + "/finalSpatialPriors");
+#endif
     }
       
 
@@ -1723,14 +1834,63 @@ inline int binarySearch(const ColumnVector& data, int num)
   return -1;
 }
 
+bool IsCoordMatrixCorrectlyOrdered(const Matrix& voxelCoords)
+{
+    assert(voxelCoords.Nrows()==3);
+    const int nVoxels = voxelCoords.Ncols();
+    for (int v = 1; v <= nVoxels-1; v++)
+    {
+	ColumnVector diff = voxelCoords.Column(v+1) - voxelCoords.Column(v);
+	int d = sign(diff(1)) + 10*sign(diff(2)) + 100*sign(diff(3)); // +1 = +x, +10 = +y, +100 = +z, -99 = -z+x, etc.
+        if (d<=0) 
+	{
+	    LOG << "Found mis-ordered voxels " << v << " and " << v+1 << ": d=" << d << endl;
+	    return false;
+	}
+    }
+    return true;
+}
 
+void SpatialVariationalBayes::CalcNeighbours(const Matrix& voxelCoords)
+{
+    Tracer_Plus tr("SpatialVariationalBayes::CalcNeighbours from voxelCoords");
+    // NOTE there's a bit of an incompatibility here: CalcDistances assumes voxelCoords are in mm, while this assumes 
+    // that they're integers!
 
+    const int nVoxels = voxelCoords.Ncols();
+    if (nVoxels < 2) return;
+    if (!IsCoordMatrixCorrectlyOrdered(voxelCoords))
+	throw Invalid_option("Coordinate matrix must be in correct order to use adjacency-based priors.");
+
+#ifdef __FABBER_LIBRARYONLY
+    throw Logic_error("CalcNeighbours currently requires NEWIMAGE to be compiled in.");
+#else
+    volume<float> mask(voxelCoords.Row(1).Maximum()+1, voxelCoords.Row(2).Maximum()+1, voxelCoords.Row(3).Maximum()+1); 
+    mask = 0.0; 
+    for (int v=1; v<=nVoxels; v++)
+    {
+	float& maskVox = mask( voxelCoords(1,v), voxelCoords(2,v), voxelCoords(3,v) );
+	assert(maskVox == 0);
+	maskVox = v;
+    }
+
+    // Essential thing: threshold the mask!
+    mask.binarise(1e-16,mask.max()+1,exclusive);
+
+    // Okay, now we've built up a close-enough mask matrix, pass the buck to the old version:
+    CalcNeighbours(mask);
+#endif // __FABBER_LIBRARYONLY
+}
+
+#ifndef __FABBER_LIBRARYONLY
 void SpatialVariationalBayes::CalcNeighbours(const volume<float>& mask)
 {
   Tracer_Plus tr("SpatialVariationalBayes::CalcNeighbours");
 
-  ColumnVector preThresh(mask.sum());
+  ColumnVector preThresh((int)mask.sum());
   const int nVoxels = preThresh.Nrows();
+
+  assert(nVoxels > 0); // Probably because mask is empty, logic error
 
   int offset(0);
   int count(1);
@@ -1832,12 +1992,15 @@ void SpatialVariationalBayes::CalcNeighbours(const volume<float>& mask)
 	<< "-" << neighbours2.at(v-1) << endl;
   */
 }
+#endif //__FABBER_LIBRARYONLY
 
-void CovarianceCache::CalcDistances(const volume<float>& mask, const string& distanceMeasure)
+#if defined(__FABBER_LIBRARYONLY_TESTWITHNEWIMAGE) || !defined(__FABBER_LIBRARYONLY)
+// Helper function, also used in fabber_library's test main()
+void ConvertMaskToVoxelCoordinates(const volume<float>& mask, Matrix& voxelCoords)
 {
-    Tracer_Plus tr("CovarianceCache::CalcDistances");
+    Tracer_Plus("ConvertMaskToVoxelCoordinates");
 
-    ColumnVector preThresh(mask.sum());
+    ColumnVector preThresh((int)mask.sum()); // mask has previously been binarized to 0 or 1
     const int nVoxels = preThresh.Nrows();
 
     int offset(0);
@@ -1852,19 +2015,13 @@ void CovarianceCache::CalcDistances(const volume<float>& mask, const string& dis
 	}
  
     const int dims[3] = {mask.xsize(),mask.ysize(),mask.zsize()};
-    const double dimSize[3] = {mask.xdim(),mask.ydim(),mask.zdim()};
+
     assert(mask.xsize()*mask.ysize()*mask.zsize() > 0);
     assert(mask.xdim()*mask.ydim()*mask.zdim() > 0); // no zeroes!
     
-    LOG << "Calculating distance matrix, using voxel dimensions: " 
-	<< mask.xdim() << " by " << mask.ydim() << " by " << mask.zdim() << " mm\n";
+    LOG_SAFE_ELSE_DISCARD( "Calculating distance matrix, using voxel dimensions: " 
+	<< mask.xdim() << " by " << mask.ydim() << " by " << mask.zdim() << " mm\n" );
     
-    if (nVoxels > 7500)
-      LOG_ERR("WARNING: Over " << int(2.5*nVoxels*nVoxels*8/1e9) 
-	      << " GB of memory will be used just to calculate "
-	      << "the distance matrix.  Hope you're not trying to invert "
-	      << "this sucker!\n" << endl);
-
     ColumnVector positions[3];  // indices
     positions[0].ReSize(nVoxels);
     positions[1].ReSize(nVoxels);
@@ -1899,6 +2056,44 @@ void CovarianceCache::CalcDistances(const volume<float>& mask, const string& dis
 
     }    
     
+    // Pass on to the alternative form
+    voxelCoords = ( positions[0] | positions[1] | positions[2] ).t(); // 3 x Nvox
+}
+#endif //__FABBER_LIBRARYONLY_TESTWITHNEWIMAGE || !__FABBER_LIBRARYONLY
+
+#ifndef __FABBER_LIBRARYONLY
+void CovarianceCache::CalcDistances(const volume<float>& mask, const string& distanceMeasure)
+{
+    Tracer_Plus tr("CovarianceCache::CalcDistances mask -> voxelCoords");
+
+    Matrix voxelCoords;
+    ConvertMaskToVoxelCoordinates(mask, voxelCoords);
+    Matrix voxelCoordsInMm = voxelCoords;
+    voxelCoordsInMm.Row(1) *= mask.xdim();
+    voxelCoordsInMm.Row(2) *= mask.ydim();
+    voxelCoordsInMm.Row(3) *= mask.zdim();
+    CalcDistances(voxelCoords, distanceMeasure);
+}
+#endif //__FABBER_LIBRARYONLY
+
+// Note: voxelCoords should really be in MM, not indices; only really matters if it's aniostropic or you're using the
+// smoothness values directly.
+void CovarianceCache::CalcDistances(const NEWMAT::Matrix& voxelCoords, const string& distanceMeasure)
+{
+    // Back to the original form
+    ColumnVector positions[3];
+    positions[0] = voxelCoords.Row(1).t();
+    positions[1] = voxelCoords.Row(2).t();
+    positions[2] = voxelCoords.Row(3).t();
+    const int nVoxels = positions[0].Nrows();
+    const double dimSize[3] = {1.0, 1.0, 1.0};  // dimSize is already included in voxelCoords
+    
+    if (nVoxels > 7500)
+      LOG_SAFE_ELSE_CERR("WARNING: Over " << int(2.5*nVoxels*nVoxels*8/1e9) 
+	      << " GB of memory will be used just to calculate "
+	      << "the distance matrix.  Hope you're not trying to invert "
+	      << "this sucker!\n" << endl);
+
     SymmetricMatrix relativePos[3];  // millimetres
     ColumnVector allOnes(nVoxels); allOnes = 1.0;
     

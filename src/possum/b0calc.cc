@@ -83,7 +83,7 @@ using namespace NEWIMAGE;
 
 // Global constants
 
-string title="b0calc \nB0 field calculation program\nCopyright(c) 2001, University of Oxford (Mark Jenkinson)";
+string title="b0calc\nB0 field calculation program\nCopyright(c) 2001, University of Oxford (Mark Jenkinson)";
 string examples="b0calc -i <input> -o <output> [options]";
 
 Option<bool> verbose(string("-v,--verbose"), false, 

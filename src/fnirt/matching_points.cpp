@@ -168,16 +168,16 @@ ReturnMatrix MatchingPoints::SSD_Gradient(unsigned int dim, const basisfield& bf
 //
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
-shared_ptr<BFMatrix> MatchingPoints::SSD_Hessian(unsigned int dim, const basisfield& bf, BFMatrixPrecisionType prec) const
+boost::shared_ptr<BFMatrix> MatchingPoints::SSD_Hessian(unsigned int dim, const basisfield& bf, BFMatrixPrecisionType prec) const
 {
   if (dim > 2) throw MatchingPointsException("SSD: dim must be 0--2");
 
   // Make sure matrix is of correct type
-  shared_ptr<BFMatrix>  hess;
-  if (bf.HasGlobalSupport()) hess = shared_ptr<BFMatrix>(new FullBFMatrix(bf.CoefSz(),bf.CoefSz()));
+  boost::shared_ptr<BFMatrix>  hess;
+  if (bf.HasGlobalSupport()) hess = boost::shared_ptr<BFMatrix>(new FullBFMatrix(bf.CoefSz(),bf.CoefSz()));
   else {
-    if (prec == BFMatrixDoublePrecision) hess = shared_ptr<BFMatrix>(new SparseBFMatrix<double>(bf.CoefSz(),bf.CoefSz()));
-    else hess = shared_ptr<BFMatrix>(new SparseBFMatrix<float>(bf.CoefSz(),bf.CoefSz()));
+    if (prec == BFMatrixDoublePrecision) hess = boost::shared_ptr<BFMatrix>(new SparseBFMatrix<double>(bf.CoefSz(),bf.CoefSz()));
+    else hess = boost::shared_ptr<BFMatrix>(new SparseBFMatrix<float>(bf.CoefSz(),bf.CoefSz()));
   }
   
   for (unsigned int pti=0; pti<_in_ref->NPoints(); pti++) {

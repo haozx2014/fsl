@@ -200,6 +200,8 @@ int applytopup()
   std::vector<std::string> infnames = parse_commaseparated_list(infname.value());
   std::vector<unsigned int> inindices = parse_commaseparated_numbers(inindex.value());
   if (infnames.size() != inindices.size()) throw ApplyTopupException("Mismatched --in and --inindex lists");
+
+  // Read input image files
   std::vector<NEWIMAGE::volume4D<float> >  scans(infnames.size());
   for (unsigned int i=0; i<infnames.size(); i++) {
     NEWIMAGE::read_volume4D(scans[i],infnames[i]);

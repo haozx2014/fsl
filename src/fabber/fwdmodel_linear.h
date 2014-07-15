@@ -112,6 +112,7 @@ public:
                               const string& indent = "") const;
   virtual void NameParams(vector<string>& names) const
     { assert(fcn); fcn->NameParams(names); }
+  using FwdModel::ModelVersion; // Tell the compiler we want both ours and the base version
   string ModelVersion() { assert(fcn != NULL); return fcn->ModelVersion(); }
 
   // Constructor (leaves centre, offset and jacobian empty)

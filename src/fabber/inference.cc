@@ -89,6 +89,9 @@ void InferenceTechnique::Setup(ArgsType& args)
 
   saveModelFit = args.ReadBool("save-model-fit");
   saveResiduals = args.ReadBool("save-residuals");
+
+  // Motion correction related setup
+  Nmcstep = convertTo<int>(args.ReadWithDefault("mcsteps","0")); //by default no motion correction
 }
 
 
@@ -99,6 +102,10 @@ void InferenceTechnique::SaveResults(const DataSet& data) const
     LOG << "    Preparing to save results..." << endl;
 
   
+#ifdef __FABBER_LIBRARYONLY
+    throw Logic_error("SaveResults shouldn't be called in fabber_library mode");
+#else // __FABBER_LIBRARYONLY
+
     // Save the resultMVNs as two NIFTI files
     // Note: I should probably use a single NIFTI file with
     // NIFTI_INTENT_NORMAL -- but I can't find the detailed 
@@ -165,8 +172,10 @@ void InferenceTechnique::SaveResults(const DataSet& data) const
 
     // Create individual files for each parameter's mean and Z-stat
 
-    for (unsigned i = 1; i <= paramNames.size(); i++)
+    if (!EasyOptions::UsingMatrixIO())
     {
+      for (unsigned i = 1; i <= paramNames.size(); i++)
+      {
         Matrix paramMean, paramZstat;
     	paramMean.ReSize(1, nVoxels);
 	paramZstat.ReSize(1, nVoxels);
@@ -180,7 +189,6 @@ void InferenceTechnique::SaveResults(const DataSet& data) const
         }
     	LOG << "    Writing means..." << endl;
 
-    	// Save paramMeans
 	volume4D<float> output(mask.xsize(),mask.ysize(),mask.zsize(),1);
 	output.setmatrix(paramMean,mask);
 	output.set_intent(NIFTI_INTENT_NONE,0,0,0);
@@ -191,7 +199,40 @@ void InferenceTechnique::SaveResults(const DataSet& data) const
         output.set_intent(NIFTI_INTENT_ZSCORE,0,0,0);
 	output.setDisplayMaximumMinimum(output.max(),output.min());
 	save_volume4D(output,outputDir + "/zstat_" + paramNames.at(i-1));
+      }
     }        
+    else
+    {
+	Matrix& paramMean = EasyOptions::OutMatrix("<means>"); // Creates matrix
+	Matrix& paramStd = EasyOptions::OutMatrix("<stdevs>");
+	const int nParams = paramNames.size();
+	paramMean.ReSize(nParams, nVoxels);
+	paramStd.ReSize(nParams, nVoxels);
+	for (int vox = 1; vox <= nVoxels; vox++)
+	{
+            for (int i = 1; i <= nParams; i++)
+	    {
+              	paramStd(i,vox) = sqrt(resultMVNs[vox-1]->GetCovariance()(i,i));
+	    	paramMean(i,vox) = resultMVNs[vox-1]->means(i);
+	    }
+	}
+	// That's it! We've written our outputs to the "means" and "stdevs" output matrices.
+	// Also save the noise parameters, just 'cuz.
+
+	Matrix& noiseMean = EasyOptions::OutMatrix("<noise_means>"); // Creates matrix
+	Matrix& noiseStd = EasyOptions::OutMatrix("<noise_stdevs>");
+	const int nNoise = resultMVNs[0]->means.Nrows() - paramNames.size();
+	noiseMean.ReSize(nNoise, nVoxels);
+	noiseStd.ReSize(nNoise, nVoxels);
+	for (int vox = 1; vox <= nVoxels; vox++)
+	{
+            for (int i = 1; i <= nNoise; i++)
+	    {
+              	noiseStd(i,vox) = sqrt(resultMVNs[vox-1]->GetCovariance()(i+nParams,i+nParams));
+	    	noiseMean(i,vox) = resultMVNs[vox-1]->means(i+nParams);
+	    }
+	}
+    }
 
     // Save the Free Energy estimates
     if (!resultFs.empty())
@@ -204,11 +245,18 @@ void InferenceTechnique::SaveResults(const DataSet& data) const
 	    freeEnergy(1,vox) = resultFs.at(vox-1);
 	  }
 	
+	if (EasyOptions::UsingMatrixIO())
+	{
+	  EasyOptions::OutMatrix("<freeEnergy>") = freeEnergy;
+        }
+        else
+        {
 	volume4D<float> output(mask.xsize(),mask.ysize(),mask.zsize(),1);
 	output.setmatrix(freeEnergy,mask);
 	output.set_intent(NIFTI_INTENT_NONE,0,0,0);
 	output.setDisplayMaximumMinimum(output.max(),output.min());
 	save_volume4D(output,outputDir + "/freeEnergy");
+        }
       }
     else
       {
@@ -220,39 +268,67 @@ void InferenceTechnique::SaveResults(const DataSet& data) const
         LOG << "    Writing model fit/residuals..." << endl;
         // Produce the model fit and residual volumeserieses
 	
-        Matrix modelFit, residuals;
+        Matrix modelFit, residuals, datamtx, coords;
         modelFit.ReSize(model->NumOutputs(), nVoxels);
+	datamtx = data.GetVoxelData(); // it is just possible that the model needs the data in its calculations
+	coords = data.GetVoxelCoords();
 	ColumnVector tmp;
         for (int vox = 1; vox <= nVoxels; vox++)
         {
-            model->Evaluate(resultMVNs.at(vox-1)->means.Rows(1,model->NumParams()), tmp);
-            modelFit.Column(vox) = tmp;
+	  // pass in stuff that the model might need
+	  ColumnVector y = datamtx.Column(vox);
+	  ColumnVector vcoords = coords.Column(vox);
+	  model->pass_in_data( y );
+	  model->pass_in_coords(vcoords);
+
+	  // do the evaluation
+	  model->Evaluate(resultMVNs.at(vox-1)->means.Rows(1,model->NumParams()), tmp);
+	  modelFit.Column(vox) = tmp;
         }
 
 	volume4D<float> output(mask.xsize(),mask.ysize(),mask.zsize(),model->NumOutputs());
 	
         if (saveResiduals)
         {
-	  residuals = data.GetVoxelData() - modelFit;
+	  residuals = datamtx - modelFit;
+
+         if (EasyOptions::UsingMatrixIO())
+         {
+          EasyOptions::OutMatrix("<residuals>") = residuals;
+         }
+	 else
+	 { 
 	  output.setmatrix(residuals,mask);
 	  output.set_intent(NIFTI_INTENT_NONE,0,0,0);
 	  output.setDisplayMaximumMinimum(output.max(),output.min());
 	  save_volume4D(output,outputDir + "/residuals");
+	 }
         }
         if (saveModelFit)
         {
+	 if (EasyOptions::UsingMatrixIO())
+	 {
+	  EasyOptions::OutMatrix("<modelfit>") = modelFit;
+	 }
+	 else
+	 {
  	  output.setmatrix(modelFit,mask);
 	  output.set_intent(NIFTI_INTENT_NONE,0,0,0);
 	  output.setDisplayMaximumMinimum(output.max(),output.min());
 	  save_volume4D(output,outputDir + "/modelfit");
+	 }
         }
 
     }
 
+#endif // __FABBER_LIBRARYONLY
     LOG << "    Done writing results." << endl;
 }
 
 void InferenceTechnique::InitMVNFromFile(vector<MVNDist*>& continueFromDists,string continueFromFile, const DataSet& allData, string paramFilename="") {
+#ifdef __FABBER_LIBRARYONLY
+  throw Logic_error("Should not be called when compiled without NEWIMAGE support");
+#else
   // Loads in a MVN to set it as inital values for inference
   // can cope with the special scenario in which extra parameters have been added to the inference
   Tracer_Plus tr("InferenceTechnique::InitMVNFromFile");
@@ -308,9 +384,9 @@ void InferenceTechnique::InitMVNFromFile(vector<MVNDist*>& continueFromDists,str
     vector<bool> usefile (ModelparamNames.size(),false);
     vector<int> oldloc (ModelparamNames.size(), 0);
     vector<bool> hasmatched (paramNames.size(), false); // to store if the file paramers have been matched
-    for (int p=0; p<ModelparamNames.size(); p++) {
+    for (unsigned p=0; p<ModelparamNames.size(); p++) {
       usefile[p]=false;
-        for (int q=0; q<paramNames.size(); q++) {
+        for (unsigned q=0; q<paramNames.size(); q++) {
 	  if (ModelparamNames[p] == paramNames[q]) {
 	    usefile[p]=true;
 	    oldloc[p] = q;
@@ -324,7 +400,7 @@ void InferenceTechnique::InitMVNFromFile(vector<MVNDist*>& continueFromDists,str
     }
 
     //Make a note of any parameters in the file that were not matched
-    for (int q=0; q<paramNames.size(); q++) {
+    for (unsigned int q=0; q<paramNames.size(); q++) {
       if (!hasmatched[q]) {
 	LOG_ERR(paramNames[q] + ": Not matched!");
       }
@@ -358,7 +434,7 @@ void InferenceTechnique::InitMVNFromFile(vector<MVNDist*>& continueFromDists,str
       fwddist = MVNfile[v]->GetSubmatrix(1,nfwdparams);
       noisedist = MVNfile[v]->GetSubmatrix(nfwdparams+1,nfwdparams+nnoiseparams);
 
-      for (int p=0; p<ModelparamNames.size(); p++) {
+      for (unsigned int p=0; p<ModelparamNames.size(); p++) {
 	// deal with the means
 	if (usefile[p]) {
 	  newmeans(p+1) = fwddist.means(oldloc[p]+1);
@@ -368,7 +444,7 @@ void InferenceTechnique::InitMVNFromFile(vector<MVNDist*>& continueFromDists,str
 
       //deal with the covariances
       filecov =fwddist.GetCovariance();
-      for (int p=0; p<ModelparamNames.size(); p++) {
+      for (unsigned int p=0; p<ModelparamNames.size(); p++) {
 	for (int q=0; q<=p; q++) {
 	  if(usefile[p]) {
 	    if (usefile[q]) {
@@ -388,7 +464,7 @@ void InferenceTechnique::InitMVNFromFile(vector<MVNDist*>& continueFromDists,str
 
   
 
-
+#endif //__FABBER_LIBRARYONLY
 }
 
 InferenceTechnique::~InferenceTechnique() 
@@ -437,3 +513,44 @@ InferenceTechnique* InferenceTechnique::NewFromName(const string& method)
       throw Invalid_option("Unrecognized --method: " + method);
     }
 }
+
+
+#ifdef __FABBER_MOTION
+
+MCobj::MCobj(const DataSet& allData) {
+  Tracer_Plus tr("MCobj::MCobj");
+
+  //initialise
+  mask = allData.GetMask();
+  num_iter=10;
+  // the following sets up an initial zero deformation field
+  Matrix datamat = allData.GetVoxelData();
+  wholeimage.setmatrix(datamat,mask);
+  modelpred=wholeimage;
+  modelpred=0.0f;
+  defx=modelpred;
+  defx.setROIlimits(0,2);
+  defx.activateROI();
+  defx=defx.ROI();
+  defy=defx;
+  defz=defx;
+  // Unnecessary initialisations?!?
+  tmpx=defx;
+  tmpy=defx;
+  tmpz=defx;
+  finalimage=modelpred;
+}
+
+
+void MCobj::run_mc(const Matrix& modelpred_mat, Matrix& finalimage_mat) {
+  Tracer_Plus tr("MCobj::run_mc");
+
+  modelpred.setmatrix(modelpred_mat,mask);
+  UpdateDeformation(wholeimage,modelpred,num_iter,defx,defy,defz,finalimage,tmpx,tmpy,tmpz);
+  defx=tmpx;
+  defy=tmpy;
+  defz=tmpz;
+  finalimage_mat = finalimage.matrix(mask);
+}
+
+#endif //__FABBER_MOTION

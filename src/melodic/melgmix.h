@@ -217,8 +217,8 @@ namespace Melodic{
       double datastdev;
 
     private:
-      MelodicOptions &opts;     
-      Log &logger; //global log file
+      __attribute__((unused)) MelodicOptions &opts;     
+      __attribute__((unused)) Log &logger; //global log file
 
       //Log mainhtml;
 

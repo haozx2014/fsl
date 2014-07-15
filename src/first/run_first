@@ -67,6 +67,7 @@
 #   Innovation Limited ("Isis"), the technology transfer company of the
 #   University, to negotiate a licence. Contact details are:
 #   innovation@isis.ox.ac.uk quoting reference DE/9564.
+export LC_NUMERIC=C
 
 Usage() {
     echo ""
@@ -76,7 +77,7 @@ Usage() {
     echo "-intref <model_name> : reference structure for the local intensity normalization"
     echo "-loadBvars <bvars>   : initializes FIRST with a previous estimate of the structure"
     echo "-multipleImages : run first on multiple images, need to provide a list of images, transformation matrices, and output names"
-	echo "-wfnirt <warp_field> : use FNIRT warp field instead of linear transformation matrix"
+    #echo "-wfnirt <warp_field> : use FNIRT warp field instead of linear transformation matrix"
     echo ""
     echo "e.g.:  run_first -i im1 -t im1_to_mni.mat -n 60 -o output_name -m ${FSLDIR}/data/first/models_317_bin/L_Hipp_bin.bmv"
     echo ""

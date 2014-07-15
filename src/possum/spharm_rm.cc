@@ -78,7 +78,7 @@ using namespace Utilities;
 // The two strings below specify the title and example usage that is
 //  printed out as the help or usage message
 
-string title="spharm_rm \nCopyright(c) 2006, University of Oxford (Mark Jenkinson)";
+string title="spharm_rm\nCopyright(c) 2006, University of Oxford (Mark Jenkinson)";
 string examples="spharm_rm [options] -i <input_image> -o <output_image>";
 
 // Each (global) object below specificies as option and can be accessed

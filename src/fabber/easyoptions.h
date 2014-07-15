@@ -73,10 +73,23 @@
 
 class EasyOptions {
  public:
-    // The only way to create an instance:
+    // Create an instance from command-line options
     EasyOptions(int argc, char** argv);
         // break down options into key=value clauses
-    
+
+    EasyOptions(const map<string,string>& src, 
+                const map<string,const Matrix*>* dataIn, 
+                map<string,Matrix>* dataOut) 
+        : args(src) // copy key=value pairs from src; use key="" for no-argument options
+        { 
+          assert(inMatrices==NULL); 
+          assert(outMatrices==NULL); 
+          inMatrices=dataIn; 
+          outMatrices=dataOut; 
+          assert(outMatrices->empty());
+	  args[""] = "fabber_library"; // This would normally hold argv[0].
+        }
+
     // Below: option-reading values.  Once they are called, 
     // the corresponding key=value pair is removed... this is deliberate, to
     // ensure that eacy argument is used exactly once.  If you want to use an
@@ -112,8 +125,19 @@ private:
     map<string,string> args;
         // all remaining unused options.
     void AddKey(const string& key); // internal helper function
- };
+
+    // These are only used in fabber_library mode:
+    static const map<string,const Matrix*>* inMatrices;
+    static map<string,Matrix>* outMatrices;
+public:
+    static bool UsingMatrixIO() { assert(!inMatrices == !outMatrices); return (inMatrices!=NULL); }
+    static const Matrix& InMatrix(const string& filename);  // simpler syntax
+    static Matrix& OutMatrix(const string& filename);
+};
  
+// Helper function:
+Matrix read_vest_fabber(const string& filename);
+
 typedef EasyOptions ArgsType;
 
 // Use NEWMAT's exception handling base class
@@ -138,4 +162,5 @@ inline T convertTo(const std::string& s)
         "convertTo failed... couldn't convert string '" + s + "' into a value.\n");
   return x;
 }
+
 

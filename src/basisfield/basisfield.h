@@ -127,7 +127,7 @@ protected:
   virtual boost::shared_ptr<NEWMAT::ColumnVector> get_coef() const;
   double get_coef(unsigned int i, unsigned int j, unsigned int k) const;
   double get_coef(unsigned int i) const;
-  virtual void assign(const basisfield& inf);
+  virtual void assign_basisfield(const basisfield& inf);
   virtual double peek_outside_fov(int i, int j, int k, FieldIndex fi) const {return(0.0);} // Should be replaced by proper method in derived classes
 
 public:

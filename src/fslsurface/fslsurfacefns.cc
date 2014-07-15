@@ -360,7 +360,7 @@ namespace fslsurface_name {
         vector<bool> used(surf.N_vertices,0);
         //keep track of which cluster were on
         T cluster_count=1;
-        typename vector<T>::iterator i_cl = clusters.begin();
+        //typename vector<T>::iterator i_cl = clusters.begin();
         vector< list<T2> > connections = surf.adj_verts;
         
         unsigned int Nconns = connections.size();
@@ -479,7 +479,7 @@ namespace fslsurface_name {
         //first is connection
         //second is waypoint
         //assumes that we traverse the surface from 0 -> N-1
-        typename vector< vertex<T> >::const_iterator v_iter = surf.const_vbegin();
+        //typename vector< vertex<T> >::const_iterator v_iter = surf.const_vbegin();
         
         
        // cout<<"COMPUTE DIST "<<vert_index<<" "<<conns.size()<<endl;
@@ -619,8 +619,6 @@ namespace fslsurface_name {
         }
        // return distances;
     }
-    
-    
     
     template <class T, class T2>
     void sc_smooth_gaussian_geodesic( fslSurface<T,T2>& surf ,const unsigned int & index, const T & sigma , const T & extent , bool run4D )
@@ -773,7 +771,7 @@ namespace fslsurface_name {
           //  typename  vector<T>::iterator i_graph = graph.begin()+vertex_index;
             
             list< pair<T,T2> > points_to_visit;//with distance
-            typename list< pair<T2,T> >::iterator i_neigh_end = index_distance[vertex_index].end();
+            //typename list< pair<T2,T> >::iterator i_neigh_end = index_distance[vertex_index].end();
             //this is actually just copying info from center (directtly from index_distance)
             //this is for immediate neighbours
             for (typename list< pair<T2,T> >::iterator i_neigh = index_distance[vertex_index].begin(); i_neigh != index_distance[vertex_index].end(); ++i_neigh)
@@ -1358,7 +1356,7 @@ namespace fslsurface_name {
 //    cout<<"image match "<<i<<" "<<thresh<<endl;
 				imth[i] = ( static_cast<int>(image[i]+0.5) == static_cast<int>(thresh+0.5) ) ? 1 : 0 ;
 			}
-			thresh=0.5;
+			thresh=(T3)0.5;
 			//	imth[i] = ( image[i] == thresh ) ? image[i] : 0 ;
 		}else if (mode == GREATER_THAN) {
 			for (int i = 0 ; i < nvoxels; ++i)

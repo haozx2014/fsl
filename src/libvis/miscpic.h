@@ -115,7 +115,7 @@ namespace MISCPIC{
       int slicer(const NEWIMAGE::volume<float>& vol1,const NEWIMAGE::volume<float>& vol2,const char *opts, bool labelSlices=false, bool debug = false);
       int slicer(const NEWIMAGE::volume<float>& vol1,const NEWIMAGE::volume<float>& vol2,vector<string> inputOptions, bool labelSlices=false, bool debug = false);
 
-      inline int slicer(const NEWIMAGE::volume<float>& vol1, char *opts, bool labelSlices=false, bool debug = false)
+      inline int slicer(const NEWIMAGE::volume<float>& vol1,const char *opts, bool labelSlices=false, bool debug = false)
       { NEWIMAGE::volume<float> tmp(1,1,1); 
 	return this->slicer(vol1, tmp, opts, debug);}
       

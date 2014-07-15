@@ -755,7 +755,6 @@ int main(int argc,char *argv[])
 			fout<<"POINTS "<<total<<" float"<<endl;
 			
 			short count=0;
-			short count2=0;
 //calculate volumes
 			float volume=0;
 			for (vector< vector<float> >::iterator verts=contours.begin();verts!=contours.end();verts++)
@@ -988,7 +987,7 @@ int main(int argc,char *argv[])
 				
 				cout<<"replace verts"<<endl;
 				
-				meshUtils* m = new meshUtils(inmeshname.value(),static_cast<meshUtils::DataType>(1));
+				// meshUtils* m = new meshUtils(inmeshname.value(),static_cast<meshUtils::DataType>(1));
 
 				// MJ: WHAT IS GOING ON HERE?? APPARENTLY NOTHING, BUT WHY?
 				
@@ -1083,7 +1082,7 @@ int main(int argc,char *argv[])
 			  {
 			    if (verbose.value()) {
 			      if (abs(Msc.element(i,0))>3)
-				cout<<"F "<<Msc.element(i,0)<<" z "<<1-MISCMATHS::fdtr(df1,df2,Msc.element(i,0))<<" p "<<erfc(ftz.convert(Msc.element(i,0),df1,df2))<<endl;
+				cout<<"F "<<Msc.element(i,0)<<" z "<<1-MISCMATHS::fdtr(df1,df2,Msc.element(i,0))<<" p "<<MISCMATHS::erfc(ftz.convert(Msc.element(i,0),df1,df2))<<endl;
 			    }
 			    Msc.element(i,0)=1-MISCMATHS::fdtr(df1,df2,Msc.element(i,0));
 			  }

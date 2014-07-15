@@ -125,7 +125,7 @@ for fn in $imagelist ; do
     bnm=`$FSLDIR/bin/remove_ext $fn`;
     bnm=`basename $bnm`;
     fullpathfn=`$FSLDIR/bin/fsl_abspath $fn`;
-    $FSLDIR/bin/imln $fullpathfn $wdir/$bnm 
+    $FSLDIR/bin/imcp $fullpathfn $wdir/$bnm 
     newimlist="$newimlist $wdir/$bnm"
 done
 

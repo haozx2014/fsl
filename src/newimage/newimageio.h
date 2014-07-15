@@ -651,35 +651,30 @@ int save_volume_datatype(const volume<T>& source, const string& filename,short d
 	  copyconvert(source,svol);
 	  return save_volume(svol,filename);
 	}
-	break;
       case DT_UNSIGNED_CHAR:
 	{
 	  volume<char> svol;
 	  copyconvert(source,svol);
 	  return save_volume(svol,filename);
 	}
-	break;
       case DT_SIGNED_INT:
 	{
 	  volume<int> svol;
 	  copyconvert(source,svol);
 	  return save_volume(svol,filename);
 	}
-	break;
       case DT_FLOAT:
 	{
 	  volume<float> svol;
 	  copyconvert(source,svol);
 	  return save_volume(svol,filename);
 	}
-	break;
       case DT_DOUBLE:
 	{
 	  volume<double> svol;
 	  copyconvert(source,svol);
 	  return save_volume(svol,filename);
 	}
-	break;
       default:
 	ostringstream errmsg;
 	errmsg << "Fslread: DT " << datatype <<  " not supported";
@@ -705,35 +700,35 @@ int save_volume4D_datatype(const volume4D<T>& source, const string& filename,sho
 	  copyconvert(source,svol);
 	  return save_volume4D(svol,filename);
 	}
-	break;
+	// break;
       case DT_UNSIGNED_CHAR:
 	{
 	  volume4D<char> svol;
 	  copyconvert(source,svol);
 	  return save_volume4D(svol,filename);
 	}
-	break;
+	// break;
       case DT_SIGNED_INT:
 	{
 	  volume4D<int> svol;
 	  copyconvert(source,svol);
 	  return save_volume4D(svol,filename);
 	}
-	break;
+	// break;
       case DT_FLOAT:
 	{
 	  volume4D<float> svol;
 	  copyconvert(source,svol);
 	  return save_volume4D(svol,filename);
 	}
-	break;
+	// break;
       case DT_DOUBLE:
 	{
 	  volume4D<double> svol;
 	  copyconvert(source,svol);
 	  return save_volume4D(svol,filename);
 	}
-	break;
+	// break;
       default:
 	ostringstream errmsg;
 	errmsg << "Fslread: DT " << datatype <<  " not supported";
@@ -860,7 +855,7 @@ int read_orig_volume(volume<T>& target, const string& filename)
   int retval = read_volumeROI(target,filename,dtype,true,
 			0,0,0,-1,-1,-1,false);
   // only handle the most basic error (cannot read file) - all others can be dealt with above
-  if (retval & 1 == 1) { handle_read_error(retval,filename); }
+  if ((retval & 1) == 1) { handle_read_error(retval,filename); }
   return retval;
 }
 template <class T>
@@ -868,7 +863,7 @@ int read_orig_volume4D(volume4D<T>& target, const string& filename)
 {
   short dtype;
   int retval = read_volume4DROI(target,filename,dtype,true,0,0,0,0,-1,-1,-1,-1,false);
-  if (retval & 1 == 1) { handle_read_error(retval,filename); }
+  if ((retval & 1) == 1) { handle_read_error(retval,filename); }
   return retval;
 }
 

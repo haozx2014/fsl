@@ -84,6 +84,20 @@ using namespace Utilities;
 // If you want to dump variables directly to this stream, just implement
 //    ostream& operator<<(ostream& stream, const your_type& data);
 
+// Two new ones that aren't used very much
+#define LOG_SAFE_ELSE_CERR(x) (EasyLog::LogStarted()?(void)(LOG<<x):(void)(cout<<x)) 
+#define LOG_SAFE_ELSE_DISCARD(x) (EasyLog::LogStarted()?(void)(LOG<<x):(void)(0)) 
+
+
+#ifdef __FABBER_LIBRARYONLY
+// These names no longer have their original meaning in the library version
+#define LOG_ERR(x) ((void)((LOG<<x))) 
+#define LOG_ERR_SAFE(x) LOG_ERR(x)
+#define LOG_SAFE_ELSE_CERR(x) (EasyLog::LogStarted()?(void)(LOG<<x):(void)(cout<<x)) 
+#define LOG_SAFE_ELSE_DISCARD(x) (EasyLog::LogStarted()?(void)(LOG<<x):(void)(0)) 
+
+#else //__FABBER_LIBRARYONLY
+
 // Changed these to use cout rather than cerr -- since the logfile contains 
 // almost everything I don't expect people to redirect cout very often.
 
@@ -94,6 +108,9 @@ using namespace Utilities;
 #define LOG_ERR_SAFE(x) (cout<<x,EasyLog::LogStarted()?(void)(LOG<<x):(void)0)
 // This is safe to use if even if the log might not have started.
 // It should only be used in main()'s exception-catching routines
+
+
+#endif //__FABBER_LIBRARYONLY
 
 class EasyLog {
  public:

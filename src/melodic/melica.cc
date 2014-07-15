@@ -269,8 +269,8 @@ namespace Melodic {
 					w = w / norm2(w);  
 
 					//termination condition : angle between old and new < epsilon
-					if((norm2(w-w_old) < 0.001*opts.epsilon.value())&&(itt_ctr>10) || 
-	   				(norm2(w+w_old) < 0.001*opts.epsilon.value())&&(itt_ctr>10)){
+					if(((norm2(w-w_old) < 0.001*opts.epsilon.value())&&(itt_ctr>10)) || 
+					   ((norm2(w+w_old) < 0.001*opts.epsilon.value())&&(itt_ctr>10))){
 	 					break;
 				  	}
         	//cout << norm2(w-w_old) << "   " << norm2(w+w_old) << endl;

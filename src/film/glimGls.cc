@@ -70,8 +70,9 @@
 #include "glimGls.h"
 #include "miscmaths/miscmaths.h"
 #include "utils/log.h"
-#include "glimGls.h"
 #include "fslsurface/fslsurface.h"
+#include "miscmaths/t2z.h"
+#include "miscmaths/f2z.h"
 
 using namespace MISCMATHS;
 using namespace Utilities;
@@ -81,44 +82,60 @@ using namespace fslsurface_name;
 
 namespace FILM {
 
-  GlimGls::GlimGls(const int pnumTS, const int psizeTS, const int pnumParams) : 
+  GlimGls::GlimGls(const int pnumTS, const int psizeTS, const int pnumParams, const int pnContrasts, const int pnFContrasts) : 
     numTS(pnumTS),
     sizeTS(psizeTS),
+    nContrasts(pnContrasts),
+    nFContrasts(pnFContrasts),
     numParams(pnumParams),
-    corrections(numParams*numParams,numTS),
     b(numParams, numTS),
+    copes(nContrasts, numTS),
+    varcopes(nContrasts, numTS),  
+    fstats(nFContrasts,numTS),
     sigmaSquareds(numTS),
     dof(sizeTS - numParams)
-  {
-    I=IdentityMatrix(sizeTS);
-  }
+    {
+      I=IdentityMatrix(sizeTS);
+      fDof.resize(nFContrasts,0);
+    }
   
   void GlimGls::CleanUp()
-
   {
-    corrections.CleanUp();
+    copes.CleanUp();
+    varcopes.CleanUp();
     sigmaSquareds.CleanUp();
     b.CleanUp();
     r.CleanUp();
   }
 
-  void GlimGls::setData(const ColumnVector& y, const Matrix& x, const int ind)
-    {
+ void GlimGls::setData(const ColumnVector& y, const Matrix& x, const int ind, const Matrix& tContrasts, const Matrix& fContrasts)
+ {
       // compute b
-      //Matrix inv_xx = (x.t()*x).i();
       Matrix inv_xx = pinv(x.t()*x);
       b.Column(ind) = inv_xx*x.t()*y;
-
       // compute r
       Matrix R = I-x*inv_xx*x.t();
       r = R*y;
 
-      // compute sigma squareds 
       sigmaSquareds(ind) = (r.t()*r).AsScalar()/R.Trace();
+      for ( int tContrast=1;tContrast <= tContrasts.Nrows();tContrast++) {
+	Matrix con=tContrasts.Row(tContrast);
+	copes(tContrast,ind)=(con*b.Column(ind)).AsScalar();
+	double scale((con*inv_xx*con.t()).AsScalar());
+	if ( scale <= 0 )
+	  cerr << "Neff Error" << endl;
+	varcopes(tContrast,ind)=sigmaSquareds(ind)*scale;
+      }
+      for ( int fContrast=1;fContrast <= fContrasts.Nrows();fContrast++) {
+	Matrix fullFContrast( 0, tContrasts.Ncols() );
+	for (int tContrast=1; tContrast<=fContrasts.Ncols() ; tContrast++ )
+	  if (fContrasts(fContrast,tContrast)==1) fullFContrast &= tContrasts.Row(tContrast);
+	fDof[fContrast-1]=fullFContrast.Nrows();
+	fstats(fContrast,ind) = (b.Column(ind).t()*fullFContrast.t()*(fullFContrast*inv_xx*fullFContrast.t()*sigmaSquareds(ind)).i()*fullFContrast*b.Column(ind)).AsScalar()/(float)fullFContrast.Nrows();
+      }
+      // set corrections  SetCorrection(inv_xx, ind);
+ }
 
-      // set corrections
-      SetCorrection(inv_xx, ind);
-    }
 
     void GlimGls::Save(const volume<float>& mask, volume4D<float>& saveVolume, fslSurface<float, unsigned int>& saveSurface, const string& saveMode, const float reftdim)
     {
@@ -126,11 +143,27 @@ namespace FILM {
       Log& logger = LogSingleton::getInstance();
       for(int i = 1; i <= numParams; i++) //Beta
 	  saveData(logger.getDir() + "/pe" + num2str(i),b.Row(i),saveVolume,mask,true,false,-1,true,NIFTI_INTENT_ESTIMATE,saveSurface,saveMode);
+
+
+
+      ColumnVector zstat(numTS);
+      for ( int tContrast=1;tContrast <= nContrasts;tContrast++) {
+	  saveData(logger.getDir() + "/cope" + num2str(tContrast),copes.Row(tContrast),saveVolume,mask,true,false,-1,true,NIFTI_INTENT_ESTIMATE,saveSurface,saveMode);
+	  saveData(logger.getDir() + "/varcope" + num2str(tContrast),varcopes.Row(tContrast),saveVolume,mask,true,false,-1,true,NIFTI_INTENT_ESTIMATE,saveSurface,saveMode);
+	  RowVector tstat(SD(copes.Row(tContrast),sqrt(varcopes.Row(tContrast))));
+	  T2z::ComputeZStats(varcopes.Row(tContrast).AsColumn(), copes.Row(tContrast).AsColumn(), dof, zstat);
+	  saveData(logger.getDir() + "/tstat" + num2str(tContrast),tstat,saveVolume,mask,true,false,-1,true,NIFTI_INTENT_ESTIMATE,saveSurface,saveMode);
+	  saveData(logger.getDir() + "/zstat" + num2str(tContrast),zstat.AsRow(),saveVolume,mask,true,false,-1,true,NIFTI_INTENT_ESTIMATE,saveSurface,saveMode);
+      }
+      for ( int fContrast=1;fContrast <= nFContrasts;fContrast++) {
+	  saveData(logger.getDir() + "/fstat" + num2str(fContrast),fstats.Row(fContrast),saveVolume,mask,true,false,-1,true,NIFTI_INTENT_ESTIMATE,saveSurface,saveMode);
+	  F2z::ComputeFStats(fstats.Row(fContrast).AsColumn(), fDof[fContrast-1], dof, zstat);
+	  saveData(logger.getDir() + "/zfstat" + num2str(fContrast),zstat.AsRow(),saveVolume,mask,true,false,-1,true,NIFTI_INTENT_ESTIMATE,saveSurface,saveMode);
+      }
       saveData(logger.getDir() + "/sigmasquareds",sigmaSquareds,saveVolume,mask,true,false,-1,false,-1,saveSurface,saveMode);
       ColumnVector dofVec(1);
       dofVec = dof;
       write_ascii_matrix(logger.appendDir("dof"), dofVec);    
-      saveData(logger.getDir() + "/corrections",corrections,saveVolume,mask,true,true,reftdim,true,NIFTI_INTENT_NONE,saveSurface,saveMode);
     }
 
   void GlimGls::saveData(const string& outputName, const Matrix& data, volume4D<float>& saveVolume, const volume<float>& volumeMask, const  bool setVolumeRange, const bool setVolumeTdim, const int outputTdim, const bool setIntent, const int intentCode, fslSurface<float, unsigned int>& saveSurface, const string& saveMode)
@@ -141,7 +174,7 @@ namespace FILM {
 	for(unsigned int timepoint=0; timepoint < saveSurface.getNumberOfScalarData(); timepoint++)
            saveSurface.setScalar(timepoint,vertex,data(timepoint+1,vertex+1));
       writeGIFTI(saveSurface,outputName+".func.gii",GIFTI_ENCODING_B64GZ);
-    } else { //TODO this is just an example below - expand to fill logic
+    } else { 
       saveVolume.setmatrix(data,volumeMask);
       if ( setVolumeTdim ) 
 	saveVolume.settdim(outputTdim);
@@ -153,23 +186,6 @@ namespace FILM {
     }
   }
 
-
-  void GlimGls::SetCorrection(const Matrix& corr, const int ind)
-    {
-      Tracer ts("SetCorrection");
-
-      // puts Matrix corr which is p*p into Matrix correction
-      // as a p*p length row:
-      int p = corr.Nrows();
-      
-      for (int i = 1; i <= p; i++)
-	{
-	  for (int j = 1; j <= p; j++)
-	    {
-	      corrections((i-1)*p + j, ind) = corr(i,j); 
-	    }
-	}
-    }
 
 }
 

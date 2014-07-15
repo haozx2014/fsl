@@ -67,6 +67,7 @@
 #   Innovation Limited ("Isis"), the technology transfer company of the
 #   University, to negotiate a licence. Contact details are:
 #   innovation@isis.ox.ac.uk quoting reference DE/9564.
+export LC_NUMERIC=C
 
 subjdir=$1
 nproc=$2
@@ -76,13 +77,14 @@ nproc=$2
 #$ -N p_possum
 #$ -m ae
 
-echo "POSSUMDIR (before)" $POSSUMDIR
-if [ "${POSSUMDIR}" == "${FSLDEVDIR}" ] ; then
-   echo "POSSUMDIR (during)" $POSSUMDIR
-else
-    export POSSUMDIR=$FSLDIR
+# For all the users POSSUMDIR will be empty and therefore automatically become FSLDIR
+# For me POSSUMDIR is my FSLDEVDIR directory. This allows me to run POSSUM on the cluster 
+# without having to make it stable and wait for a day or find way to run my binaries. 
+# It just seemed the easiest way to get around this. It is in all POSSUM scripts so please
+# leave it that way if possible.
+if [ x${POSSUMDIR} = x ] ; then
+   export POSSUMDIR=$FSLDIR
 fi
-echo "POSSUMDIR (after)" $POSSUMDIR
 
 run(){
  echo "$1" >> $2/possum.log
@@ -99,6 +101,7 @@ run "${POSSUMDIR}/bin/signal2image -i ${subjdir}/signal -o ${subjdir}/image -p $
 echo Removing intermediate files
 if [ -e ${subjdir}/signal ]; then
       rm -rf ${subjdir}/diff_proc
+    #rm -rf ${subjdir}/matrix
 fi
 
 echo Adding noise
@@ -123,7 +126,8 @@ dim1=`fslval ${subjdir}/image_abs dim1`
 if [ $n = "snr" ]; then
   snr=$m
   if [ $snr != 0 ]; then
-     sigma=`echo " ${medint} / ( 2 * ${dim1} * ${snr} ) "| bc -l` #I worked this out ages ago.
+     #sigma=`echo " ${medint} / ( 2 * ${dim1} * ${snr} ) "| bc -l` #I worked this out ages ago.
+     sigma=`echo " ${medint} / $snr " | bc -l`
      echo "sigma ${sigma} snr ${snr} medintensity ${medint}" > ${subjdir}/noise 
   else
      echo "snr  0" > ${subjdir}/noise
@@ -137,6 +141,8 @@ else
 fi
 if [ $sigma != 0 ]; then
    mv ${subjdir}/signal ${subjdir}/signal_nonoise
+   sigma=`echo "${sigma} / ${dim1} " | bc -l `
+   echo sigma for system noise is $sigma
    run "${POSSUMDIR}/bin/systemnoise --in=${subjdir}/signal_nonoise --out=${subjdir}/signal --sigma=${sigma}" $subjdir
 fi
 run "${POSSUMDIR}/bin/signal2image -i ${subjdir}/signal -o ${subjdir}/image -p ${subjdir}/pulse -a --homo" $subjdir

@@ -95,7 +95,13 @@ int main(int argc, char *argv[])
     Log& logger = LogSingleton::getInstance();
     FilmGlsOptions& globalopts = FilmGlsOptions::getInstance();
     globalopts.parse_command_line(argc, argv, logger);
-    cout << "Running in " << globalopts.analysisMode.value() << " mode." << endl;
+    Matrix tContrasts,fContrasts;
+    if (globalopts.contrastFile.value() != "") {
+      tContrasts=read_vest(globalopts.contrastFile.value());
+    }
+    if (globalopts.fContrastFile.value() != "") {
+      fContrasts=read_vest(globalopts.fContrastFile.value());
+    }
     // load data
     string epifname("epivolume");
     volume4D<float> input_data, reference;
@@ -148,7 +154,7 @@ int main(int argc, char *argv[])
 
     // Setup GLM:
     int numParams = paradigm.getDesignMatrix().Ncols();
-    GlimGls glimGls(numTS, sizeTS, numParams);
+    GlimGls glimGls(numTS, sizeTS, numParams, tContrasts.Nrows(),fContrasts.Nrows());
 
     // Residuals container:
     Matrix residuals(sizeTS, numTS);
@@ -162,7 +168,7 @@ int main(int argc, char *argv[])
 	cout << "Calculating residuals..." << endl; 
 	for(int i = 1; i <= numTS; i++)
 	  {						    
-            glimGls.setData(datam.Column(i), paradigm.getDesignMatrix(i,mask,labels), i);
+            glimGls.setData(datam.Column(i), paradigm.getDesignMatrix(i,mask,labels), i, tContrasts, fContrasts);
 	    residuals.Column(i)=glimGls.getResiduals();
 	  }
 	cout << "Completed" << endl; 
@@ -223,7 +229,7 @@ int main(int argc, char *argv[])
 	acEst.preWhiten(datam.Column(i), xw, i, effectiveDesign);   
         datam.Column(i)=xw;
       }
-      glimGls.setData(datam.Column(i), effectiveDesign, i);
+      glimGls.setData(datam.Column(i), effectiveDesign, i, tContrasts, fContrasts);
       residuals.Column(i)=glimGls.getResiduals();
       if(globalopts.output_pwdata.value() || globalopts.verbose.value())
         mean_prewhitened_dm+=effectiveDesign;	
@@ -267,8 +273,7 @@ int main(int argc, char *argv[])
     // Write out threshac:
     Matrix& threshacm = acEst.getEstimates();
     int cutoff = sizeTS/2;
-    if( globalopts.tukeysize.value()>0 ) cutoff = globalopts.tukeysize.value();
-    if( globalopts.noest.value() ) cutoff=1;
+    if(globalopts.tukeysize.value()>0) cutoff = globalopts.tukeysize.value();
     threshacm = threshacm.Rows(1,MISCMATHS::Max(1,cutoff)); 
 
 

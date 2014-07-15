@@ -1002,7 +1002,6 @@ namespace fslsurface_name {
 			cout<<*i_sc<<" "<<endl;
 		}
     }
-    template void fslSurface<float,unsigned int>::printScalars(const unsigned int & index );
 
 
 	template<class T, class T2>

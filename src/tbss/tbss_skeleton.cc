@@ -183,9 +183,9 @@ for(int z=1;z<im.zsize()-1;z++) for(int y=1;y<im.ysize()-1;y++) for(int x=1;x<im
 	if (CofGl > .1)  /* is CofG far enough away from centre voxel? */
 	  {
 	    // if (CofGl > 1.4) cout << CofGx << " " << CofGy << " " << CofGz << " " << Sum << endl;
-	    xxx = MISCMATHS::Max( MISCMATHS::Min( round(CofGx/CofGl) , 1 ) , -1);
-	    yyy = MISCMATHS::Max( MISCMATHS::Min( round(CofGy/CofGl) , 1 ) , -1);
-	    zzz = MISCMATHS::Max( MISCMATHS::Min( round(CofGz/CofGl) , 1 ) , -1);
+	    xxx = MISCMATHS::Max( MISCMATHS::Min( MISCMATHS::round(CofGx/CofGl) , 1 ) , -1);
+	    yyy = MISCMATHS::Max( MISCMATHS::Min( MISCMATHS::round(CofGy/CofGl) , 1 ) , -1);
+	    zzz = MISCMATHS::Max( MISCMATHS::Min( MISCMATHS::round(CofGz/CofGl) , 1 ) , -1);
 	  }
 	else
 	  // {{{ find direction of max curvature
@@ -456,10 +456,10 @@ if (outname.set())
 	  
 	  for(float rr=1; rr<=r+0.1; rr++) /* search outwards from centre to current voxel - test that distancemap always increasing */
 	    {
-	      int xxx1=round(rr*xxx/r);
-	      int yyy1=round(rr*yyy/r);
-	      int xxx2=round((rr+1)*xxx/r);
-	      int yyy2=round((rr+1)*yyy/r);
+	      int xxx1=MISCMATHS::round(rr*xxx/r);
+	      int yyy1=MISCMATHS::round(rr*yyy/r);
+	      int xxx2=MISCMATHS::round((rr+1)*xxx/r);
+	      int yyy2=MISCMATHS::round((rr+1)*yyy/r);
 	      if ( distancemap(x+xxx1,y+yyy1,z) > distancemap(x+xxx2,y+yyy2,z) )
 		allok=0;
 	    }

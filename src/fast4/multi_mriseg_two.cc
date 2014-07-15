@@ -355,7 +355,7 @@ double inner=0.0f;
     for(int n=-1;n<=1;n++)
 	for(int m=-1;m<=1;m++)
 	     for(int l=-1;l<=1;l++)
-		if((m_mask(x+l, y+m, z+n)==1))
+		if(m_mask(x+l, y+m, z+n)==1)
 		  inner+=MRFWeightsAM(l,m,n)*m_post.value(x+l, y+m, z+n, c);
    return inner;
 }

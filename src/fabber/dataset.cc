@@ -70,8 +70,10 @@
 #include "dataset.h"
 
 using namespace MISCMATHS;
-using namespace NEWIMAGE;
 using namespace std;
+
+#ifndef __FABBER_LIBRARYONLY 
+using namespace NEWIMAGE;
 
 void DumpVolumeInfo(const volume4D<float>& info, string indent = "", ostream& out = LOG)
 {
@@ -95,11 +97,44 @@ void DumpVolumeInfo(const volume<float>& info, string indent = "", ostream& out 
       << ", " << info.intent_param(2) << ", " << info.intent_param(3) << endl;
 }
 
+#endif //__FABBER_LIBRARYONLY
+
+// Inputs: reads various options from args, and loads the input data
+// Outputs: masks is set (except with UsingMatrixIO) and voxelData is populated
 void DataSet::LoadData(ArgsType& args)
 {
   Tracer_Plus tr("LoadData");
+
+  if (EasyOptions::UsingMatrixIO())
+    {
+      string dataFile = args.Read("data");
+      voxelData = EasyOptions::InMatrix(dataFile);
+
+      string voxelCoordsFile = args.ReadWithDefault("voxelCoords","");
+      if (voxelCoordsFile != "")
+      {
+	voxelCoords = EasyOptions::InMatrix(voxelCoordsFile);
+	// leave mask undefined
+      }
+      else
+      {
+        // voxelCoords is left undefined -- hope it's not used!!
+      }
+
+      string suppdataFile = args.ReadWithDefault("suppdata","none");
+      if (suppdataFile != "none") {
+	voxelSuppData = EasyOptions::InMatrix(suppdataFile);
+      }
+
+      return;
+    }
+
+#ifdef __FABBER_LIBRARYONLY
+  throw Logic_error("NEWIMAGE support was not compiled in, but UsingMatrixIO is false!");
+#else
   string dataOrder = args.ReadWithDefault("data-order","interleave");
 
+  // mask
       string maskFile = args.Read("mask");
       LOG_ERR("    Loading mask data from '" + maskFile << "'" << endl);
       read_volume(mask,maskFile);
@@ -116,6 +151,30 @@ void DataSet::LoadData(ArgsType& args)
 	    coordvol.setvoxelts(vcoord,i,j,k);
 	  } } }
       voxelCoords=coordvol.matrix(mask);
+      mask.binarise(1e-16,mask.max()+1,exclusive);
+
+      // supplementary data
+      string suppdataFile = args.ReadWithDefault("suppdata","none");
+      if (suppdataFile != "none") {
+	LOG_ERR("    Loading supplementary data from '" + suppdataFile << "'" << endl);
+	volume4D<float> suppdata;
+	read_volume4D(suppdata,suppdataFile);
+	DumpVolumeInfo(suppdata);
+
+	LOG << "     Applying mask to supplementary data..." << endl;
+	try {
+	  voxelSuppData=suppdata.matrix(mask);
+	} catch (exception) {
+	  LOG_ERR("\n*** NEWMAT error while thresholding SUPPLEMENTARY time-series... "
+		  << "Most likely a dimension mismatch. ***\n");
+        DumpVolumeInfo(suppdata);
+        LOG_ERR("Mask:\n");
+        DumpVolumeInfo(mask);
+        LOG_ERR("\nThis is fatal... rethrowing exception.\n");
+        throw;
+      }
+
+      }
 
   if (dataOrder == "singlefile")
     {
@@ -133,7 +192,7 @@ void DataSet::LoadData(ArgsType& args)
       
 
       LOG << "    Applying mask to data..." << endl;
-      mask.binarise(1e-16,mask.max()+1,exclusive);
+      //mask.binarise(1e-16,mask.max()+1,exclusive);
       // threshold using mask:
       try {
 	voxelData=data.matrix(mask);
@@ -171,7 +230,7 @@ void DataSet::LoadData(ArgsType& args)
 
 	  if (nTimes == -1) 
 	    nTimes = dataSets[0].tsize();
-	  else if (nTimes != dataSets.back().tsize() & dataOrder == "interleave")
+	  else if ( ( nTimes != dataSets.back().tsize() ) & dataOrder == "interleave")
 	    // data sets only strictly need same number of time points if they are to be interleaved
 	    throw Invalid_option("Data sets must all have the same number of time points");
 	}
@@ -187,7 +246,7 @@ void DataSet::LoadData(ArgsType& args)
       //DumpVolumeInfo(mask);
 
       LOG << "    Applying mask to all data sets..." << endl;
-      mask.binarise(1e-16,mask.max()+1,exclusive);
+      //mask.binarise(1e-16,mask.max()+1,exclusive);
       // threshold using mask:
       for (int i = 0; i < nSets; i++)
 	{
@@ -245,5 +304,6 @@ void DataSet::LoadData(ArgsType& args)
     }
   else
     throw Invalid_option(("Unrecognized --dataorder: " + dataOrder + " (try interleave or singlefile)").c_str());
+#endif //__FABBER_LIBRARYONLY
 }
 

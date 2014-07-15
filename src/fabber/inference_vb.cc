@@ -69,6 +69,10 @@
 #include "inference_vb.h"
 #include "convergence.h"
 
+#ifndef __FABBER_LIBRARYONLY
+using namespace NEWIMAGE;
+#endif
+
 void VariationalBayesInferenceTechnique::Setup(ArgsType& args) 
 { 
   Tracer_Plus tr("VariationalBayesInferenceTechnique::Setup");
@@ -88,7 +92,7 @@ void VariationalBayesInferenceTechnique::Setup(ArgsType& args)
       model->HardcodedInitialDists(*loadPrior, *loadPosterior);
   if (filePrior != "modeldefault") loadPrior->Load(filePrior);
   if (filePosterior != "modeldefault") loadPosterior->Load(filePosterior);
- 
+
   if ( (loadPosterior->GetSize() != model->NumParams()) 
     || (loadPrior->GetSize() != model->NumParams()) )
       throw Invalid_option("Size mismatch: model wants " 
@@ -136,6 +140,44 @@ void VariationalBayesInferenceTechnique::Setup(ArgsType& args)
     }
   }
 
+  // Specify prior types and sources
+// Section in which spatial priors can be specified by parameter name on command line
+// param_spatial_priors_bymane (PSP_byname)
+// this overwrites any existing entries in the string
+ vector<string> modnames; //names of model parameters
+ imagepriorstr.resize(model->NumParams()); 
+ model->NameParams(modnames);
+ int npspnames=0;
+ while (true)
+   {
+     npspnames++;
+     string bytypeidx = args.ReadWithDefault("PSP_byname"+stringify(npspnames),"stop!");
+     if (bytypeidx == "stop!") break; //no more spriors have been specified
+
+     // deal with the specification of this sprior (by name)
+     //compare name to those in list of model names
+     bool found=false;
+     for (int p=0; p<model->NumParams(); p++) {
+       if (bytypeidx == modnames[p]) {
+	 found = true;
+	 char pspstype = convertTo<char>(args.Read("PSP_byname"+stringify(npspnames)+"_type"));
+	 PriorsTypes[p]=pspstype;
+	 PSPidx.push_back(p); //record the index at which a PSP has been defined for use in spatialvb setup
+	 LOG_ERR("PSP_byname parameter " << bytypeidx << " at entry " << p << ", type: " << pspstype << endl);
+
+	 // now read in file name for an image prior (if appropriate)
+	 if (pspstype == 'I') {
+	   imagepriorstr[p] = args.Read("PSP_byname"+stringify(npspnames)+"_image");
+	 }
+       }
+     }
+     if (!found) {
+       throw Invalid_option("ERROR: Prior specification by name, parameter " + bytypeidx + " does not exist in the model\n");
+     }
+   }
+
+
+
   // Fix the linearization centres?
   lockedLinearFile = args.ReadWithDefault("locked-linear-from-mvn","");
 
@@ -155,8 +197,10 @@ void VariationalBayesInferenceTechnique::Setup(ArgsType& args)
     conv = new FchangeConvergenceDetector(its, 0.01);
   else if (convergence == "freduce")
     conv = new FreduceConvergenceDetector(its, 0.01);
-  else if (convergence == "trialmode")
-    conv = new TrialModeConvergenceDetector(its, 10, 0.01);
+  else if (convergence == "trialmode") {
+    int maxtrials = convertTo<int>(args.ReadWithDefault("max-trials","10"));
+    conv = new TrialModeConvergenceDetector(its, maxtrials, 0.01);
+  }
   else if (convergence == "lm")
     conv = new LMConvergenceDetector(its,0.01);
   else
@@ -183,20 +227,45 @@ void VariationalBayesInferenceTechnique::Setup(ArgsType& args)
 void VariationalBayesInferenceTechnique::DoCalculations(const DataSet& allData) 
 {
   Tracer_Plus tr("VariationalBayesInferenceTechnique::DoCalculations");
+
+  cout << "here" << endl;
   
-  const Matrix& data = allData.GetVoxelData();
+  // extract data (and the coords) from allData for the (first) VB run
+  const Matrix& origdata = allData.GetVoxelData();
+  //cerr << "Data MaxAbsValue = " << MaximumAbsoluteValue(data) << endl;
   const Matrix & coords = allData.GetVoxelCoords();
+  const Matrix & suppdata = allData.GetVoxelSuppData();
   // Rows are volumes
   // Columns are (time) series
   // num Rows is size of (time) series
-  // num Cols is size of volumes       
-  int Nvoxels = data.Ncols();
-  if (data.Nrows() != model->NumOutputs())
+  // num Cols is size of volumes
+
+  // pass in some (dummy) data/coords here just in case the model relies upon it
+  // use the first voxel values as our dummies
+  if (suppdata.Ncols() > 0) {
+    model->pass_in_data( origdata.Column(1) , suppdata.Column(1) );
+  }
+  else {
+    model->pass_in_data( origdata.Column(1) );
+  }
+  model->pass_in_coords(coords.Column(1));
+
+       
+  int Nvoxels = origdata.Ncols();
+  if (origdata.Nrows() != model->NumOutputs())
     throw Invalid_option("Data length (" 
-      + stringify(data.Nrows())
+      + stringify(origdata.Nrows())
       + ") does not match model's output length ("
       + stringify(model->NumOutputs())
       + ")!");
+
+#ifdef __FABBER_MOTION
+  MCobj mcobj(allData);
+#endif //__FABBER_MOTION
+
+  Matrix data(origdata.Nrows(),Nvoxels);
+  data = origdata;
+  Matrix modelpred(model->NumOutputs(),Nvoxels); //use this to store the model predictions in to pass to motion correction routine
 
   assert(resultMVNs.empty()); // Only call DoCalculations once
   resultMVNs.resize(Nvoxels, NULL);
@@ -221,19 +290,56 @@ void VariationalBayesInferenceTechnique::DoCalculations(const DataSet& allData)
   const int nFwdParams = initialFwdPrior->GetSize();
   const int nNoiseParams = initialNoisePrior->OutputAsMVN().GetSize(); 
 
-  // Reverse order (to test that everything is being properly reset):
-  //for (int voxel = Nvoxels; voxel >=1; voxel--) 
-  
+  // sort out loading for 'I' prior
+  vector<ColumnVector> ImagePrior(nFwdParams);
+#ifndef __FABBER_LIBRARYONLY
+  volume4D<float> imagevol;
+#endif
+  for (int k=1; k<=nFwdParams; k++) {
+    if (PriorsTypes[k-1] == 'I') {
+      LOG_ERR("Reading Image prior ("<<k<<"): " << imagepriorstr[k-1] << endl);
+      if (EasyOptions::UsingMatrixIO())
+	{
+	  ImagePrior[k-1] = EasyOptions::InMatrix(imagepriorstr[k-1]);
+	}
+      else
+	{
+#ifdef __FABBER_LIBRARYONLY
+	  throw Logic_error("Should not reach this point!");
+#else
+	  read_volume4D(imagevol,imagepriorstr[k-1]);
+	  ImagePrior[k-1] = (imagevol.matrix(allData.GetMask())).AsColumn();
+#endif //__FABBER_LIBRARYONLY
+      }
+  }
+ }
+
+  // main loop over motion correction iterations and VB calculations
+  bool continuefromprevious = false; //indicates that we should continue from a previous run (i.e. after a motion correction step)
+  for (int step = 0; step <= Nmcstep; step++) {
+    if (step>0) cout << endl << "Motion correction step " << step << " of " << Nmcstep << endl;
+
+  // loop over voxels doing VB calculations
   for (int voxel = 1; voxel <= Nvoxels; voxel++)
     {
       ColumnVector y = data.Column(voxel);
       ColumnVector vcoords = coords.Column(voxel);
-      model->pass_in_data( y );
+      if (suppdata.Ncols() > 0) {
+	ColumnVector suppy = suppdata.Column(voxel);
+	model->pass_in_data( y , suppy );
+      }
+      else {
+	model->pass_in_data( y );
+      }
       model->pass_in_coords(vcoords);
       NoiseParams* noiseVox = NULL;
       
-      // if (continuingFromFile)
-      if (initialNoisePosterior == NULL) // continuing noise params from file 
+      if (continuefromprevious) {
+	// noise params come from resultMVN
+	noiseVox = noise->NewParams();
+	noiseVox->InputFromMVN( resultMVNs.at(voxel-1)->GetSubmatrix(nFwdParams+1, nFwdParams+nNoiseParams) );
+      }
+      else if (initialNoisePosterior == NULL) // continuing noise params from file 
       {
         assert(continuingFromFile);
         assert(continueFromDists.at(voxel-1)->GetSize() == nFwdParams+nNoiseParams);
@@ -250,6 +356,8 @@ void VariationalBayesInferenceTechnique::DoCalculations(const DataSet& allData)
       const NoiseParams* noiseVoxPrior = initialNoisePrior;
       NoiseParams* const noiseVoxSave = noiseVox->Clone();
       
+
+      // give an indication of the progress through the voxels
       LOG << "  Voxel " << voxel << " of " << Nvoxels << endl;
       if (fmod(voxel,floor(Nvoxels/10))==0) {cout << ". " << flush;}
 
@@ -259,8 +367,13 @@ void VariationalBayesInferenceTechnique::DoCalculations(const DataSet& allData)
 
       MVNDist fwdPrior( *initialFwdPrior );
       MVNDist fwdPosterior;
+      if (continuefromprevious) {
+	//use result from a previous run within fabber (presumably after motion correction)
+	fwdPosterior = resultMVNs.at(voxel-1)->GetSubmatrix(1, nFwdParams);
+      }
       if (continuingFromFile)
       {
+	//use results from a previous run loaded from a file
         assert(initialFwdPosterior == NULL);
         fwdPosterior = continueFromDists.at(voxel-1)->GetSubmatrix(1, nFwdParams);
       }
@@ -274,14 +387,24 @@ void VariationalBayesInferenceTechnique::DoCalculations(const DataSet& allData)
 
 
       MVNDist fwdPosteriorSave(fwdPosterior);
+      MVNDist fwdPriorSave(fwdPrior);
 
       
       LinearizedFwdModel linear( model );
       
       // Setup for ARD (fwdmodel will decide if there is anything to be done)
       double Fard = 0;
-      model->SetupARD( fwdPosterior, fwdPrior, Fard );
-      
+      model->SetupARD( fwdPosterior, fwdPrior, Fard ); // THIS USES ARD IN THE MODEL AND IS DEPRECEATED
+      Fard = noise->SetupARD( model->ardindices, fwdPosterior, fwdPrior );
+
+      // Image priors
+      for (int k=1; k<=nFwdParams; k++) {
+	if (PriorsTypes[k-1] == 'I') {
+	  ColumnVector thisimageprior;
+	  thisimageprior = ImagePrior[k-1];
+	  fwdPrior.means(k) = thisimageprior(voxel);
+	}
+      }
 
       try
 	{
@@ -292,6 +415,7 @@ void VariationalBayesInferenceTechnique::DoCalculations(const DataSet& allData)
 
 	  conv->Reset();
 
+	  // START the VB updates and run through the relevant iterations (according to the convergence testing)
 	  int iteration = 0; //count the iterations
 	  do 
 	    {
@@ -299,6 +423,7 @@ void VariationalBayesInferenceTechnique::DoCalculations(const DataSet& allData)
 		{
 		  *noiseVox = *noiseVoxSave;  // copy values, not pointers!
 		  fwdPosterior = fwdPosteriorSave;
+		  fwdPrior = fwdPriorSave; // need to revert prior too (in case ARD is in place)
 		  linear.ReCentre( fwdPosterior.means );
 		}
 	      
@@ -315,10 +440,14 @@ void VariationalBayesInferenceTechnique::DoCalculations(const DataSet& allData)
               {
 		*noiseVoxSave = *noiseVox;  // copy values, not pointers!
                 fwdPosteriorSave = fwdPosterior;
+		fwdPriorSave = fwdPrior;
               }
 
 	      // Do ARD updates (model will decide if there is anything to do here)
-	      if (iteration > 0) { model->UpdateARD( fwdPosterior, fwdPrior, Fard ); }
+	      if (iteration > 0) { 
+		model->UpdateARD( fwdPosterior, fwdPrior, Fard ); // THIS USES ARD IN THE MODEL AND IS DEPRECEATED
+		Fard = noise->UpdateARD( model->ardindices, fwdPosterior, fwdPrior );
+	      }
 
 	      // Theta update
 	      noise->UpdateTheta( *noiseVox, fwdPosterior, fwdPrior, linear, y, NULL, conv->LMalpha() );
@@ -362,12 +491,15 @@ void VariationalBayesInferenceTechnique::DoCalculations(const DataSet& allData)
 	      iteration++;
 	    }           
 	  while ( !conv->Test( F ) );
+	  // END of VB updates
 
 	  // Revert to old values at last stage if required
 	  if ( conv-> NeedRevert() )
           {
 	    *noiseVox = *noiseVoxSave;  // copy values, not pointers!
             fwdPosterior = fwdPosteriorSave;
+	    fwdPrior = fwdPriorSave;
+	    linear.ReCentre( fwdPosterior.means ); //just in case we go on to use this in motion correction
 	  }
 	  conv->DumpTo(LOG, "    ");
 	} 
@@ -394,16 +526,18 @@ void VariationalBayesInferenceTechnique::DoCalculations(const DataSet& allData)
 	  LOG_ERR("    Going on to the next voxel" << endl);
 	}
       
+      // now write the results to resultMVNs
       try {
 
-	LOG << "    Final parameter estimates are:" << endl;
+	LOG << "    Final parameter estimates (" << fwdPosterior.means.Nrows() << "x" << fwdPosterior.means.Ncols() << ") are: " << fwdPosterior.means.t() << endl;
 	linear.DumpParameters(fwdPosterior.means, "      ");
 	
-	assert(resultMVNs.at(voxel-1) == NULL);
+	//assert(resultMVNs.at(voxel-1) == NULL); // this is no longer a good check, since we might voerwrite previous results here
 	resultMVNs.at(voxel-1) = new MVNDist(
 	  fwdPosterior, noiseVox->OutputAsMVN() );
 	if (needF)
 	  resultFs.at(voxel-1) = F;
+	modelpred.Column(voxel) = linear.Offset(); // get the model prediction which is stored within the linearized forward model
 
       } catch (...) {
 	// Even that can fail, due to results being singular
@@ -416,11 +550,22 @@ void VariationalBayesInferenceTechnique::DoCalculations(const DataSet& allData)
 
 	if (needF)
 	  resultFs.at(voxel-1) = F;
+	modelpred.Column(voxel) = linear.Offset(); // get the model prediction which is stored within the linearized forward model
       }
       
       delete noiseVox; noiseVox = NULL;
       delete noiseVoxSave;
-    }
+    } //END of voxelwise updates
+
+  //MOTION CORRECTION
+  if (step<Nmcstep) { //dont do motion correction on the last run though as that would be a waste
+#ifdef __FABBER_MOTION
+     mcobj.run_mc(modelpred,data);
+#endif //__FABBER_MOTION
+  }
+
+  continuefromprevious = true; //we now take resultMVNs and use these as the starting point if we are to run again
+  }// END of Steps that include motion correction and VB updates
 
     while (continueFromDists.size()>0)
     {

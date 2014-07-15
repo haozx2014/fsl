@@ -111,7 +111,7 @@ namespace FILM {
 	}
 
       void calcRaw(int lag = 0);
-      void spatiallySmooth(const ColumnVector& epivol, int masksize, int usanthresh, const NEWIMAGE::volume<float>& usan_vol, int lag=0);
+      void spatiallySmooth(const ColumnVector& epivol, int masksize, double usanthresh, const NEWIMAGE::volume<float>& usan_vol, int lag=0);
       void spatiallySmooth(const fslSurface<float, unsigned int> surfaceData, const float sigma, const float extent, int lag=0); 
       void applyConstraints();
       void filter(const ColumnVector& filterFFT);
@@ -119,7 +119,7 @@ namespace FILM {
       void pava();
       void preWhiten(const ColumnVector& in, ColumnVector& ret, int i, Matrix& dmret, bool highfreqremovalonly=false);
       void setDesignMatrix(const Matrix& dm);
-      int establishUsanThresh(const ColumnVector& epivol);
+      double establishUsanThresh(const ColumnVector& epivol);
 
       void getMeanEstimate(ColumnVector& ret);
 

@@ -2,7 +2,7 @@
 
       Michael Chappell - IBME & FMRIB Image Analysis Group
 
-      Copyright (C) 2010 University of Oxford */
+      Copyright (C) 2010-2011 University of Oxford */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -74,25 +74,212 @@
 
 using namespace MISCMATHS;
 
+#include "utils/tracer_plus.h"
+
+using namespace Utilities;
+
 namespace OXASL {
- 
-  //Arterial
-  ColumnVector kcblood_nodisp(const ColumnVector& tis, float deltblood, float taub, float T_1b, bool casl);
-  ColumnVector kcblood_gammadisp(const ColumnVector& tis, float deltblood, float taub, float T_1b, float s, float p, bool casl);
-  ColumnVector kcblood_gvf(const ColumnVector& tis, float deltblood, float T_1b, float s, float p, bool casl);
-  ColumnVector kcblood_gaussdisp(const ColumnVector& tis, float deltblood, float taub, float T_1b, float sig1, float sig2, bool casl);
-  ColumnVector kcblood_spatialgaussdisp(const ColumnVector& tis, float deltblood, float taub, float T_1b, float k, bool casl);
-  ColumnVector kcblood_gallichan(const ColumnVector& tis, float deltblood, float taub, float T_1b, float xdivVm, bool casl);
 
-  //Tissue
-  ColumnVector kctissue_nodisp(const ColumnVector& tis, float delttiss, float tau, float T_1b, float T_1app);
-  ColumnVector kctissue_gammadisp(const ColumnVector& tis, float delttiss, float tau, float T_1b, float T_1app, float s, float p);
-  ColumnVector kctissue_gvf(const ColumnVector& tis, float delttiss, float T_1b, float T_1app, float s, float p);
-  ColumnVector kctissue_gaussdisp(const ColumnVector& tis, float delttiss, float tau, float T_1b, float T_1app, float sig1, float sig2);
+  // generic AIF model class
+  class AIFModel {
+  public:
+    //evaluate the model
+    virtual double kcblood(const double ti, const double deltblood, const double taub, const double T_1b, bool casl,const ColumnVector dispparam) const = 0;
+    //report the number of dispersion parameters 
+    virtual int NumDisp() const = 0;
+    // return default priors for the parameters
+    virtual ColumnVector Priors() const { return priors; }
+    virtual string Name() const = 0;
 
-  //functions
-  float icgf(float a, float x);
-  float gvf(float t, float s, float p);
+  protected:
+    ColumnVector priors; //list of prior means and precisions - all means first then precisions
+
+  };
+
+  //Specific AIF models
+  class AIFModel_nodisp : public AIFModel {
+    //AIFModel_nodisp() {}
+    virtual double kcblood(const double ti, const double deltblood, const double taub, const double T_1b, bool casl, const ColumnVector dispparam) const;
+  virtual int NumDisp() const {return 0;}
+  virtual string Name() const { return "None"; }
+  };
+
+  class AIFModel_gammadisp : public AIFModel {
+  public:
+    AIFModel_gammadisp() { priors.ReSize(4); priors << 2 << -0.3 << 10 << 10; }
+    virtual double kcblood(const double ti, const double deltblood, const double taub, const double T_1b, bool casl,const ColumnVector dispparam) const;
+    virtual int NumDisp() const {return 2;}
+    virtual string Name() const { return "Gamma dispersion kernel"; }
+  };
+
+  //  double kcblood_gvf(const double ti, const double deltblood,const double taub,const double T_1b, const double s, const double p, bool casl);
+  //  double kcblood_gaussdisp(const double ti, const double deltblood, const double taub, const double T_1b, const double sig1, const double sig2, bool casl);
+  //  double kcblood_spatialgaussdisp(const double ti, const double deltblood, const double taub, const double T_1b, const double k, bool casl);
+  //  double kcblood_gallichan(const double ti, const double deltblood, const double taub, const double T_1b, const double xdivVm, bool casl);
+
+  // -------------
+  //generic residue function model class
+  class ResidModel {
+  public:
+    virtual double resid(const double ti, const double fcalib, const double T_1, const double T_1b, const double lambda, const ColumnVector residparam) const = 0;
+    //report the number of residue function parameters
+    virtual int NumResid() const = 0;
+    // return the default priors for the parameters
+    virtual ColumnVector Priors() const {return residpriors;}
+    virtual string Name() const = 0;
+
+  protected:
+    ColumnVector residpriors;
+  };
+
+  //specific residue function models
+  class ResidModel_wellmix : public ResidModel {
+  public:
+    virtual double resid(const double ti, const double fcalib, const double T_1, const double T_1b, const double lambda, const ColumnVector residparam) const;
+
+    virtual int NumResid() const {return 0;}
+    virtual string Name() const { return "Well mixed"; }
+  };
+
+  class ResidModel_simple : public ResidModel {
+  public:
+    virtual double resid(const double ti, const double fcalib, const double T_1, const double T_1b, const double lambda, const ColumnVector residparam) const;
+    
+    virtual int NumResid() const {return 0;}
+    virtual string Name() const { return "Simple"; }
+  };
+
+  class ResidModel_imperm : public ResidModel {
+  public:
+    ResidModel_imperm() { residpriors.ReSize(2); residpriors << 0.5 << 10; }
+    virtual double resid(const double ti, const double fcalib, const double T_1, const double T_1b, const double lambda, const ColumnVector residparam) const;
+
+    virtual int NumResid() const {return 1;}
+    virtual string Name() const { return "Impermeable"; }
+  };
+
+  class ResidModel_twocpt : public ResidModel {
+  public:
+    ResidModel_twocpt() { residpriors.ReSize(2); residpriors << 0.8 << 10; }
+    virtual double resid(const double ti, const double fcalib, const double T_1, const double T_1b, const double lambda, const ColumnVector residparam) const;
+
+    virtual int NumResid() const {return 1;}
+    virtual string Name() const { return "Two comparment (no backflow, no venous output)"; }
+  };
+
+  class ResidModel_spa : public ResidModel {
+  public:
+    ResidModel_spa() { residpriors.ReSize(6); residpriors << 0.02 << 0.03 << 2 << 1e-3 << 1e12 << 10; }
+    virtual double resid(const double ti, const double fcalib, const double T_1, const double T_1b, const double lambda, const ColumnVector residparam) const;
+
+    virtual int NumResid() const {return 3;}
+    virtual string Name() const { return "Single Pass Approximation (2 compartment, no backflow)"; }
+  };
+
+  // ------------
+  //generic tissue model class
+  class TissueModel {
+  public:
+    //evalute the model
+    virtual double kctissue(const double ti, const double fcalib, const double delttiss, const double tau, const double T_1b, const double T_1, const double lambda, const bool casl, const ColumnVector dispparam, const ColumnVector residparam) const = 0;
+    // report the number of dipersion parameters
+    virtual int NumDisp() const = 0;
+    // report the number of residue function parameters (beyond the normal ones)
+    virtual int NumResid() const = 0;
+    // return default priors for the parameters
+    virtual ColumnVector DispPriors() const { return disppriors; }
+    virtual ColumnVector ResidPriors() const {return residpriors; }
+    virtual string Name() const = 0;
+
+  protected:
+    ColumnVector disppriors; //list of prior means and precisions - all means first then precisions
+    ColumnVector residpriors;
+  };
+
+  //specific tissue models
+
+  class TissueModel_nodisp_simple : public TissueModel {
+    virtual double kctissue(const double ti,const double fcalib, const double delttiss,const double tau,const double T_1b,const double T_1, const double lambda,const bool casl, const ColumnVector dispparam, const ColumnVector residparam) const;
+    virtual int NumDisp() const {return 0;}
+    virtual int NumResid() const {return 0;}
+    virtual string Name() const { return "No dispersion | Simple"; }
+  };
+
+  class TissueModel_nodisp_wellmix : public TissueModel {
+  public:
+    virtual double kctissue(const double ti, const double fcalib, const double delttiss, const double tau, const double T_1b, const double T_1, const double lambda,const bool casl, const ColumnVector dispparam, const ColumnVector residparam) const;
+ virtual int NumDisp() const {return 0;}
+ virtual int NumResid() const {return 0;}
+ virtual string Name() const { return "No dispersion | Well mixed"; }
+  };
+
+  class TissueModel_nodisp_imperm : public TissueModel {
+  public:
+    TissueModel_nodisp_imperm() { residpriors.ReSize(2); residpriors << 0.5 << 10; }
+    virtual double kctissue(const double ti, const double fcalib, const double delttiss, const double tau, const double T_1b, const double T_1, const double lambda, bool casl, const ColumnVector dispparam, const ColumnVector residparam) const;
+ virtual int NumDisp() const {return 0;}
+ virtual int NumResid() const {return 1;}
+ virtual string Name() const { return "No dispersion | Impermeable"; }
+  };
+
+  class TissueModel_nodisp_2cpt : public TissueModel {
+  public:
+    TissueModel_nodisp_2cpt() { residpriors.ReSize(2); residpriors << 0.8 << 10; }
+    virtual double kctissue(const double ti,const double fcalib, const double delttiss,const double tau,const double T_1b,const double T_1, const double lambda,const bool casl, const ColumnVector dispparam, const ColumnVector residparam) const;
+    virtual int NumDisp() const {return 0;}
+    virtual int NumResid() const {return 1;}
+    virtual string Name() const { return "No dispersion | Two compartmentr (no backflow, no venous output)"; }
+  };
+
+  class TissueModel_nodisp_spa : public TissueModel {
+  public:
+    TissueModel_nodisp_spa() { residpriors.ReSize(6); residpriors << 0.02 << 0.03 << 2 << 1e-3 << 1e12 << 10; }
+virtual double kctissue(const double ti,const double fcalib, const double delttiss,const double tau,const double T_1b,const double T_1, const double lambda,const bool casl, const ColumnVector dispparam, const ColumnVector residparam) const;
+ virtual int NumDisp() const {return 0;}
+ virtual int NumResid() const {return 3;}
+ virtual string Name() const { return "No dispersion | Single Pass Approximation (2 compartment no backflow)"; }
+
+  private:
+ double Q(const double t1, const double t2, const double t3,const double PS, const double vb, const double tauc, const double fcalib, const double T_1, const double T_1b) const;
+ double R(const double t1, const double t2, const double t3,const double PS, const double vb, const double tauc, const double fcalib, const double T_1, const double T_1b) const;
+  };
+
+  class TissueModel_gammadisp_wellmix : public TissueModel {
+  public:
+    TissueModel_gammadisp_wellmix() { disppriors.ReSize(4); disppriors << 2 << -0.3 << 10 << 10; } 
+    virtual double kctissue(const double ti, const double fcalib, const double delttiss, const double tau, const double T_1b, const double T_1, const double lambda, const bool casl, const ColumnVector dispparam, const ColumnVector residparam) const;
+ virtual int NumDisp() const {return 2;}
+ virtual int NumResid() const {return 0;}
+  virtual string Name() const { return "Gamma kernel dispersion | Well mixed"; }
+  };
+
+
+  //double kctissue_gvf(const double ti, const double delttiss,const double tau, const double T_1b, const double T_1app, const double s, const double p);
+  //double kctissue_gaussdisp(const double ti, const double delttiss, const double tau, const double T_1b, const double T_1app, const double sig1, const double sig2);
+
+  //  a general tissue model that does numerical convolution
+  class TissueModel_aif_residue : public TissueModel {
+  public:
+    TissueModel_aif_residue(AIFModel* paifmodel, ResidModel* presidmodel)
+      { aifmodel=paifmodel; residmodel = presidmodel;
+	disppriors << aifmodel->Priors();
+	residpriors << residmodel->Priors();
+      }
+    virtual double kctissue(const double ti, const double fcalib, const double delttiss, const double tau, const double T_1b, const double T_1app, const double lambda, const bool casl, const ColumnVector dispparam, const ColumnVector residparam) const;
+    virtual int NumDisp() const {return aifmodel->NumDisp();}
+    virtual int NumResid() const {return residmodel->NumResid();}
+    virtual string Name() const { string name; name = "NUMERICAL CONVOLUTION - " + aifmodel->Name() + residmodel->Name(); return name; }
+
+  protected:
+    AIFModel* aifmodel;
+    ResidModel* residmodel;
+  };
+
+  // useful functions
+  double icgf(const double a, const double x);
+  double gvf(const double t, const double s, const double p);
+
+
 }
 
 #endif

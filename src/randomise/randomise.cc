@@ -292,22 +292,25 @@ volume4D<float> spatialStatistic, originalSpatialStatistic;
 
 Matrix tfceStatistic(ParametricStatistic& output, const Matrix& inputStatistic, const volume<float>& mask, float& tfceDelta, const float tfceHeight, const float tfceSize, const int tfceConnectivity, const int permutationNo, const bool isF, const int numContrasts, const vector<float>& dof, const bool outputPerms, const bool overrideDelta)
 {
+  Matrix tstat_ce(inputStatistic);
+  if ( isF ) { 
+    ColumnVector zstat, dofVector(inputStatistic.AsColumn());
+    dofVector=dof[0];
+    F2z::ComputeFStats( tstat_ce.AsColumn(), numContrasts, dofVector, zstat);
+    tstat_ce=zstat.AsRow();
+  }
+
   if (permutationNo==1 && !overrideDelta) {
-     tfceDelta=inputStatistic.Maximum()/100.0;  // i.e. 100 subdivisions of the max input stat height
+     tfceDelta=tstat_ce.Maximum()/100.0;  // i.e. 100 subdivisions of the max input stat height
      if ( tfceDelta <= 0 )
        cout << "Warning: The unpermuted statistic image for the current image contains no positive values, and cannot be processed with TFCE. A blank output image will be created." << endl;
   }
-  Matrix tstat_ce(inputStatistic);
-  tstat_ce=0;
-  if ( tfceDelta > 0 ) {
-    tstat_ce=tfce(inputStatistic,mask,tfceDelta,tfceHeight,tfceSize,tfceConnectivity);
-    if ( isF ) { 
-      ColumnVector zstat, dofVector(inputStatistic.AsColumn());
-      dofVector=dof[0];
-      F2z::ComputeFStats( tstat_ce.AsColumn(), numContrasts, dofVector, zstat);
-      tstat_ce=zstat.AsRow();
-    }
-  }
+ 
+  if ( tfceDelta > 0 ) 
+    tstat_ce=tfce(tstat_ce,mask,tfceDelta,tfceHeight,tfceSize,tfceConnectivity);
+  else 
+    tstat_ce=0;
+
   output.store(tstat_ce, permutationNo,&mask,outputPerms);
   return (tstat_ce.Row(1));
 }
@@ -321,6 +324,7 @@ void checkInput(const short st,const  Matrix& dm,const  Matrix& tc,const  Matrix
 volume<float> nonConstantMask(volume4D<float>& data, const bool allOnes)
 {
   volume<float> nonConstantMask(data.xsize(),data.ysize(),data.zsize());
+  nonConstantMask.copyproperties(data[0]);
   if ( allOnes ) {
     nonConstantMask=1;
     return nonConstantMask;
@@ -594,7 +598,7 @@ Matrix evaluateStatistics(const Matrix& data,const Matrix& model,const Matrix& c
 void calculatePermutationStatistics(ranopts& opts, const volume<float>& mask, Matrix& datam, Matrix& tc, Matrix& dm,int tstatnum, vector<float>& dof, Permuter& permuter, VoxelwiseDesign& voxelwiseDesign)
 {
   int nVoxels=(int)no_mask_voxels(mask);
-  int rankF=rank(tc.t());
+  int rankF=MISCMATHS::rank(tc.t());
   if ( opts.isDebugging.value() ) {
     cerr << "Input Design: " << endl << dm << endl;
     cerr << "Input Contrast: " << endl << tc << endl;
@@ -770,7 +774,7 @@ bool convertContrast(const Matrix& inputModel,const Matrix& inputContrast,const 
     Matrix c2=U.Columns(1,p-r);
     c2=c2.t();
     Matrix C = inputContrast & c2;
-    if ( rank(C) < C.Nrows() )
+    if ( MISCMATHS::rank(C) < C.Nrows() )
       throw Exception("Error: This (f)contrast appears to be rank defficient, please check your design.");
     Matrix W=inputModel*C.i();
     Matrix W1=W.Columns(1,r);

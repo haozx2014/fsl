@@ -313,16 +313,15 @@ namespace FILM {
       return order; 
     }
  
-  int AutoCorrEstimator::establishUsanThresh(const ColumnVector& epivol)
+  double AutoCorrEstimator::establishUsanThresh(const ColumnVector& epivol)
     {
-      int usanthresh = 100;      
       int num = epivol.Nrows();
       Histogram hist(epivol, max(num/200,1));
       hist.generate();
       float mode = hist.mode();
       cout<< "mode = " << mode << endl;
 
-      float sum = 0.0;
+      double sum = 0.0;
       int count = 0;
 
       // Work out standard deviation from mode for values greater than mode:
@@ -333,15 +332,12 @@ namespace FILM {
 	}
       }
 
-      int sig = (int)pow(sum/num, 0.5);
-      cout<< "sig = " << sig << endl;
-
-      usanthresh = sig/3;
-
-      return usanthresh;
+      double sig = pow(sum/num, 0.5);
+      cout<< "sig = " << static_cast<int>(sig) << endl;
+      return sig/3;
     } 
 
-  void AutoCorrEstimator::spatiallySmooth(const ColumnVector& epivol, int masksize, int usan_thresh, const volume<float>& usan_vol, int lag) {
+  void AutoCorrEstimator::spatiallySmooth(const ColumnVector& epivol, int masksize, double usan_thresh, const volume<float>& usan_vol, int lag) {
     Tracer trace("AutoCorrEstimator::spatiallySmooth");
     if(numTS<=1)
 	cerr << "Warning: Number of voxels = " << numTS << ". Spatial smoothing of autocorrelation estimates is not carried out" << endl;
@@ -352,7 +348,6 @@ namespace FILM {
 	  lag = MISCMATHS::Min(40,int(sizeTS/4));
 
 	if(usan_thresh == 0) usan_thresh = establishUsanThresh(epivol); // Establish epi thresh to use:
-
 	volume4D<float> susan_vol(mask.xsize(),mask.ysize(),mask.zsize(),1);
 	volume<float> usan_area(mask.xsize(),mask.ysize(),mask.zsize());
 	volume<float> kernel;
@@ -365,7 +360,7 @@ namespace FILM {
 	    // setup susan input
 	    susan_vol.setmatrix(acEst.Row(i),mask); 
 	    susan_vol*=factor;
-	    susan_vol[0]=susan_convolve(susan_vol[0],kernel,1,0,1,&usan_area,usan_vol,usan_thresh*usan_thresh);
+	    susan_vol[0]=susan_convolve(susan_vol[0],kernel,1,0,1,&usan_area,usan_vol,usan_thresh*(float)usan_thresh);
 	    // insert output back into acEst
             susan_vol/=factor;
 	    acEst.Row(i)=susan_vol.matrix(mask);

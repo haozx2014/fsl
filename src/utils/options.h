@@ -1,4 +1,4 @@
-/*  Copyright (C) 1999-2004 University of Oxford  */
+/*  Copyright (C) 1999-2014 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -448,7 +448,7 @@ namespace Utilities {
      <pre>
 #include "options.h"
 
-// $Id: options.h,v 1.34 2012/12/07 21:47:26 moisesf Exp $ 
+// $Id: options.h,v 1.35 2014/01/31 11:54:17 jmouthuy Exp $ 
 
 using namespace Utilities;
 
@@ -545,7 +545,7 @@ int main(unsigned int argc, char **argv) {
        @param argc The argument count.
        @param argv The vector of argument strings.
     */
-    unsigned int parse_command_line(unsigned int argc, char **argv, int skip=0);
+    unsigned int parse_command_line(unsigned int argc, char **argv, int skip=0, bool silentFail=false);
 
     /**
        @param filename The config file name.
