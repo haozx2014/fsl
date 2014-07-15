@@ -39,7 +39,9 @@ namespace EDDY {
 class EddyUtils
 {
 private:
-  static const int b_range = 100; // b-values within this range considered equivalent
+  /// b-values within this range considered equivalent
+  static const int b_range = 100; 
+  /// bladibla
   static NEWIMAGE::volume4D<float> get_partial_derivatives_in_scan_space(// Input
 									 const NEWIMAGE::volume<float>&                      pred,
 									 const EDDY::ECScan&                                 scan,
@@ -99,10 +101,12 @@ public:
 
 
   // Some functions for comparing diffusion parameters
+  /// Returns true if the difference in b-value is less than EddyUtils::b_range
   static bool AreInSameShell(const DiffPara& dp1,
                              const DiffPara& dp2) { return(fabs(dp1.bVal()-dp2.bVal())<double(b_range)); }
   static bool IsDiffusionWeighted(const DiffPara& dp) { return(dp.bVal() > double(b_range)); }
   static bool Isb0(const DiffPara& dp) { return(!IsDiffusionWeighted(dp)); }
+  /// Returns true if the inner product of the b-vectors is greater than 0.999
   static bool HaveSameDirection(const DiffPara& dp1,
 				const DiffPara& dp2) { return(NEWMAT::DotProduct(dp1.bVec(),dp2.bVec())>0.999); }
 

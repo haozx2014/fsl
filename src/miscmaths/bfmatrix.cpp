@@ -338,5 +338,17 @@ NEWMAT::ReturnMatrix FullBFMatrix::SolveForx(const NEWMAT::ColumnVector& b,     
   ret.Release();
   return(ret);
 }
+
+BFMatrixColumnIterator BFMatrix::begin(unsigned int col) const 
+{
+  if (col > Ncols()) throw BFMatrixException("BFMatrix:begin col out of range"); 
+  return(BFMatrixColumnIterator(*this,col));
+}
+
+BFMatrixColumnIterator BFMatrix::end(unsigned int col) const 
+{
+  if (col > Ncols()) throw BFMatrixException("BFMatrix:begin col out of range"); 
+  return(BFMatrixColumnIterator(*this,col,true));
+}
     
 } // End namespace MISCMATHS

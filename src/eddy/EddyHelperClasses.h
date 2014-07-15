@@ -1,3 +1,9 @@
+/*! \file EddyHelperClasses.h
+    \brief Contains declaration of classes that implements useful functionality for the eddy project.
+
+    \author Jesper Andersson
+    \version 1.0b, Sep., 2012.
+*/
 // Declarations of classes that implements useful
 // concepts for the eddy current project.
 // 
@@ -27,6 +33,15 @@ enum ECModel { Linear, Quadratic, Cubic, Unknown };
 enum ScanType { DWI, B0 , ANY };
 enum FinalResampling { JAC, LSR, UNKNOWN_RESAMPLING};
 
+/****************************************************************//**
+*
+* \brief This is the exception that is being thrown by routines
+*  in the core code of eddy.
+*
+* This is the exception that is being thrown by routines
+* in the core code of eddy.
+*
+********************************************************************/ 
 class EddyException: public std::exception
 {
 private:
@@ -41,19 +56,19 @@ public:
   ~EddyException() throw() {}
 };
 
-//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-//
-// Class DiffPara (Diffusion Parameters)
-//
-// This class manages the diffusion parameters for a given
-// scan. 
-//
-// {{{ @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
+/****************************************************************//**
+*
+* \brief This class manages the diffusion parameters for one scan
+*
+* This class manages the diffusion parameters for one scan
+*
+********************************************************************/ 
 class DiffPara
 {
 public:
+  /// Default constructor. Sets b-vector to [1 0 0] and b-value to zero.
   DiffPara() { _bvec.ReSize(3); _bvec(1)=1; _bvec(2)=0; _bvec(3)=0; _bval = 0; }
+  /// Contructs a DiffPara object from a b-vector and a b-value.
   DiffPara(const NEWMAT::ColumnVector&   bvec,
 	   double                        bval) : _bvec(bvec), _bval(bval)
   {
@@ -61,38 +76,47 @@ public:
     if (_bval < 0) throw EddyException("DiffPara::DiffPara: b-value must be non-negative");
     if (_bval) _bvec /= _bvec.NormFrobenius();
   }
+  /// Prints out b-vector and b-value in formatted way  
   friend ostream& operator<<(ostream& op, const DiffPara& dp) { op << "b-vector: " << dp._bvec.t() << endl << "b-value:  " << dp._bval << endl; return(op); }
+  /// Returns true if the b-value AND the direction are the same
   bool operator==(const DiffPara& rhs) const;
+  /// Same as !(a==b)
   bool operator!=(const DiffPara& rhs) const { return(!(*this==rhs)); }
+  /// Compares the b-values
   bool operator>(const DiffPara& rhs) const { return(this->bVal()>rhs.bVal()); }
+  /// Compares the b-values
   bool operator<(const DiffPara& rhs) const { return(this->bVal()<rhs.bVal()); }
+  /// Returns a normalised b-vector
   NEWMAT::ColumnVector bVec() const { return(_bvec); }
+  /// Returns the b-value
   double bVal() const { return(_bval); }
 private:
   NEWMAT::ColumnVector _bvec;
   double               _bval;
 };
 
-// }}} End of fold.
-
-//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-//
-// Class AcqPara (Acquisition Parameters)
-//
-// This class manages the acquisition parameters for a given
-// scan. 
-//
-// {{{ @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
+/****************************************************************//**
+*
+* \brief This class manages the acquisition parameters for one scan
+*
+* This class manages the acquisition parameters for one scan
+*
+********************************************************************/ 
 class AcqPara
 {
 public:
+  /// Constructs an AcqPara object from a phase-encode vector and a total readout-time (sec)
   AcqPara(const NEWMAT::ColumnVector&   pevec,
           double                        rotime);
+  /// Prints out phase-encode vactor and readout-time (sec) in formatted way  
   friend ostream& operator<<(ostream& op, const AcqPara& ap) { op << "Phase-encode vector: " << ap._pevec.t() << endl << "Read-out time: " << ap._rotime; return(op); }
+  /// Returns true if both PE direction and readout time are the same.
   bool operator==(const AcqPara& rh) const;
+  /// Same as !(a==b)
   bool operator!=(const AcqPara& rh) const { return(!(*this == rh)); }
+  /// Returns the phase-enocde vector
   NEWMAT::ColumnVector PhaseEncodeVector() const { return(_pevec); }
+  /// Returns the readout-time in seconds
   double ReadOutTime() const { return(_rotime); }
 private:
   NEWMAT::ColumnVector _pevec;
@@ -121,30 +145,40 @@ private:
   NEWIMAGE::volume<float> _mask;
 };
 
-//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-//
-// Class DiffStats
-//
-// This class calculates and serves up information about slice-wise
-// (in observation space) statistics on the difference between 
-// an observation (scan) and the prediction. 
-//
-//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
+/****************************************************************//**
+*
+* \brief This class manages stats on slice wise differences.
+*
+* This class calculates and serves up information about slice-wise
+*  (in observation space) statistics on the difference between 
+*  an observation (scan) and the prediction. 
+*
+********************************************************************/ 
 class DiffStats
 {
 public:
   DiffStats() {}
+  /// Constructs a Diffstats object given a difference volume and a mask.
   DiffStats(const NEWIMAGE::volume<float>& diff, const NEWIMAGE::volume<float>& mask);
+  /// Returns the mean (across all valid voxels in the volume) difference.
   double MeanDifference() const { return(mean_stat(_md)); }
+  /// Returns the mean (across all valid voxels in slice sl (zero-offset)) difference.
   double MeanDifference(int sl) const { if (index_ok(sl)) return(_md[sl]); else return(0.0); }
+  /// Returns a vector with the mean difference for all slices
   NEWMAT::RowVector MeanDifferenceVector() const { return(get_vector(_md)); }
+  /// Returns the mean (across all valid voxels in the volume) squared difference.
   double MeanSqrDiff() const { return(mean_stat(_msd)); }
+  /// Returns the mean (across all valid voxels in slice sl (zero-offset)) squared difference.
   double MeanSqrDiff(int sl) const { if (index_ok(sl)) return(_msd[sl]); else return(0.0); }
+  /// Returns a vector with the mean squared difference for all slices
   NEWMAT::RowVector MeanSqrDiffVector() const { return(get_vector(_msd)); }
+  /// Number of valid voxels in the whole volume (as determined by the mask passed to the constructor)
   unsigned int NVox() const { unsigned int n=0; for (int i=0; i<int(_n.size()); i++) n+=_n[i]; return(n); }
+  /// Number of valid voxels in slice sl (zero offset).
   unsigned int NVox(int sl) const { if (index_ok(sl)) return(_n[sl]); else return(0); }
+  /// Vector with the number of valid voxels in each slice.
   NEWMAT::RowVector NVoxVector() const { return(get_vector(_n)); }
+  /// Number of slices.
   unsigned int NSlice() const { return(_n.size()); }
 private:
   std::vector<double>        _md;  // Slice wise mean difference
@@ -162,30 +196,46 @@ private:
   { NEWMAT::RowVector ov(stat.size()); for (unsigned int i=0; i<stat.size(); i++) ov(i+1) = double(stat[i]); return(ov); }
 };
 
-//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-//
-// Class DiffStatsVector
-//
-// This class manages a set (one for each scan) of DiffStats objects.
-//
-//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
+/****************************************************************//**
+*
+* \brief This class manages a set (one for each scan) of DiffStats objects.
+*
+* This class manages a vector of DiffStats objects (one for each scan).
+* This means that it can look across scans (for a given slice) and 
+* build up statistics of the statistics from the DiffStats objects.
+* It can for example calculate the mean and standard deviation (across) 
+* subjects of the slice-wise mean differences from the DiffStat objects.
+* From that it can the determine how many standard deviations away
+* a given scan and slice is from the mean and hence identify out-liers.
+*
+********************************************************************/ 
 class DiffStatsVector
 {
 public:
+  /// Constructs an object with n (empty) slots for DiffStats objects.
   DiffStatsVector(unsigned int n) : _n(n) { _ds = new DiffStats[_n]; }
+  /// Copy constructor
   DiffStatsVector(const DiffStatsVector& rhs) : _n(rhs._n) { _ds = new DiffStats[_n]; for (unsigned int i=0; i<_n; i++) _ds[i] = rhs._ds[i]; }
   ~DiffStatsVector() { delete [] _ds; }
+  /// Assignment
   DiffStatsVector& operator=(const DiffStatsVector& rhs) {
     delete [] _ds; _n = rhs._n; _ds = new DiffStats[_n]; for (unsigned int i=0; i<_n; i++) _ds[i] = rhs._ds[i]; return(*this);
   }
+  /// Gives read-access to the ith (zero offset) DiffStats object in the vector.
   const DiffStats& operator[](unsigned int i) const { throw_if_oor(i); return(_ds[i]); }
+  /// Gives read/write-access to the ith (zero offset) DiffStats object in the vector. This is used to populate the vector.
   DiffStats& operator[](unsigned int i) { throw_if_oor(i); return(_ds[i]); }
+  /// Returns the number of DiffStats objects in the vector.
   unsigned int NScan() const { return(_n); }
+  /// Returns the number of slices in each of the DiffStats objects.
   unsigned int NSlice() const { return(_ds[0].NSlice()); }
+  /// Writes three files with information relevent for debugging.
   void Write(const std::string& bfname) const;
+  /// Returns a vector of vectors if scan indicies for outliers. One element of the vector corresponds to the output from GetOutliersInSlice().
   std::vector<std::vector<unsigned int> > GetOutliers(double nstdev=4.0, unsigned int minn=100) const;
+  /// Returns a vector of scan indicies for the outliers in slice sl (zero-offset).
   std::vector<unsigned int> GetOutliersInSlice(unsigned int sl, double nstdev=4.0, unsigned int minn=100) const;
+  /// Returns a vector (NScan() long) with the number of std for each scan for a slice given by sl.
   std::vector<double> GetNoOfStdevInSlice(unsigned int sl, unsigned int minn=100) const;
 private:
   unsigned int _n;   // Length of vector
@@ -196,15 +246,12 @@ private:
   void throw_if_oor(unsigned int i) const { if (i >= _n) throw EddyException("DiffStatsVector::throw_if_oor: Index out of range"); }
 };
 
-//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-//
-// Class ReplacementManager
-//
-// This class decides and keeps track of which slices in which 
-// scans should be replaced by their predictions
-//
-//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
+/****************************************************************//**
+*
+* \brief This class decides and keeps track of which slices in which 
+* scans should be replaced by their predictions
+*
+********************************************************************/ 
 class ReplacementManager {
 public:
   ReplacementManager(unsigned int nscan, unsigned int nsl, double nstdev=4.0, unsigned int minn=100) : _nstdev(nstdev), _minn(minn), _ovv(nsl), _nsv(nsl)
@@ -227,17 +274,14 @@ private:
 
   void scan_oor(unsigned int scan) const { if (!_ovv.size() || scan >= _ovv[0].size()) throw EddyException("ReplacementManager::scan_oor: Scan index out of range"); }
 };
-//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-//
-// Class ImageCoordinates
-//
-// Helper class that manages a set of image coordinates in a way that 
-// it enables calculation/implementation of partial derivatives of
-// images w.r.t. transformation parameters.
-//
-//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-
+/****************************************************************//**
+*
+* \brief Helper class that manages a set of image coordinates in a way that 
+* it enables calculation/implementation of partial derivatives of
+* images w.r.t. transformation parameters.
+*
+********************************************************************/ 
 class ImageCoordinates
 {
 public:
@@ -332,3 +376,30 @@ private:
 } // End namespace EDDY
 
 #endif // End #ifndef EddyHelperClasses_h
+
+////////////////////////////////////////////////
+//
+// Here starts Doxygen documentation
+//
+////////////////////////////////////////////////
+
+/*! 
+ * \fn EDDY::DiffPara::DiffPara(const NEWMAT::ColumnVector& bvec, double bval)
+ * Contructs a DiffPara object from a b-vector and a b-value.
+ * \param bvec ColumnVector with three elements. Will be normalised, but must have norm different from zero.
+ * \param bval b-value. Must be non-negative.
+ */
+
+/*!
+ * \fn EDDY::DiffPara::operator==(const DiffPara& rhs) const
+ *  Will return true if calls to both EddyUtils::AreInSameShell and EddyUtils::HaveSameDirection are true.
+ */ 
+
+/*! 
+ * \fn AcqPara::AcqPara(const NEWMAT::ColumnVector& pevec, double rotime)
+ * Constructs an AcqPara object from phase-encode direction and total read-out time. 
+ * \param pevec Normalised vector desribing the direction of the phase-encoding. At present the third element 
+ * (the z-direction) must be zero (i.e. it only allows phase-encoding in the xy-plane.
+ * \param rotime The time between the collection of the midpoint of the first echo and the last echo.
+ */
+

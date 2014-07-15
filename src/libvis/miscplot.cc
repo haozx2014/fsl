@@ -274,7 +274,7 @@ void miscplot::timeseries(const Matrix& mat, string filename, string title,
    
   char* ctl = new char[numpoint];
 
-  if((tr == 0.0)&&(spacing%2 == 1) || (tr > 0.0))
+  if(((tr == 0.0)&&(spacing%2 == 1)) || (tr > 0.0))
     ctl[0] = TRUE;
   else
     ctl[0] = FALSE;
@@ -343,11 +343,13 @@ void miscplot::timeseries(const Matrix& mat, string filename, string title,
   range=abs(ymax-ymin);
   if (range<1) GDC_ylabel_density = 75;
   else GDC_ylabel_density = 70;	 
-  if (range>1e6) GDC_ylabel_fmt = "%.1e";
-  else if (range>10) GDC_ylabel_fmt = "%.0f";
-  else if (range>1) GDC_ylabel_fmt = "%.1f";
-  else if (range>0.01) GDC_ylabel_fmt = "%.3f";
-  else GDC_ylabel_fmt = "%.5f";
+
+  if      (range>1e6)  GDC_ylabel_fmt = (char*)"%.1e";
+  else if (range>10)   GDC_ylabel_fmt = (char*)"%.0f";
+  else if (range>1)    GDC_ylabel_fmt = (char*)"%.1f";
+  else if (range>0.01) GDC_ylabel_fmt = (char*)"%.3f";
+  else                 GDC_ylabel_fmt = (char*)"%.5f";
+
 	if(Ylabel_fmt > "")
 		GDC_ylabel_fmt = (char*)Ylabel_fmt.c_str();
 
@@ -686,7 +688,7 @@ void miscplot::boxplot(string filename, string title){
   FILE  *outpng1 = fopen(filename.c_str(), "wb" );
   GDC_image_type     = GDC_PNG;
 
-  GDC_ylabel_fmt = "%.3f";
+  GDC_ylabel_fmt = (char*)string("%.3f").c_str();
   GDC_ylabel_density = 30;
   GDC_title = (char*)title.c_str();
 

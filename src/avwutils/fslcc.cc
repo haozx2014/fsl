@@ -160,7 +160,7 @@ int main(int argc,char *argv[])
   unsigned int done;
 
   try {
-    done=options.parse_command_line(argc, argv);
+    done=options.parse_command_line(argc, argv,0,true);
   }
   catch(X_OptionError& e) {
     options.usage();

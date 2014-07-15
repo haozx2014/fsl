@@ -1,6 +1,6 @@
 #!/bin/sh
 
-#{{{ copyright and script setup
+# copyright and script setup
 
 #   feat - main FEAT command-line script
 #
@@ -74,190 +74,29 @@
 exec $FSLTCLSH "$0" "$@"
 
 source $env(FSLDIR)/tcl/fslstart.tcl
+proc fullFirstLevelAnalysis { session } { 
 
-if { [ lindex $argv 0 ] == "" } {
-    puts "
-Usage: feat <design.fsf>
-"
-    exit 1
-    puts "
-Usage: feat <design.fsf> \[options\]
+global FSLDIR FSLSLASH fmri feat_files fsfroot logout confoundev_files
+#setup FEAT output directory
+  if { $fmri(level) == 1 && $fmri(inputtype) == 1 } { #working in an existing feat directory
+	set FD $feat_files($session)
+	cd $FD
+	fsl:exec "/bin/rm ?endered_thresh_* cluster_* lmax_* prob_mask_* thresh_* tsplot/* stats/*; rmdir stats tsplot" -n -i
+} else { 
+#setup new featdir name
 
-If no options are set then the whole design.fsf is processed
-
-Misc options (these need to come before the partial analysis options):
- -I <N>   : run just session <N> of the multiple setups in <design.fsf>
- -D <dir> : use <dir> as the working output directory (instead of what is in <design.fsf>)
-
-Partial analysis options:
- -init                             : run basic first-level initialisation
- -prestats                         : run first-level pre-stats
- -film                             : run first-level timeseries stats using FILM
- -poststats <rerunning> <stdspace> : run post-stats (first or higher-level)
- -reg                              : run first-level registration
- -gfeatprep                        : run higher-level preparation
- -flame1                           : run higher-level stats part 1 (pre-FLAME)
- -flame2                           : run higher-level stats part 2 (FLAME)
- -flame3                           : run higher-level stats part 3 (post-FLAME)
- -gica                             : run higher-level MELODIC
- -stop                             : clean-up logs files etc.
-"
-}
-
-set fsfroot [ file rootname [ lindex $argv 0 ] ]
-if { [ string range $fsfroot 0 0 ] != "/" } {
-    set fsfroot [ pwd ]/$fsfroot
-}
-
-set session 0
-set done_something 0
-
-feat5:setupdefaults
-feat5:load -1 1 ${fsfroot}.fsf
-
-
-if { [ catch {
-
-
-
-for { set argindex 1 } { $argindex < $argc } { incr argindex 1 } {
-    switch -- [ lindex $argv $argindex ] {
-
-	-I {
-	    incr argindex 1
-	    set session [ lindex $argv $argindex ]
-	}
-
-	-D {
-	    incr argindex 1
-	    set fmri(outputdir) [ lindex $argv $argindex ]
-	}
-
-	-init {
-	    feat5:proc_init $session
-	    set done_something 1
-	}
-
-	-prestats {
- 	    feat5:proc_prestats $session
- 	    set done_something 1
-	}
-
-	-film { 
-	    feat5:proc_film $session 
-	    set done_something 1
-	}
-
-	-poststats {
-	    incr argindex 1
-	    set RERUNNING [ lindex $argv $argindex ]
-	    incr argindex 1
-	    set STDSPACE [ lindex $argv $argindex ]
- 	    feat5:proc_poststats $RERUNNING $STDSPACE 
- 	    set done_something 1
-	}
-
-	-reg {
- 	    feat5:proc_reg $session
- 	    set done_something 1
-	}
-
-	-gfeatprep { 
-	    feat5:proc_gfeatprep
- 	    set done_something 1
-	}
-
-	-flame1 { 
-	    feat5:proc_flame1 $session
-	    set done_something 1
-	}
-
-	-flame2 { 
-	    feat5:proc_flame2
- 	    set done_something 1
-	}
-
-	-flame3 { 
- 	    feat5:proc_flame3
- 	    set done_something 1
-	}
-
-	-gica { 
-	    feat5:proc_gica
-	    set done_something 1
-	}
-
-	-stop { 
- 	    feat5:proc_stop
- 	    set done_something 1
-	}
-    }
-}
-
-} errMsg ] } {  
-	feat5:proc_stop 
-	return -code error "$errMsg"
-}
-
-
-#}}}
-
-
-# if we haven't processed a single-task job, this must be a full analysis:
-if { $done_something == 0 } {
-
-    if { ! $fmri(inmelodic) } {
-	if { $fmri(level) == 1 } {
-	    #{{{ FEAT first-level analysis
-
-for { set session 1 } { $session <= $fmri(multiple) } { incr session 1 } {
-
-    #{{{ setup FEAT output directory
-
-if { $fmri(analysis) == 0 || $fmri(analysis) == 4 } {
-    #{{{ copy old featdir if required, and backup old files inside
-
-set FD $feat_files($session)
-
-if { $fmri(newdir_yn) } {
-    set oldFD $FD
-    set FD [ new_filename $oldFD ]
-    file copy $oldFD $FD
-}
-
-cd $FD
-
-new_file old
-
-if { $fmri(analysis) == 0 } {
-  fsl:exec "/bin/mkdir -p old ; /bin/cp design* old" -n
-} else {
-    fsl:exec "/bin/mkdir -p old ; /bin/mv design* old ; /bin/cp old/design.fsf old/design.png old/design.lev ." -n
-    fsl:exec "/bin/mv ?endered_thresh_* cluster_* lmax_* prob_mask_* thresh_* tsplot stats/cope* stats/neff* stats/tstat* stats/varcope* stats/zstat* stats/fstat* stats/zfstat* old" -n
-}
-
-#}}}
-} else {
-    #{{{ setup new featdir name
-
-if { $fmri(outputdir) != "" } {
-    if { $fmri(multiple) == 1 } {
+   if { $fmri(outputdir) != "" } {
+      if { $fmri(multiple) == 1 } {
 	set FD [ feat5:strip $fmri(outputdir) ].feat
-    } else {
+      } else {
 	set FD [ file rootname $feat_files($session) ]_[ file rootname [ file tail $fmri(outputdir) ] ].feat
-    }
-} else {
-    set FD [ feat5:strip [ remove_ext $feat_files($session) ] ].feat
+      }
+   } else {
+     set FD [ feat5:strip [ remove_ext $feat_files($session) ] ].feat
+  }
+  set FD [ new_filename $FD ]
+  fsl:exec "/bin/mkdir -p $FD" -n
 }
-
-if { ! [ info exists fmri(overwrite_yn) ] || $fmri(overwrite_yn) == 0 } {
-    set FD [ new_filename $FD ]
-}
-fsl:exec "/bin/mkdir -p $FD" -n
-
-#}}}
-}
-
 cd $FD
 set FD [ pwd ]
 fsl:exec "mkdir -p logs" -n
@@ -282,8 +121,7 @@ if { $fmri(analysis) != 0 } {
 }
 set fsfroot ${FD}/design
 
-#}}}
-    #{{{ setup web pages
+#setup web pages
 
 if { ! [ file exists .files ] } {
     fsl:exec "mkdir .files;cp ${FSLDIR}/doc/fsl.css .files;ln -s ${FSLDIR}/doc/images .files/images"
@@ -359,54 +197,53 @@ Feat main script<br><pre>" -o
 
 fsl:echo logs/feat9 "</pre><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br></BODY></HTML>"
 
+#working to here
+
 if { $fmri(featwatcher_yn) } {
     FmribWebHelp file: ${FD}/report_log.html
 } else {
     fsl:echo "" "To view the FEAT progress and final report, point your web browser at ${FD}/report_log.html"
 }
 
-#}}}
+    set jobHalt ""
+    if { $haltForModel != 0 } {
+       set jobHalt "-h $featModelID"
+    }        
     set initID -1
     set prestatsID -1
-    set filmID -1
+    set statsID -1
     set poststatsID -1
-    set regID -1
+    set prestatsTime 0
     if { ! [ info exists fmri(totalVoxels) ] || $fmri(totalVoxels) < 0 || $fmri(totalVoxels) == "totalVoxels" } {
 	    set fmri(totalVoxels) 10000000
      }
 
-    if { $fmri(filtering_yn) ||  $fmri(stats_yn) } {
+    if { ( $fmri(filtering_yn) ||  $fmri(stats_yn) ) && $fmri(inputtype) == 2 } {
 	set initID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -I $session -init" -b 10 -N feat0_init -l logs ]
     }
 
 
     if { $fmri(reginitial_highres_yn) || $fmri(reghighres_yn) || $fmri(regstandard_yn) } {
-	set howlong [ expr 30 + 30 * $fmri(regstandard_nonlinear_yn) ]
-	set regID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -I $session -reg" -b $howlong -h $initID -N feat1b_reg -l logs ]
+	set prestatsTime [ expr $prestatsTime + 30 + 30 * $fmri(regstandard_nonlinear_yn) ]
     }
 
 
-    if { $fmri(filtering_yn) ||  $fmri(stats_yn) } {
+    if { $fmri(filtering_yn) } {
 	set howlong [ expr int( $fmri(npts) / 10 ) ]
 	if { $fmri(regunwarp_yn) } {
 	    set howlong [ expr int( $fmri(npts) / 3 ) ]
 	}
 	if { $fmri(melodic_yn) } {
 	    set howlong 300
-	}
-	set jobHalt ""
-	if { $haltForModel != 0 } {
-		    set jobHalt "-h $featModelID"
-	}                         
+	}                 
  	if { $fmri(totalVoxels) > 80000000 } {
  	   set howlong [ expr int( $fmri(totalVoxels) / 1000000 ) ]
 	}
-	
-
-	set prestatsID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -I $session -prestats" -b $howlong -h $regID -h $initID $jobHalt -N feat2_pre -l logs ]
-    }
-
-
+	set prestatsTime [ expr $prestatsTime + $howlong ]
+     }
+     if { $fmri(inputtype) == 2 } {
+	set prestatsID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -I $session -prestats" -b $prestatsTime -h $initID $jobHalt -N feat2_pre -l logs ]
+     }
      set actualEVs $fmri(evs_real)
      if { $fmri(motionevsbeta) != "" } {
 	 set actualEVs [ expr $actualEVs + [ exec sh -c "wc -l $fmri(motionevsbeta) | awk '{print \$1}'" ] ]
@@ -423,27 +260,141 @@ if { $fmri(featwatcher_yn) } {
 
     if { $fmri(stats_yn) } {
 	#This seems to be an fairly accurate estimate, for old-style feat, revisit when contrast film_gls goes on the system
-	set howlong [ expr int ( $fmri(totalVoxels) *  $fmri(npts)  * $actualEVs / 7000000000 ) + 1 ]
-	set filmID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -I $session -film" -b $howlong -h $prestatsID -N feat3_film -l logs ]
+	set howlong [ expr int ( ceil($fmri(totalVoxels)/1e7) * ( $fmri(totalVoxels) *  $fmri(npts)  * $actualEVs / 7e9 ) + 1 ) ]
+	set statsID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -I $session -stats" -b $howlong -h $prestatsID -N feat3_film -l logs ]
+	set poststatsID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -poststats 0 " -b 119 -h $statsID -N feat4_post -l logs ]
     }
+    fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -stop" -b 1 -h $prestatsID -h $statsID -h $poststatsID -N feat5_stop -l logs
+} 
 
-    if { $fmri(poststats_yn) } {
-        set howlong [ expr int( $fmri(ncon_real) * $actualEVs / 4 ) ]
-	set poststatsID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -poststats 0 0" -b $howlong -h $filmID -N feat4_post -l logs ]
-    }
+if { [ lindex $argv 0 ] == "" } {
+    puts "
+Usage: feat <design.fsf>
+"
+    exit 1
+    puts "
+Usage: feat <design.fsf> \[options\]
 
-    if { $fmri(poststats_yn) && ( [ file exists ${FD}/reg/example_func2standard.mat ] || $fmri(regstandard_yn) ) } {
-	set poststatsID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -poststats 1 0" -b 119 -h $poststatsID -h $regID -N feat4_post -l logs ]
-    }
+If no options are set then the whole design.fsf is processed
 
-    fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -stop" -b 1 -h $prestatsID -h $filmID -h $poststatsID -h $regID -N feat5_stop -l logs
+Misc options (these need to come before the partial analysis options):
+ -I <N>   : run just session <N> of the multiple setups in <design.fsf>
+ -D <dir> : use <dir> as the working output directory (instead of what is in <design.fsf>)
+
+Partial analysis options:
+ -init                             : run basic first-level initialisation
+ -prestats                         : run first-level preprocessing
+ -stats                            : run first-level statistics  
+ -poststats <higherlevel>          : run post-stats (first or higher-level)
+ -gfeatprep                        : run higher-level preparation
+ -flame1                           : run higher-level stats part 1 (pre-FLAME)
+ -flame2                           : run higher-level stats part 2 (FLAME)
+ -flame3                           : run higher-level stats part 3 (post-FLAME)
+ -gica                             : run higher-level MELODIC
+ -stop                             : clean-up logs files etc.
+"
 }
 
-#}}}
-	} else {
-	    #{{{ FEAT second-level analysis
+set fsfroot [ file rootname [ lindex $argv 0 ] ]
+if { [ string range $fsfroot 0 0 ] != "/" } {
+    set fsfroot [ pwd ]/$fsfroot
+}
 
-#{{{ setup .gfeat directory
+set session 0
+set done_something 0
+
+feat5:setupdefaults
+feat5:load -1 1 ${fsfroot}.fsf
+
+
+if { [ catch {
+
+for { set argindex 1 } { $argindex < $argc } { incr argindex 1 } {
+    switch -- [ lindex $argv $argindex ] {
+
+	-I {
+	    incr argindex 1
+	    set session [ lindex $argv $argindex ]
+	}
+
+	-D {
+	    incr argindex 1
+	    set fmri(outputdir) [ lindex $argv $argindex ]
+	}
+
+	-init {
+	    feat5:proc_init $session
+	    set done_something 1
+	}
+
+	-prestats {
+ 	    feat5:proc_prestats $session
+ 	    set done_something 1
+	}
+
+	-stats { 
+	    feat5:proc_stats $session 
+	    set done_something 1
+	}
+
+	-poststats {
+	    incr argindex 1
+	    set higherLevel [ lindex $argv $argindex ]
+ 	    feat5:proc_poststats $higherLevel
+ 	    set done_something 1
+	}
+
+	-gfeatprep { 
+	    feat5:proc_gfeatprep
+ 	    set done_something 1
+	}
+
+	-flame1 { 
+	    feat5:proc_flame1 $session
+	    set done_something 1
+	}
+
+	-flame2 { 
+	    feat5:proc_flame2
+ 	    set done_something 1
+	}
+
+	-flame3 { 
+ 	    feat5:proc_flame3
+ 	    set done_something 1
+	}
+
+	-gica { 
+	    feat5:proc_gica
+	    set done_something 1
+	}
+
+	-stop { 
+ 	    feat5:proc_stop
+ 	    set done_something 1
+	}
+    }
+}
+
+} errMsg ] } {  
+
+	puts "[lindex $argv $argindex]" 
+        puts "$errMsg"
+	feat5:proc_stop 
+	return -code error "$errMsg"
+}
+
+
+# if we haven't processed a single-task job, this must be a full analysis:
+if { $done_something == 0 } {
+
+    if { ! $fmri(inmelodic) } {
+       if { $fmri(level) == 1 } {
+	  for { set session 1 } { $session <= $fmri(multiple) } { incr session 1 } {
+	      fullFirstLevelAnalysis $session
+	  }
+      } else {
+
 
 if { $fmri(outputdir) != "" } {
     set FD [ feat5:strip $fmri(outputdir) ].gfeat
@@ -466,8 +417,8 @@ fsl:exec "${FSLDIR}/bin/feat_model design"
 
 set fsfroot ${FD}/design
 
-#}}}
-#{{{ setup toplevel .gfeat web pages
+#
+# setup toplevel .gfeat web pages
 
 if { ! [ file exists .files ] } {
     fsl:exec "mkdir .files;cp ${FSLDIR}/doc/fsl.css .files;ln -s ${FSLDIR}/doc/images .files/images"
@@ -546,8 +497,8 @@ if { $fmri(featwatcher_yn) } {
     fsl:echo "" "To view the FEAT progress and final report, point your web browser at ${FD}/report_log.html"
 }
 
-#}}}
-#{{{ setup some variables??
+#
+# setup some variables??
 
 if { $fmri(inputtype) == 1 } {
 
@@ -581,22 +532,22 @@ if { $fmri(inputtype) == 1 } {
 
 }
 
-#}}}
-#{{{ finish toplevel stats report page
+#
+# finish toplevel stats report page
 
 if { [ file exists design.mat ] } {
     fsl:echo report_stats.html "<hr><p><b>Design matrix</b><br><a href=\"design.mat\"><IMG BORDER=0 SRC=\"design.png\"></a>"
 }
 fsl:echo report_stats.html "</BODY></HTML>"
 
-#}}}
+#
 
 set preID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -gfeatprep" -b 60 -N feat2_pre -l logs ]
 set allID ""
 
 for { set session 1 } { $session <= $fmri(multiple) } { incr session 1 } {
     if { $feat_files($session) != -1 } {
-	#{{{ setup FEAT directory
+	# setup FEAT directory
 
 set FD $feat_files($session)
 set FD ${FD}.feat
@@ -618,8 +569,8 @@ if { [ exec sh -c "grep NumPoints design.mat | awk '{ print \$2 }'" ] < 30 && $f
     }
 }
 
-#}}}
-	#{{{ setup web pages
+#
+	# setup web pages
 
 set conname ""
 if { $contrastname($session) != "" } {
@@ -687,13 +638,12 @@ fsl:echo logs/feat9 "</pre><br><br><br><br><br><br><br><br><br><br><br><br><br><
 
 set logout ${GFD}/logs/feat1
 
-#}}}
         set howlong 60
         if { $fmri(robust_yn) } { set howlong [ expr int( $fmri(npts) * $fmri(evs_real) / 10 ) ] }
 	set ID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -I $session -flame1" -b 60 -N feat3a_flame -h $preID -l logs ]
 	set ID [ fsl:exec "./.flame" -b $howlong -N feat3b_flame -h $ID -l logs -f ]
 	set ID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -flame3" -b 60 -N feat3c_flame -h $ID -l logs ]
-	set ID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -poststats 0 1" -b 60 -N feat4_post -h $ID -l logs ]
+	set ID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -poststats 1" -b 60 -N feat4_post -h $ID -l logs ]
 	set allID "$allID -h [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -stop" -b 1 -h $ID -N feat5_stop -l logs ]"
 	cd ..
     }
@@ -701,13 +651,11 @@ set logout ${GFD}/logs/feat1
 
 fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $GFD -stop" -b 1 $allID -N feat5_stop -l logs
 
-#}}}
 	}
     } else {
-	#{{{ MELODIC
+	#MELODIC
 
 if { $fmri(icaopt) > 1 } {
-    #{{{ setup group ICA output dir
 
 if { $fmri(outputdir) != "" } {
     set GFD [ feat5:strip $fmri(outputdir) ].gica
@@ -724,8 +672,6 @@ set logout ${GFD}/logs/feat1
 
 fsl:exec "/bin/cp ${fsfroot}.fsf design.fsf"
 
-#}}}
-    #{{{ setup toplevel .gfeat web pages
 
 if { ! [ file exists .files ] } {
     fsl:exec "mkdir .files;cp ${FSLDIR}/doc/fsl.css .files;ln -s ${FSLDIR}/doc/images .files/images"
@@ -795,13 +741,13 @@ if { $fmri(featwatcher_yn) } {
     fsl:echo "" "To view the FEAT progres and final report, point your web browser at ${GFD}/report_log.html"
 }
 
-#}}}
+#
 }
 set ALLID ""
 
 for { set session 1 } { $session <= $fmri(multiple) } { incr session 1 } {
 
-    #{{{ setup output directory
+    # setup output directory
 
 if { $fmri(outputdir) != "" } {
     if { $fmri(multiple) == 1 } {
@@ -829,8 +775,8 @@ if { $fmri(icaopt) > 1 } {
     fsl:echo ${GFD}/design.fsf "set feat_files($session) \"$FD\""
 }
 
-#}}}
-    #{{{ setup web pages
+#
+    # setup web pages
 
 if { ! [ file exists .files ] } {
     fsl:exec "mkdir .files;cp ${FSLDIR}/doc/fsl.css .files;ln -s ${FSLDIR}/doc/images .files/images"
@@ -916,29 +862,26 @@ if { $fmri(icaopt) > 1 } {
     set logout ${GFD}/logs/feat1
 }
 
-#}}}
+#
     set ID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -I $session -init" -b 10 -N feat1a_init -l logs ]
 
 
-    if { $fmri(reginitial_highres_yn) || $fmri(reghighres_yn) || $fmri(regstandard_yn) } {
-	if {  $fmri(regstandard_nonlinear_yn) || $fmri(regunwarp_yn) } {
-		set ID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -I $session -reg" -h $ID -b 250 -N feat3_reg -l logs ]
-	} else {
-		set ID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -I $session -reg" -h $ID -b 30 -N feat3_reg -l logs ]
-	}
+    set howlong [ expr int( $fmri(npts) / 10 ) ] 
+    if 	{ ( $fmri(regstandard_nonlinear_yn) || $fmri(regunwarp_yn) ) && $howlong < 250 } {
+       set howlong 250	   
     }
 
 
-    set howlong [ expr int( $fmri(npts) / 10 ) ] 
+
     set ID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -I $session -prestats" -b $howlong -h $ID -N feat2_pre -l logs ]
     set ALLID "$ALLID -h $ID"
 
 
     if { $fmri(icaopt) == 1 } {
-	#{{{ setup melodic command
+	# setup melodic command
 
-set logout ${FD}/logs/feat4
-fsl:echo $logout "</pre><hr>Stats<br><pre>"
+#set logout ${FD}/logs/feat4
+fsl:echo ${FD}/logs/feat4 "</pre><hr>Stats<br><pre>"
 
 set thecommand "${FSLDIR}/bin/melodic -i filtered_func_data -o filtered_func_data.ica -v --nobet --bgthreshold=$fmri(thresh) --tr=$fmri(tr) --report --guireport=../../report.html"
 
@@ -973,7 +916,7 @@ if { [ file exists $fmri(ts_model_mat) ] && [ file exists $fmri(ts_model_con) ] 
     set thecommand "$thecommand --Tdes=$fmri(ts_model_mat) --Tcon=$fmri(ts_model_con)"
 }
 
-#}}}
+#
 	set ID [ fsl:exec "$thecommand" -b $howlong -h $ID -N feat4_ica -l logs ]
     }
     fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -stop" -b 1 -h $ID -N feat5_stop -l logs
@@ -985,7 +928,8 @@ if { $fmri(icaopt) > 1 } {
     fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $GFD -stop" -b 1 -h $ID -N feat5_stop -l logs
 }
 
-#}}}
+#
     }
 }
+
 

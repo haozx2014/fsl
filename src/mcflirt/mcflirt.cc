@@ -479,7 +479,6 @@ void fix2D(volume<float>& vol)
    center(1) = 0.5*(refvol.xsize() - 1.0)*refvol.xdim();
    center(2) = 0.5*(refvol.ysize() - 1.0)*refvol.ydim();
    center(3) = 0.5*(refvol.zsize() - 1.0)*refvol.zdim();
-   
    if (globalopts. plotflag)
      outfile. open(filename.c_str());
      
@@ -801,9 +800,11 @@ int main (int argc,char** argv)
 
   if (globalopts. statflag) run_and_save_stats(timeseries);
   if (globalopts. tmpmatflag) {
-    if ( globalopts.reffileflag || globalopts.meanvol ) {
+    if ( globalopts.reffileflag ) 
       decompose_mats(mat_index, mat_array0, extrefvol);
-    } else {
+    else if ( globalopts.meanvol ) 
+      decompose_mats(mat_index, mat_array0, meanvol);
+    else {
        if (!globalopts. no_reporting) 
 	 cout << "refnum = " << globalopts.refnum << endl << "Original_refvol = " << original_refvol << endl;
       if (globalopts.refnum<0) 

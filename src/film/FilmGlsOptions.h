@@ -99,6 +99,8 @@ class FilmGlsOptions {
   Option<string> meanInputFile;
   Option<string> minimumTimepointFile;
   Option<string> paradigmfname;
+  Option<string> contrastFile;
+  Option<string> fContrastFile;
   Option<int> epith;
   Option<int> ms;
   Option<int> tukeysize;
@@ -167,6 +169,13 @@ inline FilmGlsOptions::FilmGlsOptions() :
    paradigmfname(string("--pd"), string(""),
        string("~<file>\tparadigm file"),
         false, requires_argument),
+   contrastFile(string("--con"), string(""),
+       string("~<file>\tt-contrasts file"),
+        false, requires_argument),
+   fContrastFile(string("--fcon"), string(""),
+       string("~<file>\tf-contrasts file"),
+        false, requires_argument),
+
    epith(string("--epith"), 0,
         string("~<num>\tsusan brightness threshold for volumetric analysis/smoothing sigma for surface analysis"),
         false, requires_argument),
@@ -204,6 +213,8 @@ inline FilmGlsOptions::FilmGlsOptions() :
        options.add(meanInputFile);
        options.add(minimumTimepointFile);
        options.add(paradigmfname);
+       options.add(contrastFile);
+       options.add(fContrastFile); 
        options.add(epith);
        options.add(ms);
        options.add(tukeysize);

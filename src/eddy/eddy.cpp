@@ -1,10 +1,17 @@
+/*! \file eddy.cpp
+    \brief Contains main() and some very high level functions for eddy
+*/
+#pragma clang diagnostic ignored "-Wunknown-pragmas" // Ignore the OpenMP pragmas
+
 #include <cstdlib>
 #include <string>
 #include <vector>
 #include <cmath>
+#include <boost/shared_ptr.hpp>
 #include "newmat.h"
 #include "newimage/newimageall.h"
 #include "miscmaths/miscmaths.h"
+#include "stack_dump.h"
 #include "EddyHelperClasses.h"
 #include "ECScanClasses.h"
 #include "DiffusionGP.h"
@@ -14,6 +21,7 @@
 
 using namespace EDDY;
 
+/// Global function that registers a set of scans together
 ReplacementManager Register(const EddyCommandLineOptions&  clo,     // Input
 			    ScanType                       st,      // Input
 			    ECScanManager&                 sm,      // Input/Output
@@ -21,6 +29,7 @@ ReplacementManager Register(const EddyCommandLineOptions&  clo,     // Input
 			    NEWMAT::Matrix&                msshist, // Output
 			    NEWMAT::Matrix&                phist);  // Output
 
+/// Global function that detect outlier slices and replaces them by their expectation
 DiffStatsVector DetectAndReplaceOutliers(// Input
 					 const EddyCommandLineOptions& clo,
 					 ScanType                      st,
@@ -28,6 +37,7 @@ DiffStatsVector DetectAndReplaceOutliers(// Input
 					 ECScanManager&                sm,
 					 ReplacementManager&           rm);
 
+/// Global function that Loads up the prediction maker with unwarped scans
 boost::shared_ptr<DWIPredictionMaker> LoadPredictionMaker(// Input
 							  const EddyCommandLineOptions& clo,
 							  ScanType                      st,
@@ -35,6 +45,7 @@ boost::shared_ptr<DWIPredictionMaker> LoadPredictionMaker(// Input
 							  // Output
 							  NEWIMAGE::volume<float>&      mask);
 
+/// Global function that Generates diagnostic information for subsequent analysis
 void Diagnostics(const EddyCommandLineOptions&  clo,      // Input
 		 unsigned int                   iter,     // Input
 		 ScanType                       st,       // Input
@@ -44,9 +55,12 @@ void Diagnostics(const EddyCommandLineOptions&  clo,      // Input
 		 NEWMAT::Matrix&                mss,      // Output
 		 NEWMAT::Matrix&                phist);   // Output
 
+/// The entry point of eddy.
 int main(int argc, char *argv[])
 {
-    // Parse comand line input
+  StackDump::Install(); // Gives us informative stack dump if/when program crashes
+
+  // Parse comand line input
   EddyCommandLineOptions clo(argc,argv); // Command Line Options
 
   // Read all available info
@@ -71,33 +85,54 @@ int main(int argc, char *argv[])
   NEWMAT::Matrix dwi_mss, b0_mss, dwi_ph, b0_ph;
   ReplacementManager *dwi_rm;
   if (clo.NIter() && clo.RegisterDWI()) {
+    cout << "Running Register" << endl;
     dwi_rm = new ReplacementManager(Register(clo,DWI,sm,clo.NIter(),dwi_mss,dwi_ph));
     // Write outlier information
     if (clo.ReplaceOutliers()) {
+      cout << "Running sm.GetDwi2GlobalIndexMapping" << endl;
       std::vector<unsigned int> i2i = sm.GetDwi2GlobalIndexMapping();
+      cout << "Running dwi_rm->WriteReport" << endl;
       dwi_rm->WriteReport(i2i,clo.OLReportFname());
+      if (clo.WriteOutlierFreeData()) {
+	cout << "Running sm.WriteOutlierFreeData" << endl;
+        sm.WriteOutlierFreeData(clo.OLFreeDataFname());
+      }
     }
   }
-  if (clo.NIter() && clo.Registerb0()) ReplacementManager b0_rm = Register(clo,B0,sm,clo.NIter(),b0_mss,b0_ph);
+  if (clo.NIter() && clo.Registerb0()) {
+    cout << "Running Register" << endl;
+    ReplacementManager b0_rm = Register(clo,B0,sm,clo.NIter(),b0_mss,b0_ph);
+  }
+
+  /*
+  // Write raw registration parameters (for debugging).
+  cout << "Running sm.WriteParameterFile for raw parameters" << endl;
+  sm.WriteParameterFile(clo.ParOutFname()+string(".raw"));
+  cout << "Running sm.WriteRegisteredImages for raw parameters" << endl;
+  sm.WriteRegisteredImages(clo.IOutFname()+string(".raw"),clo.ResamplingMethod());  
+  */  
 
   // Separate field offset from subject movement in PE direction
-  // if (clo.RegisterDWI()) sm.SeparateFieldOffsetFromMovement();
+  // if (clo.RegisterDWI()) { cout << "Running sm.SeparateFieldOffsetFromMovement" << endl; sm.SeparateFieldOffsetFromMovement(); }
 
   // Set reference for location
-  if (clo.RegisterDWI()) sm.SetDWIReference();
-  if (clo.Registerb0()) sm.Setb0Reference();
+  if (clo.RegisterDWI()) { cout << "Running sm.SetDWIReference" << endl; sm.SetDWIReference(); }
+  if (clo.Registerb0()) { cout << "Running sm.Setb0Reference" << endl; sm.Setb0Reference(); }
 
   // Write registration parameters
+  cout << "Running sm.WriteParameterFile" << endl;
   if (clo.RegisterDWI() && clo.Registerb0()) sm.WriteParameterFile(clo.ParOutFname());
   else if (clo.RegisterDWI()) sm.WriteParameterFile(clo.ParOutFname(),DWI);
   else sm.WriteParameterFile(clo.ParOutFname(),B0);
 
   // Write registered images
+  cout << "Running sm.WriteRegisteredImages" << endl;
   if (clo.RegisterDWI() && clo.Registerb0()) sm.WriteRegisteredImages(clo.IOutFname(),clo.ResamplingMethod());
   else if (clo.RegisterDWI()) sm.WriteRegisteredImages(clo.IOutFname(),clo.ResamplingMethod(),DWI);
   else sm.WriteRegisteredImages(clo.IOutFname(),clo.ResamplingMethod(),B0);
 
   // Write EC fields
+  cout << "Running sm.WriteECFields" << endl;
   if (clo.WriteFields()) {
     if (clo.RegisterDWI() && clo.Registerb0()) sm.WriteECFields(clo.ECFOutFname());
     else if (clo.RegisterDWI()) sm.WriteECFields(clo.ECFOutFname(),DWI);
@@ -116,6 +151,24 @@ int main(int argc, char *argv[])
   }
   exit(EXIT_SUCCESS);
 }
+
+/****************************************************************//**
+*  								  
+*  A global function that registers the scans in sm.
+*  \param[in] clo Carries information about the command line options 
+*  that eddy was invoked with.
+*  \param[in] st Specifies if we should register the diffusion weighted 
+*  images or the b=0 images.
+*  \param[in,out] sm Collection of all scans. Will be updated by this call.
+*  \param[in] niter Specifies how many iterations should be run
+*  \param[out] msshist Returns the history of the mss. msshist(i,j) 
+*  contains the mss for the jth scan on the ith iteration.
+*  \param[out] phist Returns the history of the estimated parameters. 
+*  phist(i,j) contains the jth parameter on the ith iteration
+*  \return A ReplacementManager that details which slices in which 
+*  scans were replaced by their expectations.
+*
+********************************************************************/ 
 
 ReplacementManager Register(const EddyCommandLineOptions&  clo,     // Input
 			    ScanType                       st,      // Input
@@ -168,6 +221,24 @@ ReplacementManager Register(const EddyCommandLineOptions&  clo,     // Input
   return(rm);
 }
 
+/****************************************************************//**
+*  								  
+*  A global function that loads up a prediction maker with all scans 
+*  of a given type. It will load it with unwarped scans (given the 
+*  current estimates of the warps) as served up by sm.GetUnwarpedScan().
+*  \param[in] clo Carries information about the command line options 
+*  that eddy was invoked with.
+*  \param[in] st Specifies if we should register the diffusion weighted 
+*  images or the b=0 images. If it is set to DWI the function will return 
+*  an EDDY::DiffusionGP prediction maker and if it is set to b0 it will 
+*  return an EDDY::b0Predictor.
+*  \param[in] sm Collection of all scans.
+*  \param[out] mask Returns a mask that indicates the voxels where data 
+*  is present for all input scans in sm.
+*  \return A safe pointer to a DWIPredictionMaker that can be used to 
+*  make predictions about what the scans should look like in undistorted space.
+*
+********************************************************************/ 
 boost::shared_ptr<DWIPredictionMaker> LoadPredictionMaker(// Input
 							  const EddyCommandLineOptions& clo,
 							  ScanType                      st,
@@ -293,3 +364,7 @@ DiffStatsVector DetectAndReplaceOutliers(// Input
   delete pmp;
   return(stats);
 }
+
+/*! \mainpage
+ * Here goes a description of the eddy project
+ */

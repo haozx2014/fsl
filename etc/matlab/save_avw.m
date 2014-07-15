@@ -32,8 +32,10 @@ tmpname = tempname;
          
 %% Convert volume from NIFTI_PAIR format to user default
 tmp=sprintf('$FSLDIR/bin/fslmaths %s %s',tmpname,fname);
-call_fsl(tmp);
-
+[status,output]=call_fsl(tmp);
+if (status),
+  error(output)
+end
 % cross platform compatible deleting of files
 delete([tmpname,'.hdr']);
 delete([tmpname,'.img']);

@@ -281,9 +281,9 @@ int main(int argc, char *argv[])
       if (verbose.value()) {
         cout << "Calculating spline coefficients for ksp = " << ksp[0] << ", " << ksp[1] << ", " << ksp[2] << endl;
       }
-      vector<shared_ptr<basisfield> > fields(3);
+      vector<boost::shared_ptr<basisfield> > fields(3);
       try {
-        for (int i=0; i<3; i++) fields[i] = shared_ptr<splinefield>(new splinefield(infile.FieldAsSplinefield(i,ksp)));
+        for (int i=0; i<3; i++) fields[i] = boost::shared_ptr<splinefield>(new splinefield(infile.FieldAsSplinefield(i,ksp)));
       }
       catch(...) {
         cerr << "fnirtfileutils: Problem calculating spline coefficients " << endl;
@@ -322,9 +322,9 @@ int main(int argc, char *argv[])
       if (verbose.value()) {
         cout << "Calculating DCT coefficients for order = " << order[0] << ", " << order[1] << ", " << order[2] << endl;
       }
-      vector<shared_ptr<basisfield> > fields(3);
+      vector<boost::shared_ptr<basisfield> > fields(3);
       try {
-        for (int i=0; i<3; i++) fields[i] = shared_ptr<dctfield>(new dctfield(infile.FieldAsDctfield(i,order)));
+        for (int i=0; i<3; i++) fields[i] = boost::shared_ptr<dctfield>(new dctfield(infile.FieldAsDctfield(i,order)));
       }
       catch(...) {
         cerr << "fnirtfileutils: Problem calculating DCT coefficients " << endl;

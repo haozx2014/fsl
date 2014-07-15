@@ -1,3 +1,9 @@
+/*! \file b0Predictor.h
+    \brief Contains declaration of class for making silly (mean) predictions about b=0 data.
+
+    \author Jesper Andersson
+    \version 1.0b, Sep., 2012.
+*/
 // Declarations of class to make silly
 // predictions about b0 scans.
 //
@@ -23,14 +29,17 @@
 
 namespace EDDY {
 
-//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-//
-// Class b0Predictor
-//
-// Class used to make predictions about b0 scans.
-//
-// {{{ @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
+/****************************************************************//**
+*
+* \brief Class for making silly (mean) predictions about b=0 data.
+*
+* Will make predictions about b=0 scans. Since we don't expect any
+* variability in these scans the prediction will simply be the mean
+* of all the scans in the prediction maker. It is there mainly so
+* that the same code can be used for registration of 
+* diffusion-weighted and b=0 scans.
+*
+********************************************************************/ 
   class b0Predictor : public DWIPredictionMaker
 {
 public:

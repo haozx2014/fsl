@@ -1,7 +1,6 @@
-
 /*  POSSUM
-    Ivana Drobnjak & Mark Jenkinson
-    Copyright (C) 2005-2007 University of Oxford  */
+    Ivana Drobnjak, Mark Jenkinson and Matthew Webster
+    Copyright (C) 2005-2010 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -71,6 +70,7 @@
 #include <string>
 #include <fstream>
 #include <unistd.h>
+#include <time.h>
 
 #ifdef USE_MPI
 #include <mpi.h>
@@ -95,7 +95,7 @@ using namespace MISCMATHS;
 using namespace Utilities;
 //using namespace std;
 
-string title="possum \nCopyright(c) 2007, University of Oxford (Ivana Drobnjak)";
+string title="possum\nCopyright(c) 2007, University of Oxford (Ivana Drobnjak)";
 string examples="possum -i <input phantom volume> -x <MR parameters matrix> -p <pulse> -f <RF slice profile> -m <motion file> -o <output signal matrix> [optional arguments]";
 
 Option<bool> verbose(string("-v,--verbose"), false, 
@@ -154,6 +154,10 @@ Option<string> opt_slcprof(string("-f,--slcprof"), string(""),
 		  string("<inputmatrix-filename> (RF slice profile)"),
 		  true, requires_argument);
 
+Option<bool> opt_rfavg(string("--rfavg"), false,
+           string("If this option is ON it will use RF angle averging"),
+                       false, no_argument);
+
 //INPUT for the computational efficiency 
 Option<int>    opt_level(string("-l,--lev"), 1,
 		  string("{1,2,3,4} (Levels: 1.no motion//basic B0 2.motion//basic B0, 3.motion//full B0, 4.no motion//time changing B0)"),
@@ -175,15 +179,16 @@ Option<string> opt_signal(string("-o,--out"), string(""),
 		  string("<outputmatrix-filename> (Signal - [sreal, simag])"),
 		  true, requires_argument);
 
-//OUTPUT main event matrix
+//INPUT main event matrix
 Option<string> opt_mainmatrix(string("-e,--mainmatx"), string(""),
-		  string("<outputmatrix-filename> (Main event matrix [t(s),rf_ang(rad),rf_freq_band(Hz),(4)=rf_cent_freq(Hz),read(1/0),Gx,Gy,Gz(T/m),Tx,Ty,Tz(m),angle_of_rot B(rad),rot_axis Bx,By,Bz(m),angle_of_rot A(rad),rot_axis Ax,Ay,Az(m)]) "),
-		  false, requires_argument);
+		  string("<inputmatrix-filename> (Main event matrix [t(s),rf_ang(rad),rf_freq_band(Hz),(4)=rf_cent_freq(Hz),read(1/0),Gx,Gy,Gz(T/m),Tx,Ty,Tz(m),angle_of_rot B(rad),rot_axis Bx,By,Bz(m),angle_of_rot A(rad),rot_axis Ax,Ay,Az(m)]) "),
+		  true, requires_argument);
 
 //OUTPUT kcoord if needed
 Option<bool> opt_kcoord(string("-k,--kcoord"), false,
 		  string("If this option is ON it will save the kspace coordinates"),
 		  false, no_argument);
+
 
 int nonoptarg;
 
@@ -192,6 +197,13 @@ int compute_volume(int argc, char *argv[])
 {
   cout<<"Starting POSSUM..."<<endl;
   cout<<""<<endl;
+
+//tejas-22.11.12
+//start time
+time_t theTime = time(NULL);
+cout << "possum-start-time\t"<< opt_procid.value() << "\t" << theTime << endl;
+//end
+
   /////////////////////////////////////////////////////////////////////////////
   // SET UP COORDINATE SYSTEM with the CENTER IN THE CENTER OF THE OBJECT    
   /////////////////////////////////////////////////////////////////////////////
@@ -247,9 +259,6 @@ int compute_volume(int argc, char *argv[])
   ///////////////////////////////////////////////////////
   //PULSE & MOTION MATRIX SORT IN MAINMATRIX
   ///////////////////////////////////////////////////////
-  cout<<"Reading the pulse sequence..."<<endl;
-  Matrix pulse;
-  pulse=read_binary_matrix(opt_pulse.value());
   RowVector pulseinfo;
   pulseinfo=read_ascii_matrix(opt_pulse.value()+".info");//[SeqType,TE,TR,TRslc,Nx,Ny,dx,dy,maxG,RiseT,BWrec, Nvol,Nslc,SlcThk,SlcDir,Gap,zstart,FlipAngle]
   cout<<"[SeqType,TE,TR,TRslc,Nx,Ny,dx,dy,maxG,RiseT,BW,Nvol,Nslc,SlcThk,SlcDir,Gap,zstart,FA]"<<endl;
@@ -258,7 +267,7 @@ int compute_volume(int argc, char *argv[])
   cout<<"Reading the motion file..."<<endl;
   Matrix motion;
   motion=read_ascii_matrix(opt_motion.value());
-  cout<<"Motion file is "<<motion<<endl;
+  //cout<<"Motion file is "<<motion<<endl;
   /////////////////////////////////////////////////////////////////////////
   //SLICE PROFILE
   /////////////////////////////////////////////////////////////////////////
@@ -343,23 +352,32 @@ int compute_volume(int argc, char *argv[])
   cout<<"Level is "<<level<<endl;
   cout<<""<<endl;
   cout<<"Extra slc calculation..."<<endl;
-  double motion_add_down=fabs(sstzmax);
-  double motion_add_up=fabs(sstzmin);
-  double nvox=1/sszdim;//number of voxels per 1m in slice selection direction
-  double sszstart_in=pulseinfo(17);// starting point in the volume in the direction of the slice selection (used to be just z)
-  int sszstart_p=(int) (sszstart_in*nvox+0.0001);//zstart in vox, 0.0001 is just a fix so that it rounds it properly 
-  int extra_down_vox=(int)((motion_add_down+slcpr_add)*nvox);
-  int extra_down_slc=(int)(ceil((motion_add_down+slcpr_add)/slcthk));
-  int sszstart=sszstart_p-extra_down_vox;
-  if (sszstart<0) sszstart=0; 
-  int extra_up_vox=(int)((motion_add_up+slcpr_add)*nvox);
-  int extra_up_slc=(int)(ceil((motion_add_up+slcpr_add)/slcthk));
-  int sszend=sszstart_p+ (int)((numslc*slcthk+(numslc-1)*gap)*nvox) + extra_up_vox;  
-  if (sszend>(ssNz-1)) sszend=ssNz-1;
-  cout<<"Begining of the object is "<<sszstart<<" and the end is "<<sszend<<" (in vox, in slice select direction)."<<endl;
-  cout<<"Motion add on - side (mm):"<<motion_add_down<<"; Motion add on + side (mm):"<<motion_add_up<<"; Slice profile add:"<<slcpr_add<<endl;
-  cout<<"Extra voxels on - side:"<<extra_down_vox<<"& Extra voxels on + side (mm):"<<extra_up_vox<<endl;
-  cout<<"Extra slices on - side:"<<extra_down_slc<<" &  Extra slices on + side:"<< extra_up_slc<<endl;//
+    //Basic
+    double sszstart_in=pulseinfo(17);// starting point in the volume in the direction of the slice selection (used to be just z)
+    double sszend_in=sszstart_in+numslc*slcthk+(numslc-1)*gap;
+    double nvox=1/sszdim;//number of voxels per 1m in slice selection direction
+    int sszstart_p=(int) (sszstart_in*nvox+0.0001);//zstart in vox, 0.0001 is just a fix so that it rounds it properly 
+    int sszend_p=(int)ceil(sszend_in*nvox);
+    cout<<"Specified starting point is zstart= "<<sszstart_in<<" (in m) = "<<sszstart_p<<" (in voxels)"<<endl;
+    cout<<"Specified end point is zend= "<<sszend_in<<" (in m) = "<<sszend_p<<" (in voxels)"<<endl;
+    //Slice profile add ons
+    int slcpr_add_vox=(int)ceil(slcpr_add*nvox);
+    cout<<"Slice profile add-on up and down is "<<slcpr_add<<" (in m) = "<<slcpr_add_vox<<" (in voxels)"<<endl;
+    //Motion add ons
+    double rotation_add=max(fabs(posx(1))*sin(rymaxabs),fabs(posy(1))*sin(rxmaxabs));
+    double motion_add_down=fabs(sstzmax)+rotation_add;
+    double motion_add_up=fabs(sstzmin)+rotation_add;
+    int motion_add_down_vox=(int)ceil(motion_add_down*nvox);
+    int motion_add_up_vox=(int)ceil(motion_add_up*nvox);
+    cout<<"Motion add-on up is "<<motion_add_up<<" (in m) = "<<motion_add_up_vox<<" (in voxels)"<<endl;
+    cout<<"Motion add-on down is "<<motion_add_down<<" (in m) = "<<motion_add_down_vox<<" (in voxels)"<<endl;
+    //int extra_down_slc=(int)(ceil((motion_add_down+slcpr_add)/slcthk));
+    int sszstart=sszstart_p-slcpr_add_vox-motion_add_down_vox;
+    if (sszstart<0) sszstart=0; 
+    //int extra_up_slc=(int)(ceil((motion_add_up+slcpr_add)/slcthk));
+    int sszend=sszend_p+slcpr_add_vox+motion_add_up_vox;  
+    if (sszend>(ssNz-1)) sszend=ssNz-1;
+    cout<<"FINAL: Begining of the object is "<<sszstart<<" and the end is "<<sszend<<" (in vox, in slice select direction)."<<endl;
   int nospeedup=0;
   if (opt_nospeedup.value())nospeedup=1;//when no speed up used for slices
   //counter endings for the main loop
@@ -530,388 +548,435 @@ int compute_volume(int argc, char *argv[])
   double cxyz=xdim*ydim*zdim;
   string outputname=opt_signal.value();
   cout<<""<<endl;
-  ///////////////////////////////////////////////////////////
-  //NO MOTION/
-  ///////////////////////////////////////////////////////////
-  if (level==1){
-    ////////////////////////
-    // B0 PERTURBATION 
-    ////////////////////////
-    cout<<"LEVEL1"<<endl;
-    cout<<"Creating 1 B0file together with 3 gradient files..."<<endl;
-    volume<double> b0(Nxx,Ny,Nz);
-    volume<double> b0x(Nxx,Ny,Nz);
-    volume<double> b0y(Nxx,Ny,Nz);
-    volume<double> b0z(Nxx,Ny,Nz);
-    if (opt_b0.set()) {
-      read_volume(b0,opt_b0.value()+"z_dz");
-      calc_gradientsROI(b0,b0x,b0y,b0z,myid,Nxx,numprocs);
-    }
-    else {
-      b0=phantom[0]*0;
-      b0x=b0;
-      b0y=b0;
-      b0z=b0;
-    }  
-    print_volume_info(b0,"b0");
-    cout<<""<<endl;
-    //save_volume(b0z,"b0ztest");
-    /////////////
-    //MAIN LOOP
-    /////////////
-    cout<<"Main loop..."<<endl;
-    for (register int tt=0;tt<Nt;tt++){
-      for (register int zz=zstart;zz<zend;zz++){
-        cout<<"Tissue type="<<tt<<"; zstart="<<zstart<<"; zz="<<zz<<"; zend="<<zend<<"; Voxelnumber="<<voxelcounter<<endl;
-        for (register int yy=ystart;yy<yend;yy++){
-	  int xxx=myid+xstart;
-	  for (register int xx=xstart;xx<xend;xx++){
-	    //slice speed up stuff
-            if (fabs((float)slcdir)==1) sszz=zz;
-            else if (fabs((float)slcdir)==2) sszz=yy;
-            else sszz=xx;
-      	    float slctmp=(sszz-sszstart_p)/(slcthk*nvox);
-            if(ceil(slctmp) == slctmp) {
-              sszz_slc=(int)(ceil(slctmp)+1);
-            } else {
-              sszz_slc=(int) (ceil(slctmp));
+
+	  ///////////////////////////////////////////////////////////
+	  //NO MOTION/
+	  ///////////////////////////////////////////////////////////
+	  if (level==1){
+	    cout<<"Reading the pulse sequence..."<<endl;
+	    PMatrix pulse;
+	    read_binary_matrix(pulse, opt_pulse.value());
+	    ////////////////////////
+	    // B0 PERTURBATION 
+	    ////////////////////////
+	    cout<<"LEVEL1"<<endl;
+	    cout<<"Creating 1 B0file together with 3 gradient files..."<<endl;
+	    volume<double> b0(Nxx,Ny,Nz);
+	    volume<double> b0x(Nxx,Ny,Nz);
+	    volume<double> b0y(Nxx,Ny,Nz);
+	    volume<double> b0z(Nxx,Ny,Nz);
+	    if (opt_b0.set()) {
+	      read_volume(b0,opt_b0.value()+"z_dz");
+	      calc_gradientsROI(b0,b0x,b0y,b0z,myid,Nxx,numprocs);
 	    }
-            if (phantom(xx,yy,zz,tt)!=0){
-              voxelcounter=voxelcounter+1;
-              double den=phantom(xx,yy,zz,tt)*RFrec(xx,yy,zz)*cxyz;
-              if (opt_activation.set()) {
-                for (int n=0;n<=Nact-1;n++){
-		  double a=activation(xx,yy,zz)*timecourse_2[n];
-		  double b=tissue(tt+1,2);
-		  activation4D_voxel[n]=a*b/(a+b);// conversion of beta into beta1 because of the integral (see possum no 7 page 121)
-	        }
-	      }
-	     else if (opt_activation4D.set()){
-               for (int n=0;n<=Nact-1;n++){
-		 double a=activation4D(xx,yy,zz,n);//zz-zstart_p when having only a pieace of the activation volume so we start from where the phantom starts 
-                 double b=tissue(tt+1,2);
-                 activation4D_voxel[n]=a*b/(a+b);
-	       }              
-	     }
-	      voxel1(posx(xxx+1),posy(yy+1),posz(zz+1),tissue.Row(tt+1),
-                     pulse,nreadp,voxelcounter,xdim,ydim,zdim,
-                     b0(xx,yy,zz),b0x(xx,yy,zz),b0y(xx,yy,zz),b0z(xx,yy,zz),
-                     timecourse,activation4D_voxel,Nact,outputname,
-                     table_slcprof,dslcp,dslcp_first,Nslc,den,RFtrans(xx,yy,zz),
-                     opt_test,nospeedup,save_kcoord,sreal,simag);              
-	    }
-          xxx=xxx+numprocs;
-	  }
-	}
-      }
-    }
-  }
-  ////////////////////////////////////////////////////////////
-  //MOTION WHEN ONLY POSSIBLE ROTATION CAN BE IN PLANE
-  ////////////////////////////////////////////////////////////
-  if (level==2){
-    cout<<"LEVEL2"<<endl;
-    ///////////////////////
-    //MAIN MATRIX
-    ///////////////////////
-    cout<<"Sorting pulse sequence and the motion matrix in one large matrix..."<<endl;
-    pulse=sorter(pulse,motion);
-    if (opt_mainmatrix.set()) write_binary_matrix(pulse,opt_mainmatrix.value());
-    ////////////////////////
-    // B0 PERTURBATION 
-    ////////////////////////
-    cout<<"Creating 1 B0file together with 3 gradient files..."<<endl;
-    volume<double> b0(Nxx,Ny,Nz);
-    volume<double> b0x(Nxx,Ny,Nz);
-    volume<double> b0y(Nxx,Ny,Nz);
-    volume<double> b0z(Nxx,Ny,Nz);
-    if (opt_b0.set()) {
-      read_volume(b0,opt_b0.value()+"z_dz");
-      calc_gradientsROI(b0,b0x,b0y,b0z,myid,Nxx,numprocs);
-    }
-    else {
-      b0=phantom[0]*0;
-      b0x=b0;
-      b0y=b0;
-      b0z=b0;
-    }  
-    print_volume_info(b0,"b0");
-    ////////////////
-    //MAIN LOOP
-    ////////////////
-    cout<<"Main loop..."<<endl;
-    for (register int tt=0;tt<Nt;tt++){
-      for (register int zz=zstart;zz<zend;zz++){
-        cout<<"Tissue type="<<tt<<"; zstart="<<zstart<<"; zz="<<zz<<"; zend="<<zend<<"; Voxelnumber="<<voxelcounter<<endl;
-        for (register int yy=ystart;yy<yend;yy++){
-          int xxx=myid+xstart;
-	  for (register int xx=xstart;xx<xend;xx++){
-              //slice speed up stuff
-            if (fabs((float)slcdir)==1) sszz=zz;
-            else if (fabs((float)slcdir)==2) sszz=yy;
-            else sszz=xx;
-	    float slctmp=(sszz-sszstart_p)/(slcthk*nvox);
-            if(ceil(slctmp) == slctmp) {
-              sszz_slc=(int)(ceil(slctmp)+1);
-	    } else {
-              sszz_slc=(int) (ceil(slctmp));
-	    }
-            if (phantom(xx,yy,zz,tt)!=0){
-              voxelcounter=voxelcounter+1;
-	      //cout<<"xx= "<<xx<<"; yy= "<<yy<<"; zz= "<<zz<<"; RFrec(xx,yy,zz)= "<<RFrec(xx,yy,zz)<<"; RFtrans(xx,yy,zz)= "<<RFtrans(xx,yy,zz)<<endl;
-	      double den=phantom(xx,yy,zz,tt)*RFrec(xx,yy,zz)*cxyz;
-              if (opt_activation.set()) {
-                for (int n=0;n<=Nact-1;n++){
-                  double a=activation(xx,yy,zz)*timecourse_2[n];
-		  double b=tissue(tt+1,2);
-		  activation4D_voxel[n]=a*b/(a+b);// conversion of beta into beta1 because of the integral (see possum no 7 page 121)
-                }
-	      }
-	      else if (opt_activation4D.set()){
-                for (int n=0;n<=Nact-1;n++){
-                  double a=activation4D(xx,yy,zz,n);//zz-zstart_p when having only a pieace of the activation volume so we start from where the phantom starts 
-                  double b=tissue(tt+1,2);
-                  activation4D_voxel[n]=a*b/(a+b);
-                }
-	      }
-	      voxel2(posx(xxx+1),posy(yy+1),posz(zz+1),tissue.Row(tt+1),
-                     pulse,nrf,nreadp,voxelcounter,xdim,ydim,zdim,
-                     b0(xx,yy,zz),b0x(xx,yy,zz),b0y(xx,yy,zz),b0z(xx,yy,zz),
-                     timecourse,activation4D_voxel,Nact,outputname,
-                     table_slcprof,dslcp,dslcp_first,Nslc,den,RFtrans(xx,yy,zz),
-                     opt_test,nospeedup,save_kcoord,sreal,simag);
-	      }
-	      xxx=xxx+numprocs;
-	  }
-	}
-      }
-    }
-  }
-  ////////////////////////////////////////////////////////////
-  //MOTION INVOLVING ROTATION Rx or Ry or both
-  ////////////////////////////////////////////////////////////
-  if (level==3){
-    cout<<"LEVEL3"<<endl;
-     ///////////////////////
-    //MAIN MATRIX
-    ///////////////////////
-    cout<<"Sorting pulse sequence and the motion matrix in one large matrix..."<<endl;
-    pulse=sorter(pulse,motion);
-    if (opt_mainmatrix.set()) write_binary_matrix(pulse,opt_mainmatrix.value());
-    ////////////////////////////////////////////
-    // B0 PERTURBATION 
-    ////////////////////////////////////////////
-    cout<<"Creating 9 B0file together with 27 gradient files..."<<endl;
-    volume<double> b0x_dx, b0x_dy, b0x_dz, b0y_dx, b0y_dy, b0y_dz, b0z_dx, b0z_dy, b0z_dz;//read in
-    volume<double> b0x_dx_gx, b0x_dx_gy, b0x_dx_gz, b0x_dy_gx, b0x_dy_gy, b0x_dy_gz, b0x_dz_gx, b0x_dz_gy, b0x_dz_gz;//calculate from, the calc gradients
-    volume<double> b0y_dx_gx, b0y_dx_gy, b0y_dx_gz, b0y_dy_gx, b0y_dy_gy, b0y_dy_gz, b0y_dz_gx, b0y_dz_gy, b0y_dz_gz;
-    volume<double> b0z_dx_gx, b0z_dx_gy, b0z_dx_gz, b0z_dy_gx, b0z_dy_gy, b0z_dy_gz, b0z_dz_gx, b0z_dz_gy, b0z_dz_gz;
-    if (opt_b0.set()) {
-      read_volume(b0x_dx,opt_b0.value()+"x_dx");
-      calc_gradientsROI(b0x_dx,b0x_dx_gx,b0x_dx_gy,b0x_dx_gz,myid,Nxx,numprocs);
-      read_volume(b0x_dy,opt_b0.value()+"x_dy");
-      calc_gradientsROI(b0x_dy,b0x_dy_gx,b0x_dy_gy,b0x_dy_gz,myid,Nxx,numprocs);
-      read_volume(b0x_dz,opt_b0.value()+"x_dz");
-      calc_gradientsROI(b0x_dz,b0x_dz_gx,b0x_dz_gy,b0x_dz_gz,myid,Nxx,numprocs);
-      read_volume(b0y_dx,opt_b0.value()+"y_dx");
-      calc_gradientsROI(b0y_dx,b0y_dx_gx,b0y_dx_gy,b0y_dx_gz,myid,Nxx,numprocs);
-      read_volume(b0y_dy,opt_b0.value()+"y_dy");
-      calc_gradientsROI(b0y_dy,b0y_dy_gx,b0y_dy_gy,b0y_dy_gz,myid,Nxx,numprocs);
-      read_volume(b0y_dz,opt_b0.value()+"y_dz");
-      calc_gradientsROI(b0y_dz,b0y_dz_gx,b0y_dz_gy,b0y_dz_gz,myid,Nxx,numprocs);
-      read_volume(b0z_dx,opt_b0.value()+"z_dx");
-      calc_gradientsROI(b0z_dx,b0z_dx_gx,b0z_dx_gy,b0z_dx_gz,myid,Nxx,numprocs);
-      read_volume(b0z_dy,opt_b0.value()+"z_dy");
-      calc_gradientsROI(b0z_dy,b0z_dy_gx,b0z_dy_gy,b0z_dy_gz,myid,Nxx,numprocs);
-      read_volume(b0z_dz,opt_b0.value()+"z_dz");
-      calc_gradientsROI(b0z_dz,b0z_dz_gx,b0z_dz_gy,b0z_dz_gz,myid,Nxx,numprocs);
-    }
-    else {
-      b0x_dx=phantom[0]*0;
-      b0x_dx_gx=b0x_dx; b0x_dx_gy=b0x_dx; b0x_dx_gz=b0x_dx;
-      b0x_dy=b0x_dx; b0x_dy_gx=b0x_dx; b0x_dy_gy=b0x_dx; b0x_dy_gz=b0x_dx;
-      b0x_dz=b0x_dx; b0x_dz_gx=b0x_dx; b0x_dz_gy=b0x_dx; b0x_dz_gz=b0x_dx;
-      b0y_dx=b0x_dx; b0y_dx_gx=b0x_dx; b0y_dx_gy=b0x_dx; b0y_dx_gz=b0x_dx;
-      b0y_dy=b0x_dx; b0y_dy_gx=b0x_dx; b0y_dy_gy=b0x_dx; b0y_dy_gz=b0x_dx;
-      b0y_dz=b0x_dx; b0y_dz_gx=b0x_dx; b0y_dz_gy=b0x_dx; b0y_dz_gz=b0x_dx;
-      b0z_dx=b0x_dx; b0z_dx_gx=b0x_dx; b0z_dx_gy=b0x_dx; b0z_dx_gz=b0x_dx;
-      b0z_dy=b0x_dx; b0z_dy_gx=b0x_dx; b0z_dy_gy=b0x_dx; b0z_dy_gz=b0x_dx;
-      b0z_dz=b0x_dx; b0z_dz_gx=b0x_dx; b0z_dz_gy=b0x_dx; b0z_dz_gz=b0x_dx;
-    }
-    print_volume_info(b0z_dz,"b0z_dz");
-    ///////////////////
-    //MAIN LOOP
-    ///////////////////
-    cout<<"Main loop..."<<endl;
-    for (register int tt=0;tt<Nt;tt++){
-      for (register int zz=zstart;zz<zend;zz++){
-        cout<<"Tissue type="<<tt<<"; zstart="<<zstart<<"; zz="<<zz<<"; zend="<<zend<<"; Voxelnumber="<<voxelcounter<<endl;
-        for (register int yy=ystart;yy<yend;yy++){
-	  int xxx=myid+xstart;
-          for (register int xx=0;xx<xend;xx++){
-            //slice speed up stuff
-            if (fabs((float)slcdir)==1) sszz=zz;
-            else if (fabs((float)slcdir)==2) sszz=yy;
-            else sszz=xx;
-	    float slctmp=(sszz-sszstart_p)/(slcthk*nvox);
-            if(ceil(slctmp) == slctmp) {
-              sszz_slc=(int)(ceil(slctmp)+1);
-	    } else {
-              sszz_slc=(int) (ceil(slctmp));
-	    }
-	    if (phantom(xx,yy,zz,tt)!=0){
-                voxelcounter=voxelcounter+1;
-	        double den=phantom(xx,yy,zz,tt)*RFrec(xx,yy,zz)*cxyz;
-                if (opt_activation.set()) {
-                  for (int n=0;n<=Nact-1;n++){
-                    double a=activation(xx,yy,zz)*timecourse_2[n];
-		    double b=tissue(tt+1,2);
-		    activation4D_voxel[n]=a*b/(a+b);// conversion of beta into beta1 because of the integral (see possum no 7 page 121)
-                  }
-	        }
-	        else if (opt_activation4D.set()){
-                  for (int n=0;n<=Nact-1;n++){
-                    double a=activation4D(xx,yy,zz,n);//zz-zstart_p when having only a pieace of the activation volume so we start from where the phantom starts 
-                    double b=tissue(tt+1,2);
-                    activation4D_voxel[n]=a*b/(a+b); 
+	    else {
+	      b0=phantom[0]*0;
+	      b0x=b0;
+	      b0y=b0;
+	      b0z=b0;
+	    }  
+	    print_volume_info(b0,"b0");
+	    cout<<""<<endl;
+	    //save_volume(b0z,"b0ztest");
+	    /////////////
+	    //MAIN LOOP
+	    /////////////
+	    cout<<"Main loop..."<<endl;
+	    for (register int tt=0;tt<Nt;tt++){
+	      for (register int zz=zstart;zz<zend;zz++){
+		cout<<"Tissue type="<<tt<<"; zstart="<<zstart<<"; zz="<<zz<<"; zend="<<zend<<"; Voxelnumber="<<voxelcounter<<endl;
+		for (register int yy=ystart;yy<yend;yy++){
+		  int xxx=myid+xstart;
+		  for (register int xx=xstart;xx<xend;xx++){
+		    //slice speed up stuff
+		    if (fabs((float)slcdir)==1) sszz=zz;
+		    else if (fabs((float)slcdir)==2) sszz=yy;
+		    else sszz=xx;
+	      	    float slctmp=(sszz-sszstart_p)/(slcthk*nvox);
+		    if(ceil(slctmp) == slctmp) {
+		      sszz_slc=(int)(ceil(slctmp)+1);
+		    } else {
+		      sszz_slc=(int) (ceil(slctmp));
+		    }
+		    if (phantom(xx,yy,zz,tt)!=0){
+		      voxelcounter=voxelcounter+1;
+		      double den=phantom(xx,yy,zz,tt)*RFrec(xx,yy,zz)*cxyz;
+		      if (opt_activation.set()) {
+		        for (int n=0;n<=Nact-1;n++){
+			  double a=activation(xx,yy,zz)*timecourse_2[n];
+			  double b=tissue(tt+1,2);
+			  activation4D_voxel[n]=a*b/(a+b);// conversion of beta into beta1 because of the integral (see possum no 7 page 121)
+			}
+		      }
+		     else if (opt_activation4D.set()){
+		       for (int n=0;n<=Nact-1;n++){
+			 double a=activation4D(xx,yy,zz,n);//zz-zstart_p when having only a pieace of the activation volume so we start from where the phantom starts 
+		         double b=tissue(tt+1,2);
+		         activation4D_voxel[n]=a*b/(a+b);
+		       }              
+		     }
+		      voxel1(posx(xxx+1),posy(yy+1),posz(zz+1),tissue.Row(tt+1),
+		             pulse,nreadp,voxelcounter,xdim,ydim,zdim,
+		             b0(xx,yy,zz),b0x(xx,yy,zz),b0y(xx,yy,zz),b0z(xx,yy,zz),
+		             timecourse,activation4D_voxel,Nact,outputname,
+		             table_slcprof,dslcp,dslcp_first,Nslc,den,RFtrans(xx,yy,zz),
+		             opt_test,nospeedup,save_kcoord,sreal,simag);   
+		      //srealT+=sreal*coil(xx,yy,zz); //Ivana 01.11.12 -trial		      
+		    }
+		  xxx=xxx+numprocs;
 		  }
 		}
-		voxel3(posx(xxx+1),posy(yy+1),posz(zz+1),tissue.Row(tt+1),
-                       pulse,nrf,nreadp,voxelcounter,xdim,ydim,zdim,
-                       b0x_dx(xx,yy,zz),b0y_dx(xx,yy,zz),b0z_dx(xx,yy,zz),
-                       b0x_dy(xx,yy,zz),b0y_dy(xx,yy,zz),b0z_dy(xx,yy,zz),
-		       b0x_dz(xx,yy,zz),b0y_dz(xx,yy,zz),b0z_dz(xx,yy,zz),
-                       b0x_dx_gx(xx,yy,zz),b0y_dx_gx(xx,yy,zz),b0z_dx_gx(xx,yy,zz),
-		       b0x_dy_gx(xx,yy,zz),b0y_dy_gx(xx,yy,zz),b0z_dy_gx(xx,yy,zz),
-	               b0x_dz_gx(xx,yy,zz),b0y_dz_gx(xx,yy,zz),b0z_dz_gx(xx,yy,zz),
-		       b0x_dx_gy(xx,yy,zz),b0y_dx_gy(xx,yy,zz),b0z_dx_gy(xx,yy,zz),
-	               b0x_dy_gy(xx,yy,zz),b0y_dy_gy(xx,yy,zz),b0z_dy_gy(xx,yy,zz),
-		       b0x_dz_gy(xx,yy,zz),b0y_dz_gy(xx,yy,zz),b0z_dz_gy(xx,yy,zz),
-                       b0x_dx_gz(xx,yy,zz),b0y_dx_gz(xx,yy,zz),b0z_dx_gz(xx,yy,zz),
-		       b0x_dy_gz(xx,yy,zz),b0y_dy_gz(xx,yy,zz),b0z_dy_gz(xx,yy,zz),
-	               b0x_dz_gz(xx,yy,zz),b0y_dz_gz(xx,yy,zz),b0z_dz_gz(xx,yy,zz),
-                       timecourse,activation4D_voxel,Nact,outputname,table_slcprof,
-                       dslcp,dslcp_first,Nslc,den,RFtrans(xx,yy,zz),opt_test,
-                       nospeedup,save_kcoord,sreal,simag);
 	      }
-	    xxx=xxx+numprocs;
 	    }
 	  }
-	}
-      }
-    }
-  ///////////////////////////////////////////////////////////
-  //NO MOTION BUT B0 PERTURBATION CHANGES WITH TIME
-  ///////////////////////////////////////////////////////////
-  if (level==4){
-    cout<<"LEVEL4"<<endl;
-    ////////////////////////
-    // B0 PERTURBATION 
-    ////////////////////////
-    cout<<"Creating 1 B0extra file together with 3 gradient files all changing in time..."<<endl;
-    Matrix b0timecourse_tmp;
-    double* b0timecourse;
-    double* b0timecourse_2;
-    double* b0time;
-    double* b0xtime;
-    double* b0ytime; 
-    double* b0ztime;
-    b0timecourse_tmp=read_ascii_matrix(opt_b0timecourse4D.value());
-    int Nb0=b0timecourse_tmp.Nrows();
-    b0timecourse=new double[Nb0];
-    b0timecourse_2=new double[Nb0];
-    b0time=new double[Nb0];
-    b0xtime=new double[Nb0];
-    b0ytime=new double[Nb0];
-    b0ztime=new double[Nb0];
-    for (int n=0;n<=Nb0-1;n++){
-      b0timecourse[n]=b0timecourse_tmp(n+1,1);
-      b0timecourse_2[n]=b0timecourse_tmp(n+1,2);
-    }
-    volume<double> b0extra;
-    volume<double> b0xextra;
-    volume<double> b0yextra;
-    volume<double> b0zextra;
-    read_volume(b0extra,opt_b0extra.value());
-    calc_gradientsROI(b0extra,b0xextra,b0yextra,b0zextra,myid,Nxx,numprocs);
-    print_volume_info(b0extra,"b0extra");
-    cout<<"Creating 1 B0file together with 3 gradient files..."<<endl;
-    volume<double> b0(Nxx,Ny,Nz);
-    volume<double> b0x(Nxx,Ny,Nz);
-    volume<double> b0y(Nxx,Ny,Nz);
-    volume<double> b0z(Nxx,Ny,Nz);
-    if (opt_b0.set()) {
-      read_volume(b0,opt_b0.value()+"z_dz");
-      calc_gradientsROI(b0,b0x,b0y,b0z,myid,Nxx,numprocs);
-    }
-    else {
-      b0=phantom[0]*0;
-      b0x=b0;
-      b0y=b0;
-      b0z=b0;
-    }  
-    print_volume_info(b0,"b0");
-    cout<<""<<endl;
-    /////////////
-    //MAIN LOOP
-    /////////////
-    cout<<"Main loop..."<<endl;
-    for (register int tt=0;tt<Nt;tt++){
-      for (register int zz=zstart;zz<zend;zz++){
-        cout<<"Tissue type="<<tt<<"; zstart="<<zstart<<"; zz="<<zz<<"; zend="<<zend<<"; Voxelnumber="<<voxelcounter<<endl;
-        for (register int yy=ystart;yy<yend;yy++){
-	  int xxx=myid+xstart;
-          for (register int xx=xstart;xx<xend;xx++){
-            //slice speed up stuff
-            if (fabs((float)slcdir)==1) sszz=zz;
-            else if (fabs((float)slcdir)==2) sszz=yy;
-            else sszz=xx;
-	    float slctmp=(sszz-sszstart_p)/(slcthk*nvox);
-            if(ceil(slctmp) == slctmp) {
-              sszz_slc=(int)(ceil(slctmp)+1);
-              } else {
-              sszz_slc=(int) (ceil(slctmp));
-              }
-            if (phantom(xx,yy,zz,tt)!=0){
-                voxelcounter=voxelcounter+1;
-                double den=phantom(xx,yy,zz,tt)*RFrec(xx,yy,zz)*cxyz;
-                if (opt_activation.set()) {
-                  for (int n=0;n<=Nact-1;n++){
-                    double a=activation(xx,yy,zz)*timecourse_2[n];
-		    double b=tissue(tt+1,2);
-		    activation4D_voxel[n]=a*b/(a+b);// conversion of beta into beta1 because of the integral (see possum no 7 page 121)
-		  }
-		}
-	        else if (opt_activation4D.set()){
-                  for (int n=0;n<=Nact-1;n++){
-                    double a=activation4D(xx,yy,zz,n);//zz-zstart_p when having only a pieace of the activation volume so we start from where the phantom starts 
-                    double b=tissue(tt+1,2);
-                    activation4D_voxel[n]=a*b/(a+b); 
-		  }              
-		}
-                for (int n=0;n<=Nb0-1;n++){
-                  b0time[n]=b0extra(xx,yy,zz)*b0timecourse_2[n];
-                  b0xtime[n]=b0xextra(xx,yy,zz)*b0timecourse_2[n];
-                  b0ytime[n]=b0yextra(xx,yy,zz)*b0timecourse_2[n];
-                  b0ztime[n]=b0zextra(xx,yy,zz)*b0timecourse_2[n];
-		  if (voxelcounter==1){
-		    cout<<"b0time[n]="<<b0time[n]<<"b0xtime[n]="<<b0xtime[n]<<"b0ytime[n]="<<b0ytime[n]<<"b0ztime[n]="<<b0ztime[n]<<endl;
-		  }
-		} 
-            	voxel4(posx(xxx+1),posy(yy+1),posz(zz+1),tissue.Row(tt+1),
-                       pulse,nreadp,voxelcounter,xdim,ydim,zdim,
-                       b0time,b0xtime,b0ytime,b0ztime, b0timecourse, Nb0,
-                       b0(xx,yy,zz),b0x(xx,yy,zz),b0y(xx,yy,zz),b0z(xx,yy,zz),
-                       timecourse,activation4D_voxel,Nact,outputname,table_slcprof,
-                       dslcp,dslcp_first,Nslc,den,RFtrans(xx,yy,zz),opt_test,
-                       nospeedup,save_kcoord,sreal,simag);  
+	  ////////////////////////////////////////////////////////////
+	  //MOTION WHEN ONLY POSSIBLE ROTATION CAN BE IN PLANE
+	  ////////////////////////////////////////////////////////////
+	  if (level==2){
+	    cout<<"LEVEL2"<<endl;
+	    ///////////////////////
+	    //MAIN MATRIX
+	    ///////////////////////
+	    cout<<"Sorting pulse sequence and the motion matrix in one large matrix..."<<endl;
+	    cout<<"Reading the pulse sequence..."<<endl;
+	    PMatrix pulse;
+	    read_binary_matrix(pulse,opt_mainmatrix.value());
+	    ////////////////////////
+	    // B0 PERTURBATION 
+	    ////////////////////////
+	    cout<<"Creating 1 B0file together with 3 gradient files..."<<endl;
+	    volume<double> b0(Nxx,Ny,Nz);
+	    volume<double> b0x(Nxx,Ny,Nz);
+	    volume<double> b0y(Nxx,Ny,Nz);
+	    volume<double> b0z(Nxx,Ny,Nz);
+	    if (opt_b0.set()) {
+	      read_volume(b0,opt_b0.value()+"z_dz");
+	      calc_gradientsROI(b0,b0x,b0y,b0z,myid,Nxx,numprocs);
 	    }
-	    xxx=xxx+numprocs;
+	    else {
+	      b0=phantom[0]*0;
+	      b0x=b0;
+	      b0y=b0;
+	      b0z=b0;
+	    }  
+	    print_volume_info(b0,"b0");
+	    ////////////////
+	    //MAIN LOOP
+	    ////////////////
+	    cout<<"Main loop..."<<endl;
+	    for (register int tt=0;tt<Nt;tt++){
+	      for (register int zz=zstart;zz<zend;zz++){
+		cout<<"Tissue type="<<tt<<"; zstart="<<zstart<<"; zz="<<zz<<"; zend="<<zend<<"; Voxelnumber="<<voxelcounter<<endl;
+		for (register int yy=ystart;yy<yend;yy++){
+		  int xxx=myid+xstart;
+		  for (register int xx=xstart;xx<xend;xx++){
+		      //slice speed up stuff
+		    if (fabs((float)slcdir)==1) sszz=zz;
+		    else if (fabs((float)slcdir)==2) sszz=yy;
+		    else sszz=xx;
+		    float slctmp=(sszz-sszstart_p)/(slcthk*nvox);
+		    if(ceil(slctmp) == slctmp) {
+		      sszz_slc=(int)(ceil(slctmp)+1);
+		    } else {
+		      sszz_slc=(int) (ceil(slctmp));
+		    }
+		    if (phantom(xx,yy,zz,tt)!=0){
+		      voxelcounter=voxelcounter+1;
+		      //cout<<"xx= "<<xx<<"; yy= "<<yy<<"; zz= "<<zz<<"; RFrec(xx,yy,zz)= "<<RFrec(xx,yy,zz)<<"; RFtrans(xx,yy,zz)= "<<RFtrans(xx,yy,zz)<<endl;
+		      double den=phantom(xx,yy,zz,tt)*RFrec(xx,yy,zz)*cxyz;
+		      if (opt_activation.set()) {
+		        for (int n=0;n<=Nact-1;n++){
+		          double a=activation(xx,yy,zz)*timecourse_2[n];
+			  double b=tissue(tt+1,2);
+			  activation4D_voxel[n]=a*b/(a+b);// conversion of beta into beta1 because of the integral (see possum no 7 page 121)
+		        }
+		      }
+		      else if (opt_activation4D.set()){
+		        for (int n=0;n<=Nact-1;n++){
+		          double a=activation4D(xx,yy,zz,n);//zz-zstart_p when having only a pieace of the activation volume so we start from where the phantom starts 
+		          double b=tissue(tt+1,2);
+		          activation4D_voxel[n]=a*b/(a+b);
+		        }
+		      }
+		      voxel2(posx(xxx+1),posy(yy+1),posz(zz+1),tissue.Row(tt+1),
+		             pulse,nrf,nreadp,voxelcounter,xdim,ydim,zdim,
+		             b0(xx,yy,zz),b0x(xx,yy,zz),b0y(xx,yy,zz),b0z(xx,yy,zz),
+		             timecourse,activation4D_voxel,Nact,outputname,
+		             table_slcprof,dslcp,dslcp_first,Nslc,den,RFtrans(xx,yy,zz),
+		             opt_test,nospeedup,save_kcoord,sreal,simag);
+		      }
+		      xxx=xxx+numprocs;
+		  }
+		}
+	      }
+	    }
 	  }
-	}
-      }
-    }
-  }
+	  ////////////////////////////////////////////////////////////
+	  //MOTION INVOLVING ROTATION Rx or Ry or both
+	  ////////////////////////////////////////////////////////////
+	  if (level==3){
+	    cout<<"LEVEL3"<<endl;
+	    ////////////////////////////////////////////
+	    // B0 PERTURBATION 
+	    ////////////////////////////////////////////
+	    cout<<"Creating 9 B0file together with 27 gradient files..."<<endl;
+	    volume<double> b0x_dx, b0x_dy, b0x_dz, b0y_dx, b0y_dy, b0y_dz, b0z_dx, 
+	      b0z_dy, b0z_dz;//read in
+	    volume<double> b0x_dx_gx, b0x_dx_gy, b0x_dx_gz, b0x_dy_gx, b0x_dy_gy, 
+	      b0x_dy_gz, b0x_dz_gx, b0x_dz_gy, b0x_dz_gz;//calculate from, the calc gradients
+	    volume<double> b0y_dx_gx, b0y_dx_gy, b0y_dx_gz, b0y_dy_gx, b0y_dy_gy, 
+	      b0y_dy_gz, b0y_dz_gx, b0y_dz_gy, b0y_dz_gz;
+	    volume<double> b0z_dx_gx, b0z_dx_gy, b0z_dx_gz, b0z_dy_gx, b0z_dy_gy, 
+	      b0z_dy_gz, b0z_dz_gx, b0z_dz_gy, b0z_dz_gz;
+	    if (opt_b0.set()) {
+	      read_volume(b0x_dx,opt_b0.value()+"x_dx");
+	      calc_gradientsROI(b0x_dx,b0x_dx_gx,b0x_dx_gy,b0x_dx_gz,myid,Nxx,numprocs);
+	      read_volume(b0x_dy,opt_b0.value()+"x_dy");
+	      calc_gradientsROI(b0x_dy,b0x_dy_gx,b0x_dy_gy,b0x_dy_gz,myid,Nxx,numprocs);
+	      read_volume(b0x_dz,opt_b0.value()+"x_dz");
+	      calc_gradientsROI(b0x_dz,b0x_dz_gx,b0x_dz_gy,b0x_dz_gz,myid,Nxx,numprocs);
+	      read_volume(b0y_dx,opt_b0.value()+"y_dx");
+	      calc_gradientsROI(b0y_dx,b0y_dx_gx,b0y_dx_gy,b0y_dx_gz,myid,Nxx,numprocs);
+	      read_volume(b0y_dy,opt_b0.value()+"y_dy");
+	      calc_gradientsROI(b0y_dy,b0y_dy_gx,b0y_dy_gy,b0y_dy_gz,myid,Nxx,numprocs);
+	      read_volume(b0y_dz,opt_b0.value()+"y_dz");
+	      calc_gradientsROI(b0y_dz,b0y_dz_gx,b0y_dz_gy,b0y_dz_gz,myid,Nxx,numprocs);
+	      read_volume(b0z_dx,opt_b0.value()+"z_dx");
+	      calc_gradientsROI(b0z_dx,b0z_dx_gx,b0z_dx_gy,b0z_dx_gz,myid,Nxx,numprocs);
+	      read_volume(b0z_dy,opt_b0.value()+"z_dy");
+	      calc_gradientsROI(b0z_dy,b0z_dy_gx,b0z_dy_gy,b0z_dy_gz,myid,Nxx,numprocs);
+	      read_volume(b0z_dz,opt_b0.value()+"z_dz");
+	      calc_gradientsROI(b0z_dz,b0z_dz_gx,b0z_dz_gy,b0z_dz_gz,myid,Nxx,numprocs);
+	    }
+	    else {
+	      b0x_dx=phantom[0]*0;
+	      b0x_dx_gx=b0x_dx; b0x_dx_gy=b0x_dx; b0x_dx_gz=b0x_dx;
+	      b0x_dy=b0x_dx; b0x_dy_gx=b0x_dx; b0x_dy_gy=b0x_dx; b0x_dy_gz=b0x_dx;
+	      b0x_dz=b0x_dx; b0x_dz_gx=b0x_dx; b0x_dz_gy=b0x_dx; b0x_dz_gz=b0x_dx;
+	      b0y_dx=b0x_dx; b0y_dx_gx=b0x_dx; b0y_dx_gy=b0x_dx; b0y_dx_gz=b0x_dx;
+	      b0y_dy=b0x_dx; b0y_dy_gx=b0x_dx; b0y_dy_gy=b0x_dx; b0y_dy_gz=b0x_dx;
+	      b0y_dz=b0x_dx; b0y_dz_gx=b0x_dx; b0y_dz_gy=b0x_dx; b0y_dz_gz=b0x_dx;
+	      b0z_dx=b0x_dx; b0z_dx_gx=b0x_dx; b0z_dx_gy=b0x_dx; b0z_dx_gz=b0x_dx;
+	      b0z_dy=b0x_dx; b0z_dy_gx=b0x_dx; b0z_dy_gy=b0x_dx; b0z_dy_gz=b0x_dx;
+	      b0z_dz=b0x_dx; b0z_dz_gx=b0x_dx; b0z_dz_gy=b0x_dx; b0z_dz_gz=b0x_dx;
+	    }
+	    print_volume_info(b0z_dz,"b0z_dz");
+	    ///////////////////
+	    //MAIN LOOP
+	    ///////////////////
+	    cout<<"Main loop..."<<endl;
+	    int nonzero=0;
+	    for (register int tt=0;tt<Nt;tt++){
+	      for (register int zz=zstart;zz<zend;zz++){
+		for (register int yy=ystart;yy<yend;yy++){
+		  for (register int xx=xstart;xx<xend;xx++){
+		    if (phantom(xx,yy,zz,tt)>1e-05) nonzero++;
+		  }
+		}
+	      }
+	    }
+	    cout<<"The number of non-zero voxels is "<<nonzero<<endl;
+	    RowVector numpointstmp;
+	    numpointstmp=read_ascii_matrix(opt_mainmatrix.value()+".numpoints");
+	    int numpoints=(int)numpointstmp(1);
+	    int seg=(int)numpointstmp(2);
+	    if (seg==0 || seg>numpoints) seg=numpoints;
+	    PMatrix pulse(seg,19);
+	    pulse=0.0;
+	    int segA=1;int segB=segA+seg-1;
+	    while (segA<numpoints){
+	      voxelcounter=0;
+	      cout<<"Reading the main matrix.Portion SegA="<<segA<<" SegB="<<segB<<endl;
+	      if ((segB-segA+1)!=pulse.Nrows()) pulse.ReSize(segB-segA+1,19);
+	      read_binary_matrix(pulse,opt_mainmatrix.value(),segA,segB,1,19);//add boundaries
+	      cout<<"MatrixFile="<<opt_mainmatrix.value()<<endl;
+	      nrf=0;
+	      for (int tmp=1;tmp<=(segB-segA+1);tmp++){
+		if (fabs(pulse(tmp,2))>1e-06) nrf++;
+		//cerr<<" Nrf="<<nrf<<"Pulse("<<tmp<<",2)="<<pulse(tmp,2)<<endl;
+	      }
+	      for (register int tt=0;tt<Nt;tt++){
+		for (register int zz=zstart;zz<zend;zz++){
+		  cout<<"Tissue type="<<tt<<"; zstart="<<zstart<<"; zz="<<zz<<"; zend=";
+		  cout<<zend<<"; Voxelnumber="<<voxelcounter<<endl;
+		  for (register int yy=ystart;yy<yend;yy++){
+		    int xxx=myid+xstart;
+		    for (register int xx=0;xx<xend;xx++){
+		      //slice speed up stuff
+		      if (fabs((float)slcdir)==1) sszz=zz;
+		      else if (fabs((float)slcdir)==2) sszz=yy;
+		      else sszz=xx;
+		      float slctmp=(sszz-sszstart_p)/(slcthk*nvox);
+		      if(ceil(slctmp) == slctmp) {
+		        sszz_slc=(int)(ceil(slctmp)+1);
+		      } else {
+		        sszz_slc=(int) (ceil(slctmp));
+		      }
+		      if (phantom(xx,yy,zz,tt)>1e-05){
+		        voxelcounter=voxelcounter+1;
+			double den=phantom(xx,yy,zz,tt)*RFrec(xx,yy,zz)*cxyz;
+		        if (opt_activation.set()) {
+		          for (int n=0;n<=Nact-1;n++){
+		            double a=activation(xx,yy,zz)*timecourse_2[n];
+			    double b=tissue(tt+1,2);
+			    activation4D_voxel[n]=a*b/(a+b);// conversion of beta 
+			    //into beta1 because of the integral (see possum no 7 page 121)
+		          }
+			}
+			else if (opt_activation4D.set()){
+		          for (int n=0;n<=Nact-1;n++){
+		            double a=activation4D(xx,yy,zz,n);//zz-zstart_p 
+			    //when having only a pieace of the activation volume so we start 
+			    //from where the phantom starts 
+		            double b=tissue(tt+1,2);
+		            activation4D_voxel[n]=a*b/(a+b); 
+			  }
+			}
+			voxel3(posx(xxx+1),posy(yy+1),posz(zz+1),tissue.Row(tt+1),
+		               pulse ,segA, nrf,nreadp,nonzero,voxelcounter,xdim,ydim,zdim,
+		               b0x_dx(xx,yy,zz),b0y_dx(xx,yy,zz),b0z_dx(xx,yy,zz),
+		               b0x_dy(xx,yy,zz),b0y_dy(xx,yy,zz),b0z_dy(xx,yy,zz),
+			       b0x_dz(xx,yy,zz),b0y_dz(xx,yy,zz),b0z_dz(xx,yy,zz),
+		               b0x_dx_gx(xx,yy,zz),b0y_dx_gx(xx,yy,zz),b0z_dx_gx(xx,yy,zz),
+			       b0x_dy_gx(xx,yy,zz),b0y_dy_gx(xx,yy,zz),b0z_dy_gx(xx,yy,zz),
+			       b0x_dz_gx(xx,yy,zz),b0y_dz_gx(xx,yy,zz),b0z_dz_gx(xx,yy,zz),
+			       b0x_dx_gy(xx,yy,zz),b0y_dx_gy(xx,yy,zz),b0z_dx_gy(xx,yy,zz),
+			       b0x_dy_gy(xx,yy,zz),b0y_dy_gy(xx,yy,zz),b0z_dy_gy(xx,yy,zz),
+			       b0x_dz_gy(xx,yy,zz),b0y_dz_gy(xx,yy,zz),b0z_dz_gy(xx,yy,zz),
+		               b0x_dx_gz(xx,yy,zz),b0y_dx_gz(xx,yy,zz),b0z_dx_gz(xx,yy,zz),
+			       b0x_dy_gz(xx,yy,zz),b0y_dy_gz(xx,yy,zz),b0z_dy_gz(xx,yy,zz),
+			       b0x_dz_gz(xx,yy,zz),b0y_dz_gz(xx,yy,zz),b0z_dz_gz(xx,yy,zz),
+		               timecourse,activation4D_voxel,Nact,outputname,table_slcprof,
+		               dslcp,dslcp_first,Nslc,den,RFtrans(xx,yy,zz),opt_test,
+		               nospeedup,save_kcoord,opt_rfavg.value(),
+			       sreal,simag);
+		      }
+		    xxx=xxx+numprocs;
+		    }
+		  }
+		}
+	      }
+	      segA=segB;
+	      segB=segA+seg-1;
+	      if (segB>numpoints) segB=numpoints;
+	    }
+	  }
+	  ///////////////////////////////////////////////////////////
+	  //NO MOTION BUT B0 PERTURBATION CHANGES WITH TIME
+	  ///////////////////////////////////////////////////////////
+	  if (level==4){
+	    cout<<"LEVEL4"<<endl;
+	    cout<<"Reading the pulse sequence..."<<endl;
+	    PMatrix pulse;
+	    read_binary_matrix(pulse, opt_pulse.value());  
+	    ////////////////////////
+	    // B0 PERTURBATION 
+	    ////////////////////////
+	    cout<<"Creating 1 B0extra file together with 3 gradient files all changing in time..."<<endl;
+	    Matrix b0timecourse_tmp;
+	    double* b0timecourse;
+	    double* b0timecourse_2;
+	    double* b0time;
+	    double* b0xtime;
+	    double* b0ytime; 
+	    double* b0ztime;
+	    b0timecourse_tmp=read_ascii_matrix(opt_b0timecourse4D.value());
+	    int Nb0=b0timecourse_tmp.Nrows();
+	    b0timecourse=new double[Nb0];
+	    b0timecourse_2=new double[Nb0];
+	    b0time=new double[Nb0];
+	    b0xtime=new double[Nb0];
+	    b0ytime=new double[Nb0];
+	    b0ztime=new double[Nb0];
+	    for (int n=0;n<=Nb0-1;n++){
+	      b0timecourse[n]=b0timecourse_tmp(n+1,1);
+	      b0timecourse_2[n]=b0timecourse_tmp(n+1,2);
+	    }
+	    volume<double> b0extra;
+	    volume<double> b0xextra;
+	    volume<double> b0yextra;
+	    volume<double> b0zextra;
+	    read_volume(b0extra,opt_b0extra.value());
+	    calc_gradientsROI(b0extra,b0xextra,b0yextra,b0zextra,myid,Nxx,numprocs);
+	    print_volume_info(b0extra,"b0extra");
+	    cout<<"Creating 1 B0file together with 3 gradient files..."<<endl;
+	    volume<double> b0(Nxx,Ny,Nz);
+	    volume<double> b0x(Nxx,Ny,Nz);
+	    volume<double> b0y(Nxx,Ny,Nz);
+	    volume<double> b0z(Nxx,Ny,Nz);
+	    if (opt_b0.set()) {
+	      read_volume(b0,opt_b0.value()+"z_dz");
+	      calc_gradientsROI(b0,b0x,b0y,b0z,myid,Nxx,numprocs);
+	    }
+	    else {
+	      b0=phantom[0]*0;
+	      b0x=b0;
+	      b0y=b0;
+	      b0z=b0;
+	    }  
+	    print_volume_info(b0,"b0");
+	    cout<<""<<endl;
+	    /////////////
+	    //MAIN LOOP
+	    /////////////
+	    cout<<"Main loop..."<<endl;
+	    for (register int tt=0;tt<Nt;tt++){
+	      for (register int zz=zstart;zz<zend;zz++){
+		cout<<"Tissue type="<<tt<<"; zstart="<<zstart<<"; zz="<<zz<<"; zend="<<zend<<"; Voxelnumber="<<voxelcounter<<endl;
+		for (register int yy=ystart;yy<yend;yy++){
+		  int xxx=myid+xstart;
+		  for (register int xx=xstart;xx<xend;xx++){
+		    //slice speed up stuff
+		    if (fabs((float)slcdir)==1) sszz=zz;
+		    else if (fabs((float)slcdir)==2) sszz=yy;
+		    else sszz=xx;
+		    float slctmp=(sszz-sszstart_p)/(slcthk*nvox);
+		    if(ceil(slctmp) == slctmp) {
+		      sszz_slc=(int)(ceil(slctmp)+1);
+		      } else {
+		      sszz_slc=(int) (ceil(slctmp));
+		      }
+		    if (phantom(xx,yy,zz,tt)!=0){
+		        voxelcounter=voxelcounter+1;
+		        double den=phantom(xx,yy,zz,tt)*RFrec(xx,yy,zz)*cxyz;
+		        if (opt_activation.set()) {
+		          for (int n=0;n<=Nact-1;n++){
+		            double a=activation(xx,yy,zz)*timecourse_2[n];
+			    double b=tissue(tt+1,2);
+			    activation4D_voxel[n]=a*b/(a+b);// conversion of beta into beta1 because of the integral (see possum no 7 page 121)
+			  }
+			}
+			else if (opt_activation4D.set()){
+		          for (int n=0;n<=Nact-1;n++){
+		            double a=activation4D(xx,yy,zz,n);//zz-zstart_p when having only a pieace of the activation volume so we start from where the phantom starts 
+		            double b=tissue(tt+1,2);
+		            activation4D_voxel[n]=a*b/(a+b); 
+			  }              
+			}
+		        for (int n=0;n<=Nb0-1;n++){
+		          b0time[n]=b0extra(xx,yy,zz)*b0timecourse_2[n];
+		          b0xtime[n]=b0xextra(xx,yy,zz)*b0timecourse_2[n];
+		          b0ytime[n]=b0yextra(xx,yy,zz)*b0timecourse_2[n];
+		          b0ztime[n]=b0zextra(xx,yy,zz)*b0timecourse_2[n];
+			  if (voxelcounter==1){
+			    cout<<"b0time[n]="<<b0time[n]<<"b0xtime[n]="<<b0xtime[n]<<"b0ytime[n]="<<b0ytime[n]<<"b0ztime[n]="<<b0ztime[n]<<endl;
+			  }
+			} 
+		    	voxel4(posx(xxx+1),posy(yy+1),posz(zz+1),tissue.Row(tt+1),
+		               pulse,nreadp,voxelcounter,xdim,ydim,zdim,
+		               b0time,b0xtime,b0ytime,b0ztime, b0timecourse, Nb0,
+		               b0(xx,yy,zz),b0x(xx,yy,zz),b0y(xx,yy,zz),b0z(xx,yy,zz),
+		               timecourse,activation4D_voxel,Nact,outputname,table_slcprof,
+		               dslcp,dslcp_first,Nslc,den,RFtrans(xx,yy,zz),opt_test,
+		               nospeedup,save_kcoord,sreal,simag);  
+		    }
+		    xxx=xxx+numprocs;
+		  }
+		}
+	      }
+	    }
+	  }
+
   /////////////////
   //PARALEL STUFF
   #ifdef USE_MPI
@@ -943,6 +1008,12 @@ int compute_volume(int argc, char *argv[])
     cout<<"Possum finished generating the signal for "<<voxelcounter<<" voxels."<<endl;
   #endif
 
+//tejas-22.11.12
+//start time
+theTime = time(NULL);
+cout << "possum-end-time\t" << opt_procid.value() << "\t"  << theTime << endl;
+//end
+
   return 0;
 }
 
@@ -952,7 +1023,6 @@ int main (int argc, char *argv[])
 
   Tracer tr("main");
   OptionParser options(title, examples);
-
   try {
     options.add(verbose);
     options.add(help);
@@ -977,6 +1047,7 @@ int main (int argc, char *argv[])
     options.add(opt_slcprof);
     options.add(opt_mainmatrix);
     options.add(opt_nospeedup);
+    options.add(opt_rfavg);
     
     nonoptarg = options.parse_command_line(argc, argv);
 
@@ -994,7 +1065,7 @@ int main (int argc, char *argv[])
     exit(EXIT_FAILURE);
   } catch(std::exception &e) {
     cerr << e.what() << endl;
-  } 
+  }
 
   // Call the local functions
   compute_volume(argc, argv);

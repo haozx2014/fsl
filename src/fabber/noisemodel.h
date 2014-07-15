@@ -151,6 +151,15 @@ class NoiseModel {
   	const LinearFwdModel& model,
   	const ColumnVector& data) const = 0;
 
+  // ARD things
+  double SetupARD(vector<int> ardindices,
+		  const MVNDist& theta,
+		  MVNDist& thetaPrior) const;
+
+ double UpdateARD(vector<int> ardindices,
+		  const MVNDist& theta,
+		  MVNDist& thetaPrior) const;
+
   // Potentially other functions could go here, 
   // e.g. likelihood at a point (for MCMC) or sampling function (for Gibbs)
 

@@ -72,7 +72,7 @@
  * Written by Adrian Groves, 2007
  * FMRIB Centre, University of Oxford
  *
- * Last modified: $Date: 2007/08/02 11:16:47 $ $Author: adriang $ $Revision: 1.12 $
+ * Last modified: $Date: 2014/02/06 17:00:14 $ $Author: mwebster $ $Revision: 1.13 $
  */
 
 #ifndef __FABBER_FWDMODEL_QUIPSS2_H
@@ -126,7 +126,7 @@ protected: // Constants
       return R0index()+Rbasis.Ncols()+(te-1)*Nbasis.Ncols() + 1; }
   int InvEffIndex() const { assert(stdevInvEff>0); return NnStart(echoTime.Ncols()+1); }
   int T1bIndex() const { assert(stdevT1b>0); 
-    return NnStart(echoTime.Ncols()+(stdevInvEff>0)?1:0); }
+    return NnStart( echoTime.Ncols()+ ( (stdevInvEff>0)?1:0) ); }
   int dtIndex() const { assert(stdevDt>0);
     return NnStart(echoTime.Ncols()+1) + (stdevT1b>0?1:0) + (stdevInvEff>0?1:0); }
 

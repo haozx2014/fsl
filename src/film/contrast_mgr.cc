@@ -88,33 +88,7 @@ using namespace Utilities;
 
 int main(int argc, char *argv[])
 {
-  try{
-    
-    // Setup logging:
-    Log& logger = LogSingleton::getInstance();
-
-
-    // parse command line
-    ContrastMgrOptions& globalopts = ContrastMgrOptions::getInstance();
-    globalopts.parse_command_line(argc, argv, logger);
-
-    if(globalopts.debug)
-      Tracer_Plus::setrunningstackon();
-
-    ContrastMgr conMgr;
-   
-    conMgr.run();
-    
-  }
-  catch(Exception& p_excp) 
-    {
-      cerr << p_excp.what() << endl;
-    }
-  catch(...)
-    {
-      cerr << "Uncaught exception!" << endl;
-    }
-
+  cout << "Contrast_mgr is now deprecated, do not use this version on Post-stats only FEAT runs." << endl;
   return 0;
 }
 

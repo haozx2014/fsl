@@ -126,15 +126,24 @@ proc pnm { w } {
 
     set entries($w,sliceorder) "up"
     radiobutton $w.f.sliceorder.up -text "Up" \
-	    -variable entries($w,sliceorder) -value up -anchor w
+	    -variable entries($w,sliceorder) -value up -anchor w -command "pnm:slicefile $w"
     radiobutton $w.f.sliceorder.down -text "Down" \
-	    -variable entries($w,sliceorder) -value down -anchor w
+	    -variable entries($w,sliceorder) -value down -anchor w -command "pnm:slicefile $w"
     radiobutton $w.f.sliceorder.intup -text "Interleaved Up" \
-	    -variable entries($w,sliceorder) -value interleaved_up -anchor w
+	    -variable entries($w,sliceorder) -value interleaved_up -anchor w -command "pnm:slicefile $w"
     radiobutton $w.f.sliceorder.intdown -text "Interleaved Down" \
-	    -variable entries($w,sliceorder) -value interleaved_down -anchor w
+	    -variable entries($w,sliceorder) -value interleaved_down -anchor w -command "pnm:slicefile $w"
+    radiobutton $w.f.sliceorder.usrfile -text "User Specified (via file)" \
+	    -variable entries($w,sliceorder) -value usrfile -anchor w -command "pnm:slicefile $w"
 
-    pack $w.f.sliceorder.label $w.f.sliceorder.up $w.f.sliceorder.down $w.f.sliceorder.intup $w.f.sliceorder.intdown -in $w.f.sliceorder -side left -padx 3 -pady 3
+    pack $w.f.sliceorder.label $w.f.sliceorder.up $w.f.sliceorder.down $w.f.sliceorder.intup $w.f.sliceorder.intdown $w.f.sliceorder.usrfile -in $w.f.sliceorder -side left -padx 3 -pady 3
+
+    frame $w.f.slicefileframe
+    set entries($w,slicefile) ""
+    FileEntry  $w.f.slicefileframe.slicefile -textvariable entries($w,slicefile) -label "    User slice timing file   " -title "Select" -width 40 -filedialog directory  -filetypes IMAGE -disabledbackground gray
+    $w.f.slicefileframe.slicefile configure -state disabled
+
+    pack $w.f.slicefileframe.slicefile -in $w.f.slicefileframe -side top -anchor w -padx 3 -pady 3
 
    # slice direction
     frame $w.f.slicedir
@@ -153,7 +162,7 @@ proc pnm { w } {
 
     # general pack
 
-    pack $w.f.intrace $w.f.invols $w.f.columns $w.f.triggers $w.f.sliceorder $w.f.slicedir -in $lfinput -side top -anchor w -pady 3 -padx 5
+    pack $w.f.intrace $w.f.invols $w.f.columns $w.f.triggers $w.f.sliceorder $w.f.slicefileframe $w.f.slicedir -in $lfinput -side top -anchor w -pady 3 -padx 5
 
     #output volume size
 
@@ -294,11 +303,21 @@ proc pnm:csfmask { w } {
     update idletasks
 }
 
+proc pnm:slicefile { w } {
+    global entries
+    if { $entries($w,sliceorder) == "usrfile" } {
+	$w.f.slicefileframe.slicefile configure -state normal
+    } else {
+	$w.f.slicefileframe.slicefile configure -state disabled
+    }
+    update idletasks
+}
+
 
 proc pnm:apply { w } {
     global entries
 
-    set status [ pnm:proc $entries($w,intrace) $entries($w,invols) $entries($w,colcard) $entries($w,colresp) $entries($w,coltrig) $entries($w,poxtriggers) $entries($w,samp) $entries($w,tr) $entries($w,sliceorder) $entries($w,slicedir) $entries($w,outvol) $entries($w,ocard) $entries($w,oresp) $entries($w,omultc) $entries($w,omultr) $entries($w,rvt) $entries($w,hr) $entries($w,csf) $entries($w,csfmask) $entries($w,smoothcard) $entries($w,smoothresp) $entries($w,smoothhr) $entries($w,smoothrvt) $entries($w,cleanup) $entries($w,invresp) $entries($w,invcard)  ]
+    set status [ pnm:proc $entries($w,intrace) $entries($w,invols) $entries($w,colcard) $entries($w,colresp) $entries($w,coltrig) $entries($w,poxtriggers) $entries($w,samp) $entries($w,tr) $entries($w,sliceorder) $entries($w,slicedir) $entries($w,slicefile) $entries($w,outvol) $entries($w,ocard) $entries($w,oresp) $entries($w,omultc) $entries($w,omultr) $entries($w,rvt) $entries($w,hr) $entries($w,csf) $entries($w,csfmask) $entries($w,smoothcard) $entries($w,smoothresp) $entries($w,smoothhr) $entries($w,smoothrvt) $entries($w,cleanup) $entries($w,invresp) $entries($w,invcard) ]
 
     update idletasks
     puts "Done"
@@ -307,12 +326,12 @@ proc pnm:apply { w } {
 #}}}
 #{{{ proc
 
-proc pnm:proc { infile invol colcard colresp coltrig poxtrig samprate tr sliceorder slicedir outname oc or multc multr rvt hr csf csfmask smoothc smoothr smoothhr smoothrvt cleanup invr invc } {
+proc pnm:proc { infile invol colcard colresp coltrig poxtrig samprate tr sliceorder slicedir slicefile outname oc or multc multr rvt hr csf csfmask smoothc smoothr smoothhr smoothrvt cleanup invr invc } {
 
     global FSLDIR
     
-    set poppargs "-i ${outname}_input.txt -o ${outname} -s $samprate --tr=$tr --smoothcard=$smoothc --smoothresp=$smoothr --resp=$colresp --cardiac=$colcard --trigger=$coltrig"    
-    set pnmcommand "${FSLDIR}/bin/pnm_evs -i $invol -c ${outname}_card.txt -r ${outname}_resp.txt -o ${outname} --tr=$tr --oc=$oc --or=$or --multc=$multc --multr=$multr --sliceorder=$sliceorder --slicedir=$slicedir"    
+    set poppargs "-i ${outname}_input.txt -o ${outname} -s $samprate --tr=$tr --smoothcard=$smoothc --smoothresp=$smoothr --resp=$colresp --cardiac=$colcard --trigger=$coltrig"
+    set pnmcommand "${FSLDIR}/bin/pnm_evs -i $invol -c ${outname}_card.txt -r ${outname}_resp.txt -o ${outname} --tr=$tr --oc=$oc --or=$or --multc=$multc --multr=$multr"    
 
     if { $poxtrig == 1 } { set poppargs "$poppargs --pulseox_trigger" }
     if { $rvt == 1 } { 
@@ -327,6 +346,9 @@ proc pnm:proc { infile invol colcard colresp coltrig poxtrig samprate tr sliceor
     if { $cleanup == 0 } { set poppargs "$poppargs --noclean1 --noclean2" }
     if { $invr == 1 } { set poppargs "$poppargs --invertresp" }
     if { $invc == 1 } { set poppargs "$poppargs --invertcardiac" }
+    set pnmsliceconf "--sliceorder=$sliceorder --slicedir=$slicedir"
+    if { $sliceorder == "usrfile" } { set pnmsliceconf "--slicetiming=$slicefile" }
+    set pnmcommand "$pnmcommand $pnmsliceconf"
 
     puts "$FSLDIR/bin/fslFixText $infile ${outname}_input.txt"
     puts "$FSLDIR/bin/pnm_stage1 $poppargs"

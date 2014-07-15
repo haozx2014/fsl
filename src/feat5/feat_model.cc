@@ -1377,7 +1377,8 @@ int main(int argc, char **argv)
       // {{{ add motion params to model if required 
 
       if ( motionparams.Ncols() > 0 ) {
-	for(orig_ev=real_ev=0; orig_ev<evs.nOriginalNoMotion; real_ev+=evs.nRealPerOrig[orig_ev], orig_ev++); //Fast forward through normal EVs
+	for(orig_ev=real_ev=0; orig_ev<evs.nOriginalNoMotion; real_ev+=evs.nRealPerOrig[orig_ev], orig_ev++)
+	  ; //Fast forward through normal EVs
 	  //cout << "inserting motion parameters starting at real EV " << real_ev+1 << endl;
 	  realDesign.Columns(real_ev+1,real_ev+motionparams.Ncols()) = motionparams;
 	  evs.nRealPerOrig[evs.nOriginal-1] = motionparams.Ncols();
@@ -1706,7 +1707,7 @@ void writeFMatrix(const string filename, const Contrasts& contrasts, const Matri
       Fmat=Fmat.Rows(1,Fmat_rows);
 
       // test that F(X'X)^-1F' is invertible, i.e. of full rank
-      if ( (Fmat.Nrows()==0) || ( rank(Fmat*pinv(realDesign.t()*realDesign)*Fmat.t()) < Fmat.Nrows() ) ) {
+      if ( (Fmat.Nrows()==0) || ( MISCMATHS::rank(Fmat*pinv(realDesign.t()*realDesign)*Fmat.t()) < Fmat.Nrows() ) ) {
 	cout << "F-test " << f << " isn't valid - each included contrast cannot be a linear combination of the others." << endl;
 	exit(1);
       }

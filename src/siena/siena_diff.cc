@@ -397,7 +397,7 @@ arrB(CS)=in2(x,y,z);
 /*flow(x,y,z) = 3;*/ /* DEBUG colour central point */
 
   pos=0;
-  d=1; X=round(x+d*ex); Y=round(y+d*ey); Z=round(z+d*ez);
+  d=1; X=MISCMATHS::round(x+d*ex); Y=MISCMATHS::round(y+d*ey); Z=MISCMATHS::round(z+d*ez);
   if ( (X>0) && (X<x_size-1) && (Y>0) && (Y<y_size-1) && (Z>0) && (Z<z_size-1) )
     {
       arrA(CS+1)=in1.interpolate(x+d*ex,y+d*ey,z+d*ez);
@@ -406,7 +406,7 @@ arrB(CS)=in2(x,y,z);
       segvalpos = seg1(X,Y,Z);
       for(d=2;d<=CORRWIDTH+SEARCH+1;d++)
 	{
-	  X=round(x+d*ex); Y=round(y+d*ey); Z=round(z+d*ez);
+	  X=MISCMATHS::round(x+d*ex); Y=MISCMATHS::round(y+d*ey); Z=MISCMATHS::round(z+d*ez);
 	  if ( (X>0) && (X<x_size-1) && (Y>0) && (Y<y_size-1) && (Z>0) && (Z<z_size-1) )
 	    {
 	      if ( (pos<0) && (seg1(X,Y,Z)!=segvalpos) )
@@ -429,7 +429,7 @@ arrB(CS)=in2(x,y,z);
 
 for(d=1;d<=SEARCH+pos;d++)
 {
-  X=round(x+d*ex); Y=round(y+d*ey); Z=round(z+d*ez);
+  X=MISCMATHS::round(x+d*ex); Y=MISCMATHS::round(y+d*ey); Z=MISCMATHS::round(z+d*ez);
   if (d<=pos)
     flow(X,Y,Z) = 7;
   else
@@ -441,7 +441,7 @@ for(d=1;d<=SEARCH+pos;d++)
 // }}}
 
   neg=0;
-  d=-1; X=round(x+d*ex); Y=round(y+d*ey); Z=round(z+d*ez);
+  d=-1; X=MISCMATHS::round(x+d*ex); Y=MISCMATHS::round(y+d*ey); Z=MISCMATHS::round(z+d*ez);
   if ( (X>0) && (X<x_size-1) && (Y>0) && (Y<y_size-1) && (Z>0) && (Z<z_size-1) )
     {
       arrA(CS-1)=in1.interpolate(x+d*ex,y+d*ey,z+d*ez);
@@ -450,7 +450,7 @@ for(d=1;d<=SEARCH+pos;d++)
       segvalneg = seg1(X,Y,Z);
       for(d=-2;d>=-CORRWIDTH-SEARCH-1;d--)
 	{
-	  X=round(x+d*ex); Y=round(y+d*ey); Z=round(z+d*ez);
+	  X=MISCMATHS::round(x+d*ex); Y=MISCMATHS::round(y+d*ey); Z=MISCMATHS::round(z+d*ez);
 	  if ( (X>0) && (X<x_size-1) && (Y>0) && (Y<y_size-1) && (Z>0) && (Z<z_size-1) )
 	    {
 	      if ( (neg>0) && (seg1(X,Y,Z)!=segvalneg) )
@@ -473,7 +473,7 @@ for(d=1;d<=SEARCH+pos;d++)
 
   for(d=-1;d>=-SEARCH+neg;d--)
     {
-      X=round(x+d*ex); Y=round(y+d*ey); Z=round(z+d*ez);
+      X=MISCMATHS::round(x+d*ex); Y=MISCMATHS::round(y+d*ey); Z=MISCMATHS::round(z+d*ez);
       if (d>=neg)
 	flow(X,Y,Z) = 7;
       else

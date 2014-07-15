@@ -2,9 +2,9 @@
 //
 // splinefield.cpp
 //
-// Jesper Andersson, FMRIB Image Analysis Group
+// Jesper Andersson and Matthew Webster, FMRIB Image Analysis Group
 //
-// Copyright (C) 2007 University of Oxford 
+// Copyright (C) 2007-2014 University of Oxford 
 //
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -102,10 +102,6 @@ splinefield::splinefield(const std::vector<unsigned int>& psz,
     throw BasisfieldException("splinefield::splinefield: Invalid knot-spacing");
   }
   */
-  if (ksp[0]<0 || (NDim()>1 && ksp[1]<0) || (NDim()>2 && ksp[2]<0)) {
-    throw BasisfieldException("splinefield::splinefield: Invalid knot-spacing");
-  }
-
   for (unsigned int i=0; i<3; i++) {
     std::vector<unsigned int>  deriv(3,0);
     deriv[i] = 1;
@@ -124,7 +120,7 @@ splinefield::splinefield(const std::vector<unsigned int>& psz,
   // splinefield::assign(inf);
 }
 
-void splinefield::assign(const splinefield& inf)
+void splinefield::assign_splinefield(const splinefield& inf)
 {
   _sp = inf._sp;
   for (unsigned int i=0; i<3; i++) {
@@ -136,8 +132,8 @@ splinefield& splinefield::operator=(const splinefield& inf)
 {
   if (&inf == this) {return(*this);} // Detect self
 
-  basisfield::assign(inf);   // Assign common part
-  splinefield::assign(inf);  // Assign splinefield specific bits
+  basisfield::assign_basisfield(inf);   // Assign common part
+  splinefield::assign_splinefield(inf);  // Assign splinefield specific bits
 
   return(*this);
 }

@@ -72,7 +72,6 @@
 #define _GNU_SOURCE 1
 #define POSIX_SOURCE 1
 
-#include "newimage/newimageall.h"
 #include "warpfns/warpfns.h"
 #include "miscmaths/miscmaths.h"
 #include "utils/options.h"

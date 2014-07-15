@@ -88,7 +88,7 @@ Option<string> infilename(string("-i,--input"),string(""),
 Option<string> outfilename(string("-o,--output"),string(""),
 		       string("filename for output registered vector or tensor field"),
 		       true,requires_argument);
-Option<string> ref(string("-r,--ref"),string(""),
+Option<string> reffname(string("-r,--ref"),string(""),
 		       string("filename for reference (target) volume"),
 		       true,requires_argument);
 Option<string> matrix(string("-t,--affine"),string(""),
@@ -291,7 +291,7 @@ void vecreg_aff(const volume4D<float>& tens,
 	X_target << x << y << z;
 	X_seed=vox_to_vox(X_target,targetdim,seeddim,iM);
 	
-	if(mask((int)round(float(X_seed(1))),(int)round(float(X_seed(2))),(int)round(float(X_seed(3))))==0)
+	if(mask((int)MISCMATHS::round(float(X_seed(1))),(int)MISCMATHS::round(float(X_seed(2))),(int)MISCMATHS::round(float(X_seed(3))))==0)
 	  continue;
 	
 
@@ -445,7 +445,7 @@ void vecreg_nonlin(const volume4D<float>& tens,volume4D<float>& oV1,
 	 X_seed = NewimageCoord2NewimageCoord(warpvol,false,oV1[0],mask,X_target);
 
 
-	if(mask((int)round(float(X_seed(1))),(int)round(float(X_seed(2))),(int)round(float(X_seed(3))))==0)
+	 if(mask((int)MISCMATHS::round(float(X_seed(1))),(int)MISCMATHS::round(float(X_seed(2))),(int)MISCMATHS::round(float(X_seed(3))))==0)
 	  continue;
 	
 	 // compute interpolated tensor
@@ -552,11 +552,12 @@ int do_vecreg(){
   //}
   if(verbose.value()) cerr << "Loading volumes" << endl;
   read_volume4D(ivol,infilename.value());
-  read_volume(refvol,ref.value());
+  read_volume(refvol,reffname.value());
 
   volume4D<float> ovol;
   ovol.reinitialize(refvol.xsize(),refvol.ysize(),refvol.zsize(),ivol.tsize());
   copybasicproperties(refvol,ovol);
+  ovol=0;
 
   // set interpolation method
   if(interpmethod.value()=="nearestneighbour")
@@ -639,7 +640,7 @@ int main(int argc,char *argv[]){
     options.add(help);
     options.add(infilename);
     options.add(outfilename);
-    options.add(ref);
+    options.add(reffname);
     options.add(matrix);
     options.add(warp);
     options.add(matrix2);

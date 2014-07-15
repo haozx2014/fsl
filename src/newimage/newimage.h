@@ -108,7 +108,9 @@ namespace NEWIMAGE {
 			int mint; int maxx; int maxy; int maxz; int maxt; } ;
 
 
-#pragma interface  
+#ifndef __llvm__
+#pragma interface	 /* gcc class implementation */
+#endif
 
   template <class T>
   class volume : public lazymanager {
@@ -420,7 +422,6 @@ namespace NEWIMAGE {
     void SetRow(int j, int k, const ColumnVector& row);
     void SetColumn(int j, int k, const ColumnVector& col);
 
-
     // SECONDARY FUNCTIONS
     void setextrapolationmethod(extrapolation extrapmethod) const { p_extrapmethod = extrapmethod; }
     extrapolation getextrapolationmethod() const { return(p_extrapmethod); }
@@ -506,8 +507,8 @@ namespace NEWIMAGE {
     void threshold(T lowerth, T upperth, threshtype tt=inclusive);
     void threshold(T thresh) { this->threshold(thresh,this->max(),inclusive); }
     // valid entries for dims are +/- 1, 2, 3 (and for newx, etc they are x, -x, y, -y, z, -z)
-    void swapdimensions(int dim1, int dim2, int dim3);
-    void swapdimensions(const string& newx, const string& newy, const string& newz);
+    void swapdimensions(int dim1, int dim2, int dim3, bool keepLRorder=false);
+    void swapdimensions(const string& newx, const string& newy, const string& newz, const bool keepLRorder=false);
     Matrix swapmat(int dim1, int dim2, int dim3) const;
     Matrix swapmat(const string& newx, const string& newy, const string& newz) const;
 
@@ -847,8 +848,8 @@ namespace NEWIMAGE {
     void threshold(T lowerth, T upperth, threshtype tt=inclusive);
     void threshold(T thresh) { this->threshold(thresh,this->max(),inclusive); }
     // valid entries for dims are +/- 1, 2, 3 (and for newx, etc they are x, -x, y, -y, z, -z)
-    void swapdimensions(int dim1, int dim2, int dim3);
-    void swapdimensions(const string& newx, const string& newy, const string& newz);
+    void swapdimensions(int dim1, int dim2, int dim3,  bool keepLRorder=false);
+    void swapdimensions(const string& newx, const string& newy, const string& newz, const bool keepLRorder=false);
     Matrix swapmat(int dim1, int dim2, int dim3) const;
     Matrix swapmat(const string& newx, const string& newy, const string& newz) const;
 
@@ -1136,9 +1137,9 @@ namespace NEWIMAGE {
   template <class S1, class S2>
   bool samedim(const volume<S1>& vol1, const volume<S2>& vol2)
   {
-    return(std::abs(vol1.xdim()-vol2.xdim())<1e-6 && 
-           std::abs(vol1.ydim()-vol2.ydim())<1e-6 && 
-           std::abs(vol1.zdim()-vol2.zdim())<1e-6);
+    return(std::abs(vol1.xdim()-vol2.xdim())<1e-3 && 
+           std::abs(vol1.ydim()-vol2.ydim())<1e-3 && 
+           std::abs(vol1.zdim()-vol2.zdim())<1e-3);
   }
 
   template <class S1, class S2>

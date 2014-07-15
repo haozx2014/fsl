@@ -802,12 +802,6 @@ int do_unwarping()
   }
 
   unwarpdir_value = unwarpdir.value();
-  // swap x direction for neurological files (to keep consistent with
-  //  original nifti voxel coordinates)
-  if ((invol.tsize()>0) && (!invol[0].RadiologicalFile)) {
-    if (unwarpdir_value=="x") { unwarpdir_value="x-"; }
-    else if (unwarpdir_value=="x-") { unwarpdir_value="x"; }
-  }
 
   if (maskfname.set()) {
     if (verbose.value()) { cout << "Reading mask volume" << endl; }

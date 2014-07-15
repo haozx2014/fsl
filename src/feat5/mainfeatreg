@@ -67,6 +67,7 @@
 #   Innovation Limited ("Isis"), the technology transfer company of the
 #   University, to negotiate a licence. Contact details are:
 #   innovation@isis.ox.ac.uk quoting reference DE/9564.
+export LC_NUMERIC=C
 
 usage() {
   echo "Usage: `basename $0` <feat_directory> [-pngs]"
@@ -446,7 +447,7 @@ done
 
 cd $outputDirectory
 
-writeToFile $logFile 1 0 "</pre><hr>Registration<br><pre>"
+writeToFile $logFile 0 0 "</pre><hr>Registration<br><pre>"
 writeToFile $htmlReport 1 0 "<HTML><HEAD><link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
 <TITLE>FSL</TITLE></HEAD><BODY><OBJECT data=\"report.html\"></OBJECT>"
 

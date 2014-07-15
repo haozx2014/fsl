@@ -162,7 +162,7 @@ public:
   }
   T ValAndDerivs(double x, double y, double z, std::vector<T>& rderiv) const;
 
-  // Return continous derivative at voxel centres (only works for order<1)
+  // Return continous derivative at voxel centres (only works for order>1)
   T Deriv(const std::vector<unsigned int>& indx, unsigned int ddir) const;
   T Deriv1(const std::vector<unsigned int>& indx) const {return(Deriv(indx,0));}
   T Deriv2(const std::vector<unsigned int>& indx) const {return(Deriv(indx,1));}
@@ -894,7 +894,6 @@ unsigned int Splinterpolator<T>::get_dwgts(const double *coord, const int *sinds
       switch (_order) {
       case 0:
 	throw SplinterpolatorException("get_dwgts: invalid order spline");
-        break;
       case 1:
         dwgts[dim][0] = -1; dwgts[dim][1] = 1;  // Not correct on original gridpoints
 	break;
@@ -923,7 +922,6 @@ unsigned int Splinterpolator<T>::get_dwgts_at_i(const unsigned int *indx, const 
       switch (_order) {
       case 0: case 1:
 	throw SplinterpolatorException("get_dwgts_at_i: invalid order spline");
-        break;
       case 2: case 3: case 4: case 5: case 6: case 7:
 	for (unsigned int i=0; i<ni; i++) {
 	  dwgts[dim][i] = get_dwgt_at_i(indx[dim]-(sinds[dim]+int(i)));
@@ -986,7 +984,6 @@ double Splinterpolator<T>::get_wgt_at_i(int i) const
     break;
   default:
     throw SplinterpolatorException("get_wgt_at_i: invalid order spline");
-    break;
   }
   return(val);     
 }
@@ -1008,7 +1005,6 @@ double Splinterpolator<T>::get_dwgt_at_i(int i) const
   switch (_order) {
   case 0: case 1:
     throw SplinterpolatorException("get_dwgt: invalid order spline");
-    break;
   case 2:
     if (!ai) val = 0.0;
     else if (ai==1) val = sign * (-0.5);
@@ -1041,7 +1037,6 @@ double Splinterpolator<T>::get_dwgt_at_i(int i) const
     break;
   default:
     throw SplinterpolatorException("get_dwgt_at_i: invalid order spline");
-    break;
   }
   return(val);     
 }
@@ -1098,7 +1093,6 @@ double Splinterpolator<T>::get_wgt(double x) const
     break;
   default:
     throw SplinterpolatorException("get_wgt: invalid order spline");
-    break;
   }
 
   return(val);
@@ -1121,7 +1115,6 @@ double Splinterpolator<T>::get_dwgt(double x) const
   switch (_order) {
   case 0: case 1:
     throw SplinterpolatorException("get_dwgt: invalid order spline");
-    break;
   case 2:
     if (ax < 0.5) val = sign * -2.0*ax;
     else if (ax < 1.5) val = sign * (-1.5 + ax);
@@ -1154,7 +1147,6 @@ double Splinterpolator<T>::get_dwgt(double x) const
     break;
   default:
     throw SplinterpolatorException("get_dwgt: invalid order spline");
-    break;
   }
 
   return(val);
@@ -1316,7 +1308,6 @@ T Splinterpolator<T>::coef(int *indx) const
       switch (_et[i]) {
       case Zeros:
 	return(static_cast<T>(0));
-	break;
       case Constant:
 	indx[i] = 0;
 	break;
@@ -1334,7 +1325,6 @@ T Splinterpolator<T>::coef(int *indx) const
       switch (_et[i]) {
       case Zeros:
 	return(static_cast<T>(0));
-	break;
       case Constant:
 	indx[i] = _dim[i]-1;
 	break;
@@ -1383,7 +1373,7 @@ template<class T>
 void Splinterpolator<T>::common_construction(const T *data, const std::vector<unsigned int>& dim, unsigned int order, double prec, const std::vector<ExtrapolationType>& et, bool copy)
 {
   if (!dim.size()) throw SplinterpolatorException("common_construction: data has zeros dimensions");
-  if (!dim.size() > 5) throw SplinterpolatorException("common_construction: data cannot have more than 5 dimensions");
+  if (dim.size() > 5) throw SplinterpolatorException("common_construction: data cannot have more than 5 dimensions");
   if (dim.size() != et.size()) throw SplinterpolatorException("common_construction: dim and et must have the same size");
   for (unsigned int i=0; i<dim.size(); i++) if (!dim[i]) throw SplinterpolatorException("common_construction: data cannot have zeros size in any direction");
   if (order > 7) throw SplinterpolatorException("common_construction: spline order must be lesst than 7");
@@ -1565,7 +1555,6 @@ unsigned int Splinterpolator<T>::SplineColumn::get_poles(unsigned int order, dou
     break;
   default:
     throw SplinterpolatorException("SplineColumn::get_poles: invalid order of spline");
-    break;
   }
   return(np);
 }

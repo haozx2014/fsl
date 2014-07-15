@@ -15,8 +15,10 @@ function save_avw_complex(img,fname,vsize)
 save_avw(real(img),[fname,'R'],'f',vsize);
 save_avw(imag(img),[fname,'I'],'f',vsize);
 command=sprintf('$FSLDIR/bin/fslcomplex -complex %s %s %s',[fname,'R'],[fname,'I'],fname);
-call_fsl(command);
-
+[status,output]=call_fsl(command);
+if (status),
+  error(output)
+end
 % cross platform compatible deleting of files
 delete([fname,'R','.hdr']);
 delete([fname,'R','.img']);

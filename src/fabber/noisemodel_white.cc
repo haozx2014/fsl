@@ -326,19 +326,14 @@ void WhiteNoiseModel::UpdateTheta(
     prec = theta.GetPrecisions();
     precdiag << prec;
 
-    Delta = mTmp + thetaPrior.GetPrecisions()*thetaPrior.means - theta.GetPrecisions()*ml;
+    // a different (but equivalent?) form for the LM update
+    Delta = J.t() * X * (data - gml) + thetaPrior.GetPrecisions()*thetaPrior.means - thetaPrior.GetPrecisions()*ml;
     theta.means = ml + (prec + LMalpha*precdiag).i()*Delta;
 
-
-    //Delta = mTmp + thetaPrior.GetPrecisions()*thetaPrior.means;
-    //theta.means = ml + (prec + LMalpha*prec).i()*Delta;
-
+    // LM update
     //theta.means = (prec + LMalpha*precdiag).i()
-    //* ( mTmp + thetaPrior.GetPrecisions() * thetaPrior.means );
+    // * ( mTmp + thetaPrior.GetPrecisions() * thetaPrior.means );
 
-    //Delta = mTmp + thetaPrior.GetPrecisions()*thetaPrior.means - theta.GetPrecisions()*ml;
-    //float step = 0.01/LMalpha;
-    //theta.means = ml + step*theta.GetCovariance()*Delta;
   }
   else { //normal update (NB the LM update resuces to this when alpha=0 strictly)
   theta.means = theta.GetCovariance()

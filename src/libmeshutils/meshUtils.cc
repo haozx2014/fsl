@@ -120,11 +120,11 @@ struct float2
 	float x,y;
 };
 
-static float2 make_float2(float x, float y)
-{
-	float2 t; t.x = x; t.y = y; return t;
-	
-}
+//static float2 make_float2(float x, float y)
+//{
+//	float2 t; t.x = x; t.y = y; return t;
+//
+//}
 
 static float3 make_float3(float x, float y, float z)
 {
@@ -342,8 +342,9 @@ namespace meshutils {
 		
 		
 		}
-	
-	}
+		// Brian's dodgy code - return a number
+		return -1;
+	  }
 
 	
 	
@@ -1599,7 +1600,6 @@ vector<float> meshUtils::sliceMesh(const float & ycut)
 	}
 	
 	
-	int count=0;
 
 	//this deterimes which line of first polygon is cut
 	if (  checkLine(Points.element(static_cast<int>(Polygons.element(mask.at(0),0)),1), Points.element(static_cast<int>(Polygons.element(mask.at(0),1)),1),ycut) ) { 

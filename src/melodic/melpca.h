@@ -106,7 +106,7 @@ namespace Melodic{
       MelodicData &melodat;
       MelodicOptions &opts;
       Log &logger;
-      MelodicReport &report;
+      __attribute__((unused)) MelodicReport &report;
 
       int pcadim();
   };   

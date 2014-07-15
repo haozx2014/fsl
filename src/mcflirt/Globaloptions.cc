@@ -109,10 +109,6 @@ void Globaloptions::parse_command_line(int argc,char** argv)
       gdtflag = 1;
       n++;
       continue;
-    } else if ( arg == "-edge" ) {
-      edgeflag = 1;
-      n++;
-      continue;
     } else if ( arg == "-hist" ) {
       histflag = 1;
       n++;
@@ -311,7 +307,6 @@ void Globaloptions::print_usage(int argc, char *argv[])
        << "        -nn_final                          (applies final transformations using Nearest Neighbour interpolation)\n"
        << "        -init <filename>                   (initial transform matrix to apply to all vols)\n"
        << "        -gdt                               (run search on gradient images)\n"
-       << "        -edge                              (run search on contour images)\n"
        << "        -meanvol                           register timeseries to mean volume (overrides refvol and reffile options)\n"
        << "        -stats                             produce variance and std. dev. images\n"
        << "        -mats                              save transformation matricies in subdirectory outfilename.mat\n"

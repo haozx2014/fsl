@@ -86,7 +86,7 @@ class ApplyTopupException: public std::exception
 private:
   std::string m_msg;
 public:
-  ApplyTopupException(const std::string& msg) throw(): m_msg(msg) {}
+  ApplyTopupException(const std::string& msg) throw(): m_msg(msg) { cout << what() << endl; }
 
   virtual const char * what() const throw() {
     return string("ApplyTopup:: msg=" + m_msg).c_str();

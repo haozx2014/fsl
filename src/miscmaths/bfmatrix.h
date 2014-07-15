@@ -113,6 +113,8 @@ public:
 
 enum BFMatrixPrecisionType {BFMatrixDoublePrecision, BFMatrixFloatPrecision};
 
+class BFMatrixColumnIterator;
+
 class BFMatrix
 {
 protected:
@@ -122,6 +124,11 @@ public:
   BFMatrix() {}
   BFMatrix(unsigned int m, unsigned int n) {}
   virtual ~BFMatrix() {}
+
+  friend class BFMatrixColumnIterator;
+
+  BFMatrixColumnIterator begin(unsigned int col) const;
+  BFMatrixColumnIterator end(unsigned int col) const;
 
   // Access as NEWMAT::Matrix
   virtual NEWMAT::ReturnMatrix AsMatrix() const = 0;
@@ -203,6 +210,8 @@ public:
     mp = boost::shared_ptr<MISCMATHS::SpMat<T> >(new MISCMATHS::SpMat<T>(*(M.mp))); return(*this);
   }
 
+  friend class BFMatrixColumnIterator;
+
   // Access as NEWMAT::Matrix
   virtual NEWMAT::ReturnMatrix AsMatrix() const {NEWMAT::Matrix ret; ret = mp->AsNEWMAT(); ret.Release(); return(ret);}
   
@@ -277,6 +286,8 @@ public:
     mp = boost::shared_ptr<NEWMAT::Matrix>(new NEWMAT::Matrix(*(M.mp))); return(*this);
   }
 
+  friend class BFMatrixColumnIterator;
+
   virtual NEWMAT::ReturnMatrix AsMatrix() const {NEWMAT::Matrix ret; ret = *mp; ret.Release(); return(ret);}
   virtual const NEWMAT::Matrix& ReadAsMatrix() const {return(*mp);} 
 
@@ -333,6 +344,87 @@ public:
 					 double                      tol,
                                          int                         miter) const;
     
+};
+
+class BFMatrixColumnIterator {
+public:
+  BFMatrixColumnIterator(const BFMatrix& mat, unsigned int col, bool end=false) : _mat(mat), _col(col)
+  {
+    if (col > mat.Ncols()) throw BFMatrixException("BFMatrixColumnIterator: col out of range");
+    const FullBFMatrix   *fp = dynamic_cast<const FullBFMatrix *>(&(_mat));
+    if (fp) {
+      if (end) _row=_mat.Nrows()+1;
+      else _row=1;
+      _is_sparse=false;
+      _is_double=true;
+    }
+    else {
+      const SparseBFMatrix<float> *sfp = dynamic_cast<const SparseBFMatrix<float> *>(&(_mat));
+      if (sfp) {
+	if (end) _sfi = new SpMat<float>::ColumnIterator(sfp->mp->end(_col));
+	else _sfi = new SpMat<float>::ColumnIterator(sfp->mp->begin(_col));
+        _is_sparse = true;
+        _is_double = false;
+      }
+      else {
+	const SparseBFMatrix<double> *sdp = dynamic_cast<const SparseBFMatrix<double> *>(&(_mat));
+        if (sdp) {
+	  if (end) _sdi = new SpMat<double>::ColumnIterator(sdp->mp->end(_col));
+	  else _sdi = new SpMat<double>::ColumnIterator(sdp->mp->begin(_col));
+	  _is_sparse = true;
+	  _is_double = true;
+	}
+	else throw BFMatrixException("BFMatrixColumnIterator: No matching type for mat");
+      }
+    }
+  }
+  BFMatrixColumnIterator(const BFMatrixColumnIterator& rhs) : _mat(rhs._mat), _col(rhs._col), _is_sparse(rhs._is_sparse), _is_double(rhs._is_double) {
+    if (_is_sparse) {
+      if (_is_double) _sdi = new SpMat<double>::ColumnIterator(*(rhs._sdi));
+      else _sfi = new SpMat<float>::ColumnIterator(*(rhs._sfi));
+    }
+    else _row = rhs._row; 
+  }
+  ~BFMatrixColumnIterator() { if (_is_sparse) { if (_is_double) free(_sdi); else free(_sfi); } }
+
+  // Prefix case. Use this if at all possible.
+  BFMatrixColumnIterator& operator++() {
+    if (_is_sparse) { if (_is_double) ++(*_sdi); else ++(*_sfi); }
+    else _row++;
+    return(*this);
+  }
+  // Postfix case. Avoid.
+  BFMatrixColumnIterator operator++(int dummy) {
+    BFMatrixColumnIterator clone(*this);
+    if (_is_sparse) { if (_is_double) ++(*_sdi); else ++(*_sfi); }
+    else _row++;
+    return(clone);    
+  }
+  bool operator==(const BFMatrixColumnIterator& rhs) const {
+    if (_is_sparse!=rhs._is_sparse || _is_double!=rhs._is_double) return(false);
+    if (_is_sparse) { if (_is_double) return(*_sdi==*(rhs._sdi)); else return(*_sfi==*(rhs._sfi)); }
+    else {
+      if (_col!=rhs._col || &_mat!=&(rhs._mat)) return(false);
+      else return(_row==rhs._row);
+    }
+  }
+  bool operator!=(const BFMatrixColumnIterator& rhs) const { return(!(*this==rhs)); }
+  double operator*() const {
+    if (_is_sparse) { if (_is_double) return(*(*_sdi)); else return(double(*(*_sfi))); }
+    else return(_mat.Peek(_row,_col));
+  }
+  unsigned int Row() const { 
+    if (_is_sparse) { if (_is_double) return(_sdi->Row()); else return(double(_sfi->Row())); }
+    else return(_row);
+  }
+private:
+  SpMat<double>::ColumnIterator                *_sdi; // ptr to Sparse Double Iterator
+  SpMat<float>::ColumnIterator                 *_sfi; // ptr to Sparse Float Iterator
+  const BFMatrix&                              _mat;
+  unsigned int                                 _col;
+  unsigned int                                 _row;
+  bool                                         _is_sparse;
+  bool                                         _is_double;
 };
 
 //

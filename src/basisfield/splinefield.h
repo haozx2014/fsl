@@ -107,8 +107,11 @@ public:
   splinefield& operator=(const splinefield& inf);
   virtual ~splinefield() {} // This should drop straight through to base-class
 
+  // Explicit instruction to compiler that we intend not to refine some Peek functions
+  using basisfield::Peek;
   // Getting the value for a non-integer voxel location
   virtual double Peek(double x, double y, double z, FieldIndex fi=FIELD) const;
+  virtual double Peek(float x, float y, float z, FieldIndex fi=FIELD) const {return(Peek(static_cast<double>(x),static_cast<double>(y),static_cast<double>(z)));}
 
   // General utility functions
 
@@ -142,6 +145,7 @@ public:
  	
   // Functions that actually do some work
 
+  using basisfield::Set; // Instruct compiler that we intentionally don't refine all Set functions
   virtual void Set(const NEWIMAGE::volume<float>& pfield);
 
   virtual void SetToConstant(double fv);
@@ -377,7 +381,7 @@ private:
 
 protected:
   // Functions for use in this and derived classes
-  virtual void assign(const splinefield& inf);
+  virtual void assign_splinefield(const splinefield& inf);
   virtual double peek_outside_fov(int i, int j, int k, FieldIndex fi) const;
 
 };

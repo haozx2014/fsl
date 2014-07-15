@@ -67,11 +67,16 @@
     innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include "inference_vb.h"
+#ifndef __FABBER_LIBRARYONLY
 #include "newimage/newimageall.h"
+#endif //__FABBER_LIBRARYONLY
 
 class CovarianceCache {
  public:
+#ifndef __FABBER_LIBRARYONLY
   void CalcDistances(const NEWIMAGE::volume<float>& mask, const string& distanceMeasure);
+#endif //__FABBER_LIBRARYONLY
+  void CalcDistances(const NEWMAT::Matrix& voxelCoords, const string& distanceMeasure);
   const SymmetricMatrix& GetDistances() const { return distances; }
 
   const ReturnMatrix GetC(double delta) const; // quick to calculate
@@ -121,9 +126,12 @@ public:
 
     vector<vector<int> > neighbours; // Sparse matrix would be easier
     vector<vector<int> > neighbours2; // Sparse matrix would be easier
+#ifndef __FABBER_LIBRARYONLY
     void CalcNeighbours(const NEWIMAGE::volume<float>& mask);
+#endif //__FABBER_LIBRARYONLY
+    void CalcNeighbours(const Matrix& voxelCoords);
 
-    vector<string> imagepriorstr;
+    //vector<string> imagepriorstr; now inherited from spatialvb
     
     // For the new (Sahani-based) smoothing method:    
     CovarianceCache covar;
@@ -166,3 +174,9 @@ public:
 };
 
 
+#ifdef __FABBER_LIBRARYONLY_TESTWITHNEWIMAGE
+#include "newimage/newimage.h"
+using namespace NEWIMAGE;
+// Helper function, useful elsewhere:
+void ConvertMaskToVoxelCoordinates(const volume<float>& mask, Matrix& voxelCoords);
+#endif //__FABBER_LIBRARYONLY_TESTWITHNEWIMAGE

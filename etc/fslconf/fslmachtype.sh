@@ -36,17 +36,21 @@ if [ $? -eq 0 ]; then
             # We are going to build a universal (ppc32, ppc64, x86_32, x86_64)
             #    combined binary, so we only need 1 host type
             os_release=`uname -r | $AWK -F . '{ printf "%s", $1 }'`
-	    	if [ $os_release -ge 11 ]; then
-				# GCC deprecated, will always be 4.2.1 going forward. Strip extra versioning off
-				gcc_os_name=`echo $gcc_os_name|awk -F. '{ print $1 }'`
-	    	fi
-            if [ $os_release -ge 8 ]; then
+	    if [ $os_release -ge 12 ]; then
+		# Using LLVM/clang from now on
+		llvm_vstr=`cc -v 2>&1`
+		llvm_v=`echo ${llvm_vstr} | awk '{ print $4 }'`
+		os_v=`echo ${llvm_vstr} | awk '{ print $11 }' | awk -F. '{ print $1 }' | sed 's/x86_64-//'`
+		machtype=${os_v}-llvm${llvm_v}
+            elif [ $os_release -ge 8 ]; then
                 # This is 10.4 so Universal builds possible
                 gcc_host="${gcc_os_vendor}-${gcc_os_name}"
                 # Note, for BSDish platforms, gcc_os_name includes a version
+		machtype=${gcc_host}-gcc${gcc_version}
             else
-				# Prior to Tiger and gcc4, things were a mess...
-				gcc_host="${gcc_cpu_type}-${gcc_os_vendor}"
+	        # Prior to Tiger and gcc4, things were a mess...
+		gcc_host="${gcc_cpu_type}-${gcc_os_vendor}"
+		machtype=${gcc_host}-gcc${gcc_version}
                 # Note, gcc_os_vendor in this case is actually gcc_os_name above
 	    fi
 	    ;;
@@ -58,15 +62,14 @@ if [ $? -eq 0 ]; then
 	    else
 		gcc_host="${gcc_cpu_type}-${gcc_os_vendor}-${gcc_os_name}"
             fi
-	    ;;
-	SunOS)
-	    gcc_host="${gcc_cpu_type}-${gcc_os_name}"
+	    machtype=${gcc_host}-gcc${gcc_version}
 	    ;;
 	*)
 	    gcc_host="${gcc_cpu_type}-${gcc_os_vendor}-${gcc_os_name}"
+	    machtype=${gcc_host}-gcc${gcc_version}
 	    ;;
     esac
-    machtype=${gcc_host}-gcc${gcc_version};
+    
 fi
 echo ${machtype}
 exit 0

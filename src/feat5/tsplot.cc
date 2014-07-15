@@ -468,7 +468,7 @@ volume4D<float> acs;
 	for(int z=0; z<im.zsize(); z++)
 	  for(int y=0; y<im.ysize(); y++)
 	    for(int x=0; x<im.xsize(); x++)
-	      if ( (imz(x,y,z)>maxz) && ( (!haveclusters) || (immask(x,y,z)>0) && (!prewhiten || acs(x,y,z,1)!=0 || acs(x,y,z,2)!=0) ) )
+	      if ( (imz(x,y,z)>maxz) && ( (!haveclusters) ||  ( (immask(x,y,z)>0) && (!prewhiten || acs(x,y,z,1)!=0 || acs(x,y,z,2)!=0) ) ) )
 	      {
 		/* make max Z be inside a cluster if we found a cluster map */
 		maxz=imz(x,y,z);

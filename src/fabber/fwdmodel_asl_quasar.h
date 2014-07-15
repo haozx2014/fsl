@@ -93,6 +93,7 @@ public:
 
   virtual void HardcodedInitialDists(MVNDist& prior, MVNDist& posterior) const;
 
+  using FwdModel::SetupARD;
   virtual void SetupARD(const MVNDist& posterior, MVNDist& prior, double& Fard);
   virtual void UpdateARD(const MVNDist& posterior, MVNDist& prior, double& Fard) const;
 

@@ -86,5 +86,8 @@ end
 % call avwcreatehd program
 
 tmp=sprintf('FSLOUTPUTTYPE=NIFTI_PAIR; export FSLOUTPUTTYPE; $FSLDIR/bin/fslcreatehd %d %d %d %d %7.5f %7.5f %7.5f %7.5f 0 0 0 %d %s',dims(1),dims(2),dims(3),dims(4),vsize(1),vsize(2),vsize(3),vsize(4),dtype,fname);
-call_fsl(tmp);
+[status,output]=call_fsl(tmp);
+if (status),
+  error(output)
+end
 disp(' ');

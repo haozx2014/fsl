@@ -415,8 +415,10 @@ int fmrib_main_float(int argc, char* argv[],const bool timeseriesMode)
       vol = abs(vol);
     } else if (sarg=="-v") {
       if (mask.nvoxels()>0) {
-	cout << (long int) mask.sum() << " " 
-	     << mask.sum() * vol.xdim() * vol.ydim() * vol.zdim() << " ";
+        long int nvox = mask.sum();
+        if (mask.tsize() == 1) nvox = nvox * vol.tsize();
+	cout << (long int) nvox << " " 
+	     << nvox * vol.xdim() * vol.ydim() * vol.zdim() << " ";
       } else {
 	cout << (long int) vol.nvoxels() * vol.tsize() << " "
 	     << vol.nvoxels() * vol.tsize() * vol.xdim() * vol.ydim() * vol.zdim() << " ";

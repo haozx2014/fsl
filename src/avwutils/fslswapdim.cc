@@ -121,7 +121,7 @@ int fmrib_main(int argc,char *argv[])
     cout << "WARNING:: Flipping Left/Right orientation (as det < 0)" << endl;
   }
   
-  invol.swapdimensions(newx,newy,newz);
+  invol.swapdimensions(newx,newy,newz,true);
 
   int retval=0;
   if (outname!="") {

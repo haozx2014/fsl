@@ -67,6 +67,10 @@
     innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 
+#if !defined(__inference_h)
+#define __inference_h
+
+
 #pragma once
 #include <map>
 #include <string>
@@ -76,6 +80,9 @@
 #include "easylog.h"
 #include "easyoptions.h"
 #include "dataset.h"
+#ifdef __FABBER_MOTION
+ #include "Update_deformation.h"
+#endif //__FABBER_MOTION
 
 class InferenceTechnique {
     
@@ -106,9 +113,43 @@ class InferenceTechnique {
 
   void InitMVNFromFile(vector<MVNDist*>& continueFromDists,string continueFromFile, const DataSet& allData, string paramFilename);
   
+  // Motion related stuff
+  int Nmcstep; // number of motion correction steps to run
+
 private:
     const InferenceTechnique& operator=(const InferenceTechnique& from)
         { assert(false); return from; } // just not allowed. 
 
 };
+
+
+// Motion Correction class
+#ifdef __FABBER_MOTION
+//   NB: for now the mask should cover the *entire* image as we zero everything
+//       outside of the mask, which is not good for registration
+//       In future we'd need allData to be able to provide the original image (or something to)
+
+class MCobj {
+public:
+  MCobj(const DataSet& allData);
+  void run_mc(const Matrix& modelpred_mat, Matrix& finalimage_mat);
+  void set_num_iter(int nit) { num_iter=nit; }
+private:
+  int num_iter;  // default 10
+  volume<float> mask;
+  volume4D<float> defx;
+  volume4D<float> defy;
+  volume4D<float> defz;
+  // things below are kept for efficiency (?) in order to avoid repeated allocation/destruction
+  volume4D<float> tmpx;
+  volume4D<float> tmpy;
+  volume4D<float> tmpz;
+  volume4D<float> modelpred;
+  volume4D<float> finalimage;
+  volume4D<float> wholeimage;
+};
+
+#endif // __FABBER_MOTION
+
+#endif
 

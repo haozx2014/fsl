@@ -73,7 +73,7 @@ set VARS(history) {}
 proc feat5 { w } {
     global fmri PXHOME FSLDIR USER feat_files unwarp_files unwarp_files_mag initial_highres_files highres_files VARS argc argv PWD gui_ext HOME tempSpin
  
-    #{{{ main window
+    # main window
 
 feat5:setupdefaults
 
@@ -87,8 +87,8 @@ wm iconbitmap $w @${FSLDIR}/tcl/fmrib.xbm
 
 set fmri(donemodel) 0
 
-#}}}
-    #{{{ mode
+#
+    # mode
 
 frame $w.mode
 
@@ -106,25 +106,24 @@ can use this hierarchically - for example at second-level to analyse
 across several sessions and then at third-level to analyse across
 several subjects."                       
 
-optionMenu2 $w.mode.analysis fmri(analysis) -command "feat5:updateanalysis $w" 7 "Full analysis" 1 "Pre-stats" 3 "Pre-stats + Stats" 2 "                     Stats" 6 "                     Stats + Post-stats"  4 "                                  Post-stats" 0 "Registration only"
+    optionMenu2 $w.mode.analysis fmri(analysis) -command "feat5:updateanalysis $w" 7 "Full analysis" 1 "Preprocessing" 2 "Statistics" 
 
-balloonhelp_for $w.mode.analysis "You can run a full analysis - Pre-Stats; Stats; Post-stats;
-Registration - or a (sensible) subset of these options.
+balloonhelp_for $w.mode.analysis "You can run a full analysis - Preprocessing and Statistics
+- or either of these of these options individually.
 
-If you select \"Post-stats\" or \"Registration only\", you will need
-to select a FEAT directory (or directories) instead of starting with
-4D image data; the results already produced in those FEAT directories
-will then be used as appropriate.
+If you select \"Statistics\" you will need to select a FEAT directory 
+(or directories) instead of starting with 4D image data; the results 
+already produced in those FEAT directories will then be used as appropriate.
 
-Note that if you want to run only \"Post-stats\", you must select the
+Note that if you want to run only \"Statistic\", you must select the
 FEAT directory/directories before editing the contrasts or
 thresholding parameters, as these will get reset on selection of the
 FEAT directory/directories."
 
 pack $w.mode.level $w.mode.analysis -in $w.mode -side left -anchor w
 
-#}}}
-    #{{{ notebook
+#
+    # notebook
 
 NoteBook $w.nb -side top -bd 2 -tabpady {5 10} -arcradius 3 
 $w.nb insert 0 misc -text "Misc"    
@@ -134,28 +133,28 @@ $w.nb insert 3 stats     -text "Stats"
 $w.nb insert 4 poststats -text "Post-stats"
 $w.nb insert 5 reg       -text "Registration"
 
-#{{{ Misc
+# Misc
 
 set fmri(miscf) [ $w.nb getframe misc ]
 
 feat5:misc_gui $w
 
-#}}}
-#{{{ Data
+#
+# Data
 
 set fmri(dataf) [ $w.nb getframe data ]
 
 feat5:data_gui $w
 
-#}}}
-#{{{ Pre-statistics processing
+#
+# Pre-statistics processing
 
 set fmri(filteringf) [ $w.nb getframe filtering ]
 
 feat5:prestats_gui $w
 
-#}}}
-#{{{ Stats
+#
+# Stats
 
 set fmri(statsf) [ $w.nb getframe stats ]
 
@@ -263,19 +262,13 @@ If you are carrying out a mid-level analysis (e.g., cross-sessions) and will be 
 
 If you do decide to run \"FLAME 1+2\" and the FEAT logs indicate a large difference between the stage 1 and stage 2 estimations (or, for example, the final thresholded zstat image looks \"speckled\"), this is an indication that your data is highly non-Gaussian (e.g., has one or more strong outlier subjects, or has two clearly different groups of subjects being modelled as a single group). In such a case, stage 1 estimation is quite inaccurate (OLS even more so), hence the larger-than-normal difference between stages 1 and 2. The only really good solution is to investigate in your data what is going on - for example, to find the bad outlier."
 
-#}}}
-#{{{ Post-Stats
+#
+# Post-Stats
 
 set fmri(poststatsf) [ $w.nb getframe poststats ]
 
-#{{{ edit contrasts
-
-button $w.modelcon -text "Edit contrasts" -command "feat5:setup_model $w"
-balloonhelp_for $w.modelcon "This allows setup of contrasts and F-tests, to be run on a previous
-analysis."
-
-#}}}
-#{{{ pre-thresholding masking
+# edit contrasts
+# pre-thresholding masking
 
 FileEntry $fmri(poststatsf).threshmask -textvariable fmri(threshmask) -label "Pre-threshold masking" -title "Select mask" -width 30 -filedialog directory  -filetypes IMAGE
 
@@ -292,8 +285,8 @@ it can be a thresholded stats image from a previous analysis (in the
 same space as the data to be analysed here); only voxels containing
 zero in the \"mask\" image will get zeroed in this masking process."
 
-#}}}
-#{{{ thresholding
+#
+# thresholding
 
 TitleFrame   $w.thresh -text "Thresholding" -relief groove 
 set fmri(lfthresh) [ $w.thresh getframe ]
@@ -326,8 +319,8 @@ Bonferroni correction.
 You can also choose to simply threshold the uncorrected Z statistic
 values, or apply no thresholding at all."
 
-#}}}
-#{{{ contrast masking
+#
+# contrast masking
 
 button $w.conmask -text "Contrast masking" -command "feat5:setup_conmask $w"
 
@@ -346,15 +339,15 @@ voxels that survived thresholding."
 
 balloonhelp_for $w.conmask $fmri(conmask_help) 
 
-#}}}
-#{{{ rendering
+#
+# rendering
 
 TitleFrame  $w.render -text "Rendering" -relief groove 
 set fmri(lfrendering) [ $w.render getframe ]
 
 set fmri(lfrenderingtop) [ frame $fmri(lfrendering).top ]
 
-#{{{ Z display min and max
+# Z display min and max
 
 set tmpvalzdisplay $fmri(zdisplay)
 
@@ -379,8 +372,8 @@ should choose a conservatively wide range for the min and max (e.g.,
 min=1, max=15), to make sure that you do not carry out unintentional
 thresholding via colour rendering."
 
-#}}}
-#{{{ render type
+#
+# render type
 
 set tmpvalrendertype $fmri(rendertype)
 
@@ -389,12 +382,12 @@ balloonhelp_for $w.rendertype "With \"Solid colours\" you don't see any sign of 
 within the colour blobs; with \"Transparent colours\" you will see
 through the colour blobs to the background intensity"
 
-#}}}
+#
 
 pack $w.zmaxmenu $w.rendertype -in $fmri(lfrenderingtop) -side left -anchor n
 pack $fmri(lfrenderingtop) -in $fmri(lfrendering) -anchor w
 
-#}}}
+#
 
 pack $fmri(poststatsf).threshmask -in $fmri(poststatsf) -side top -anchor w -padx 5 -pady 5
 pack $w.thresh $w.render          -in $fmri(poststatsf) -side top -anchor w
@@ -404,7 +397,7 @@ pack $w.thresh $w.render          -in $fmri(poststatsf) -side top -anchor w
 set fmri(zdisplay) $tmpvalzdisplay
 set fmri(rendertype) $tmpvalrendertype
 
-#{{{ background image for group stats
+# background image for group stats
 
 frame $w.bgimage
 
@@ -425,21 +418,21 @@ subject.
 You can alternatively choose to use the original lowres functional
 data for the overlays, or the standard-space template image."
 
-#}}}
+#
 
 
 checkbutton $fmri(poststatsf).tsplot_yn -text "Create time series plots" -variable fmri(tsplot_yn)
 balloonhelp_for $fmri(poststatsf).tsplot_yn "If you do not wish to create the time series plots in the web page report, turn this option off."
 pack $fmri(poststatsf).tsplot_yn -in $fmri(poststatsf) -side top -anchor w
 
-#}}}
-#{{{ Registration
+#
+# Registration
 
 set fmri(regf) [ $w.nb getframe reg ]
 
 feat5:reg_gui $w
 
-#}}}
+#
 
 set fmri(level) 1
 set fmri(analysis) 7
@@ -450,8 +443,8 @@ set fmri(paradigm_hp) $tmpval
 
 $w.nb raise data
 
-#}}}
-    #{{{ button Frame
+#
+    # button Frame
 
 frame $w.btns
     
@@ -465,7 +458,7 @@ button $w.btns.cancel -command "destroy $w" -text "Exit"
 
 button $w.btns.help -command "FmribWebHelp file: ${FSLDIR}/doc/redirects/feat.html" -text "Help"
 
-#{{{ Utils
+# Utils
 
 menubutton $w.btns.utils -text "Utils" -menu $w.btns.utils.menu -relief raised -bd 2
 
@@ -477,16 +470,16 @@ $w.btns.utils.menu add command -label "Featquery - get FEAT stats from ROI mask 
 
 $w.btns.utils.menu add command -label "High-res FEAT stats colour rendering" -command { exec sh -c "${FSLDIR}/bin/Renderhighres$gui_ext" & }
 
-#}}}
+#
 
 pack $w.btns.apply $w.btns.save $w.btns.load $w.btns.cancel $w.btns.help $w.btns.utils -in $w.btns -side left -expand yes
 
-#}}}
+#
 
     pack $w.mode $w.nb -in $w -side top -anchor n -padx 10 -pady 10 
     pack $w.btns -in $w -side bottom -fill x -padx 10 -pady 10 
 
-    #{{{ load fsf file
+    # load fsf file
 
 if { $argc > 0 } {
 
@@ -508,14 +501,14 @@ if { $argc > 0 } {
 
 }
 
-#}}}
-    #{{{ updates needed after the loading of settings
+#
+    # updates needed after the loading of settings
 
 if { $fmri(perfsub_yn) } {
     pack $fmri(temp).tcmenu -in $fmri(temp) -after $fmri(temp).ps_yn -side top -side left -padx 5
 }
 
-#}}}
+#
 }
 
 if { ! [ info exists INGUI ] } {

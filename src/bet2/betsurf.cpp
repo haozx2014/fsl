@@ -1075,6 +1075,7 @@ vector<double> co_ext(const volume<float> & t1, const volume<float> & t2, const 
 	  m2 = pt2.last_point_over(m, .25);
 	  if (fabs(m2 - outskin) > 10) alloutput = false;
 	  else outskin = outskin;
+          // The line above is very suspicious
 	}
     }
 
@@ -1319,7 +1320,7 @@ int main(int argc, char *argv[]) {
   int nb_pars = 0;
 
   try {
-    nb_pars = options.parse_command_line(argc, argv);
+    nb_pars = options.parse_command_line(argc, argv, 0, true);
   }
   catch(X_OptionError& e) {
     options.usage();

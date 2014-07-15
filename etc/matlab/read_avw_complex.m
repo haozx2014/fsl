@@ -17,7 +17,10 @@ function [img,dims,scales,bpp,endian] = read_avw_complex(fname)
 %   
 
 command=sprintf('${FSLDIR}/bin/fslcomplex -realcartesian %s %s %s',fname,[fname,'R'],[fname,'I']);
-call_fsl(command);
+[status,output] = call_fsl(command);
+if (status),
+  error(output)
+end
 
 [imgr,dims,scales,bpp,endian]=read_avw([fname,'R']);
 [imgi,dims,scales,bpp,endian]=read_avw([fname,'I']);

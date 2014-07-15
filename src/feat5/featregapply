@@ -84,7 +84,7 @@ source $env(FSLDIR)/tcl/fslstart.tcl
 #{{{ proc runregfiles
 
 proc runregfiles { in out } {
-
+    # return 0 if everything exists and is up to date
     catch { exec sh -c "mkdir -p reg_standard/[ file dirname $out ]" } errmsg
 
     if { ! [ imtest reg_standard/$out ] } {
@@ -102,6 +102,7 @@ proc runregfiles { in out } {
 proc runflirt { in ref out space interp datatype } {
     global FSLDIR fmri
 
+    # only do anything at all if things don't exist or need updating
     if { [ runregfiles $in $out ] } {
 	set TMPNAM [ fsl:exec "${FSLDIR}/bin/tmpnam frgrot" -n ]
 
@@ -141,12 +142,14 @@ proc runflirt { in ref out space interp datatype } {
 
 if { [ lindex $argv 0 ] == "" } {
     puts "
-Usage: featregapply <feat_directory> \[-f\] \[-c\] \[-l <image>\] \[-s <image>\]
+Usage: featregapply <feat_directory> \[-f\] \[-c\] \[-l <image>\] \[-s <image>\] \[-r <res>\] \[-e\]
   -f : force featregapply to run even if already run on this FEAT directory
   -c : cleanup, i.e. remove all featregapply output
   -l <image> : upsample functional-space <image> to standard space using trilinear interpolation
   -s <image> : upsample functional-space <image> to standard space using spline (like sinc) interpolation
-"
+  -r <res> : specify the standard space resolution for melodic (e.g. 3 for 3mm)
+  -e : exclude filtered func from processing"
+
     exit 1
 }
 
@@ -162,22 +165,46 @@ if { ! [ file exists reg/example_func2standard.mat ] } {
 
 feat5:setupdefaults
 feat5:load -1 1 design.fsf
-set REF reg/standard
+
 
 # for older first-level FEAT dirs: create mean_func if it's not already there
 if { [ imtest filtered_func_data ] && ! [ imtest mean_func ] } {
     fsl:exec "${FSLDIR}/bin/fslmaths filtered_func_data -Tmean mean_func"
 }
 
-catch { exec sh -c "mkdir -p reg_standard/reg reg_standard/stats" } errmsg
-
+set excludeFiltered 0
+# Freshen or cleanup old reg_standard
 for { set i 1 } { $i < [ llength $argv ] } { incr i 1 } {
     if { ! [ string compare [ lindex $argv $i ] "-f" ] } {
-      fsl:exec "/bin/rm -rf reg_standard"
+	fsl:exec "/bin/rm -rf reg_standard"
+    } elseif { ! [ string compare [ lindex $argv $i ] "-e" ] } {
+       set excludeFiltered 1
     } elseif { ! [ string compare [ lindex $argv $i ] "-c" ] } {
-      fsl:exec "/bin/rm -rf reg_standard"
-      exit 0
-    } elseif { ! [ string compare [ lindex $argv $i ] "-l" ] } {
+	fsl:exec "/bin/rm -rf reg_standard"
+	exit 0
+    } elseif { ! [ string compare [ lindex $argv $i ] "-r" ] } {
+	incr i 1
+	set fmri(regstandard_res) [ lindex $argv $i ]
+    }
+}
+catch { exec sh -c "mkdir -p reg_standard/reg reg_standard/stats" } errmsg
+
+set REF reg/standard
+if { [ info exists fmri(inmelodic) ] && $fmri(inmelodic) } {
+    set REF reg_standard/standard
+
+    if { ! [ info exists fmri(regstandard_res) ] || $fmri(regstandard_res) == 0 } { # Just take a copy of the standard space image
+      fsl:exec "${FSLDIR}/bin/imcp reg/standard reg_standard/standard"
+    } elseif { $fmri(regstandard_res)>0.0001 } {
+      fsl:exec "${FSLDIR}/bin/flirt -ref reg/standard -in reg/standard -out reg_standard/standard -applyisoxfm $fmri(regstandard_res)"
+    } else {
+      puts "Error - standard space resolution too small - tried to use $fmri(regstandard_res) mm"
+      exit 1
+    }
+}
+
+for { set i 1 } { $i < [ llength $argv ] } { incr i 1 } {
+    if { ! [ string compare [ lindex $argv $i ] "-l" ] } {
       incr i 1
       set theim [ lindex $argv $i ]
       runflirt $theim $REF $theim example_func trilinear float
@@ -196,10 +223,6 @@ for { set i 1 } { $i < [ llength $argv ] } { incr i 1 } {
 
 # MELODIC upsampling
 if { [ info exists fmri(inmelodic) ] && $fmri(inmelodic) } {
-    if { $fmri(regstandard_res)>0.0001 } {
-	fsl:exec "${FSLDIR}/bin/flirt -ref reg/standard -in reg/standard -out reg_standard/standard -applyisoxfm $fmri(regstandard_res)"
-	set REF reg_standard/standard
-    }
 
     set BGIMAGE ""
     switch $fmri(bgimage) {
@@ -213,11 +236,14 @@ if { [ info exists fmri(inmelodic) ] && $fmri(inmelodic) } {
     } else {
 	imcp reg_standard/standard reg_standard/bg_image
     }
-
-    runflirt filtered_func_data $REF filtered_func_data example_func trilinear float
-    fsl:exec "${FSLDIR}/bin/fslmaths reg_standard/filtered_func_data -Tstd -bin reg_standard/mask -odt char"
+    if { $excludeFiltered } {
+      runflirt example_func $REF mask example_func trilinear float
+      fsl:exec "${FSLDIR}/bin/fslmaths reg_standard/mask -bin reg_standard/mask -odt char"
+    } else {
+      runflirt filtered_func_data $REF filtered_func_data example_func trilinear float
+      fsl:exec "${FSLDIR}/bin/fslmaths reg_standard/filtered_func_data -Tstd -bin reg_standard/mask -odt char"
+    }
 } else {
-
     foreach input [ imglob example_func mean_func ] {
 	runflirt $input $REF $input example_func spline float
     }

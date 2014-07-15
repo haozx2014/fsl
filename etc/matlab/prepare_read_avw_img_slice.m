@@ -18,5 +18,7 @@ function tmpfname = prepare_read_avw_img_slice(fname)
 
 tmpfname = tempname;
 command = sprintf('FSLOUTPUTTYPE=NIFTI_PAIR; export FSLOUTPUTTYPE; $FSLDIR/bin/fslmaths %s %s', fname, tmpfname);
-call_fsl(command);
-
+[status,output] = call_fsl(command);
+if (status),
+  error(output)
+end

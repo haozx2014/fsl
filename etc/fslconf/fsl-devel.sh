@@ -5,7 +5,7 @@
 # Written by Mark Jenkinson
 #  FMRIB Analysis Group, University of Oxford
 
-# SHCOPYRIGHT
+# SHBASECOPYRIGHT
 
 
 #### Set up standard FSL user environment variables ####

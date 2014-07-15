@@ -78,9 +78,9 @@ namespace NEWIMAGE {
 
 
 int  handle_read_error(int errorflag, const string& filename) {
-  if (errorflag & 1 == 1) { imthrow("ERROR:: Could not open file " + filename,22); }
-  if (errorflag & 2 == 2) { imthrow("ERROR:: Illegal NIfTI file! Inconsistent sform and qform information set in " + filename,40); }
-  if (errorflag & 4 == 4) { imthrow("ERROR:: Illegal NIfTI file! Zero determinant for sform and/or qform set in  " + filename,41); }
+  if ((errorflag & 1) == 1) { imthrow("ERROR:: Could not open file " + filename,22); }
+  if ((errorflag & 2) == 2) { imthrow("ERROR:: Illegal NIfTI file! Inconsistent sform and qform information set in " + filename,40); }
+  if ((errorflag & 4) == 4) { imthrow("ERROR:: Illegal NIfTI file! Zero determinant for sform and/or qform set in  " + filename,41); }
   return errorflag;
 }
 

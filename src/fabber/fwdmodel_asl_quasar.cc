@@ -78,7 +78,7 @@ using namespace NEWIMAGE;
 
 string QuasarFwdModel::ModelVersion() const
 {
-  return "$Id: fwdmodel_asl_quasar.cc,v 1.6 2013/03/14 16:53:05 chappell Exp $";
+  return "$Id: fwdmodel_asl_quasar.cc,v 1.8 2014/02/21 13:49:09 mwebster Exp $";
 }
 
 void QuasarFwdModel::HardcodedInitialDists(MVNDist& prior, 
@@ -1093,7 +1093,7 @@ ColumnVector QuasarFwdModel::kcblood_gaussdisp(const ColumnVector& tis, float de
       if (ti< deltll) T_1b = T_1bin;
       else            T_1b = T_1ll;
 
-      kcblood(it) = 0.5*exp(-ti/T_1b)*( erf( (ti-deltblood)/(sqrt2*sig1) ) - erf( (ti-deltblood+taub)/(sqrt2*sig2) ) );
+      kcblood(it) = 0.5*exp(-ti/T_1b)*( MISCMATHS::erf( (ti-deltblood)/(sqrt2*sig1) ) - MISCMATHS::erf( (ti-deltblood+taub)/(sqrt2*sig2) ) );
 
     }
   return kcblood;
@@ -1246,9 +1246,9 @@ ColumnVector kctissue(tis.Nrows());
       float u1 = (ti-delttiss)/(sqrt2*sig1);
       float u2 = (ti - delttiss - tau)/(sqrt2*sig2);
 
-      kctissue(it) = F/(2*R) * (  (erf(u1) - erf(u2))*exp(R*ti) 
-				  - (1 + erf(u1 - (R*sig1)/sqrt2))*exp(R*(delttiss+(R*sig1*sig1)/2)) 
-				  + (1 + erf(u2 - (R*sig2)/sqrt2))*exp(R*(delttiss+tau+(R*sig2*sig2)/2)) 
+      kctissue(it) = F/(2*R) * (  (MISCMATHS::erf(u1) - MISCMATHS::erf(u2))*exp(R*ti) 
+				  - (1 + MISCMATHS::erf(u1 - (R*sig1)/sqrt2))*exp(R*(delttiss+(R*sig1*sig1)/2)) 
+				  + (1 + MISCMATHS::erf(u2 - (R*sig2)/sqrt2))*exp(R*(delttiss+tau+(R*sig2*sig2)/2)) 
 				  );
     
     }
@@ -1261,7 +1261,7 @@ float QuasarFwdModel::icgf(float a, float x) const {
 
   //incomplete gamma function with a=k, based on the incomplete gamma integral
 
-  return gamma(a)*igamc(a,x);
+  return MISCMATHS::gamma(a)*igamc(a,x);
 }
 
 float QuasarFwdModel::gvf(float t, float s, float p) const {
@@ -1272,6 +1272,6 @@ float QuasarFwdModel::gvf(float t, float s, float p) const {
   // NB this is basically a gamma pdf
 
   if (t<0)    return 0.0;
-  else        return pow(s,1+s*p) / gamma(1+s*p) * pow(t,s*p) * exp(-s*t);
+  else        return pow(s,1+s*p) / MISCMATHS::gamma(1+s*p) * pow(t,s*p) * exp(-s*t);
 }
 

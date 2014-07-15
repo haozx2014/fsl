@@ -145,10 +145,16 @@ void StackDump::print_backtrace(int sig, siginfo_t *info, void *dodgy)
   for (unsigned int i=2; i<stack_depth; i++) {
     char bls[256]; strcpy(bls,stack_strings[i]);
     char *file = NULL; char *fn=NULL; char *fend=NULL;
-    for (file=bls; *file!=' '; file++) ; for (; *file==' '; file++) ; // Skip confusing frame #
-    for (fn=file; !(*fn=='0' && *(fn+1)=='x'); fn++) ; // We have found address
-    for (; *fn!=' '; fn++) ; *fn='\0'; fn++; // Now at start of function name
-    for (fend=fn; *fend!=' '; fend++) ; *fend='\0';
+    for (file=bls; *file!=' '; file++)      //
+      ;                                     //
+    for (; *file==' '; file++)              // Skip confusing frame #
+      ;                                     //
+    for (fn=file; !(*fn=='0' && *(fn+1)=='x'); fn++)
+      ; // We have found address
+    for (; *fn!=' '; fn++)
+      ; *fn='\0'; fn++; // Now at start of function name
+    for (fend=fn; *fend!=' '; fend++)
+      ; *fend='\0';
     size_t length; int status;
     char *demangled = abi::__cxa_demangle(fn,NULL,&length,&status);
     if (demangled) {

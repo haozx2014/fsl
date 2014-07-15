@@ -71,7 +71,7 @@
 #include "newimage/newimageall.h"
 #include "miscmaths/miscmaths.h"
 #include "utils/fsl_isfinite.h"
-#include "libprob/libprob.h"
+#include "libprob.h"
 
 using namespace MISCMATHS;
 using namespace NEWIMAGE;
@@ -145,8 +145,8 @@ int printUsage(const string& programName)
   cout << "\nKernel operations (set BEFORE filtering operation if desired):" << endl;
   cout << " -kernel 3D : 3x3x3 box centered on target voxel (set as default kernel)" << endl;
   cout << " -kernel 2D : 3x3x1 box centered on target voxel" << endl;
-  cout << " -kernel box    <size>     : all voxels in a box of width <size> centered on target voxel" << endl;
-  cout << " -kernel boxv   <size>     : <size>x<size>x<size> box centered on target voxel, CAUTION: size should be an odd number" << endl;
+  cout << " -kernel box    <size>     : all voxels in a cube of width <size> mm centered on target voxel" << endl;
+  cout << " -kernel boxv   <size>     : all voxels in a cube of width <size> voxels centered on target voxel, CAUTION: size should be an odd number" << endl;
   cout << " -kernel gauss  <sigma>    : gaussian kernel (sigma in mm, not voxels)" << endl;
   cout << " -kernel sphere <size>     : all voxels in a sphere of radius <size> mm centered on target voxel" << endl;
   cout << " -kernel file   <filename> : use external file as kernel" << endl;

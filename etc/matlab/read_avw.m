@@ -21,8 +21,11 @@ function [img,dims,scales,bpp,endian] = read_avw(fname)
 tmpname = tempname;
 
 command = sprintf('FSLOUTPUTTYPE=NIFTI_PAIR; export FSLOUTPUTTYPE; $FSLDIR/bin/fslmaths %s %s', fname, tmpname);
-call_fsl(command);
+[status,output]=call_fsl(command);
 
+if (status),
+  error(output)
+end
   [dims,scales,bpp,endian,datatype]= read_avw_hdr(tmpname);
   if (datatype==32),
     % complex type

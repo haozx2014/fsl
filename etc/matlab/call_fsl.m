@@ -23,13 +23,15 @@ else
   % setenv('LD_LIBRARY_PATH',fsllibdir);
 end
 
-command = sprintf('/bin/sh -c ''. ${FSLDIR}/etc/fslconf/fsl.sh; %s''', cmd);
+command = sprintf('/bin/sh -c ''. %s/etc/fslconf/fsl.sh; %s''', fsldir, cmd);
 [status,output] = system(command);
 
 if ismac
   setenv('DYLD_LIBRARY_PATH', dylibpath);
 else
-  setenv('LD_LIBRARY_PATH', ldlibpath);
+    setenv('LD_LIBRARY_PATH', ldlibpath);
 end
 
-
+if status
+    error('FSL call (%s) failed, %s', command, output)
+end

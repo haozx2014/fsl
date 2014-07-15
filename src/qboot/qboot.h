@@ -108,7 +108,7 @@ namespace ODFs{
     const Matrix& m_SHT;          //Pseudoinverse of spherical harmonic transform matrix, used to get the signal SH coefficients 
     const Matrix& m_HAT;          //Hat matrix, used during bootstrap 
     const DiagonalMatrix& m_scaling_factors;//Holds the scaling factors to obtain the ODF SH coefficients from the signal SH ones
-    const int& m_SH_order;        //maximum SH order (must be even)  
+     __attribute__((unused)) const int& m_SH_order;        //maximum SH order (must be even)  
     const int& Num_of_coeff;      //Number of coefficients that will be estimated.
     const int& n_samples;         //Number of samples per coefficient
     const float& m_delta;         //Regularization parameter for signal intensities
@@ -265,8 +265,8 @@ namespace ODFs{
     const Matrix& m_SHT;          //Pseudoinverse of spherical harmonic transform matrix, used to get the signal SH coefficients 
     const Matrix& m_HAT;          //Hat matrix, used during bootstrap 
     const DiagonalMatrix& m_scaling_factors;//Holds the scaling factors to obtain the ODF SH coefficients from the signal SH ones
-    const int& m_SH_order;        //maximum SH order (must be even)  
-    const int& Num_of_coeff;      //Number of coefficients that will be estimated.
+    __attribute__((unused)) const int& m_SH_order;        //maximum SH order (must be even)  
+    __attribute__((unused)) const int& Num_of_coeff;      //Number of coefficients that will be estimated.
     const int& n_samples;         //Number of samples per coefficient
     const float& m_delta;         //Regularization parameter for signal intensities
 
@@ -489,9 +489,9 @@ namespace ODFs{
   //GFA is then computed numerically as in (Tuch, 2004).
   class ODF_GFA{
     const Matrix& SHcoeff_samples;        //SH coefficients that describe the ODF (Num_coeff x N_samples)
-    const int& lmax;                      //maximum SH order employed
+    __attribute__((unused)) const int& lmax;                      //maximum SH order employed
     const int Num_of_coeff;               //number of SH coefficients 
-    const int& nsamples;                  //number of bootstrap samples
+    __attribute__((unused)) const int& nsamples;                  //number of bootstrap samples
     const Matrix& Eval_SH;                //(i,j) element: for each tesselation point i, contains the jth spherical harmonic evaluated at i (Matrix common to all voxels)
 
     float gfa;                            //holds the generalised FA value, corresponding to the mean ODF shape 
@@ -555,6 +555,7 @@ namespace ODFs{
     const int& n_samples;                    //Number of samples
     const int& n_coeff;                      //Number of coefficients to store
     const int& n_voxels;                     //Number of valid non-zero voxels
+    int zero_max_num_peaks;                  //A kludge
     const int& max_num_peaks;                //Maximum number of peaks allowed in each voxel
     const bool& m_meancoeff;                 //Flag to indicate whether the mean ODF coefficients will be saved 
     const bool& m_gfa;                       //Flag to indicate whether the GFA for the mean ODF will be saved 
@@ -563,7 +564,7 @@ namespace ODFs{
   public:
   //Constructor (for saving coefficient samples)
   Samples(const int& ncoeff, const volume<float>& mask, const int& nvoxels, const int& nsamples, const bool& meancoeff=false, const bool& gfa_flag=false):
-    m_mask(mask),n_samples(nsamples),n_coeff(ncoeff),n_voxels(nvoxels),max_num_peaks(0),m_meancoeff(meancoeff), m_gfa(gfa_flag){
+    m_mask(mask),n_samples(nsamples),n_coeff(ncoeff),n_voxels(nvoxels),zero_max_num_peaks(0),max_num_peaks(zero_max_num_peaks),m_meancoeff(meancoeff), m_gfa(gfa_flag){
       if (m_meancoeff){
 	mean_SHcoeff.ReSize(ncoeff,nvoxels);  
 	mean_SHcoeff=0;

@@ -167,7 +167,7 @@ const
   double x1 = (i-0.5-_ca[i1]) / (_ca[i1+1]-_ca[i1]);  // Distance of 1st crossing from i1
   double x2 = (i+0.5-_ca[i2]) / (_ca[i2+1]-_ca[i2]);  // Distance of 2nd crossing from i2
 
-  if (i1==i2) {  // If both squeezed between one index and nest
+  if (i1==i2) {  // If both squeezed between one index and next
     if (x1 < 0.5) {
       if (x2 < 0.5) {
 	indx[0] = _ca.IndexInRange(i1);

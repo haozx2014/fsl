@@ -455,7 +455,7 @@ bool Tetrahedron::is_point_on_right_side_of_plane(double x, double y, double z, 
   default:
     break;
   }
-  return(!udot || (udot<0)&&(kdot<0) || (udot>0)&&(kdot>0));
+  return(!udot || ((udot<0)&&(kdot<0)) || ((udot>0)&&(kdot>0)));
 }
 
 /////////////////////////////////////////////////////////////////////

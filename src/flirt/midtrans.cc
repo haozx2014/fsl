@@ -421,7 +421,7 @@ int main(int argc,char *argv[])
     options.add(verbose);
     options.add(help);
     
-    nonoptarg = options.parse_command_line(argc, argv);
+    nonoptarg = options.parse_command_line(argc, argv, 0, true);
 
     // line below stops the program if the help was requested or 
     //  a compulsory option was not set

@@ -82,6 +82,14 @@ DiffStats::DiffStats(const NEWIMAGE::volume<float>& diff, const NEWIMAGE::volume
   }  
 }
 
+/*!
+ * Will write three files containing the mean differences, the
+ * mean squared differences and the number of valid voxels. The
+ * organisation of the (text) files is such that the nth column 
+ * of the mth row corresponds to the nth slice for the mth scan.
+ * \param bfname Base file name from which will be created 'bfname'.MeanDifference, 
+ * 'bfname'.MeanSquaredDifference and 'bfname'.NoOfVoxels.
+ */
 void DiffStatsVector::Write(const std::string& bfname) const
 {
   std::string fname = bfname + std::string(".MeanDifference");
@@ -101,6 +109,14 @@ void DiffStatsVector::Write(const std::string& bfname) const
   file.close();
 }
 
+/*!
+ * Returns a vector of vectors where each vector is equivalent to the output
+ * from DiffStatsVector::GetOutliersInSlice. So for example the ith vector of the return value
+ * correponds to the output from a call DiffStatsVector::GetOutliersInSlice with sl=i.
+ * \param sl Slice index. It is zero offset so that e.g. sl=4 implies the 5th slice.
+ * \param nstdev Indicates how many standard deviations imply an outlier.
+ * \param minn Indicates the minimum number of valid voxels in a slice for it to be considered to have robust/valid statistic (and hence for it to be considered an outlier).
+ */
 std::vector<std::vector<unsigned int> > DiffStatsVector::GetOutliers(double        nstdev,     // # of std to qualify as outlier
 								    unsigned int  minn) const  // Min # of voxels to be considered
 {
@@ -109,6 +125,15 @@ std::vector<std::vector<unsigned int> > DiffStatsVector::GetOutliers(double     
   return(rvv);
 }
 
+/*!
+ * Returns a vector of (scan) indicies for the outliers for a scan given by sl. So if
+ * for example scan 10 and scan 36 (zero offset) are outliers for slice 6 (zero offset)
+ * it will return a vector [10 36] given the call GetOutliersInSlice(6). If there are
+ * no outliers an empty (zero size) vector will be returned.
+ * \param sl Slice index. It is zero offset so that e.g. sl=4 implies the 5th slice.
+ * \param nstdev Indicates how many standard deviations imply an outlier.
+ * \param minn Indicates the minimum number of valid voxels in a slice for it to be considered to have robust/valid statistic (and hence for it to be considered an outlier).
+ */
 std::vector<unsigned int> DiffStatsVector::GetOutliersInSlice(unsigned int  sl,
 							      double        nstdev,      // # of std to qualify as outlier
 							      unsigned int  minn) const  // Min # of voxels to be considered
