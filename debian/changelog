@@ -1,5 +1,6 @@
-fsl (5.0.6-3) unstable; urgency=medium
+fsl (5.0.7-1) UNRELEASED; urgency=medium
 
+  * New upstream release.
   * Remove the documentation from the source package due to a number of files
     with unclear origin and license. Consequently, the -doc has been removed
     as well. Upstream confirms that documentation is best consumed from the
