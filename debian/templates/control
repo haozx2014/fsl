@@ -91,7 +91,7 @@ Depends: mozilla-firefox | www-browser,
          ${misc:Depends}
 Recommends: fsl-atlases
 Suggests: fsl-feeds,
-          fsl-#FSLMVERSION#-gpu (= ${binary:Version}),
+          fsl-#FSLMVERSION#-gpu,
           octave | ${octave:Depends},
           mriconvert | dicomnifti,
           fsl-complete,
