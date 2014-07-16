@@ -1,0 +1,47 @@
+diff --git a/debian/rules b/debian/rules
+index 6c3e6b5..0bd368f 100755
+--- a/debian/rules
++++ b/debian/rules
+@@ -52,8 +52,8 @@ FSL_LIBRARY_PATH=$(CURDIR)/lib
+ # install into this directory
+ DEB_DESTDIR=$(CURDIR)/debian/tmp
+ 
+-# don't compile GPU
+-COMPILE_GPU:=0
++# compile GPU only if building on x86 platform where nvcc present
++COMPILE_GPU:=$(shell which nvcc >/dev/null 2>&1 && echo 1 || echo 0)
+ 
+ # define common environment setup for all make calls
+ # complicated LD_LIBRARY expression ensures that no
+diff --git a/debian/templates/control b/debian/templates/control
+index 8240efa..e666473 100644
+--- a/debian/templates/control
++++ b/debian/templates/control
+@@ -16,6 +16,7 @@ Build-Depends: debhelper (>= 7),
+                libnifti-dev (>> 1.1.0-1),
+                libgiftiio-dev,
+                mesa-common-dev,
++               nvidia-cuda-toolkit [amd64 i386],
+                libexpat1-dev | libexpat-dev,
+                libglu1-mesa-dev | libglu-dev,
+                libgomp1,
+@@ -119,3 +120,19 @@ Description: analysis tools for FMRI, MRI and DTI brain imaging
+  FSL interoperates well with other brain imaging related software. This includes
+  Caret, FreeSurfer (cortical flattening and modelling). All FSL tools support
+  the NIfTI format.
++
++Package: fsl-#FSLMVERSION#-gpu
++Architecture: amd64 i386
++Depends: fsl-#FSLMVERSION#-core (= ${binary:Version}),
++         ${shlibs:Depends},
++         ${misc:Depends}
++Description: GPU-accelerated tools for FSL
++ FSL is a comprehensive library of image analysis and statistical tools
++ for fMRI, MRI and DTI brain imaging data. The suite consists of various
++ command line tools, as well as simple GUIs for its core analysis pipelines.
++ Among others, FSL offers implementations of standard GLM analysis,
++ white matter tractography, tissue segmentation, affine and non-linear
++ co-registration, and independent component analysis.
++ .
++ This package provides accelerated versions of some FSL commands to utilize
++ NVIDIA's CUDA toolkit.
