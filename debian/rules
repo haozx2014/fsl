@@ -18,7 +18,7 @@ PROJECTS = \
   utils fslio miscmaths newimage libvis first_lib meshclass fslvtkio \
   misc_tcl basisfield warpfns bint shapeModel MVdisc fslsurface libmeshutils \
   avwutils basil bet2 cluster fast4 feat5 film filmbabe flirt fabber baycest \
-  fslvbm mcflirt melodic misc_c miscvis mm randomise siena slicetimer susan \
+  fslvbm mcflirt melodic misc_c miscvis mm gps randomise siena slicetimer susan \
   tbss fnirt fugue asl_mfree misc_scripts fdt first possum sgeutils flameo \
   oxford_asl qboot topup ptx2 lesions eddy
 
