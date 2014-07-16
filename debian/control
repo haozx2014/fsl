@@ -90,9 +90,9 @@ Depends: mozilla-firefox | www-browser,
          fslview,
          ${shlibs:Depends},
          ${misc:Depends}
-Recommends: fsl-5.0-gpu (= ${binary:Version}),
-            fsl-atlases
+Recommends: fsl-atlases
 Suggests: fsl-feeds,
+          fsl-5.0-gpu (= ${binary:Version}),
           octave | ${octave:Depends},
           mriconvert | dicomnifti,
           fsl-complete,
