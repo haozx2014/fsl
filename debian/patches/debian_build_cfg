@@ -96,12 +96,12 @@ Description: Debian build setup and shared libraries
  
  DTIFIT=dtifit
  CCOPS=ccops
-@@ -155,7 +155,7 @@
+@@ -155,7 +155,7 @@ ${EDDYCOMBINE}: ${EDDYCOMBINEOBJS}
  		   ${CXX} ${CXXFLAGS} ${LDFLAGS} -o $@ ${EDDYCOMBINEOBJS} ${DLIBS}
  
  ${LIBBEDPOSTX_CUDA}: 
 -		${CUDA}/bin/nvcc --shared --compiler-options '-fPIC' -o CUDA/libbedpostx_cuda.so CUDA/init_gpu.cu CUDA/samples.cu CUDA/diffmodels.cu CUDA/runmcmc.cu  CUDA/xfibres_gpu.cu -O3  -gencode=arch=compute_20,code=\"sm_20,compute_20\" -gencode=arch=compute_35,code=\"sm_35,compute_35\"  -lcudart -lcuda -lcurand -I. -L${CUDA}/lib64 -L${CUDA}/lib -ICUDA/options -I${CUDA}/include/thrust -I${FSLDIR}/extras/include/newmat -I${FSLDIR}/include -I${FSLDIR}/extras/include/boost -maxrregcount=64
-+		${CUDA}/bin/nvcc --shared --compiler-options '-fPIC' -o CUDA/libbedpostx_cuda.so CUDA/init_gpu.cu CUDA/samples.cu CUDA/diffmodels.cu CUDA/runmcmc.cu  CUDA/xfibres_gpu.cu -O3  -gencode=arch=compute_20,code=\"sm_20,compute_20\" -lcudart -lcuda -lcurand -I. -L${CUDA}/lib64 -L${CUDA}/lib -ICUDA/options -I${CUDA}/include/thrust -I/usr/include/newmat -I${FSLDIR}/include -I${FSLDIR}/extras/include/boost -maxrregcount=64 -I/usr/include/nifti
++		${CUDA}/bin/nvcc --shared --compiler-options '-fPIC' -o CUDA/libbedpostx_cuda.so CUDA/init_gpu.cu CUDA/samples.cu CUDA/diffmodels.cu CUDA/runmcmc.cu  CUDA/xfibres_gpu.cu -O3  -gencode=arch=compute_20,code=\"sm_20,compute_20\" -gencode=arch=compute_35,code=\"sm_35,compute_35\"  -lcudart -lcuda -lcurand -I. -L${CUDA}/lib64 -L${CUDA}/lib -ICUDA/options -I${CUDA}/include/thrust -I${FSLDIR}/extras/include/newmat -I${FSLDIR}/include -I${FSLDIR}/extras/include/boost -maxrregcount=64 -DBOOST_NOINLINE='__attribute__ ((noinline))'
  		@if [ ! -d ${FSLDEVDIR}/lib/ ] ; then ${MKDIR} ${FSLDEVDIR}/lib ; fi
  		${CP} -rf CUDA/libbedpostx_cuda.so ${FSLDEVDIR}/lib
  
@@ -136,7 +136,7 @@ Description: Debian build setup and shared libraries
  #ifdef __cplusplus
 --- a/src/libvis/Makefile
 +++ b/src/libvis/Makefile
-@@ -6,7 +6,7 @@
+@@ -4,7 +4,7 @@
  
  PROJNAME = libvis
  
@@ -145,7 +145,7 @@ Description: Debian build setup and shared libraries
  USRLDFLAGS = -L${LIB_NEWMAT} -L${LIB_PROB} -L${LIB_GD} -L${LIB_GDC} -L${LIB_PNG} -L${LIB_ZLIB}
  
  LIBS = -lnewimage -lmiscplot -lmiscpic -lmiscmaths -lfslio -lniftiio -lznz -lnewmat -lprob -lm  -lgdc -lgd -lpng -lz
-@@ -22,10 +22,10 @@
+@@ -21,10 +21,10 @@
  all: miscplot miscpic
  
  miscplot: ${PLOTOBJS}

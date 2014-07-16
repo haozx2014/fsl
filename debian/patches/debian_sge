@@ -4,8 +4,8 @@ Description: out-of-the-box compatibility with Debian's SGE
  SGE, if not, not.
 --- a/src/fdt/bedpostx
 +++ b/src/fdt/bedpostx
-@@ -198,14 +198,20 @@
- mkdir -p ${subjdir}.bedpostX/logs/pid_${$}
+@@ -262,16 +262,21 @@
+ mkdir -p ${subjdir}.bedpostX/logs/monitor
  mkdir -p ${subjdir}.bedpostX/xfms
  
 -mailto=`whoami`@fmrib.ox.ac.uk
@@ -21,40 +21,33 @@ Description: out-of-the-box compatibility with Debian's SGE
  echo Queuing parallel processing stage
  nslices=`${FSLDIR}/bin/fslval ${subjdir}/data dim3`
  [ -f ${subjdir}.bedpostX/commands.txt ] && rm ${subjdir}.bedpostX/commands.txt
+ 
+ monitor
 -if [ "x$SGE_ROOT" = "x" ]; then
 +# Don't be SGE-specific -- rely on FSLPARALLEL
-+#if [ "x$SGE_ROOT" = "x" ]; then
 +if [ "x$FSLPARALLEL" = "x" ]; then
+     ${subjdir}.bedpostX/monitor&
+ fi
  
- # 
- # Need to set off a backgrounded monitoring task
-@@ -281,14 +287,20 @@
+@@ -293,12 +298,15 @@
      fi
      slice=$(($slice + 1))
  done
--
 -bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -l ${subjdir}.bedpostX/logs -M $mailto -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
 +# don't specify a mailto address, but rely on fsl_sub doing it
-+#bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -l ${subjdir}.bedpostX/logs -M $mailto -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
 +bedpostid=`${FSLDIR}/bin/fsl_sub -j $preprocid -l ${subjdir}.bedpostX/logs -N bedpostx -t ${subjdir}.bedpostX/commands.txt`
  
  echo Queuing post processing stage
 -mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -T 60 -m as -N bpx_postproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_postproc.sh $subjdir`
--
--[ "x$SGE_ROOT" = "x" ] && kill -USR1 $monitorpid
--if [ "x$SGE_ROOT" != "x" ]; then
 +# don't setup email options, rely on fsl_sub's setting
-+#mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -T 60 -m as -N bpx_postproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_postproc.sh $subjdir`
 +mergeid=`${FSLDIR}/bin/fsl_sub -j $bedpostid -T 60 -N bpx_postproc -l ${subjdir}.bedpostX/logs ${FSLDIR}/bin/bedpostx_postproc.sh $subjdir`
-+
+ 
+-if [ "x$SGE_ROOT" != "x" ]; then
 +# Don't be SGE-specific -- rely on FSLPARALLEL
-+#[ "x$SGE_ROOT" = "x" ] && kill -USR1 $monitorpid
-+#if [ "x$SGE_ROOT" != "x" ]; then
-+[ "x$FSLPARALLEL" = "x" ] && kill -USR1 $monitorpid
 +if [ "x$FSLPARALLEL" != "x" ]; then
      echo
      echo Type ${subjdir}.bedpostX/monitor to show progress.
-     cat <<EOM > ${subjdir}.bedpostX/monitor
+     echo Type ${subjdir}.bedpostX/cancel to terminate all the queued tasks.
 --- a/src/fdt/fdt.tcl
 +++ b/src/fdt/fdt.tcl
 @@ -858,8 +858,11 @@
@@ -100,9 +93,11 @@ Description: out-of-the-box compatibility with Debian's SGE
  
  # what type of OS?
  set OSFLAVOUR unix
+diff --git a/src/possum/possumX b/src/possum/possumX
+index 29190c6..e1ecdae 100644
 --- a/src/possum/possumX
 +++ b/src/possum/possumX
-@@ -231,7 +231,9 @@
+@@ -251,7 +251,9 @@ echo Making possum directory structure
  mkdir -p ${subjdir}/diff_proc
  mkdir -p ${subjdir}/logs
  mkdir -p ${subjdir}/logs/pid_${$}
@@ -110,27 +105,25 @@ Description: out-of-the-box compatibility with Debian's SGE
 +# This setting is already present in fsl_sub and allows for a more flexible,
 +# centralized configuration
 +#mailto=`whoami`@fmrib.ox.ac.uk
-     
- echo Processing stage 
- date
-@@ -244,9 +246,12 @@
-     procnum=$(($procnum + 1))
- done
+ 
+ echo Preprocessing stage
+ echo "${POSSUMDIR}/bin/possum_matrix -p ${subjdir}/pulse -m ${subjdir}/motion --seg=$segs -o ${subjdir}/matrix"
+@@ -274,9 +276,10 @@ done
+ #tejas-add
+ if [ ! -z $holdjb ]; then hold="-j $holdjb "; fi
  
 -echo "${FSLDIR}/bin/fsl_sub -T $ntime -l ${subjdir}/logs $arch -M $mailto -N possum -t ${subjdir}/possum.com"
 +# don't specify a mailto address, but rely on fsl_sub doing it
-+#echo "${FSLDIR}/bin/fsl_sub -T $ntime -l ${subjdir}/logs $arch -M $mailto -N possum -t ${subjdir}/possum.com"
-+#possumid=`${FSLDIR}/bin/fsl_sub -T $ntime -l ${subjdir}/logs $arch -M $mailto -N possum -t ${subjdir}/possum.com `
 +echo "${FSLDIR}/bin/fsl_sub -T $ntime -l ${subjdir}/logs $arch -N possum -t ${subjdir}/possum.com"
+ unset LD_LIBRARY_PATH DYLD_LIBRARY_PATH DYLD_FALLBACK_LIBRARY_PATH
+-possumid=`${FSLDIR}/bin/fsl_sub -T $ntime ${hold}-l ${subjdir}/logs $arch -M $mailto -N possum -t ${subjdir}/possum.com` 
++possumid=`${FSLDIR}/bin/fsl_sub -T $ntime ${hold}-l ${subjdir}/logs $arch -N possum -t ${subjdir}/possum.com` 
+ #tejas-end
  
--possumid=`${FSLDIR}/bin/fsl_sub -T $ntime -l ${subjdir}/logs $arch -M $mailto -N possum -t ${subjdir}/possum.com ` 
-+possumid=`${FSLDIR}/bin/fsl_sub -T $ntime -l ${subjdir}/logs $arch -N possum -t ${subjdir}/possum.com `
  
- echo Post processing stage
- date
 --- a/src/sgeutils/fsl_sub
 +++ b/src/sgeutils/fsl_sub
-@@ -70,6 +70,13 @@
+@@ -71,6 +71,13 @@
  # cluster.
  ###########################################################################
  
@@ -144,8 +137,8 @@ Description: out-of-the-box compatibility with Debian's SGE
  
  ###########################################################################
  # The following section determines what to do when fsl_sub is called
-@@ -85,6 +92,22 @@
- 	METHOD=NONE
+@@ -98,6 +105,22 @@
+ 	fi
  fi
  
 +# define the default 'qsub' implementation to be used for cluster submission
@@ -167,7 +160,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  # stop submitted scripts from submitting jobs themselves
  if [ "X$FSLSUBALREADYRUN" = "Xtrue" ] ; then
      METHOD=NONE
-@@ -106,16 +129,22 @@
+@@ -122,16 +145,22 @@
  
  map_qname ()
  {
@@ -200,7 +193,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  
      #echo "Estimated time was $1 mins: queue name is $queue"
  }
-@@ -141,13 +170,13 @@
+@@ -157,13 +186,13 @@
  $command -q short.q gzip *.img *.hdr
  $command -a darwin regscript rawdata outputdir ...
  
@@ -219,7 +212,7 @@ Description: out-of-the-box compatibility with Debian's SGE
    -j <jid>              Place a hold on this task until job jid has completed
    -t <filename>         Specify a task file of commands to execute in parallel
    -N <jobname>          Specify jobname as it will appear on queue
-@@ -160,24 +189,26 @@
+@@ -176,24 +205,26 @@
                          <threads> specifies the number of threads to run
    -v                    Verbose mode.
  
@@ -260,7 +253,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  
  nargs=$#
  if [ $nargs -eq 0 ] ; then
-@@ -212,10 +243,13 @@
+@@ -228,10 +259,13 @@
  # change. It also sets up the basic emailing control.
  ###########################################################################
  
@@ -278,7 +271,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  
  
  ###########################################################################
-@@ -387,6 +421,11 @@
+@@ -413,6 +447,11 @@
  		exit -1
  	    fi
  
@@ -289,8 +282,8 @@ Description: out-of-the-box compatibility with Debian's SGE
 +	    fi
              # Get a list of queues configured for this PE and confirm that the queue
              # we have submitted to has that PE set up.
- 	    qstat -g c -pe $peName 2>&1 >/dev/null
-@@ -411,9 +450,9 @@
+ 	    qstat -g c -pe $peName >/dev/null 2>&1
+@@ -437,9 +476,9 @@
  
  	if [ "x$tasks" = "x" ] ; then
  	    if [ $scriptmode -ne 1 ] ; then
@@ -302,7 +295,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  	    fi
  	    if [ $verbose -eq 1 ] ; then 
  		echo sge_command: $sge_command >&2
-@@ -421,7 +460,7 @@
+@@ -447,7 +486,7 @@
  	    fi
  	    exec $sge_command $@ | awk '{print $3}'
  	else

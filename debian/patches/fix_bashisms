@@ -1,26 +1,4 @@
 Description: Fix bashisms in the code.
---- a/src/possum/possumX
-+++ b/src/possum/possumX
-@@ -98,7 +98,7 @@
- fi
- 
- echo "POSSUMDIR (before)" $POSSUMDIR
--if [ "${POSSUMDIR}" == "${FSLDEVDIR}" ] ; then
-+if [ "${POSSUMDIR}" = "${FSLDEVDIR}" ] ; then
-    echo "POSSUMDIR (during)" $POSSUMDIR
- else
-     export POSSUMDIR=$FSLDIR
---- a/src/possum/possumX_postproc.sh
-+++ b/src/possum/possumX_postproc.sh
-@@ -77,7 +77,7 @@
- #$ -m ae
- 
- echo "POSSUMDIR (before)" $POSSUMDIR
--if [ "${POSSUMDIR}" == "${FSLDEVDIR}" ] ; then
-+if [ "${POSSUMDIR}" = "${FSLDEVDIR}" ] ; then
-    echo "POSSUMDIR (during)" $POSSUMDIR
- else
-     export POSSUMDIR=$FSLDIR
 --- a/src/oxford_asl/quasil
 +++ b/src/oxford_asl/quasil
 @@ -1,4 +1,4 @@
@@ -29,7 +7,7 @@ Description: Fix bashisms in the code.
  
  # QuASIL: QUASAR Bayesian Arterial SpIn Labeling parameter estimation
  #
-@@ -461,4 +461,4 @@
+@@ -462,4 +462,4 @@
  mv $tempdir .
  fi
  
@@ -52,7 +30,7 @@ Description: Fix bashisms in the code.
  #   Copyright (C) 2012 University of Oxford
  #
  #   Part of FSL - FMRIB's Software Library
-@@ -294,4 +294,4 @@
+@@ -295,4 +295,4 @@
  rm initmask????.*
  
  cd ..
@@ -67,7 +45,7 @@ Description: Fix bashisms in the code.
  
  # OXFORD_ASL: Converts ASL images in to perfusion maps
  #
-@@ -1336,4 +1336,4 @@
+@@ -1339,4 +1339,4 @@
  
  
  echo "Output is $outdir/"
