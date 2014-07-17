@@ -93,11 +93,9 @@ Description: out-of-the-box compatibility with Debian's SGE
  
  # what type of OS?
  set OSFLAVOUR unix
-diff --git a/src/possum/possumX b/src/possum/possumX
-index 29190c6..e1ecdae 100644
 --- a/src/possum/possumX
 +++ b/src/possum/possumX
-@@ -251,7 +251,9 @@ echo Making possum directory structure
+@@ -251,7 +251,9 @@
  mkdir -p ${subjdir}/diff_proc
  mkdir -p ${subjdir}/logs
  mkdir -p ${subjdir}/logs/pid_${$}
@@ -108,7 +106,7 @@ index 29190c6..e1ecdae 100644
  
  echo Preprocessing stage
  echo "${POSSUMDIR}/bin/possum_matrix -p ${subjdir}/pulse -m ${subjdir}/motion --seg=$segs -o ${subjdir}/matrix"
-@@ -274,9 +276,10 @@ done
+@@ -274,9 +276,10 @@
  #tejas-add
  if [ ! -z $holdjb ]; then hold="-j $holdjb "; fi
  
@@ -137,7 +135,7 @@ index 29190c6..e1ecdae 100644
  
  ###########################################################################
  # The following section determines what to do when fsl_sub is called
-@@ -98,6 +105,22 @@
+@@ -98,6 +105,24 @@
  	fi
  fi
  
@@ -155,12 +153,14 @@ index 29190c6..e1ecdae 100644
 +        # if condor shall be used, simply switch to Condor's qsub emulation
 +        qsub_cmd="condor_qsub"
 +    fi
++else
++    METHOD=NONE
 +fi
 +
  # stop submitted scripts from submitting jobs themselves
  if [ "X$FSLSUBALREADYRUN" = "Xtrue" ] ; then
      METHOD=NONE
-@@ -122,16 +145,22 @@
+@@ -122,16 +147,22 @@
  
  map_qname ()
  {
@@ -193,7 +193,7 @@ index 29190c6..e1ecdae 100644
  
      #echo "Estimated time was $1 mins: queue name is $queue"
  }
-@@ -157,13 +186,13 @@
+@@ -157,13 +188,13 @@
  $command -q short.q gzip *.img *.hdr
  $command -a darwin regscript rawdata outputdir ...
  
@@ -212,7 +212,7 @@ index 29190c6..e1ecdae 100644
    -j <jid>              Place a hold on this task until job jid has completed
    -t <filename>         Specify a task file of commands to execute in parallel
    -N <jobname>          Specify jobname as it will appear on queue
-@@ -176,24 +205,26 @@
+@@ -176,24 +207,26 @@
                          <threads> specifies the number of threads to run
    -v                    Verbose mode.
  
@@ -253,7 +253,7 @@ index 29190c6..e1ecdae 100644
  
  nargs=$#
  if [ $nargs -eq 0 ] ; then
-@@ -228,10 +259,13 @@
+@@ -228,10 +261,13 @@
  # change. It also sets up the basic emailing control.
  ###########################################################################
  
@@ -271,7 +271,7 @@ index 29190c6..e1ecdae 100644
  
  
  ###########################################################################
-@@ -413,6 +447,11 @@
+@@ -413,6 +449,11 @@
  		exit -1
  	    fi
  
@@ -283,7 +283,7 @@ index 29190c6..e1ecdae 100644
              # Get a list of queues configured for this PE and confirm that the queue
              # we have submitted to has that PE set up.
  	    qstat -g c -pe $peName >/dev/null 2>&1
-@@ -437,9 +476,9 @@
+@@ -437,9 +478,9 @@
  
  	if [ "x$tasks" = "x" ] ; then
  	    if [ $scriptmode -ne 1 ] ; then
@@ -295,7 +295,7 @@ index 29190c6..e1ecdae 100644
  	    fi
  	    if [ $verbose -eq 1 ] ; then 
  		echo sge_command: $sge_command >&2
-@@ -447,7 +486,7 @@
+@@ -447,7 +488,7 @@
  	    fi
  	    exec $sge_command $@ | awk '{print $3}'
  	else
