@@ -6,6 +6,9 @@ fsl (5.0.7-2) UNRELEASED; urgency=medium
   * Add a patch to honor an unset FSLPARALLEL (do not submit jobs to a
     cluster) even in cases where SGE_ROOT is set (Closes: #685757). Thanks to
     German Gomez-Herrero for the patch.
+  * Sanitize PATH and LD_LIBRARY_PATH when sourcing the configuration file.
+    Old/duplicate FSL path entries are now removed (Closes: #695257). Thanks
+    to Vincent Kersten for the patch.
 
  -- Michael Hanke <mih@debian.org>  Thu, 17 Jul 2014 15:44:44 +0200
 

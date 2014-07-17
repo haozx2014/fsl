@@ -5,6 +5,10 @@
 # Written by Mark Jenkinson, FMRIB Analysis Group, University of Oxford
 # Modified for Debian by Michael Hanke <michael.hanke@gmail.com>
 
+# clean out previous fsl PATH components: DO NOT EDIT THE NEXT TWO LINES
+PATH=$( echo $PATH | tr ":" "\n" | grep  -v "/usr/lib/fsl/" | tr -s "\n" ":" | sed 's/:$//')
+LD_LIBRARY_PATH=$( echo $LD_LIBRARY_PATH | tr ":" "\n" | grep  -v "/usr/lib/fsl/" | tr -s "\n" ":" | sed 's/:$//')
+
 #### Set up standard FSL user environment variables ####
 
 # Debian has a fixed FSLDIR
