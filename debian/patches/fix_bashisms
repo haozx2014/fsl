@@ -52,3 +52,14 @@ Description: Fix bashisms in the code.
 -echo "OXFORD_ASL - done."
 \ No newline at end of file
 +echo "OXFORD_ASL - done."
+--- a/src/randomise/randomise_parallel
++++ b/src/randomise/randomise_parallel
+@@ -129,7 +129,7 @@ GENERATE_ID=`$FSLDIR/bin/fsl_sub -T ${REQUESTED_TIME} -N ${BASENAME}.generate -l
+ 
+ #stage2:
+ cat <<combineScript > ${DIRNAME}/${BASENAME}.defragment
+-#!/bin/sh
++#!/bin/bash
+ echo "Merging stat images"
+ for FIRSTSEED in ${ROOTNAME}_SEED1_*_p_*.nii.gz ${ROOTNAME}_SEED1_*_corrp_*.nii.gz ; do 
+   ADDCOMMAND=""
