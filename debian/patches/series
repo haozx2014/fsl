@@ -4,3 +4,4 @@ fix_bashisms
 debian_sge
 debian_build_cfg
 up_longoptions=
+kfreebsd_compat

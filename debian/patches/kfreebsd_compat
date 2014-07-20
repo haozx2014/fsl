@@ -1,0 +1,62 @@
+--- a/src/fslsurface/fslsurface_structs.h
++++ b/src/fslsurface/fslsurface_structs.h
+@@ -64,7 +64,7 @@
+ #ifndef fslsurface_STRUCTS_H
+ #define fslsurface_STRUCTS_H
+ 
+-#ifdef __linux
++#if defined(__linux) || defined(__FreeBSD_kernel__)
+ #define GL_GLEXT_PROTOTYPES
+ #include <GL/gl.h>
+ #include <GL/glext.h>
+--- a/src/fslsurface/fslsurfacegl.h
++++ b/src/fslsurface/fslsurfacegl.h
+@@ -67,7 +67,7 @@
+ #include <fslsurface.h>
+ 
+ 
+-#ifdef __linux
++#if defined(__linux) || defined(__FreeBSD_kernel__)
+ 
+ #define GL_GLEXT_PROTOTYPES 
+ #include <GL/glut.h>
+--- a/src/fslsurface/fslsurfacemaths.cpp
++++ b/src/fslsurface/fslsurfacemaths.cpp
+@@ -76,7 +76,7 @@
+ #include <fslsurfacefns.h>
+ #include <fslsurfaceio.h>
+ #include <fslsurface_first.h>
+-#ifdef __linux
++#if defined(__linux) || defined(__FreeBSD_kernel__)
+ #else
+ #include <AGL/agl.h>
+ #endif
+--- a/src/fslsurface/fslsurfacegl.cc
++++ b/src/fslsurface/fslsurfacegl.cc
+@@ -288,7 +288,7 @@ namespace fslsurface_name{
+ 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_ele_array );
+ 		
+ 		//cout<<"render2 "<<endl;
+-#ifdef __linux
++#if defined(__linux) || defined(__FreeBSD_kernel__)
+ 		glEnableVertexAttribArrayARB(vertexLoc);
+ 		glEnableVertexAttribArrayARB(normalLoc);
+ 		glEnableVertexAttribArrayARB(scalarLoc);
+@@ -299,7 +299,7 @@ namespace fslsurface_name{
+ #endif
+ 		
+ 		//cout<<"render3 "<<endl;
+-#ifdef __linux
++#if defined(__linux) || defined(__FreeBSD_kernel__)
+ 		
+ 		glVertexAttribPointerARB(vertexLoc, 3, GL_FLOAT, GL_FALSE, sizeof(vertex<T>), 0);
+ 		glVertexAttribPointerARB(normalLoc, 3, GL_FLOAT, GL_FALSE, sizeof(vertex<T>), BUFFER_OFFSET(3*sizeof(float)));
+@@ -317,7 +317,7 @@ namespace fslsurface_name{
+ 		glDrawElements(GL_TRIANGLES,surf.N_triangles*3,GL_UNSIGNED_INT,0);
+ 		//cout<<"render5 "<<surf->N_triangles<<endl;
+ 		
+-#ifdef __linux
++#if defined(__linux) || defined(__FreeBSD_kernel__)
+ 		glDisableVertexAttribArrayARB(vertexLoc);
+ 		glDisableVertexAttribArrayARB(normalLoc);
+ 		glDisableVertexAttribArrayARB(scalarLoc);

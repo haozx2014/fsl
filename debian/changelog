@@ -1,3 +1,10 @@
+fsl (5.0.7-3) unstable; urgency=medium
+
+  * Improve FSL's build configuration to not treat any non-Linux platform
+    as a Mac (Closes: #755356).
+
+ -- Michael Hanke <mih@debian.org>  Sun, 20 Jul 2014 11:36:26 +0200
+
 fsl (5.0.7-2) unstable; urgency=low
 
   * Add a patch to make randomise_parallel work on systems that do not have
