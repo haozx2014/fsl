@@ -1,3 +1,10 @@
+fsl (5.0.7-4) unstable; urgency=medium
+
+  * Fix FTBFS on kfreebsd: Disable 'stack_dump' component that is "highly
+    non-portable" and can be replaced, if necessary, with plain gdb.
+
+ -- Michael Hanke <mih@debian.org>  Wed, 23 Jul 2014 08:01:53 +0200
+
 fsl (5.0.7-3) unstable; urgency=medium
 
   * Improve FSL's build configuration to not treat any non-Linux platform
