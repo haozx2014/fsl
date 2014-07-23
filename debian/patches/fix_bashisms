@@ -54,7 +54,7 @@ Description: Fix bashisms in the code.
 +echo "OXFORD_ASL - done."
 --- a/src/randomise/randomise_parallel
 +++ b/src/randomise/randomise_parallel
-@@ -129,7 +129,7 @@ GENERATE_ID=`$FSLDIR/bin/fsl_sub -T ${REQUESTED_TIME} -N ${BASENAME}.generate -l
+@@ -129,7 +129,7 @@
  
  #stage2:
  cat <<combineScript > ${DIRNAME}/${BASENAME}.defragment
@@ -63,3 +63,14 @@ Description: Fix bashisms in the code.
  echo "Merging stat images"
  for FIRSTSEED in ${ROOTNAME}_SEED1_*_p_*.nii.gz ${ROOTNAME}_SEED1_*_corrp_*.nii.gz ; do 
    ADDCOMMAND=""
+--- a/src/fdt/bedpostx
++++ b/src/fdt/bedpostx
+@@ -132,7 +132,7 @@
+     if [ ! \$havedad -gt 0 ]; then
+        exit 0
+     fi
+-    if [ "x$SGE_ROOT" == "x" ]; then
++    if [ "x$SGE_ROOT" = "x" ]; then
+         havedad=\`ps -e -o pid | grep "$$\\b" | wc -l\`        
+     fi
+     sleep 180;
