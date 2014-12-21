@@ -1,7 +1,7 @@
 #!/bin/sh
 
-# Copyright (C) 2007-2013 University of Oxford
-# Authors: Dave Flitney, Stephen Smith and Matthew Webster
+# Copyright (C) 2007-2014 University of Oxford
+# Authors: Dave Flitney, Stephen Smith, Matthew Webster and Duncan Mortimer
 
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -64,7 +64,7 @@
 #   Innovation Limited ("Isis"), the technology transfer company of the
 #   University, to negotiate a licence. Contact details are:
 #   innovation@isis.ox.ac.uk quoting reference DE/9564.
-export LC_NUMERIC=C
+export LC_ALL=C
 
 ###########################################################################
 # Edit this file in order to setup FSL to use your local compute
@@ -89,12 +89,6 @@ else
 	if [ "x$QCONF" = "x" ]; then
 		METHOD=NONE
 		echo "Warning: SGE_ROOT environment variable is set but Grid Engine software not found, will run locally" >&2
-	else
-		$QCONF -se `hostname` >/dev/null 2>&1
-		if [ $? -eq 0 ]; then
-		   METHOD=NONE
-		   echo "Warning: job submission on a cluster node attempted, running locally without submission" >&2
-		fi
 	fi
 fi
 
@@ -231,7 +225,7 @@ omp_pe='openmp'
 queue=long.q
 queueCmd=" -q long.q "
 mailto=`whoami`@fmrib.ox.ac.uk
-MailOpts="n"
+MailOpts="a"
 
 
 ###########################################################################
@@ -338,7 +332,15 @@ while [ $1 != -- ] ; do
     -l)
       LogOpts="-o $2 -e $2";
       LogDir="${2}/";
-      mkdir -p $2;
+      if [ ! -e ${2} ]; then 
+	  mkdir -p $2
+      else
+	  echo ${2} | grep '/dev/null' >/dev/null 2>&1
+	  if [ $? -eq 1 ] && [ -f ${2} ]; then
+	      echo "Log destination is a file (should be a folder)"
+	      exit -1
+	  fi
+      fi
       shift;;
     -F)
       scriptmode=1;
@@ -363,6 +365,14 @@ shift
 if [ -z "$taskfile" ] && [ -z "$1" ]; then
 	echo "Either supply a command to run or a parallel task file"
 	exit -1
+fi
+
+if [ -z "$taskfile" ] && [ ! -x "$1" ]; then
+	which $1 >/dev/null 2>&1
+	if [ $? -ne 0 ]; then
+		echo "The command you have requested cannot be found or is not executable"
+		exit -1
+	fi
 fi
 
 if [ "x$JobName" = x ] ; then 

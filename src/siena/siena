@@ -67,7 +67,7 @@
 #   Innovation Limited ("Isis"), the technology transfer company of the
 #   University, to negotiate a licence. Contact details are:
 #   innovation@isis.ox.ac.uk quoting reference DE/9564.
-export LC_NUMERIC=C
+export LC_ALL=C
 
 Usage() {
     cat <<EOF
@@ -306,6 +306,11 @@ ${FSLDIR}/bin/pngappend gr${A}_halfwayto_${B}a.png + gr${A}_halfwayto_${B}b.png 
 echo "<hr><p><b>Final brain edge movement image</b><p>atrophy <IMG SRC=\".ramp2.gif\"> 0 <IMG SRC=\".ramp.gif\"> \"growth\"<p><IMG BORDER=0 SRC=\"${A}_halfwayto_${B}_render.png\"><p><b>Estimated PBVC: $pbvc_average</b>" >> report.html
 
 if [ $do_viena = yes ] ; then
+
+    # Export Ao and Bo (containing the input file names) as they 
+    # are used in viena_quant during HTML report generation
+    export Ao
+    export Bo
     ${FSLDIR}/bin/viena_quant ${A} ${B} ${Vmask}
 fi
 

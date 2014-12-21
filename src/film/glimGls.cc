@@ -122,7 +122,7 @@ namespace FILM {
 	Matrix con=tContrasts.Row(tContrast);
 	copes(tContrast,ind)=(con*b.Column(ind)).AsScalar();
 	double scale((con*inv_xx*con.t()).AsScalar());
-	if ( scale <= 0 )
+	if ( scale <= 0 && con.MaximumAbsoluteValue() > 0 )
 	  cerr << "Neff Error" << endl;
 	varcopes(tContrast,ind)=sigmaSquareds(ind)*scale;
       }

@@ -67,7 +67,7 @@
 #   Innovation Limited ("Isis"), the technology transfer company of the
 #   University, to negotiate a licence. Contact details are:
 #   innovation@isis.ox.ac.uk quoting reference DE/9564.
-export LC_NUMERIC=C
+export LC_ALL=C
 
 #deal with options
 
@@ -141,7 +141,7 @@ Usage() {
 }
 
 Version() {
-echo "$Id: asl_calib,v 1.24 2013/08/30 13:22:57 chappell Exp $"
+echo "$Id: asl_calib,v 1.25 2014/12/02 16:58:53 chappell Exp $"
 exit 0
 }
 
@@ -543,7 +543,7 @@ if [ -z $maskflag ]; then
 	imcp $temp_calib/refmask $temp_calib/refmask_low_unthresh
     fi
     
-    if [ ! -z $fasthasrun ] & [ -z $senson ]; then
+    if [ ! -z $fasthasrun ] && [ -z $senson ]; then
         # also extract the bias field and convert to sensitivity image (as long as we have already been supplied by a sensivity iamge or reference)
 	${FSLDIR}/bin/applywarp --ref=$calib --in=$temp_calib/seg_bias --out=$temp_calib/biasfield --premat=$temp_calib/high2low.mat --super --interp=spline --superlevel=4
 	${FSLDIR}/bin/fslmaths $temp_calib/biasfield -recip $temp_calib/sens

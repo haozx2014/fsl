@@ -274,6 +274,7 @@ int main(int argc, char *argv[])
     Matrix& threshacm = acEst.getEstimates();
     int cutoff = sizeTS/2;
     if(globalopts.tukeysize.value()>0) cutoff = globalopts.tukeysize.value();
+    if( globalopts.noest.value() ) cutoff=1;	
     threshacm = threshacm.Rows(1,MISCMATHS::Max(1,cutoff)); 
 
 

@@ -151,7 +151,7 @@ set tempSpin -1
 
 toplevel $w
 
-catch { exec sh -c "${FSLDIR}/bin/melodic -V | grep \[0-9\]" } melodicversion
+catch { exec sh -c "${FSLDIR}/bin/melodic -V | grep '\[0-9\]'" } melodicversion
 set fmri(version) [ lindex $melodicversion 2 ]
 
 wm title      $w $melodicversion

@@ -114,6 +114,7 @@ class ranopts {
   Option<bool> verbose;
   Option<bool> cluster_norm;
   Option<bool> outputRaw;
+  Option<bool> outputUncorr;
   Option<bool> outputTextPerm;
   Option<bool> outputTextNull;
   Option<bool> output_permstat;
@@ -191,7 +192,7 @@ class ranopts {
 	    string("~<n_perm>\tnumber of permutations (default 5000, set to 0 for exhaustive)"),
 	    false, requires_argument),  
    voxelwiseOutput(string("-x"),false,
-	    string("\toutput voxelwise (corrected and uncorrected) p-value images"),
+	    string("\toutput voxelwise corrected p-value images"),
 		 false, no_argument),  
    doFOnly(string("--fonly"), false, 
 	   string("\tcalculate f-statistics only"), 
@@ -232,6 +233,9 @@ class ranopts {
 		false, no_argument),
    outputRaw(string("-R"), false, 
 	   string("\toutput raw ( unpermuted ) statistic images"), 
+		false, no_argument),
+   outputUncorr(string("--uncorrp"), false, 
+	   string("output uncorrected p-value images"), 
 		false, no_argument),
    outputTextPerm(string("-P"), false, 
 	   string("\toutput permutation vector text file"), 
@@ -309,6 +313,7 @@ class ranopts {
        options.add(verbose);
        options.add(cluster_norm);
        options.add(outputRaw);
+       options.add(outputUncorr);
        options.add(outputTextPerm);
        options.add(outputTextNull);
        options.add(output_permstat);

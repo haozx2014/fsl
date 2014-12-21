@@ -89,7 +89,7 @@ using namespace Utilities;
 using namespace NEWMAT;
 using namespace MISCMATHS;
 
-string title="cluster \nCopyright(c) 2000-2008, University of Oxford (Mark Jenkinson, Matthew Webster)";
+string title="cluster \nCopyright(c) 2000-2013, University of Oxford (Mark Jenkinson, Matthew Webster)";
 string examples="cluster --in=<filename> --thresh=<value> [options]";
 
 Option<bool> verbose(string("-v,--verbose"), false, 
@@ -113,6 +113,9 @@ Option<bool> no_table(string("--no_table"), false,
 Option<bool> minclustersize(string("--minclustersize"), false,
 		      string("prints out minimum significant cluster size"),
 		      false, no_argument);
+Option<int> sizethreshold(string("--minextent"), 1,
+		      string("do not report clusters with less than extent voxels"),
+		      false, requires_argument);
 Option<int> voxvol(string("--volume"), 0,
 		   string("number of voxels in the mask"),
 		   false, requires_argument);
@@ -650,6 +653,15 @@ int fmrib_main(int argc, char *argv[])
   // get sorted index (will revert to cluster size if no pthresh)
   vector<int> idx;
   idx = get_sortindex(pthreshsize);
+
+  for ( int n=length-1;n>=1;n-- ) {
+    int index=idx[n];
+    if ( sizethreshold.set() && size[index] < sizethreshold.value() ) {
+      pthreshsize[index]=0;
+      nozeroclust++;
+	}
+  }
+
   if (verbose.value()) {cout<<pthreshsize.size()<<" labels in sortedidx"<<endl;}
 
   vector<int> threshidx(length);
@@ -732,6 +744,7 @@ int main(int argc,char *argv[])
     options.add(minv);
     options.add(no_table);
     options.add(minclustersize);
+    options.add(sizethreshold);
     options.add(transformname);
     options.add(stdvolname);
     options.add(scalarname);

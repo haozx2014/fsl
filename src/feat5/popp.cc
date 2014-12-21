@@ -669,11 +669,20 @@ int process_scanner_triggers(const ColumnVector& datavals) {
   // TRIGGERS
   // detect slice/volume triggers and mark initial detection in Etrig
 
-  // threshold is 90% of the 6th largest value (assume up to 5 outliers!)  
-  float trigLevel = 0.9*percentile(datavals,100.0*(1.0-5.0/datavals.Nrows())) + 0.1*percentile(datavals,50.0);
+  // loop is to progressively lower the threshold in case the initial one is too high
+  ColumnVector Etrig(1);
+  Etrig=0.0;
+  float frac=1.0, trigLevel;
+  while (Etrig.Sum()<=0.0) {
+    frac-=0.1;
+    if (frac<=0.0) { imthrow("Cannot find any valid triggers",60);  }
+    // threshold starts at 90% of the 6th largest value (assume up to 5 outliers!)  
+    trigLevel = frac*percentile(datavals,100.0*(1.0-5.0/datavals.Nrows())) + (1-frac)*percentile(datavals,5.0);
+    if (debug.value()) { cout << "trigLevel is " << trigLevel << endl; }
+    Etrig = detect_triggers(datavals,trigLevel);
+  }
 
-  ColumnVector Etrig, trigpts;
-  Etrig = detect_triggers(datavals,trigLevel);
+  ColumnVector trigpts;
   trigpts=find(Etrig,0.5);
   int ntrigs=trigpts.Nrows();
   float sec_per_trig=0.0;
@@ -740,14 +749,21 @@ int process_cardiac(const ColumnVector& datavals_orig) {
       if (debug.value()) { write_ascii_matrix(datavals,"debug_smooth_card"); }
       
       // initialise sensible HBI (heart beat interval)
-      // find percentile for threshold
-      float thresh = percentile(datavals,initthreshc.value()); // empirical val (not too sensitive to this)
-      if (verbose.value()) { cout << "Cardiac threshold = " << thresh << endl; }
-
-      // Do the peak calculation
-      int hbi, minsep;
+      // loop over progressively decreasing percentage thresholds, in case of clipping near top
       vector<int> diffs;
-      diffs = calc_diffs(datavals,thresh);
+      int hbi, minsep;
+      float thresh, pthresh=initthreshc.value();
+      while (diffs.size()<=0) {
+	// find percentile for threshold
+	thresh = percentile(datavals,pthresh); // empirical val (not too sensitive to this)
+	if (verbose.value()) { cout << "Cardiac threshold = " << thresh << endl; }
+	// Do the peak calculation
+	diffs = calc_diffs(datavals,thresh);
+	if (pthresh<10) { imthrow("Cannot find any valid cardiac peaks",60);  }
+	pthresh-=10;
+      }
+
+
       if (debug.value()) { ColumnVector tmp(diffs.size()); for (int n=1; n<=tmp.Nrows(); n++) {tmp(n)=diffs[n-1];} write_ascii_matrix(tmp,"diffs4mode"); }
       hbi=mode(diffs,MISCMATHS::round(0.1*samplingrate.value()));   // 0.1 seconds as a rough bin size guess
       if (verbose.value()) { cout << "Mean Heart Beat Interval = " << hbi/samplingrate.value() << endl; }
@@ -857,16 +873,23 @@ int process_respiratory(const ColumnVector &datavals_orig) {
       //  difference, so might as well pass the normalised one
             
       // initialise sensible BBI (breath-to-breath interval)
-      float thresh = percentile(datavals,initthreshr.value()); // empirical val (not too sensitive to this)
-      if (verbose.value()) { cout << "Threshold = " << thresh << endl; }
-      if (verbose.value()) { cout << "Min / Max = " << datavals.Minimum() << " & " << datavals.Maximum() << endl; }
-      
-      // Do the peak calculation
-      int bbi, minsep;
+      // loop over progressively decreasing percentage thresholds, in case of clipping near top
       vector<int> diffs;
-      if (verbose.value()) { cout << "Calculating differences" << endl; }
-      if (debug.value()) { write_ascii_matrix(datavals,"datavals_pre_diffs"); }
-      diffs = calc_diffs(datavals,thresh);
+      int bbi, minsep;
+      float thresh, pthresh=initthreshr.value();
+      while (diffs.size()<=0) {
+	// find percentile for threshold
+	float thresh = percentile(datavals,pthresh); // empirical val (not too sensitive to this)
+	if (verbose.value()) { cout << "Threshold = " << thresh << endl; }
+	if (verbose.value()) { cout << "Min / Max = " << datavals.Minimum() << " & " << datavals.Maximum() << endl; }
+	// Do the peak calculation
+	if (verbose.value()) { cout << "Calculating differences" << endl; }
+	if (debug.value()) { write_ascii_matrix(datavals,"datavals_pre_diffs"); }
+	diffs = calc_diffs(datavals,thresh);
+	if (pthresh<10) { imthrow("Cannot find any valid cardiac peaks",60);  }
+	pthresh-=10;
+      }
+
       if (verbose.value()) { cout << "Calculating mode: number of diffs = " << diffs.size() << endl; }
       bbi=mode(diffs,MISCMATHS::round(0.2*samplingrate.value()));  // 0.2 seconds as a rough bin size
       if (verbose.value()) { cout << "Mean Breath to Breath Interval = " << bbi/samplingrate.value() << endl; }

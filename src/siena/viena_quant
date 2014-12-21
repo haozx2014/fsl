@@ -280,14 +280,14 @@ cat > "$HTML" << EOF
 
 <h2>Ventricular masking</h2>
 <p>The ventricle mask in halfway space, overlaid on input A:<br>${Ao}</p>
-<IMG BORDER=0 SRC="${A}_halfwayto_${B}_ventricle_region_bin.png">
+<IMG BORDER=0 SRC="${base}_halfwayto_${follow}_ventricle_region_bin.png">
 <p>The ventricle mask in halfway space, overlaid on input B:<br>${Bo}</p>
-<IMG BORDER=0 SRC="${B}_halfwayto_${A}_ventricle_region_bin.png">
+<IMG BORDER=0 SRC="${follow}_halfwayto_${base}_ventricle_region_bin.png">
 <hr>
 
 <h2>Final brain edge movement image within ventricular mask</h2>
 <p>atrophy <IMG SRC=".ramp2.gif"> 0 <IMG SRC=".ramp.gif"> growth</p>
-<IMG BORDER=0 SRC="${A}_halfwayto_${B}_render_ventricles.png">
+<IMG BORDER=0 SRC="${base}_halfwayto_${follow}_render_ventricles.png">
 <p><b>Estimated PVVC: $meanpvvc</b></p>
 <hr>
 
