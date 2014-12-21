@@ -11,7 +11,7 @@
 #include "newmat.h"
 #include "newimage/newimageall.h"
 #include "miscmaths/miscmaths.h"
-#include "stack_dump.h"
+#include "utils/stack_dump.h"
 #include "EddyHelperClasses.h"
 #include "ECScanClasses.h"
 #include "DiffusionGP.h"

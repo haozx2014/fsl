@@ -129,9 +129,9 @@ NoteBook $w.nb -side top -bd 2 -tabpady {5 10} -arcradius 3
 $w.nb insert 0 misc -text "Misc"    
 $w.nb insert 1 data      -text "Data"     
 $w.nb insert 2 filtering -text "Pre-stats"  
-$w.nb insert 3 stats     -text "Stats"
-$w.nb insert 4 poststats -text "Post-stats"
-$w.nb insert 5 reg       -text "Registration"
+$w.nb insert 3 reg       -text "Registration"
+$w.nb insert 4 stats     -text "Stats"
+$w.nb insert 5 poststats -text "Post-stats"
 
 # Misc
 
@@ -164,7 +164,7 @@ prewhitening to make the statistics valid and maximally efficient. For
 other data - for example, very long TR (>30s) FMRI data, PET data or
 data with very few time points (<50) - this should be turned off."
 
-optionMenu2 $w.motionevs fmri(motionevs) -command "feat5:updatemotionevs $w" 0 "Don't Add Motion Parameters" 1 "Standard Motion Parameters" 2 "Standard + Extended Motion Parameters" 
+optionMenu2 $w.motionevs fmri(motionevs) 0 "Don't Add Motion Parameters" 1 "Standard Motion Parameters" 2 "Standard + Extended Motion Parameters" 
 balloonhelp_for $w.motionevs "You may want to include the head motion parameters (as estimated by
 MCFLIRT motion correction in the Pre-stats processing) as confound EVs
 in your model. This can sometimes help remove the residual effects of

@@ -178,29 +178,34 @@ proc fsl:exec { thecommand args } {
     # run and log the actual command
     if { $do_logout } {
 	fsl:echo $logout "\n$thecommand"
-    }
-    if { $do_logout } {
 	if { $logout != "" } {
-	    set errorCode [ catch { exec sh -c $thecommand >> $logout } errmsg ]
-	    if { $errorCode != 0 } { fsl:echo $logout "$errmsg" }
+	    set errorCode [ catch { exec sh -c $thecommand >>& $logout } errmsg ]
+	    set actualCode [lindex $::errorCode 0]
+	    if { $errorCode != 0 && $actualCode ne "NONE" &&  $ignoreErrors != 1 } { 
+	    } else {
 	    # Trim errmsg to final line
-            set errmsg [ exec sh -c "tail -n 1 $logout" ]
+		set errmsg [ exec sh -c "tail -n 1 $logout" ]
+	    }
 	} else {
 	    set errorCode [ catch { exec sh -c $thecommand } errmsg ]
+	    set actualCode [lindex $::errorCode 0]
 	    catch { puts $errmsg } putserr
 	}
     } else {
 	set errorCode [ catch { exec sh -c $thecommand } errmsg ]
+	set actualCode [lindex $::errorCode 0]
     }
 
-    if { $ignoreErrors == 1 } {
-	set errorCode 0
+    if { $errorCode != 0 && $actualCode ne "NONE" &&  $ignoreErrors != 1 } { 
+	if { $do_logout } {
+	    fsl:echo $logout "\nFATAL ERROR ENCOUNTERED:\nCOMMAND:\n$thecommand\nERROR MESSAGE:\n$errmsg\nEND OF ERROR MESSAGE" 	
+	}
+    } else {
+       	set errorCode 0
     }
+
 
     # now return errmsg in case the exec call needs to know the output
-    if { $errorCode != 0 && $do_logout } {
-	fsl:echo $logout "\nFATAL ERROR ENCOUNTERED"
-    }
     return -code $errorCode $errmsg 
 }
 

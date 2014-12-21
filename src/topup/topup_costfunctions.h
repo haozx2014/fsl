@@ -418,6 +418,9 @@ public:
 
   void WriteCoefficients(const std::string& fname) const;
   void WriteUnwarped(const std::string& fname) const;
+  void WriteUnwarped(const std::string&               fname,
+		     const NEWIMAGE::volume4D<float>& hdr,
+		     double                           sf) const;
   void WriteJacobiansForDebug(const std::string& fname) const;
   void WriteField(const std::string& fname) const;
   void WriteDisplacementFields(const std::string& fname) const;

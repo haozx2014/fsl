@@ -68,7 +68,7 @@
 #   Innovation Limited ("Isis"), the technology transfer company of the
 #   University, to negotiate a licence. Contact details are:
 #   innovation@isis.ox.ac.uk quoting reference DE/9564.
-export LC_NUMERIC=C
+export LC_ALL=C
 
 if [ $# -lt 1 -o X$1 = X-h -o X$1 = X-help -o X$1 = X--help ] ; then
   echo "Script for extracting sequence parameters from Varian fid directories"

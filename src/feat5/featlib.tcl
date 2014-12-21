@@ -5398,7 +5398,7 @@ if { $fmri(temphp_yn) || $fmri(templp_yn) } {
 set IMTR [ exec sh -c "$FSLDIR/bin/fslval filtered_func_data pixdim4" ]
 
 if { [ expr abs($IMTR - $fmri(tr)) ] > 0.01 } {
-    fsl:exec "${FSLDIR}/bin/fslhd -x filtered_func_data | sed 's/  dt = .*/  dt = '$fmri(tr)'/g' > tmpHeader"
+    fsl:exec "${FSLDIR}/bin/fslhd -x filtered_func_data | sed 's/  dt = .*/  dt = '\\''$fmri(tr)'\\''/g' > tmpHeader"
     fsl:exec "${FSLDIR}/bin/fslcreatehd tmpHeader filtered_func_data"
     fsl:exec "/bin/rm tmpHeader"
 }

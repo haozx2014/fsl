@@ -124,7 +124,7 @@ set fsfroot ${FD}/design
 #setup web pages
 
 if { ! [ file exists .files ] } {
-    fsl:exec "mkdir .files;cp ${FSLDIR}/doc/fsl.css .files;ln -s ${FSLDIR}/doc/images .files/images"
+    fsl:exec "mkdir .files;cp ${FSLDIR}/doc/fsl.css .files;cp -r ${FSLDIR}/doc/images .files/images"
 }
 
 fsl:echo report.html "<link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
@@ -260,7 +260,7 @@ if { $fmri(featwatcher_yn) } {
 
     if { $fmri(stats_yn) } {
 	#This seems to be an fairly accurate estimate, for old-style feat, revisit when contrast film_gls goes on the system
-	set howlong [ expr int ( ceil($fmri(totalVoxels)/1e7) * ( $fmri(totalVoxels) *  $fmri(npts)  * $actualEVs / 7e9 ) + 1 ) ]
+	set howlong [ expr int ( ceil($fmri(totalVoxels)/1e7) * ( $fmri(totalVoxels) *  $fmri(npts)  * $actualEVs / 1e11 ) + 1 ) ]
 	set statsID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -I $session -stats" -b $howlong -h $prestatsID -N feat3_film -l logs ]
 	set poststatsID [ fsl:exec "${FSLDIR}/bin/feat ${fsfroot}.fsf -D $FD -poststats 0 " -b 119 -h $statsID -N feat4_post -l logs ]
     }
@@ -377,11 +377,10 @@ for { set argindex 1 } { $argindex < $argc } { incr argindex 1 } {
 }
 
 } errMsg ] } {  
-
-	puts "[lindex $argv $argindex]" 
+        puts "Error encountered while running in main feat script, halting."
         puts "$errMsg"
-	feat5:proc_stop 
-	return -code error "$errMsg"
+        feat5:proc_stop
+        return -code error "$errMsg"
 }
 
 
@@ -421,7 +420,7 @@ set fsfroot ${FD}/design
 # setup toplevel .gfeat web pages
 
 if { ! [ file exists .files ] } {
-    fsl:exec "mkdir .files;cp ${FSLDIR}/doc/fsl.css .files;ln -s ${FSLDIR}/doc/images .files/images"
+    fsl:exec "mkdir .files;cp ${FSLDIR}/doc/fsl.css .files;cp -r ${FSLDIR}/doc/images .files/images"
 }
 
 fsl:echo report.html "<link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
@@ -577,7 +576,7 @@ if { $contrastname($session) != "" } {
     set conname "($contrastname($session))"
 }
 
-fsl:exec "ln -s ../.files .files"
+fsl:exec "cp -r ../.files .files"
 
 fsl:echo report.html "<link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
 
@@ -674,7 +673,7 @@ fsl:exec "/bin/cp ${fsfroot}.fsf design.fsf"
 
 
 if { ! [ file exists .files ] } {
-    fsl:exec "mkdir .files;cp ${FSLDIR}/doc/fsl.css .files;ln -s ${FSLDIR}/doc/images .files/images"
+    fsl:exec "mkdir .files;cp ${FSLDIR}/doc/fsl.css .files;cp -r ${FSLDIR}/doc/images .files/images"
 }
 
 fsl:echo report.html "<link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">
@@ -779,7 +778,7 @@ if { $fmri(icaopt) > 1 } {
     # setup web pages
 
 if { ! [ file exists .files ] } {
-    fsl:exec "mkdir .files;cp ${FSLDIR}/doc/fsl.css .files;ln -s ${FSLDIR}/doc/images .files/images"
+    fsl:exec "mkdir .files;cp ${FSLDIR}/doc/fsl.css .files;cp -r ${FSLDIR}/doc/images .files/images"
 }
 
 fsl:echo report.html "<link REL=\"stylesheet\" TYPE=\"text/css\" href=\".files/fsl.css\">

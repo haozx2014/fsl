@@ -227,6 +227,7 @@ int do_work(int argc, char* argv[], int nonoptarg)
     }
     
     // save the FDR (q_min) results
+    if ( invertp.value() ) amat=1.0f-amat;
     save_as_image(adjname.value(),vmask,amat);
   }
 

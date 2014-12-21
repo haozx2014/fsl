@@ -83,6 +83,7 @@
 #include "newimage/newimageall.h"
 #include "miscmaths/miscmaths.h"
 #include "miscmaths/nonlin.h"
+#include "utils/stack_dump.h"
 #include "warpfns/warpfns.h"
 #include "basisfield/basisfield.h"
 #include "basisfield/splinefield.h"
@@ -99,6 +100,8 @@ using namespace TOPUP;
 int main(int   argc,
          char  *argv[])
 {
+  StackDump::Install(); // Gives us informative stack dump if/when program crashes
+
   // Read command line input
   boost::shared_ptr<topup_clp> clp;
   try {
@@ -230,7 +233,7 @@ int main(int   argc,
     cf->WriteCoefficients(clp->CoefFname());
     cf->WriteMovementParameters(clp->MovParFname());
     if (clp->FieldFname().size()) cf->WriteField(clp->FieldFname());
-    if (clp->ImaOutFname().size()) cf->WriteUnwarped(clp->ImaOutFname());
+    if (clp->ImaOutFname().size()) cf->WriteUnwarped(clp->ImaOutFname(),in,gmean/100.0);
     if (clp->DisplacementFieldBaseFname().size()) {
       cf->WriteDisplacementFields(clp->DisplacementFieldBaseFname());
     }

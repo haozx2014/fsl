@@ -53,7 +53,7 @@ for fname in $@ ; do
     rm -f $fname.copytmp
     sed -n $com1 $fname > $fname.copytmp
     cat ${FSLCONFDIR}/common/copyrights/shcopyright.sh >> $fname.copytmp
-    echo "export LC_NUMERIC=C" >> $fname.copytmp
+    echo "export LC_ALL=C" >> $fname.copytmp
     sed -n $com2 $fname >> $fname.copytmp
     cp -f $fname.copytmp $fname
     rm -f $fname.copytmp

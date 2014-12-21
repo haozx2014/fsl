@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # OXFORD_ASL: Converts ASL images in to perfusion maps
 #
@@ -67,7 +67,7 @@
 #   Innovation Limited ("Isis"), the technology transfer company of the
 #   University, to negotiate a licence. Contact details are:
 #   innovation@isis.ox.ac.uk quoting reference DE/9564.
-export LC_NUMERIC=C
+export LC_ALL=C
 
 Usage() {
     echo "OXFORD_ASL"
@@ -88,7 +88,7 @@ Usage() {
     echo ""
     echo "Structural image (see also Registration)"
     echo " {-s}          : structural image (already BETed)"
-    echo " {--senscorr}  : use bias field (froms segmentation) for sensitivity correction"
+    echo " {--senscorr}  : use bias field (from segmentation) for sensitivity correction"
     echo ""
     echo " Output options"
     echo " --vars     : also save the parameter estimated variances"
@@ -98,12 +98,14 @@ Usage() {
     echo ""
     echo "Extended options (all optional):"
     echo " Analysis"
-    echo " --artoff    : Do not infer arterial signal - e.g. arterial suppression has been applied"
-    echo " --fixbolus  : Bolus duration is fixed, e.g. by QUIPSSII or CASL (otheriwse it will be estimated)"
-#    echo " --fixbat    : Fix the bolus arrival time (to value specified by --bat)"
-    echo " --spatial   : Perform ASL analysis with automatic spatial smoothing of CBF"
-    echo " --infert1   : Incorporate uncertainty in T1 values in analysis"
-    echo " --fulldata  : Never average multiple measurements at each TI"
+    echo " --artoff     : Do not infer arterial signal - e.g. arterial suppression has been applied"
+    echo " --fixbolus   : Bolus duration is fixed, e.g. by QUIPSSII or CASL (otheriwse it will be estimated)"
+#    echo " --fixbat     : Fix the bolus arrival time (to value specified by --bat)"
+    echo " --spatial    : Perform ASL analysis with automatic spatial smoothing of CBF"
+    echo " --infert1    : Incorporate uncertainty in T1 values in analysis"
+    echo " --fulldata   : Never average multiple measurements at each TI"
+    echo " --noiseprior : Use an informative prior for the noise estimation"
+    echo "   --noisesd  : Set a custom noise std. dev. for the nosie prior"
 
     echo " Registration (requires structural image)"
     echo " --asl2struc : transformation matrix from asl data to structural image"
@@ -117,17 +119,23 @@ Usage() {
     echo " -r          : low resolution structural image (already BETed)"
 
     echo " Calibration"
-    echo " -c          : M0 calibration image"
-    echo "  --csf      : Manually specify csf mask for calibration"
-    echo " --cgain     : Relative gain between calibration and ASL image - {default: 1}"
+    echo " --M0        : (single) precomputed M0 value (e.g. from having run a separate calibration)"
     echo " --alpha     : Inversion efficiency - {default: 0.98 (pASL); 0.85 (cASL)}"
-    echo "--tr         : TR of calibration data - {defailt: 3.2 s}"
-    echo " --t1csf     : T1 of CSF (s) - {for default see asl_calib}"
-    echo " --te        : Echo time for the readout (to correct for T2/T2* effect in calibration)"
-    echo "  --t2star   : Correct for T2* rather than T2"
-    echo "  --t2csf    : T2 of CSF (ms) - {for default see asl_calib}"
-    echo "  --t2bl     : T2 of blood (ms) - {for default see asl_calib}"
-    echo " --cref      : Supply a reference image for sensitivity correction" 
+    echo "  To supply calibration data:"
+    echo "  -c          : M0 calibration image"
+    echo "  --tr        : TR of calibration data - {default: 3.2 s}"
+    echo "  --cgain     : Relative gain between calibration and ASL image - {default: 1}"
+    echo "  --cmethod   : Calibration method: {default: single}"
+    echo "                single - M0 value will be calculated within automatically created CSF mask"
+    echo "                voxel  - voxelwise M0 values derrived from calibration image"
+    echo "   extended options for single"
+    echo "    --csf      : Manually specify csf mask for calibration"
+    echo "    --t1csf    : T1 of CSF (s) - {for default see asl_calib}"
+    echo "    --te       : Echo time for the readout (to correct for T2/T2* effect in calibration)"
+    echo "    --t2star   : Correct for T2* rather than T2"
+    echo "    --t2csf    : T2 of CSF (ms) - {for default see asl_calib}"
+    echo "    --t2bl     : T2 of blood (ms) - {for default see asl_calib}"
+    echo "    --cref     : Supply a reference image for sensitivity correction" 
     echo "Partial volume correction"
     echo " --pvcorr    : Do partial volume correction"
     echo "               *Automated determination of PV estimates {default} requires:"
@@ -166,7 +174,7 @@ Usage() {
 }
 
 Version() {
-echo "$Id: oxford_asl,v 1.40 2014/04/24 16:08:39 chappell Exp $"
+echo "$Id: oxford_asl,v 1.41.2.1 2014/12/01 16:08:39 mwebster Exp $"
 exit 0
 }
 
@@ -348,10 +356,6 @@ Calibration() {
 	    extraoptions=$extraoptions" --isen $outdir/native_space/sensitivity"
     fi
 
-    if [ -z $tr ]; then
-	tr=3.2
-    fi
-
     if [ -z $te ]; then
 	#by default assume TE is zero
 	te=0
@@ -378,10 +382,6 @@ Calibration() {
 	extraoptions=$extraoptions" --t2b $t2bl"
     fi
 
-# calibration image gain
-    if [ -z $cgain ]; then
-	cgain=1;
-    fi
 
 
     # setup the main options that we will pass to aslcalib regardless of whether we are auot generating reference mask
@@ -551,7 +551,13 @@ fi
 
 # calibrated results
 if [ ! -z $calibflag ]; then
-    malpha=`echo "$Mo * $alpha" | bc` #include the inversion efficiency when we do the final calibration
+    if [ $cmethod = 'single' ]; then
+	malpha=`echo "$Mo * $alpha" | bc` #include the inversion efficiency when we do the final calibration
+    elif [ $cmethod = 'voxel' ]; then
+	${FSLDIR}/bin/fslmaths $outdir/calib/M0 -mul $alpha $tempdir/malpha
+	malpha=$tempdir/malpha
+    fi
+
     Calibrate perfusion $malpha 6000 $subdir
     Report perfusion_calib $subdir gm
    
@@ -565,7 +571,13 @@ if [ ! -z $calibflag ]; then
     fi
 
     if [ ! -z $varout ]; then
-	Mosq=`echo "$Mo * $Mo * $alpha * $alpha" | bc` #include the inversion efficiency when we do the final calibration
+	if [ $cmethod = 'single' ]; then
+	    Mosq=`echo "$Mo * $Mo * $alpha * $alpha" | bc` #include the inversion efficiency when we do the final calibration
+	elif [ $cmethod = 'voxel' ]; then
+	    ${FSLDIR}/bin/fslmaths $outdir/calib/M0 -mul $outdir/calib/M0 -mul $alpha -mul $alpha $tempdir/mosq
+	    Mosq=$tempdir/mosq
+	fi
+	
 	Calibrate perfusion_var $Mosq 36000000 $subdir
     fi
 
@@ -655,14 +667,20 @@ takeargs=0;
 	    takeargs=1;;
 	--t1b) t1bset=$argument
 	    takeargs=1;;
+	--noiseprior) noiseprior=1
+	    ;;
+	--noisesd) noisesd=$argument
+	    takeargs=1;;
+	--cmethod) cmethod=$argument
+	    takeargs=1;;
 	--csf) csfflag=1 csf=$argument
 	    takeargs=1;;
 	--cref) cref=$argument; senscorr=1;
 	    takeargs=1;;
 	--isen) isen=$argument; senscorr=1;
 	    takeargs=1;;
-	--senscorr) needseg=1; senscorr=1;
-	    ;;
+	#--senscorr) needseg=1; senscorr=1; #disbale 
+	#    ;;
 	--M0) M0=$argument; calibflag=1;
 	    takeargs=1;;
 	--tr) tr=$argument
@@ -687,8 +705,6 @@ takeargs=0;
 	    takeargs=1;;
 	--zblur) zblur=1
 	    ;;
-#	--nativeout) nativeout=1
-#	    ;;
 	--structout) structout=1
 	    ;;
 	--vars) varout=1
@@ -882,13 +898,14 @@ fi
 
 # standard pre-processing of calibration image
 if [ ! -z $calib ]; then
-    #echo $calib
     tsize=`fslinfo $calib | grep "^dim4" | sed 's:dim4[ ]*::'`
     if [ $tsize -gt 1 ]; then
         #cut - throw away first volume
 	Log "Removing first volume of calibration time series - to ensure data is in steady state"
 	tsize=`expr $tsize - 1`
 	fslroi $calib $tempdir/calib 1 $tsize
+    else
+	${FSLDIR}/bin/imcp $calib $tempdir/calib
     fi
     # take the mean
     fslmaths $tempdir/calib -Tmean $tempdir/calib
@@ -979,7 +996,7 @@ if [ -z $pvgm ]; then
 	exit 1
     fi
     Log "Estimating partial volumes from structural image"
-    ${FSLDIR}/bin/fast -b -o $tempdir/seg -p $tempdir/struc
+    ${FSLDIR}/bin/fast -B -b -o $tempdir/seg -p $tempdir/struc
     
         # invert the transformation matrix
     ${FSLDIR}/bin/convert_xfm -omat $tempdir/struct2asl.mat -inverse $tempdir/asl2struct.mat
@@ -1029,6 +1046,30 @@ if [ ! -z $pvcorr ]; then
     fi
 fi
 
+# Defaults for (some) parameters
+# deal with T1
+if [ -z $t1set ]; then
+    t1set=1.3;
+fi
+Log "T1: $t1set"
+
+if [ -z $t1bset ]; then
+# follws the ASL white paper recommendation
+    t1bset=1.65;
+fi
+Log "T1b: $t1bset"
+
+# TR (for calibration image)
+if [ -z $tr ]; then
+    tr=3.2
+fi
+
+
+# calibration image gain
+if [ -z $cgain ]; then
+    cgain=1;
+fi
+
 # Calibration if reqd
 if [ -z $alpha ]; then
         # based on the ASL white paper
@@ -1039,14 +1080,41 @@ if [ -z $alpha ]; then
     fi
 fi
 
+if [ -z $cmethod ]; then
+# default calibration method is to calculate a single M0 value from CSF
+    cmethod=single
+fi
+
 if [ ! -z $calib ]; then
-# calcualte M0a
-Calibration
-Mo=`cat $outdir/calib/M0.txt`
+    if [ $cmethod = 'single' ]; then
+	Log "Calibration is using a single M0 value with a CSF reference"
+	if [ -z $csf ] && [ -z $struc ]; then
+	    echo "ERROR: Provide either a structural image or CSF mask for calibration when using --cmethod=single"
+	    exit 1
+	fi
+       # calcualte M0a from CSF
+	Calibration
+	Mo=`cat $outdir/calib/M0.txt`
+    elif [ $cmethod = 'voxel' ]; then
+	Log "Calibration is voxelwise"
+	mkdir $outdir/calib
+        # copy over the calibration image and apply the cgain setting - this increases the magntiude of M0 to match that of the ASL data (acquired with a higher gain - cgain>=1 normally)
+	${FSLDIR}/bin/fslmaths $calib -mul $cgain $outdir/calib/M0
+	Mo=$outdir/calib/M0 
+	if [ 1 -eq `echo "$tr < 5" | bc`  ]; then
+	 # correct the M0 image for short TR using the equation from the white paper
+	    echo "Correcting the calibration (M0) image for short TR"
+	    ccorr=`echo "1 / (1 - e(- $tr / $t1set) )" | bc -l`
+	    ${FSLDIR}/bin/fslmaths $Mo -mul $ccorr $Mo
+	fi
+    else
+	echo "Error unrecognised calibration method: $cmethod, (use single or voxel)"
+    fi 
 elif [ ! -z $M0 ]; then
-# An M0 value has been supplied, use this
-Mo=`cat $M0`
-echo "M0: $Mo"
+    # An M0 value has been supplied, use this
+    Mo=$M0
+    echo "M0: $Mo"
+    Log "Using supplied M0 value: $Mo"
 fi
 
 #deal with TIs
@@ -1085,18 +1153,6 @@ if [ -z $boluset ]; then
     boluslen=1;
 fi
 Log "Bolus duration: $boluslen"
-
-# deal with T1
-if [ -z $t1set ]; then
-    t1set=1.3;
-fi
-Log "T1: $t1set"
-
-if [ -z $t1bset ]; then
-# follws the ASL white paper recommendation
-    t1bset=1.65;
-fi
-Log "T1b: $t1bset"
 
 
 # the data should come in 'as acquired' which we assume is blocks of all TIs
@@ -1199,6 +1255,29 @@ else
     basil_options=$basil_options"--fixbat " 
     Log "Fixed arterial arrival time"
     Log "Setting arterial arrival time to $bat"
+fi
+
+# Noise specification
+snr=10; #default SNR
+if [ $tpoints -eq 1 ]; then
+    # only a single time point in data, will use informative noise prior
+   noiseprior=1
+   Log "Single volume: informative noise prior will be used"
+fi
+
+if [ ! -z $noiseprior ]; then
+    # use an informative nosie prior
+     if [ -z $noisesd ]; then
+	 Log "Using default SNR (=$snr) to set noise std dev"
+	# estimate signal magntiude
+	${FSLDIR}/bin/fslmaths $datafile -Tmax $tempdir/datamax
+	brain_mag=`${FSLDIR}/bin/fslstats $tempdir/datamax -k $tempdir/mask -M`
+	# this will correspond to whole brain CBF (roughly) - about 0.5 of GM
+	noisesd=`echo "scale=2;sqrt( $brain_mag * 2 / $snr )" | bc`
+    fi
+
+    Log "Using a prior noise sd of: $noisesd"
+    echo "--prior-noise-stdev=$noisesd" >> $tempdir/basil_options.txt
 fi
 
 # Exteneded options for BASIL

@@ -604,7 +604,7 @@ void calculatePermutationStatistics(ranopts& opts, const volume<float>& mask, Ma
     cerr << "Input Contrast: " << endl << tc << endl;
     cerr << "Contrast rank: " << rankF << endl;
     cerr << "Dof: " << dof[0] << " original dof: " << ols_dof(dm) << endl;
-  }    
+  }
   volume4D<float> tstat4D(mask.xsize(),mask.ysize(),mask.zsize(),1);
   float tfce_delta(0), clusterThreshold(0), massThreshold(0);
   if ( opts.tfce_delta.set() )
@@ -632,20 +632,21 @@ void calculatePermutationStatistics(ranopts& opts, const volume<float>& mask, Ma
   if ( !((clusterThreshold>0) || (massThreshold>0) || opts.tfce.value() || opts.voxelwiseOutput.value()) )
   {
     cout << "Warning! No output options selected. Outputing raw tstat only" << endl;
+    opts.outputRaw.set_value("true");
     nPerms=1;
   }
   // resize the containers for the relevant inference distributions
-  voxels.setup(1,nPerms,nVoxels,false,true,opts.out_fileroot.value()+"_vox"+statLabel);
+  voxels.setup(1,nPerms,nVoxels,false,opts.outputUncorr.value(),opts.out_fileroot.value()+"_vox"+statLabel);
   if ( clusterThreshold >0 )  
-    clusters.setup(1,nPerms,nVoxels,isNormalising,false,opts.out_fileroot.value()+"_clustere"+statLabel);
+    clusters.setup(1,nPerms,nVoxels,isNormalising,opts.outputUncorr.value(),opts.out_fileroot.value()+"_clustere"+statLabel);
   if ( massThreshold>0 ) 
-    clusterMasses.setup(1,nPerms,nVoxels,false,false,opts.out_fileroot.value()+"_clusterm"+statLabel);
+    clusterMasses.setup(1,nPerms,nVoxels,false,opts.outputUncorr.value(),opts.out_fileroot.value()+"_clusterm"+statLabel);
   if ( clusters.isAveraging ) 
-    clusterNormals.setup(1,nPerms,nVoxels,false,false,opts.out_fileroot.value()+"_clustern"+statLabel);
+    clusterNormals.setup(1,nPerms,nVoxels,false,opts.outputUncorr.value(),opts.out_fileroot.value()+"_clustern"+statLabel);
   if ( opts.tfce.value() )    
-    clusterEnhanced.setup(1,nPerms,nVoxels,isNormalising,true,opts.out_fileroot.value()+"_tfce"+statLabel);
+    clusterEnhanced.setup(1,nPerms,nVoxels,isNormalising,opts.outputUncorr.value(),opts.out_fileroot.value()+"_tfce"+statLabel);
   if ( clusterEnhanced.isAveraging ) { 
-    clusterEnhancedNormals.setup(1,nPerms,nVoxels,false,false,opts.out_fileroot.value()+"_tfcen"+statLabel);
+    clusterEnhancedNormals.setup(1,nPerms,nVoxels,false,opts.outputUncorr.value(),opts.out_fileroot.value()+"_tfcen"+statLabel);
     try { previousTFCEStat.ReSize(nPerms,clusterEnhanced.sumStatMat.Ncols());} //between 5e17 - 5e18 values for a 2gb machine
     catch (...) {cerr << "using lowram" << endl; lowram=true;}         
   }
@@ -764,7 +765,7 @@ void calculatePermutationStatistics(ranopts& opts, const volume<float>& mask, Ma
     permuter.writePermutationHistory(opts.out_fileroot.value()+"_perm"+statLabel+".txt");  
 }
 
-bool convertContrast(const Matrix& inputModel,const Matrix& inputContrast,const Matrix& inputData,Matrix& outputModel,Matrix& outputContrast, Matrix& outputData, const int mode)
+bool convertContrast(const Matrix& inputModel,const Matrix& inputContrast,const Matrix& inputData,Matrix& outputModel,Matrix& outputContrast, Matrix& outputData, const int mode, const bool debug)
 {
     int r(inputContrast.Nrows()),p(inputContrast.Ncols());
     Matrix tmp=(IdentityMatrix(p)-inputContrast.t()*pinv(inputContrast.t()));
@@ -779,13 +780,27 @@ bool convertContrast(const Matrix& inputModel,const Matrix& inputContrast,const 
     Matrix W=inputModel*C.i();
     Matrix W1=W.Columns(1,r);
     Matrix W2=W.Columns(r+1,W.Ncols());
-    bool confoundsExist( W2.Ncols() > 0 ); 
-    if ( confoundsExist && mode == 0 ) 
+    bool confoundsExist( W2.Ncols() > 0 );
+    if ( confoundsExist ) {
+      SVD(W2,D,U,V); 
+      float confoundMax(D.Maximum()); 
+      SVD(W1,D,U,V);
+      float interestMax(D.Maximum());
+      if ( (interestMax>confoundMax) && (interestMax == (interestMax+(confoundMax/1000.0)))) { //we truncate confound space to float and see if it is very small compared to interest
+	confoundsExist=false;
+	W2=0;
+      }
+    }
+    if ( confoundsExist &&  ( mode == 0 || mode == 1 ) ) {
       outputData=(IdentityMatrix(W2.Nrows())-W2*pinv(W2))*inputData;
-    else if ( confoundsExist && mode == 1 ) 
-      outputData=(IdentityMatrix(W2.Nrows())-W2*pinv(W2))*inputData;
-    else 
+      if ( debug )
+	cerr << "Orthogonalising data wrt to confounds." << endl;
+    }
+    else { 
       outputData=inputData;
+      if ( debug )
+	cerr << "Not orthogonalising data wrt to confounds." << endl;
+    }
     
     if ( mode == 0 ) { //Kennedy  Regress Y_a on X_a
       outputModel=W1;
@@ -796,7 +811,7 @@ bool convertContrast(const Matrix& inputModel,const Matrix& inputContrast,const 
     if ( mode == 1 || mode == 2 || mode == 3 ) { //Regress Y_a (Freedman_Lane) or Y (No unconfounding) or Y_aFull ( ter Braak ) on X | Z 
       outputModel=W1;
       outputContrast=IdentityMatrix(r);
-      if ( confoundsExist ) { 
+      if ( W2.Ncols() > 0 ) { 
 	Matrix nuisanceContrast(r,W2.Ncols());
 	nuisanceContrast=0;
 	outputContrast = outputContrast | nuisanceContrast;
@@ -829,7 +844,7 @@ void analyseContrast(const Matrix& inputContrast, const Matrix& dm, const Matrix
     for(int voxel=1;voxel<=datam.Ncols();voxel++)
     {
       Matrix tempDesign(voxelwiseInput.adjustDesign(dm,voxel)),tempData;
-      hasConfounds=convertContrast(tempDesign,inputContrast,datam.Column(voxel),NewModel,NewCon,tempData,opts.confoundMethod.value());
+      hasConfounds=convertContrast(tempDesign,inputContrast,datam.Column(voxel),NewModel,NewCon,tempData,opts.confoundMethod.value(),opts.isDebugging.value());
       NewDataM.Column(voxel)=tempData;
       for (unsigned int currentEV=0;currentEV<effectiveVoxelwiseRegressors.size();currentEV++) 
 	effectiveVoxelwiseRegressors.at(currentEV).Column(voxel)=NewModel.Column(currentEV+1);
@@ -842,8 +857,8 @@ void analyseContrast(const Matrix& inputContrast, const Matrix& dm, const Matrix
     fullVoxelwiseDesign.EV=effectiveVoxelwiseRegressors;
     fullVoxelwiseDesign.isSet=true;
   }
-  else hasConfounds=convertContrast(dm,inputContrast,datam,NewModel,NewCon,NewDataM,opts.confoundMethod.value());
 
+  else hasConfounds=convertContrast(dm,inputContrast,datam,NewModel,NewCon,NewDataM,opts.confoundMethod.value(),opts.isDebugging.value());
   if ( opts.isDebugging.value() ) {
     if ( hasConfounds ) 
       cerr << "Confounds detected." << endl;

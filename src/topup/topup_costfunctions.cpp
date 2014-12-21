@@ -1081,6 +1081,33 @@ void TopupCF::WriteUnwarped(const std::string& fname) const
   if (TracePrint()) cout << "Leaving TopupCF::WriteUnwarped" << endl;
 }
 
+void TopupCF::WriteUnwarped(const std::string&               fname,
+			    const NEWIMAGE::volume4D<float>& hdr,
+			    double                           sf) const
+{
+  if (TracePrint()) cout << "Entering TopupCF::WriteUnwarped" << endl;
+
+  NEWIMAGE::volume4D<float> out = hdr;
+  NEWIMAGE::copybasicproperties(hdr,out);
+  for (unsigned int i=0; i<_sm.NoOfScans(); i++) {
+    out[i] = _sm.GetScan(i,_field);
+    out[i] *= sf;
+  }
+  NEWIMAGE::volume<char> mask = _sm.GetMask(_field);
+  for (int t=0; t<out.tsize(); t++) {
+    for (int k=0; k<out.zsize(); k++) {
+      for (int j=0; j<out.ysize(); j++) {
+        for (int i=0; i<out.xsize(); i++) {
+          out(i,j,k,t) = (mask(i,j,k)) ? out(i,j,k,t) : 0.0;
+        }
+      }
+    }
+  }
+  write_volume4D(out,fname);
+
+  if (TracePrint()) cout << "Leaving TopupCF::WriteUnwarped" << endl;
+}
+
 void TopupCF::WriteJacobiansForDebug(const std::string& fname) const
 {
   if (TracePrint()) cout << "Entering TopupCF::WriteJacobiansForDebug" << endl;

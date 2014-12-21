@@ -265,7 +265,7 @@ boost::shared_ptr<topup_clp> parse_topup_command_line(unsigned int   narg,
   Utilities::Option<vector<int> > maxiter(string("--miter"), maxiterdefault,
       string("\tMax # of non-linear iterations, default 5"), false, Utilities::requires_argument);
 
-  vector<float> lambdadefault(0);
+  vector<float> lambdadefault(1,0.0);
   Utilities::Option<vector<float> > lambda(string("--lambda"),lambdadefault,
       string("Weight of regularisation, default depending on --ssqlambda and --regmod switches. See user documetation."), 
       false, Utilities::requires_argument);
@@ -315,7 +315,7 @@ boost::shared_ptr<topup_clp> parse_topup_command_line(unsigned int   narg,
   // Some explanatory text
 
   string title = "topup";
-  string examples = string("topup --imain=<some 4D image> --datain=<text file> --config=<text file with parameters> --coutname=my_field\n");
+  string examples = string("topup --imain=<some 4D image> --datain=<text file> --config=<text file with parameters> --out=my_topup_results\n");
 
   // Create and load options-parser
 

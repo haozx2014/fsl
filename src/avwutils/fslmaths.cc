@@ -147,6 +147,7 @@ int printUsage(const string& programName)
   cout << " -kernel 2D : 3x3x1 box centered on target voxel" << endl;
   cout << " -kernel box    <size>     : all voxels in a cube of width <size> mm centered on target voxel" << endl;
   cout << " -kernel boxv   <size>     : all voxels in a cube of width <size> voxels centered on target voxel, CAUTION: size should be an odd number" << endl;
+  cout << " -kernel boxv3  <X> <Y> <Z>: all voxels in a cuboid of dimensions X x Y x Z centered on target voxel, CAUTION: size should be an odd number" << endl;
   cout << " -kernel gauss  <sigma>    : gaussian kernel (sigma in mm, not voxels)" << endl;
   cout << " -kernel sphere <size>     : all voxels in a sphere of radius <size> mm centered on target voxel" << endl;
   cout << " -kernel file   <filename> : use external file as kernel" << endl;
@@ -245,6 +246,8 @@ int inputParser(int argc, char *argv[], short output_dt)
   read_volume4D(inputVolume,string(argv[1]));
   bool modifiedInput(false);
   bool setDisplayRange(false);
+  float tfce_delta(0);
+  float tfce_minT(0);
 
   int i=2;
   for (i = 2; i < argc-1; i++)  //main loop
@@ -626,14 +629,16 @@ if (!separatenoise)
        else
        {
 	 float size=atof(argv[i+2]);
-	 if(string(argv[i+1])=="box")      kernel=box_kernel(size,xdim,ydim,zdim);
-	 if(string(argv[i+1])=="boxv")   kernel=box_kernel((int)size,(int)size,(int)size);
+	 separable=false;
+         if(string(argv[i+1])=="box" || string(argv[i+1])=="boxv" || string(argv[i+1])=="boxv3" || string(argv[i+1])=="gauss") separable=true;       
+
+	 if(string(argv[i+1])=="box")         kernel=box_kernel(size,xdim,ydim,zdim);
+	 else if(string(argv[i+1])=="boxv")   kernel=box_kernel((int)size,(int)size,(int)size);
+	 else if(string(argv[i+1])=="boxv3")  { kernel=box_kernel((int)atof(argv[i+2]),(int)atof(argv[i+3]),(int)atof(argv[i+4])); i+=2; }
          else if(string(argv[i+1])=="gauss")  kernel=gaussian_kernel3D(size,xdim,ydim,zdim);
          else if(string(argv[i+1])=="sphere") kernel=spherical_kernel(size,xdim,ydim,zdim);
 	 else if(string(argv[i+1])=="file")   read_volume(kernel,string(argv[i+2]));
-         if(string(argv[i+1])=="box" || string(argv[i+1])=="gauss") separable=true;       
-         else separable=false;  
-	  i++;
+	 i++;
        }
        i++;
        //save_volume(kernel,"kernel");
@@ -1029,6 +1034,10 @@ if (!separatenoise)
     /*****************END OF FILTERING OPTIONS***************/
     else if (string(argv[i])=="-edge")
        inputVolume=edge_strengthen(inputVolume);
+    else if (string(argv[i])=="-tfce_minT")
+      tfce_minT = atof(argv[++i]);
+    else if (string(argv[i])=="-tfce_delta")
+      tfce_delta = atof(argv[++i]);
     else if (string(argv[i])=="-tfce") {
       float height_power = atof(argv[++i]);
       float size_power = atof(argv[++i]);
@@ -1036,7 +1045,7 @@ if (!separatenoise)
 
       for(int t=0;t<inputVolume.tsize();t++) {
 	try { 
-	  tfce(inputVolume[t], height_power, size_power, connectivity, 0, 0);
+	  tfce(inputVolume[t], height_power, size_power, connectivity, tfce_minT, tfce_delta);
 	}
 	catch(Exception& e) { 
 	  cerr << "ERROR: TFCE failed, please check your file for valid sizes and voxel values." <<  e.what() << endl << endl << "Exiting" << endl; 
@@ -1058,7 +1067,7 @@ if (!separatenoise)
 	float tfce_thresh = atof(argv[++i]);
 	
 	for(int t=0;t<inputVolume.tsize();t++)
-	  tfce_support(inputVolume[t], height_power, size_power, connectivity, 0, 0, X, Y, Z, tfce_thresh);
+	  tfce_support(inputVolume[t], height_power, size_power, connectivity, tfce_minT, tfce_delta, X, Y, Z, tfce_thresh);
       }
 
 // }}}
