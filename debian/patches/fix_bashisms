@@ -37,21 +37,6 @@ Description: Fix bashisms in the code.
 -echo "Now run randomise on the newly created files: all_F1_x_skeletonised etc."
 \ No newline at end of file
 +echo "Now run randomise on the newly created files: all_F1_x_skeletonised etc."
---- a/src/oxford_asl/oxford_asl
-+++ b/src/oxford_asl/oxford_asl
-@@ -1,4 +1,4 @@
--#!/bin/sh
-+#!/bin/bash
- 
- # OXFORD_ASL: Converts ASL images in to perfusion maps
- #
-@@ -1339,4 +1339,4 @@
- 
- 
- echo "Output is $outdir/"
--echo "OXFORD_ASL - done."
-\ No newline at end of file
-+echo "OXFORD_ASL - done."
 --- a/src/randomise/randomise_parallel
 +++ b/src/randomise/randomise_parallel
 @@ -129,7 +129,7 @@

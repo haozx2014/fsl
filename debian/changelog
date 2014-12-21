@@ -1,3 +1,23 @@
+fsl (5.0.8-1) unstable; urgency=medium
+
+  * New upstream release.
+    - New command 'fslselectvols' to select a (non-contiguous) subset of
+      volumes from a 4D image.
+    - New '-kernel boxv3' option for fslmaths.
+    - New '--minextent' option for cluster.
+    - Bugfix for header information of topup output files.
+    - FEAT has improved handling of non-fatal error conditions.
+    - Bugfix for asl_calib script.
+    - Bugfix for missing images in the VIENA report.
+    - All FSL scripts now internally set their locale to C.
+    - A potential race condition with multiple calls to maskdyads or slices has
+      been corrected.
+    - FDR now saves adjusted values as 1-p if the input is 1-p.
+  * Refresh patches and remove one resolved bashism fix.
+  * 
+
+ -- Michael Hanke <mih@debian.org>  Sun, 21 Dec 2014 10:39:15 +0100
+
 fsl (5.0.7-4) unstable; urgency=medium
 
   * Fix FTBFS on kfreebsd: Disable 'stack_dump' component that is "highly

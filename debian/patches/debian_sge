@@ -135,7 +135,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  
  ###########################################################################
  # The following section determines what to do when fsl_sub is called
-@@ -98,6 +105,24 @@
+@@ -92,6 +99,24 @@
  	fi
  fi
  
@@ -160,7 +160,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  # stop submitted scripts from submitting jobs themselves
  if [ "X$FSLSUBALREADYRUN" = "Xtrue" ] ; then
      METHOD=NONE
-@@ -122,16 +147,22 @@
+@@ -116,16 +141,22 @@
  
  map_qname ()
  {
@@ -193,7 +193,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  
      #echo "Estimated time was $1 mins: queue name is $queue"
  }
-@@ -157,13 +188,13 @@
+@@ -151,13 +182,13 @@
  $command -q short.q gzip *.img *.hdr
  $command -a darwin regscript rawdata outputdir ...
  
@@ -212,7 +212,7 @@ Description: out-of-the-box compatibility with Debian's SGE
    -j <jid>              Place a hold on this task until job jid has completed
    -t <filename>         Specify a task file of commands to execute in parallel
    -N <jobname>          Specify jobname as it will appear on queue
-@@ -176,24 +207,26 @@
+@@ -170,24 +201,26 @@
                          <threads> specifies the number of threads to run
    -v                    Verbose mode.
  
@@ -253,14 +253,14 @@ Description: out-of-the-box compatibility with Debian's SGE
  
  nargs=$#
  if [ $nargs -eq 0 ] ; then
-@@ -228,10 +261,13 @@
+@@ -222,10 +255,13 @@
  # change. It also sets up the basic emailing control.
  ###########################################################################
  
 -queue=long.q
 -queueCmd=" -q long.q "
 -mailto=`whoami`@fmrib.ox.ac.uk
--MailOpts="n"
+-MailOpts="a"
 +# SGE should already have a default queue, but allow for overwrite
 +queueCmd=""
 +if [ "x$FSLCLUSTER_DEFAULT_QUEUE" != "x" ] ; then
@@ -271,7 +271,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  
  
  ###########################################################################
-@@ -413,6 +449,11 @@
+@@ -423,6 +459,11 @@
  		exit -1
  	    fi
  
@@ -283,7 +283,7 @@ Description: out-of-the-box compatibility with Debian's SGE
              # Get a list of queues configured for this PE and confirm that the queue
              # we have submitted to has that PE set up.
  	    qstat -g c -pe $peName >/dev/null 2>&1
-@@ -437,9 +478,9 @@
+@@ -447,9 +488,9 @@
  
  	if [ "x$tasks" = "x" ] ; then
  	    if [ $scriptmode -ne 1 ] ; then
@@ -295,7 +295,7 @@ Description: out-of-the-box compatibility with Debian's SGE
  	    fi
  	    if [ $verbose -eq 1 ] ; then 
  		echo sge_command: $sge_command >&2
-@@ -447,7 +488,7 @@
+@@ -457,7 +498,7 @@
  	    fi
  	    exec $sge_command $@ | awk '{print $3}'
  	else
