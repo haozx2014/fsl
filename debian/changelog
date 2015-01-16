@@ -1,3 +1,9 @@
+fsl (5.0.8-2) experimental; urgency=medium
+
+  * Include upstream patch to prevent a crash in the FEAT component.
+
+ -- Michael Hanke <mih@debian.org>  Fri, 16 Jan 2015 19:11:28 +0100
+
 fsl (5.0.8-1) unstable; urgency=medium
 
   * New upstream release.
@@ -14,7 +20,6 @@ fsl (5.0.8-1) unstable; urgency=medium
       been corrected.
     - FDR now saves adjusted values as 1-p if the input is 1-p.
   * Refresh patches and remove one resolved bashism fix.
-  * 
 
  -- Michael Hanke <mih@debian.org>  Sun, 21 Dec 2014 10:39:15 +0100
 

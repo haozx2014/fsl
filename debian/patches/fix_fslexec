@@ -1,0 +1,23 @@
+From: Matthew Webster <matthew.webster@NDCN.OX.AC.UK>
+Subject: Fix crash of Feat
+
+References: https://www.jiscmail.ac.uk/cgi-bin/webadmin?A2=FSL;56ace2.1412
+
+
+diff --git a/src/misc_tcl/fsl_exec.tcl b/src/misc_tcl/fsl_exec.tcl
+index a2c97bd..8f9ce87 100644
+--- a/src/misc_tcl/fsl_exec.tcl
++++ b/src/misc_tcl/fsl_exec.tcl
+@@ -175,6 +175,7 @@ proc fsl:exec { thecommand args } {
+ 	set logout ""
+     }
+ 
++    if { ! [ info exists ::errorCode ] } { set ::errorCode "NONE" } 
+     # run and log the actual command
+     if { $do_logout } {
+ 	fsl:echo $logout "\n$thecommand"
+@@ -209,3 +210,4 @@ proc fsl:exec { thecommand args } {
+     return -code $errorCode $errmsg 
+ }
+ 
++
