@@ -1,9 +1,9 @@
-fsl (5.0.8-3) UNRELEASED; urgency=medium
+fsl (5.0.8-3) experimental; urgency=medium
 
   * fsl_app_wrapper - wrap $@ into "" to pass arguments correctly into
     original utility
 
- -- Yaroslav Halchenko <debian@onerussian.com>  Wed, 04 Mar 2015 08:44:03 -0500
+ -- Yaroslav Halchenko <debian@onerussian.com>  Wed, 04 Mar 2015 08:49:46 -0500
 
 fsl (5.0.8-2) experimental; urgency=medium
 
