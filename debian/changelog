@@ -1,3 +1,10 @@
+fsl (5.0.8-3) UNRELEASED; urgency=medium
+
+  * fsl_app_wrapper - wrap $@ into "" to pass arguments correctly into
+    original utility
+
+ -- Yaroslav Halchenko <debian@onerussian.com>  Wed, 04 Mar 2015 08:44:03 -0500
+
 fsl (5.0.8-2) experimental; urgency=medium
 
   * Include upstream patch to prevent a crash in the FEAT component.

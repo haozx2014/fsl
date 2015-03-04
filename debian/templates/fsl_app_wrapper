@@ -31,4 +31,4 @@ if [ ! -x $abs_cmd ]; then
 	abs_cmd=${FSLDIR}/bin/${cmd#fsl#FSLMVERSION#-*}
 fi
 
-exec ${abs_cmd} $@
+exec ${abs_cmd} "$@"
