@@ -1,35 +1,36 @@
 Source: fsl
-Section: non-free/science
-Priority: optional
 Maintainer: NeuroDebian Team <team@neuro.debian.net>
-Uploaders: Michael Hanke <mih@debian.org>, Yaroslav Halchenko <debian@onerussian.com>
+Uploaders: Michael Hanke <mih@debian.org>,
+           Yaroslav Halchenko <debian@onerussian.com>
+Section: non-free/science
+XS-Autobuild: yes
+Priority: optional
 Build-Depends: debhelper (>= 7),
-               zlib1g-dev (>= 1.2.2),
-               libboost-dev (>= 1.32.0),
-               libpng-dev | libpng12-dev (>= 1.2.8rel),
-               libgd2-noxpm-dev (>= 2.0.33) | libgd2-xpm-dev (>= 2.0.33),
+               zlib1g-dev,
+               libboost-dev,
+               libpng-dev,
+               libgd2-noxpm-dev | libgd2-xpm-dev,
                libnewmat10-dev,
                libgdchart-gd2-noxpm-dev | libgdchart-gd2-xpm-dev,
                liboctave-dev | octave3.2-headers | octave3.0-headers,
-               tcl (>=8.4.7),
+               tcl,
                imagemagick,
-               libnifti-dev (>> 1.1.0-1),
+               libnifti-dev,
                libgiftiio-dev,
                mesa-common-dev,
                libexpat1-dev | libexpat-dev,
                libglu1-mesa-dev | libglu-dev,
-               libgomp1,
-Standards-Version: 3.9.5
+               libgomp1
+Standards-Version: 3.9.6
+Vcs-Browser: https://anonscm.debian.org/cgit/pkg-exppsy/fsl.git
+Vcs-Git: git://anonscm.debian.org/pkg-exppsy/fsl.git
 Homepage: http://www.fmrib.ox.ac.uk/fsl/
-Vcs-Browser: http://git.debian.org/?p=pkg-exppsy/fsl.git
-Vcs-Git: git://git.debian.org/git/pkg-exppsy/fsl.git
-XS-Autobuild: yes
 
 Package: fsl
 Architecture: all
-Depends: fsl-core,
-         ${misc:Depends},
 Section: non-free/oldlibs
+Depends: fsl-core,
+         ${misc:Depends}
 Description: transitional dummy package
  The only purpose of this package is to enable upgrades to the new 'fsl-core'
  package which replaces 'fsl'. This package can safely be removed.
@@ -40,9 +41,9 @@ Description: transitional dummy package
 
 Package: fsl-5.0
 Architecture: all
+Section: non-free/oldlibs
 Depends: fsl-5.0-core,
          ${misc:Depends}
-Section: non-free/oldlibs
 Description: transitional dummy package
  The only purpose of this package is to enable upgrades to the new
  'fsl-5.0-core' package which replaces 'fsl-5.0'.
@@ -54,10 +55,10 @@ Description: transitional dummy package
 
 Package: fsl-core
 Architecture: all
-Depends:  fsl-5.0-core,
-          ${misc:Depends},
-Replaces: fsl (<< 5.0.3)
+Depends: fsl-5.0-core,
+         ${misc:Depends}
 Breaks: fsl (<< 5.0.3)
+Replaces: fsl (<< 5.0.3)
 Description: metapackage for the latest version of FSL
  FSL is a comprehensive library of image analysis and statistical tools
  for fMRI, MRI and DTI brain imaging data. The suite consists of various
@@ -77,12 +78,10 @@ Description: metapackage for the latest version of FSL
 
 Package: fsl-5.0-core
 Architecture: any
-Replaces: fsl-5.0 (<< 5.0.3)
-Breaks: fsl-5.0 (<< 5.0.3)
 Depends: mozilla-firefox | www-browser,
          tcsh | c-shell,
-         tk (>=8.4.7),
-         tcl (>=8.4.7),
+         tk,
+         tcl,
          bc,
          dc,
          python,
@@ -96,9 +95,11 @@ Suggests: fsl-feeds,
           mriconvert | dicomnifti,
           fsl-complete,
           condor | gridengine-client
+Breaks: fsl-5.0 (<< 5.0.3)
 Conflicts: fsl-fslview,
            fsl-doc-4.1 (<< 4.1.9-5~)
 Provides: fsl
+Replaces: fsl-5.0 (<< 5.0.3)
 Description: analysis tools for FMRI, MRI and DTI brain imaging
  FSL is a comprehensive library of image analysis and statistical tools
  for fMRI, MRI and DTI brain imaging data. The suite consists of various
