@@ -6,3 +6,4 @@
 /usr/lib/fsl/5.0/fsl_app_wrapper /usr/bin/fsl5.0-fsl
 /usr/bin/fslview /usr/lib/fsl/5.0/fslview
 /usr/bin/atlasquery /usr/lib/fsl/5.0/atlasquery
+/usr/share/javascript/excanvas/excanvas.min.js /usr/share/fsl/5.0/etc/js/excanvas.js

@@ -204,6 +204,8 @@ install: build
 	rm debian/tmp/etc/fslconf/fslmachtype.sh
 	# do not install license files
 	rm debian/tmp/etc/js/LICENSE.txt
+	# comes in an dedicated package
+	rm debian/tmp/etc/js/excanvas.js
 
 
 

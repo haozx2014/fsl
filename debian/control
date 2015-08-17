@@ -86,6 +86,7 @@ Depends: mozilla-firefox | www-browser,
          dc,
          python,
          fslview,
+         libjs-excanvas,
          ${shlibs:Depends},
          ${misc:Depends}
 Recommends: fsl-atlases
