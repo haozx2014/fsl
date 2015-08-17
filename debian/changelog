@@ -1,8 +1,15 @@
-fsl (5.0.8-4) UNRELEASED; urgency=medium
+fsl (5.0.8-4) unstable; urgency=medium
 
-  * Remove versioned dependencies to transitional packages libgd2-(no)xpm-dev
+  * Remove versioned dependencies on transitional packages libgd2-(no)xpm-dev
     in favor of a dependency on libgd-dev (Closes: #792291). Thanks to
     Mattia Rizzolo for the report.
+  * Add patch to force FSL to use its own modified version of the BWidget
+    TCL package. This prevents incompatibility issues if a system-wide
+    BWidget installation is found (Closes: #792758). The "fix" forces a
+    version requirement on BWidget 1.8 (matches embedded version,
+    Debian has 1.9.x as of now). This is not ideal, but a minimally intrusive
+    change that achieves the desired behavior. Thanks to Vincent Kersten
+    for the report.
 
  -- Michael Hanke <mih@debian.org>  Mon, 17 Aug 2015 11:30:18 +0100
 
