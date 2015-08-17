@@ -10,6 +10,9 @@ fsl (5.0.8-4) unstable; urgency=medium
     Debian has 1.9.x as of now). This is not ideal, but a minimally intrusive
     change that achieves the desired behavior. Thanks to Vincent Kersten
     for the report.
+  * Move upstream meta data to debian/upstream/metadata.
+  * Drop embeded excanvas javascript library in favor of a dependency on
+    libjs-excanvas.
 
  -- Michael Hanke <mih@debian.org>  Mon, 17 Aug 2015 11:30:18 +0100
 
