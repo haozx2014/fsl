@@ -1,3 +1,11 @@
+fsl (5.0.8-4) UNRELEASED; urgency=medium
+
+  * Remove versioned dependencies to transitional packages libgd2-(no)xpm-dev
+    in favor of a dependency on libgd-dev (Closes: #792291). Thanks to
+    Mattia Rizzolo for the report.
+
+ -- Michael Hanke <mih@debian.org>  Mon, 17 Aug 2015 11:30:18 +0100
+
 fsl (5.0.8-3) UNRELEASED; urgency=medium
 
   * fsl_app_wrapper - wrap $@ into "" to pass arguments correctly into
