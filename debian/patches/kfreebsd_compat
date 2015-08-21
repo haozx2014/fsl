@@ -33,7 +33,7 @@
  #endif
 --- a/src/fslsurface/fslsurfacegl.cc
 +++ b/src/fslsurface/fslsurfacegl.cc
-@@ -288,7 +288,7 @@ namespace fslsurface_name{
+@@ -288,7 +288,7 @@
  		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_ele_array );
  		
  		//cout<<"render2 "<<endl;
@@ -42,7 +42,7 @@
  		glEnableVertexAttribArrayARB(vertexLoc);
  		glEnableVertexAttribArrayARB(normalLoc);
  		glEnableVertexAttribArrayARB(scalarLoc);
-@@ -299,7 +299,7 @@ namespace fslsurface_name{
+@@ -299,7 +299,7 @@
  #endif
  		
  		//cout<<"render3 "<<endl;
@@ -51,7 +51,7 @@
  		
  		glVertexAttribPointerARB(vertexLoc, 3, GL_FLOAT, GL_FALSE, sizeof(vertex<T>), 0);
  		glVertexAttribPointerARB(normalLoc, 3, GL_FLOAT, GL_FALSE, sizeof(vertex<T>), BUFFER_OFFSET(3*sizeof(float)));
-@@ -317,7 +317,7 @@ namespace fslsurface_name{
+@@ -317,7 +317,7 @@
  		glDrawElements(GL_TRIANGLES,surf.N_triangles*3,GL_UNSIGNED_INT,0);
  		//cout<<"render5 "<<surf->N_triangles<<endl;
  		
@@ -68,12 +68,12 @@
  #include "miscmaths/miscmaths.h"
 -#include "utils/stack_dump.h"
 +// Disable stack_dump that upstream labels as "highly non-portable"
-+// one can still use plan gdb to get the same information
++// one can still use gdb to get the same information
 +//#include "utils/stack_dump.h"
  #include "EddyHelperClasses.h"
  #include "ECScanClasses.h"
  #include "DiffusionGP.h"
-@@ -58,7 +58,7 @@ void Diagnostics(const EddyCommandLineOptions&  clo,      // Input
+@@ -58,7 +60,7 @@
  /// The entry point of eddy.
  int main(int argc, char *argv[])
  {
@@ -82,3 +82,25 @@
  
    // Parse comand line input
    EddyCommandLineOptions clo(argc,argv); // Command Line Options
+--- a/src/topup/topup.cpp
++++ b/src/topup/topup.cpp
+@@ -83,7 +83,9 @@
+ #include "newimage/newimageall.h"
+ #include "miscmaths/miscmaths.h"
+ #include "miscmaths/nonlin.h"
+-#include "utils/stack_dump.h"
++// Disable stack_dump that upstream labels as "highly non-portable"
++// one can still use gdb to get the same information
++//#include "utils/stack_dump.h"
+ #include "warpfns/warpfns.h"
+ #include "basisfield/basisfield.h"
+ #include "basisfield/splinefield.h"
+@@ -100,7 +102,7 @@
+ int main(int   argc,
+          char  *argv[])
+ {
+-  StackDump::Install(); // Gives us informative stack dump if/when program crashes
++  //StackDump::Install(); // Gives us informative stack dump if/when program crashes
+ 
+   // Read command line input
+   boost::shared_ptr<topup_clp> clp;

@@ -1,3 +1,9 @@
+fsl (5.0.8-5) unstable; urgency=medium
+
+  * Disable unecessary unportable debugging code that breaks on kfreebsd.
+
+ -- Michael Hanke <mih@debian.org>  Fri, 21 Aug 2015 11:43:25 +0200
+
 fsl (5.0.8-4) unstable; urgency=medium
 
   * Remove versioned dependencies on transitional packages libgd2-(no)xpm-dev
