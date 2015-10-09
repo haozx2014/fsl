@@ -71,17 +71,14 @@
 
 #ifndef __MELODICPCA_h
 #define __MELODICPCA_h
-#include "newimage/newimageall.h"
 #include "utils/log.h"
 #include "meloptions.h"
 #include "meldata.h"
 #include "melodic.h"
-//#include "melreport.h"
 #include "newmatap.h"
 #include "newmatio.h"
 
 using namespace Utilities;
-using namespace NEWIMAGE;
 
 namespace Melodic{
   

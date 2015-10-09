@@ -499,8 +499,8 @@ double CsvTriangle::dist_to_point(const Vec& x0)const{
 
     dir = p[1]-p[0];             // ray direction vector
     w0 = p[0]-_vertice[0];
-    a = -(n|w0)/n.norm()/w0.norm();
-    b = (n|dir)/n.norm()/dir.norm();
+    a = -(n|w0);
+    b = (n|dir);
     if (fabs(b) < 0.001) { // ray is parallel to triangle plane
       if (fabs(a) < 0.001)                 // ray lies in triangle plane
 	return true;
@@ -511,8 +511,11 @@ double CsvTriangle::dist_to_point(const Vec& x0)const{
     r = a / b;
     if (r < 0.0)                   // ray goes away from triangle
       return false;                  // => no intersect
-    
+
     // for a segment, also test if (r > 1.0) => no intersect
+    if (r > 1.0)    
+      return false;
+    
     Pt I;
     I = p[0] + r * dir;           // intersect point of ray and plane
     
@@ -576,6 +579,9 @@ double CsvTriangle::dist_to_point(const Vec& x0)const{
       return false;                  // => no intersect
     
     // for a segment, also test if (r > 1.0) => no intersect
+    if (r > 1.0)    
+      return false;
+
     Pt I;
     I = p[0] + r * dir;           // intersect point of ray and plane
     

@@ -84,14 +84,11 @@ public:
                                 
   virtual void NameParams(vector<string>& names) const;     
   virtual int NumParams() const 
-  { return 2 + (infermtt?1:0) + (inferlambda?1:0) + (inferdelay?1:0) + (inferart?2:0) + (inferret?1:0); } 
+  { return 2 + (infermtt?1:0) + (inferlambda?1:0) + (inferdelay?1:0) + (inferart?2:0) + (inferret?1:0)+ (usecbv?1:0) + (dispoption?2:0); } 
 
   virtual ~DSCFwdModel() { return; }
 
   virtual void HardcodedInitialDists(MVNDist& prior, MVNDist& posterior) const;
-
- virtual void SetupARD(const MVNDist& posterior, MVNDist& prior, double& Fard);
-  virtual void UpdateARD(const MVNDist& posterior, MVNDist& prior, double& Fard) const;
 
   // Constructor
   DSCFwdModel(ArgsType& args);
@@ -99,6 +96,7 @@ public:
 protected: 
 
   ColumnVector aifshift( const ColumnVector& aif, const float delta, const float hdelt ) const;
+  void createconvmtx( LowerTriangularMatrix& A, const ColumnVector aifnew ) const;
   
 // Constants
 
@@ -117,6 +115,10 @@ protected:
 
   int ret_index() const { return art_index() + (inferart?1:0) + (inferret?1:0); } //NB two arterial parameters
 
+  int cbv_index() const { return ret_index() + (usecbv?1:0); }
+
+  int disp_index() const { return cbv_index() + (dispoption?1:0); }
+
   //for ARD
   vector<int> ard_index;
 
@@ -124,21 +126,18 @@ protected:
   double te;
   double r2;
   double delt;
-  int ntpts;
-  ColumnVector aif;
+  ColumnVector artsig;
   ColumnVector s;
-  ColumnVector tsamp;
 
-  //upsampled timeseries
-  int upsample;
-  int nhtpts;
-  float hdelt;
-  ColumnVector htsamp;
+  bool aifconc;
 
   bool infermtt;
+  bool usecbv;
   bool inferlambda;
   bool inferdelay;
   bool inferart;
+  bool artoption;
+  bool dispoption;
   bool inferret;
   bool doard;
 

@@ -102,9 +102,11 @@ class probtrackxOptions {
   Option<bool>             network;
   Option<bool>             simpleout;
   Option<bool>             pathdist;
+  Option<bool>             omeanpathlength; 
   Option<string>           pathfile;
   Option<bool>             s2tout;
   Option<bool>             s2tastext;
+  Option<bool>		   closestvertex;
 
   Option<string>           targetfile;
   Option<string>           waypoints;
@@ -113,6 +115,7 @@ class probtrackxOptions {
   Option<bool>             onewaycondition;  // apply waypoint conditions to half the tract
   Option<string>           rubbishfile;
   Option<string>           stopfile;
+  Option<string>           wtstopfiles;
 
   Option<bool>             matrix1out;
   Option<float>            distthresh1;  
@@ -159,6 +162,7 @@ class probtrackxOptions {
   FmribOption<string>      locfibchoice;     // inside this mask, define local rules for fibre picking
   FmribOption<string>      loccurvthresh;    // inside this mask, define local curvature threshold
   FmribOption<bool>        targetpaths;      // output separate fdt_paths for each target
+  FmribOption<bool>        noprobinterpol;   // turn off probabilistic interpolation
 
   void parse_command_line(int argc, char** argv,Log& logger);
   void modecheck();
@@ -214,7 +218,7 @@ class probtrackxOptions {
 	    true, requires_argument),
 
    simple(string("--simple"),false,
-	string("\tTrack from a list of voxels (seed must be a ASCII list of coordinates)"),
+	string("Track from a list of voxels (seed must be a ASCII list of coordinates)"),
 	false, no_argument),
    network(string("--network"), false,
 	   string("Activate network mode - only keep paths going through at least one of the other seed masks"),
@@ -225,6 +229,9 @@ class probtrackxOptions {
    pathdist(string("--pd"), false,
 	    string("\tCorrect path distribution for the length of the pathways"),
 	    false, no_argument), 
+   omeanpathlength(string("--ompl"), false,
+	    string("\tOutput mean path length from seed"),
+	    false, no_argument),
    pathfile(string("--fopd"), "",
 	    string("\tOther mask for binning tract distribution"),
 	    false, requires_argument), 
@@ -234,7 +241,9 @@ class probtrackxOptions {
    s2tastext(string("--s2tastext"), false,
 	     string("Output seed-to-target counts as a text file (default in simple mode)\n\n"),
 	     false, no_argument), 
-
+   closestvertex(string("--closestvertex"), false,
+	     string("Count only nearest neighbour vertex when the face of a surface is crossed."),
+	     false, no_argument), 
 
    targetfile(string("--targetmasks"),"",
 	      string("File containing a list of target masks - for seeds_to_targets classification"),
@@ -255,7 +264,10 @@ class probtrackxOptions {
 	       string("\tReject pathways passing through locations given by this mask"),
 	       false, requires_argument),
    stopfile(string("--stop"), string(""),
-	       string("\tStop tracking at locations given by this mask file\n\n"),
+	       string("\tStop tracking at locations given by this mask file"),
+	       false, requires_argument),
+   wtstopfiles(string("--wtstop"), string(""),
+	       string("One mask or text file with mask names. Allow propagation within mask but terminate on exit. If multiple masks, non-overlapping volumes expected\n\n"),
 	       false, requires_argument),
 
    matrix1out(string("--omatrix1"), false,
@@ -336,7 +348,7 @@ class probtrackxOptions {
 
 
    sampvox(string("--sampvox"), 0, 
-	   string("Sample random points within x mm sphere seed voxels (e.g. --sampvox=5). Default=0"), 
+	   string("Sample random points within a sphere with radius x mm from the center of the seed voxels (e.g. --sampvox=0.5, 0.5 mm radius sphere). Default=0"), 
 	   false, requires_argument),
    randfib(string("--randfib"), 0, 
 	   string("Default 0. Set to 1 to randomly sample initial fibres (with f > fibthresh). \n                        Set to 2 to sample in proportion fibres (with f>fibthresh) to f. \n                        Set to 3 to sample ALL populations at random (even if f<fibthresh)"), 
@@ -356,7 +368,7 @@ class probtrackxOptions {
 	    string("No explanation needed"),
 	    false, requires_argument),
    forcefirststep(string("--forcefirststep"),false,
-		  string("In case seed and stop masks are the same"),
+		  string("In case seed and stop masks are the same. Also needed for surface wt_stop masks that are also seeds."),
 		  false, no_argument),
    osampfib(string("--osampfib"),false,
 	    string("Output sampled fibres"),
@@ -371,13 +383,16 @@ class probtrackxOptions {
 	      string("Save path coordinates to ascii file"),
 	      false, no_argument),
    locfibchoice(string("--locfibchoice"),string(""),
-	      string("Local rules for fibre choice - 0=closest direction(default), 1=equal prob (f>thr), 2=equal prob with angle threshold (=40 deg)"),
+	      string("Local rules for fibre choice - 0=closest direction(default), 1=equal prob (f>thr), 2=equal prob with angle threshold (=40 deg), 3=sample in proportion to f"),
 	      false, requires_argument),
    loccurvthresh(string("--loccurvthresh"),string(""),
 	      string("Local curvature threshold"),
 	      false, requires_argument),
    targetpaths(string("--otargetpaths"),false,
 	      string("Output separate fdt_paths for targets (assumes --os2t is on)"),
+	      false, no_argument),
+   noprobinterpol(string("--noprobinterpol"),false,
+	      string("Turn off probabilistic interpolation"),
 	      false, no_argument),
 
    options("probtrackx","probtrackx2 -s <basename> -m <maskname> -x <seedfile> -o <output> --targetmasks=<textfile>\n probtrackx2 --help\n")
@@ -400,9 +415,11 @@ class probtrackxOptions {
        options.add(network);
        options.add(simpleout);
        options.add(pathdist);
+       options.add(omeanpathlength);
        options.add(pathfile);
        options.add(s2tout);
        options.add(s2tastext);
+       options.add(closestvertex);
 
        options.add(targetfile);
        options.add(waypoints);
@@ -411,6 +428,7 @@ class probtrackxOptions {
        options.add(onewaycondition);
        options.add(rubbishfile);
        options.add(stopfile);
+       options.add(wtstopfiles);
 
        options.add(matrix1out);
        options.add(distthresh1);
@@ -456,6 +474,7 @@ class probtrackxOptions {
        options.add(locfibchoice);
        options.add(loccurvthresh);
        options.add(targetpaths);
+       options.add(noprobinterpol);
 
      }
      catch(X_OptionError& e) {

@@ -423,6 +423,7 @@ public:
 		     double                           sf) const;
   void WriteJacobiansForDebug(const std::string& fname) const;
   void WriteField(const std::string& fname) const;
+  void WriteField(const std::string& fname, const NEWIMAGE::volume4D<float>& hdr) const;
   void WriteDisplacementFields(const std::string& fname) const;
   void WriteMask(const std::string& fname) const;
   void WriteMaskedDiff(const std::string& fname) const;

@@ -1,6 +1,7 @@
-#!/bin/sh
-#   Copyright (C) 2012 University of Oxford
-#
+#!/usr/bin/env python
+#   fsladd - add ( or average! ) a list of images
+#   Stephen Smith, Saad Jbabdi and Matthew Webster FMRIB Image Analysis Group
+#   Copyright (C) 2015 University of Oxford 
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
 #   fsl@fmrib.ox.ac.uk
@@ -62,31 +63,35 @@
 #   Innovation Limited ("Isis"), the technology transfer company of the
 #   University, to negotiate a licence. Contact details are:
 #   innovation@isis.ox.ac.uk quoting reference DE/9564.
-export LC_ALL=C
+import sys
+import os
+import subprocess
+import argparse
 
-if [ "$1" == "" ];then
-    echo ""
-    echo "Usage: fsladd <output> [-m] <listOfVolumes> "
-    echo ""
-    echo "-m : calculates the mean instead of sum"
-    echo ""
-    exit 1
-fi
+def main(output,files,scale,mean):
+    if scale:
+        newMean=1000
+        scales = [ newMean/float(subprocess.check_output([os.path.join(os.environ["FSLDIR"],"bin","fslstats"),inputFile,"-M"])) for inputFile in files ]
+        files = [ [files[i],"-mul",str(scales[i]/scales[i+1])] if i < len(scales)-1 else [files[i],"-mul",str(scales[i])] for i in range(0,len(scales)) ]
+    else:
+        files = [ [fileName] for fileName in files ]
+    command =  [os.path.join(os.environ["FSLDIR"],"bin","fslmaths")]+files[0]
+    for index in range(1,len(files)):
+        command+=["-add"]+files[index]
+    if mean:
+        command+=["-div",str(len(files))]
+    command.append(output)
+    print command
+    status=subprocess.call(command)
 
-o=$1
-shift;
-
-m=""
-if [ "$1" == "-m" ];then
-    shift;
-    m=" -div $#"
-fi
-
-cmd="${FSLDIR}/bin/fslmaths $1"
-shift;
-for i in $@;do
-    cmd=" $cmd -add $i"
-done
-cmd=" $cmd $m $o"
-$cmd
-
+    
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(add_help=False,usage='%(prog)s <output> [-m] [-s] <listOfVolumes>')
+    parser.add_argument('-m',dest='mean',help='calculate mean instead of sum',action='store_true',default = False)
+    parser.add_argument('-s',dest='scale',help='scale each input image mean to 1000 before processing',action='store_true',default = False)    
+    parser.add_argument('files',nargs='+',help=argparse.SUPPRESS)
+    if len(sys.argv) < 3:
+        parser.print_help()
+        sys.exit(1)
+    args=parser.parse_args(sys.argv[2:])
+    main(sys.argv[1],args.files,args.scale,args.mean)

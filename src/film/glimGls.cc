@@ -152,13 +152,13 @@ namespace FILM {
 	  saveData(logger.getDir() + "/varcope" + num2str(tContrast),varcopes.Row(tContrast),saveVolume,mask,true,false,-1,true,NIFTI_INTENT_ESTIMATE,saveSurface,saveMode);
 	  RowVector tstat(SD(copes.Row(tContrast),sqrt(varcopes.Row(tContrast))));
 	  T2z::ComputeZStats(varcopes.Row(tContrast).AsColumn(), copes.Row(tContrast).AsColumn(), dof, zstat);
-	  saveData(logger.getDir() + "/tstat" + num2str(tContrast),tstat,saveVolume,mask,true,false,-1,true,NIFTI_INTENT_ESTIMATE,saveSurface,saveMode);
-	  saveData(logger.getDir() + "/zstat" + num2str(tContrast),zstat.AsRow(),saveVolume,mask,true,false,-1,true,NIFTI_INTENT_ESTIMATE,saveSurface,saveMode);
+	  saveData(logger.getDir() + "/tstat" + num2str(tContrast),tstat,saveVolume,mask,true,false,-1,true,NIFTI_INTENT_TTEST,saveSurface,saveMode);
+	  saveData(logger.getDir() + "/zstat" + num2str(tContrast),zstat.AsRow(),saveVolume,mask,true,false,-1,true,NIFTI_INTENT_ZSCORE,saveSurface,saveMode);
       }
       for ( int fContrast=1;fContrast <= nFContrasts;fContrast++) {
-	  saveData(logger.getDir() + "/fstat" + num2str(fContrast),fstats.Row(fContrast),saveVolume,mask,true,false,-1,true,NIFTI_INTENT_ESTIMATE,saveSurface,saveMode);
+	  saveData(logger.getDir() + "/fstat" + num2str(fContrast),fstats.Row(fContrast),saveVolume,mask,true,false,-1,true,NIFTI_INTENT_FTEST,saveSurface,saveMode);
 	  F2z::ComputeFStats(fstats.Row(fContrast).AsColumn(), fDof[fContrast-1], dof, zstat);
-	  saveData(logger.getDir() + "/zfstat" + num2str(fContrast),zstat.AsRow(),saveVolume,mask,true,false,-1,true,NIFTI_INTENT_ESTIMATE,saveSurface,saveMode);
+	  saveData(logger.getDir() + "/zfstat" + num2str(fContrast),zstat.AsRow(),saveVolume,mask,true,false,-1,true,NIFTI_INTENT_ZSCORE,saveSurface,saveMode);
       }
       saveData(logger.getDir() + "/sigmasquareds",sigmaSquareds,saveVolume,mask,true,false,-1,false,-1,saveSurface,saveMode);
       ColumnVector dofVec(1);

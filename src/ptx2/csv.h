@@ -85,13 +85,13 @@
 #include <string>
 #include <fstream>
 #include <stdio.h>
+#include "warpfns/warpfns.h"
+#include "warpfns/fnirt_file_reader.h"
 #include "newimage/newimageio.h"
 #include "miscmaths/miscmaths.h"
 #include "fslvtkio/fslvtkio.h"
 #include "utils/tracer_plus.h"
 #include "csv_mesh.h"
-#include "warpfns/warpfns.h"
-#include "warpfns/fnirt_file_reader.h"
 
 //#include "fslsurface/fslsurface.h"
 //#include "fslsurface/fslsurfaceio.h"
@@ -109,10 +109,6 @@ bool triBoxOverlap(float boxcenter[3],float boxhalfsize[3],float triverts[3][3])
 bool rayBoxIntersection(float origin[3],float direction[3],float vminmax[2][3]);
 bool segTriangleIntersection(float seg[2][3],float tri[3][3]);
 float triDistPoint(const Triangle& t,const ColumnVector pos);
-
-
-
-
 
 // This is the main class that can handle an ROI made of a bunch of voxels and surface vertices
 // Its main role is to tell you whether a point is in the ROI (voxels) or whether a line segment
@@ -373,6 +369,8 @@ public:
   void reload_rois  (const string& filename);
   void save_roi     (const int& roiind,const string& prefix);
   void save_rois    (const string& prefix);
+  void divide_rois  (CSV csv2);
+  void divide_maps  (CSV csv2);
   //void save_as_volume (const string& prefix);
   void fill_volume  (volume<float>& vol,const int& ind);
   void cleanup();
@@ -431,8 +429,10 @@ public:
 		   const vector<ColumnVector>& crossedvox,bool docount=false,bool docontinue=false,const float& val=1.0);
   bool has_crossed_roi(const ColumnVector& x1,const ColumnVector& x2,
 		       const vector<ColumnVector>& crossedvox,vector<int>& crossedrois)const;
+  bool has_crossed_roi_vols(const ColumnVector& x1,vector<int>& crossedrois)const;
   bool has_crossed_roi(const ColumnVector& x1,const ColumnVector& x2,
-		       const vector<ColumnVector>& crossedvox,vector<int>& crossedrois,vector<int>& crossedlocs)const;
+		       const vector<ColumnVector>& crossedvox,vector<int>& crossedrois,vector<int>& crossedlocs,
+		       vector< pair<int,int> >& surf_Triangle,bool closestvertex)const;
 
 
   int step_sign(const int& loc,const Vec& step)const;

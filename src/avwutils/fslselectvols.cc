@@ -193,20 +193,20 @@ int main(int argc,char *argv[]){
       bool meancalc=calc_mean.value(), varcalc=calc_var.value();
 
       if(!meancalc && !varcalc)
-	subdata.reinitialize(data[0].xsize(),data[0].ysize(),data[0].zsize(),list.Ncols());
+	subdata.reinitialize(data.xsize(),data.ysize(),data.zsize(),list.Ncols());
       else
-	subdata.reinitialize(data[0].xsize(),data[0].ysize(),data[0].zsize(),1);
+	subdata.reinitialize(data.xsize(),data.ysize(),data.zsize(),1);
       subdata=0;
-      copybasicproperties(data[0],subdata[0]);
+      copybasicproperties(data,subdata);
       
       float v,v2;
-      for(int z=0;z<data[0].zsize();z++){
-	for(int y=0;y<data[0].ysize();y++){
-	  for(int x=0;x<data[0].xsize();x++){
+      for(int z=0;z<data.zsize();z++){
+	for(int y=0;y<data.ysize();y++){
+	  for(int x=0;x<data.xsize();x++){
 	    v=0;v2=0;
 	    for(int i=1;i<=list.Ncols();i++){	  
 	      v += data[list(1,i)](x,y,z);
-	      v2 += v*v;
+	      v2 += data[list(1,i)](x,y,z)*data[list(1,i)](x,y,z);
 	      if(!meancalc && !varcalc)
 		subdata[i-1](x,y,z)= data[list(1,i)](x,y,z);
 	    }

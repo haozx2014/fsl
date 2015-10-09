@@ -1,8 +1,8 @@
-/*  fwdmodel_cest_devel.h - Development resting state ASL model
+/*  split_parts_gpu.cc
 
-    Michael Chappell, IBME PUMMA & FMRIB Image Analysis Group
+    Tim Behrens, Saad Jbabdi, Stam Sotiropoulos, Moises Hernandez  - FMRIB Image Analysis Group
 
-    Copyright (C) 2010 University of Oxford  */
+    Copyright (C) 2005 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -66,83 +66,88 @@
     University, to negotiate a licence. Contact details are:
     innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
-#include "fwdmodel.h"
-#include "inference.h"
+#include "newimage/newimageall.h"
 #include <string>
-using namespace std;
+#include <stdio.h>
+#include <stdlib.h>
 
-class CESTDevelFwdModel : public FwdModel {
-public: 
-  // Virtual function overrides
-  virtual void Evaluate(const ColumnVector& params, 
-			      ColumnVector& result) const;
-  static void ModelUsage();
-  virtual string ModelVersion() const;
-                  
-  virtual void DumpParameters(const ColumnVector& vec,
-                                const string& indents = "") const;
-                                
-  virtual void NameParams(vector<string>& names) const;     
-  virtual int NumParams() const 
-  { return 9 + (pvcorr?9:0) + (t12soft?6:0) + (wassron?1:0);
-  } 
+void save_part(Matrix data, string name, int idpart){
 
-  virtual ~CESTDevelFwdModel() { return; }
+	int nvox = data.Ncols();
+	int ndir = data.Nrows();
 
-  virtual void HardcodedInitialDists(MVNDist& prior, MVNDist& posterior) const;
+	string file_name;
+	file_name = name+"_"+num2str(idpart);
 
-virtual void SetupARD(const MVNDist& posterior, MVNDist& prior, double& Fard);
-  virtual void UpdateARD(const MVNDist& posterior, MVNDist& prior, double& Fard) const;
+	ofstream out;
+	out.open(file_name.data(), ios::out | ios::binary);
+	out.write((char*)&data(1,1),nvox*ndir*sizeof(Real));
+	out.close();
+}
 
 
-  // Constructor
-  CESTDevelFwdModel(ArgsType& args);
+// parameters:
+// 1. data.nii.gz
+// 2. mask.nii.gz
+// 3. grad_dev.nii.gz
+// 4. gflag
+// 5. nparts
+// 6. output directory
 
 
-protected: 
-  //specific functions
-  ReturnMatrix Mz_spectrum(ColumnVector wvec, float w1, float t, ColumnVector M0, ColumnVector wi, Matrix kij, Matrix T12) const;
-  //ReturnMatrix expm(Matrix inmatrix) const;
-  //ReturnMatrix PadeApproximant(Matrix inmatrix, int m) const;
-  //ReturnMatrix PadeCoeffs(int m) const;
+int main(int argc, char *argv[]){
 
-// Constants
+	std::string data_str = argv[1];
+	std::string mask_str = argv[2];
+	std::string grad_str = argv[3];
+	int gflag = atoi(argv[4]);
+	int nparts = atoi(argv[5]);
+	std::string out_dir = argv[6];
 
-  // Lookup the starting indices of the parameters
-  
+	//printf("%s\n%s\n%s\n%i\n%i\n%s\n",data_str.data(),mask_str.data(),grad_str.data(),gflag,nparts,out_dir.data());
+	NEWIMAGE::volume4D<float> data;
+	NEWIMAGE::volume<float> mask;
+    	read_volume4D(data,data_str);
+    	read_volume(mask,mask_str);
+	Matrix datam;
+    	datam=data.matrix(mask); 
 
-  // vector indices for the parameters to expereicne ARD
-  vector<int> ard_index;
+	int nvoxels=datam.Ncols();
+	int ndirections=datam.Nrows();
+	
+	NEWIMAGE::volume4D<float> grad; 
+	Matrix gradm;
+	int dirs_grad=0;
+	if(gflag){
+		read_volume4D(grad,grad_str);
+      		gradm=grad.matrix(mask);
+		dirs_grad = gradm.Nrows();
+	}
+	
 
-  //flags
-  bool wassron;
-  bool wassronly;
-  bool t12soft;
-  bool pvcorr;
-  bool basic;
-  bool mton;
+	int size_part=nvoxels/nparts;
 
-  // scan parameters
-  vector<float> t;
-
-  //model parameters
-  int npool;
-  vector<float> wlam;
-  float W_wlam;
-  float ppm_apt_set;
-  //float ppm_mt;
-  vector<float> B1set;
-  Matrix T12master;
-  Matrix T12WMmaster;
-  Matrix T12CSFmaster;
-  vector<ColumnVector> wvec;
-
-  //WASSR
-  float W_w1;
-  float W_t;
-  ColumnVector W_wvec;
-  
-  // ard flags
-  bool doard;
- 
-};
+	Matrix data_part;
+	Matrix grad_part;
+	string out_data;
+	string out_grad;
+	out_data.append(out_dir);
+	out_grad.append(out_dir);
+	out_data.append("/data");
+	out_grad.append("/grad_dev");
+	for(int i=0;i<(nparts-1);i++){
+		data_part = datam.SubMatrix(1,ndirections,i*size_part+1,(i+1)*size_part);
+		save_part(data_part,out_data,i);
+		if(gflag){
+			grad_part = gradm.SubMatrix(1,dirs_grad,i*size_part+1,(i+1)*size_part);
+			save_part(grad_part,out_grad,i);
+		}
+	}
+	// last part
+	data_part = datam.SubMatrix(1,ndirections,(nparts-1)*size_part+1,nvoxels);
+	save_part(data_part,out_data,(nparts-1));
+	if(gflag){
+		grad_part = gradm.SubMatrix(1,dirs_grad,(nparts-1)*size_part+1,nvoxels);
+		save_part(grad_part,out_grad,(nparts-1));
+	}
+}

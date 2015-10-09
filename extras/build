@@ -1,5 +1,49 @@
 #!/bin/sh
 
+buildIt() { #$1 folder $2 projname $3 doMake
+    if [ -d ${1}/${2} ] ; then
+	echo $'\n\n'
+	echo "Making project ${2}" ;
+	echo " " ;
+	cd ${1}/${2} ;
+	if [ X"$2" = "Xtcl" -o X"$2" = "Xtk" ] ; then
+	    cd unix ;
+	fi
+	if [ "${3}" = "1" ]; then
+            ${MAKE} distclean ;
+	fi    
+	echo `pwd`
+	if [ -x fslconfigure ] ; then
+	  echo "Running configure with FSL options" ;
+	  ./fslconfigure ;
+	fi
+	if [ "${3}" = "0" ]; then
+          return
+	fi  
+	if ${MAKE} ${MAKEOPTIONS} ; then 
+	    if ${MAKE} install ; then
+		${MAKE} distclean ;
+	    else
+		errorinstall="$errorinstall $2" ; export errorinstall ;
+	    fi
+	    if [ X"$2" = "Xtcl" -o X"$2" = "Xtk" ] ; then
+		cd ${1}/${2} ;
+		${MAKE} install
+	    fi	    
+	    
+	    echo " "
+	    echo " ------------------------- "
+	    echo "Successfully made ${2}";
+	else
+	    echo " "
+	    echo " ========================= "
+	    echo "ERROR::Could not make ${2} successfully" ;
+	    echo $'\n\n'
+	    errorprojs="$errorprojs ${2}" ; export errorprojs ;
+	fi
+    fi
+}
+
 if [ X${FSLDIR}X = XX ] ; then
     echo "Please set FSLDIR first"
     exit 1
@@ -61,52 +105,16 @@ if [ ${BUILDICONV} -eq 1 ]; then
   PROJECTS="${PROJECTS} libiconv"
 fi
 PROJECTS="${PROJECTS} libgd libgdc libprob libcprob newmat cprob newran fftw"
+PROJECTS="${PROJECTS} boost libxml2-2.9.2 libxml++-2.34.0"
 for projname in $PROJECTS; do
-
     if [ -d $FSLESRCDIR/$projname ] ; then
-
-	echo " " ;
-	echo " " ;
-	echo "Making project $projname" ;
-	echo " " ;
-	cd $FSLESRCDIR/$projname ;
-	if [ X"$projname" = "Xtcl" -o X"$projname" = "Xtk" ] ; then
-	    cd unix ;
-	fi
-        ${MAKE} distclean ;
-	
-	if [ -x fslconfigure ] ; then
-	  echo "Running configure with FSL options" ;
-	  ./fslconfigure ;
-	fi
-	if ${MAKE} ${MAKEOPTIONS} ; then 
-	    if ${MAKE} install ; then
-		${MAKE} distclean ;
-	    else
-		errorinstall="$errorinstall $projname" ; export errorinstall ;
-	    fi
-	    if [ X"$projname" = "Xtcl" -o X"$projname" = "Xtk" ] ; then
-		cd $FSLESRCDIR/$projname ;
-		${MAKE} install
-	    fi	    
-	    
-	    echo " "
-	    echo " ------------------------- "
-	    echo "Successfully made $projname";
-	else
-	    echo " "
-	    echo " ========================= "
-	    echo "ERROR::Could not make $projname successfully" ;
-	    echo " "
-	    echo " "
-	    errorprojs="$errorprojs $projname" ; export errorprojs ;
-	fi
+       buildIt $FSLESRCDIR $projname 1 
+    elif [ "$projname"="boost" -a -d ${FSLEXTINC}/boost/boost ]; then
+       buildIt $FSLEXTINC boost 0
     fi
 done
 
-echo " ";
-echo " ";
-echo " ";
+echo $'\n\n'
 if [ "X${errorprojs}X" != XX ] ; then
   echo "!!ERROR in BUILD!!" ;
   echo "  Could not make the following projects successfully:" ;

@@ -70,7 +70,6 @@
     innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include <stdlib.h>
-#include "newimage/newimageall.h"
 #include "utils/log.h"
 #include "meloptions.h"
 #include "meldata.h"
@@ -113,12 +112,12 @@ namespace Melodic {
 
     int itt_ctr,itt_ctr2=1,cum_itt=0,newmaxitts = opts.maxNumItt.value(); 
     double minAbsSin = 1.0, minAbsSin2 = 1.0;
-    if(opts.approach.value() == string("tica"))
+    if(opts.approach.value() == string("tica")) {
       opts.maxNumItt.set_T(opts.rank1interval.value());
-
-    rank1_old = melodat.get_dewhite()*redUMM;
-    rank1_old = melodat.expand_dimred(rank1_old);
-    rank1_old = krapprox(rank1_old,int(rank1_old.Nrows()/melodat.get_numfiles())); 
+      rank1_old = melodat.get_dewhite()*redUMM;
+      rank1_old = melodat.expand_dimred(rank1_old);
+      rank1_old = krapprox(rank1_old,int(rank1_old.Nrows()/melodat.get_numfiles()));
+    }
     do{// TICA loop
       itt_ctr = 1;
       do{ // da loop!!!

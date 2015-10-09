@@ -232,7 +232,7 @@ int main(int   argc,
     }
     cf->WriteCoefficients(clp->CoefFname());
     cf->WriteMovementParameters(clp->MovParFname());
-    if (clp->FieldFname().size()) cf->WriteField(clp->FieldFname());
+    if (clp->FieldFname().size()) cf->WriteField(clp->FieldFname(),in);
     if (clp->ImaOutFname().size()) cf->WriteUnwarped(clp->ImaOutFname(),in,gmean/100.0);
     if (clp->DisplacementFieldBaseFname().size()) {
       cf->WriteDisplacementFields(clp->DisplacementFieldBaseFname());

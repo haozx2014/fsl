@@ -78,7 +78,7 @@ using namespace NEWIMAGE;
 
 string CESTFwdModel::ModelVersion() const
 {
-  return "$Id: fwdmodel_cest.cc,v 1.7 2014/02/06 17:00:14 mwebster Exp $";
+  return "$Id: fwdmodel_cest.cc,v 1.9 2015/09/08 13:55:19 mwebster Exp $";
 }
 
 void CESTFwdModel::HardcodedInitialDists(MVNDist& prior, 

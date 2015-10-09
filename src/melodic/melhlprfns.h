@@ -73,8 +73,6 @@
 #define __MELODICHLPR_h
 
 #include "newimage/newimageall.h"
-#include "newmatap.h"
-#include "newmatio.h"
 
 	#ifdef __APPLE__
 	#include <mach/mach.h>

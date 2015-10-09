@@ -71,7 +71,6 @@
 
 #ifndef __MELODICICA_h
 #define __MELODICICA_h
-#include "newimage/newimageall.h"
 #include "utils/log.h"
 #include "melpca.h"
 #include "meloptions.h"

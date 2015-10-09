@@ -82,7 +82,16 @@ using namespace TRACTVOLSX;
 using namespace mesh;
 using namespace PARTICLE;
 
-
+struct infoVertex{ // to avoid connections between vertices of the same triangle
+  float value;
+  int mesh;
+  int triangle;
+};
+struct infoVertexSeed{ // to avoid connections between vertices of the same triangle ... for seeds
+  int loc;
+  int mesh;
+  vector<int> triangles;
+};
 
   class MatCell_cmpr{
     // This class contains compressed information on entries for matrix4 format
@@ -284,15 +293,15 @@ namespace TRACT{
     CSV                           m_stop; 
     CSV                           m_waymasks;
     CSV                           m_netmasks;
+    CSV                           m_wtstopmasks;
 
     vector<int>                   m_way_passed_flags;
-
+    
     // for network mode
     int                           m_seed_id;
     Matrix                        m_network_mat;
     ColumnVector                  m_net_passed_flags;
-    //vector<int>                   m_net_passed_flags;
-
+    ColumnVector                  m_net_passed;
 
     vector< vector<ColumnVector> > m_crossedvox;
     bool                           m_surfexists;
@@ -322,8 +331,10 @@ namespace TRACT{
     // Streamliner needs to know about matrix3 
     CSV                           m_mask3;
     CSV                           m_lrmask3;
-    vector< pair<int,float> >     m_inmask3; // knows which node in mask3 and how far from seed (signed distance)
-    vector< pair<int,float> >     m_inlrmask3;
+    vector< pair<int,infoVertex> > m_inmask3; // knows which node in mask3 and how far from seed (signed distance)
+    vector< pair<int,infoVertex> > m_inlrmask3;
+    vector< pair<int,infoVertex> > m_inmask3_aux; // write here and update m_inmask3 only if a part is accepted
+    vector< pair<int,infoVertex> > m_inlrmask3_aux;	
 
     // we need this class to know about seed space
     const CSV&                    m_seeds;
@@ -355,8 +366,7 @@ namespace TRACT{
 	m_way_passed_flags[i]=0;
       if(opts.network.value()){
 	m_net_passed_flags=0;
-	//for(unsigned int i=0;i<m_net_passed_flags.size();i++)
-	//m_net_passed_flags[i]=0;
+	m_net_passed=0;
       }
       m_tracksign=1;
     }
@@ -402,9 +412,8 @@ namespace TRACT{
       if(m_netmasks.nSurfs()>0){surfexists();}
       m_net_passed_flags.ReSize(m_netmasks.nRois());
       m_net_passed_flags=0;
-
-      //m_net_passed_flags.clear();
-      //m_net_passed_flags.resize(m_netmasks.nRois(),0);
+      m_net_passed.ReSize(m_netmasks.nRois());
+      m_net_passed=0;
 
     }
     void set_seed_id(const int i){m_seed_id=i;}
@@ -413,8 +422,8 @@ namespace TRACT{
       m_network_mat=0;
     }
     void update_mat(){
-      for(int i=1;i<=m_net_passed_flags.Nrows();i++){
-	if(m_net_passed_flags(i)==0){continue;}
+      for(int i=1;i<=m_net_passed.Nrows();i++){
+	if(m_net_passed(i)==0){continue;}
 	if(m_seed_id+1>i){m_network_mat(m_seed_id+1,i)++;}
 	else{m_network_mat(m_seed_id+1,i+1)++;}    
       }   
@@ -422,7 +431,6 @@ namespace TRACT{
     void save_network_mat(){
       write_ascii_matrix(m_network_mat,logger.appendDir("fdt_network_matrix"));
     }
-    const ColumnVector& net_passed_flags(){return m_net_passed_flags;}
 
     void load_waymasks(const string& filename){
       m_waymasks.reinitialize(m_seeds.get_refvol());
@@ -432,6 +440,13 @@ namespace TRACT{
       m_way_passed_flags.clear(); 
       for(int i=0;i<m_waymasks.nRois();i++)
 	m_way_passed_flags.push_back(0);
+    }
+
+    void load_wtstopmasks(const string& filename){
+      m_wtstopmasks.reinitialize(m_seeds.get_refvol());
+      m_wtstopmasks.set_convention(opts.meshspace.value());
+      m_wtstopmasks.load_rois(filename);    
+      if(m_wtstopmasks.nSurfs()>0){surfexists();} //cerr<<"Surface has been provided as a walk-through stopping mask! Currently unsupported!"; exit(1); }
     }
 
     void    set_waycond(const string& cond){m_waycond=cond;}
@@ -464,32 +479,41 @@ namespace TRACT{
 	if(m_lrmask3.nSurfs()>0){surfexists();}
       }
     }
-    void                       clear_inmask3()   {m_inmask3.clear();}
-    void                       clear_inlrmask3() {m_inlrmask3.clear();}
-    vector< pair<int,float> >& get_inmask3()     {return m_inmask3;}
-    vector< pair<int,float> >& get_inlrmask3()   {return m_inlrmask3;}
+    void                       clear_inmask3()   {m_inmask3.clear();m_inmask3_aux.clear();}
+    void                       clear_inlrmask3() {m_inlrmask3.clear();m_inlrmask3_aux.clear();}
+    void		       reset_m_inmask3_aux() {m_inmask3_aux.clear();m_inlrmask3_aux.clear();}
+    vector< pair<int,infoVertex> >& get_inmask3()     {return m_inmask3;}
+    vector< pair<int,infoVertex> >& get_inlrmask3()   {return m_inlrmask3;}
     CSV                        get_mask3()       {return m_mask3;}
     CSV                        get_lrmask3()     {return m_lrmask3;}
-    void fill_inmask3(const vector<int>& crossedlocs3,const float& pathlength){
-      vector< pair<int,float> > inmask3;
+    void fill_inmask3(const vector<int>& crossedlocs3,vector< pair<int,int> >& surf_Triangle,const float& pathlength){
+      vector< pair<int,infoVertex> > inmask3;
       for(unsigned int iter=0;iter<crossedlocs3.size();iter++){
-	pair<int,float> mypair;
+	pair<int,infoVertex> mypair;
 	mypair.first=crossedlocs3[iter];
-	mypair.second=m_tracksign*pathlength;
+	mypair.second.value=m_tracksign*pathlength;
+	mypair.second.mesh=surf_Triangle[iter].first;
+	mypair.second.triangle=surf_Triangle[iter].second;
 	inmask3.push_back(mypair);
       }
-      m_inmask3.insert(m_inmask3.end(),inmask3.begin(),inmask3.end());
+      m_inmask3_aux.insert(m_inmask3_aux.end(),inmask3.begin(),inmask3.end());
     }
-    void fill_inlrmask3(const vector<int>& crossedlocs3,const float& pathlength){
-      vector< pair<int,float> > inmask3;
+    void fill_inlrmask3(const vector<int>& crossedlocs3,vector< pair<int,int> >& surf_Triangle,const float& pathlength){
+      vector< pair<int,infoVertex> > inmask3;
       for(unsigned int iter=0;iter<crossedlocs3.size();iter++){
-	pair<int,float> mypair;
+	pair<int,infoVertex> mypair;
 	mypair.first=crossedlocs3[iter];
-	mypair.second=m_tracksign*pathlength;
+	mypair.second.value=m_tracksign*pathlength;
+	mypair.second.mesh=surf_Triangle[iter].first;
+	mypair.second.triangle=surf_Triangle[iter].second;
 	inmask3.push_back(mypair);
       }
-      m_inlrmask3.insert(m_inlrmask3.end(),inmask3.begin(),inmask3.end());
+      m_inlrmask3_aux.insert(m_inlrmask3_aux.end(),inmask3.begin(),inmask3.end());
     }
+    void copy_inmask3(){
+	m_inmask3.insert(m_inmask3.end(),m_inmask3_aux.begin(),m_inmask3_aux.end());
+	m_inlrmask3.insert(m_inlrmask3.end(),m_inlrmask3_aux.begin(),m_inlrmask3_aux.end());
+    }	
     // /////////////////////////////////////////////////////////////////
   };
 
@@ -499,6 +523,7 @@ namespace TRACT{
     Log&                         logger;
 
     volume<float>                m_prob;      // spatial histogram of tract location within brain mask (in seed space)
+    volume<float>                m_prob2;     // for mean path length	
     volume4D<float>              m_localdir;
     volume<int>                  m_beenhere;
     Matrix                       m_I;
@@ -506,11 +531,13 @@ namespace TRACT{
     vector<ColumnVector>         m_diff_path;
     vector< vector<ColumnVector> > m_crossedvox;
     CSV                          m_prob_alt;  // spatial histogram of tracts with alternative user-defined mask
+    CSV                          m_prob_alt2; // for mean path length
     CSV                          m_beenhere_alt;
 
     // same as m_prob and m_localdir but split into the different
     // target masks if the option opts.targetpaths is ON
     vector< volume<float> >      m_prob_multi;
+    vector< volume<float> >      m_prob_multi2; // for mean path length
     vector< volume4D<float> >    m_localdir_multi;
     
 
@@ -522,28 +549,30 @@ namespace TRACT{
     // do we still need these?
     vector<ColumnVector>         m_seedcounts;
     Matrix                       m_SeedCountMat;
-    int                          m_SeedRow;
     int                          m_numseeds;
 
     // know where we are in seed space/counts (because seeds are now CSV)
     string                       m_curtype;
-    int                          m_seedroi;
-    int                          m_curloc;
+    infoVertexSeed	         m_curloc;
 
     // classification targets
     CSV                          m_targetmasks;
     vector<bool>                 m_targflags;
     CSV                          m_s2t_count;
+    CSV                          m_s2t_count2;  // for mean path length
     Matrix                       m_s2tastext;
+    Matrix                       m_s2tastext2;  // for mean path length
     int                          m_s2trow;
     volume4D<float>              m_targetpaths;
 
     // MATRIX 1
     SpMat<float>                *m_ConMat1; // using sparse
+    SpMat<float>                *m_ConMat1b; // for mean path length
     int                          m_Conrow1;
 
     // MATRIX 2
     SpMat<float>                 *m_ConMat2; // using sparse
+    SpMat<float>                 *m_ConMat2b; // for mean path length
     volume<int>                  m_lrmask;
     volume<int>                  m_lookup2;
     volume<int>                  m_beenhere2;
@@ -551,7 +580,7 @@ namespace TRACT{
 
     // MATRIX 3
     SpMat<float>                 *m_ConMat3; // using sparse
-    vector<int>                  m_inmask3;
+    SpMat<float>                 *m_ConMat3b; // for mean path length
 
     // MATRIX 4 - columns are seed space, rows are diffusion space
     SpMat_HCP                   *m_ConMat4;     
@@ -596,7 +625,14 @@ namespace TRACT{
 			  m_stline.get_seeds().ysize(),
 			  m_stline.get_seeds().zsize());
       copybasicproperties(m_stline.get_seeds().get_refvol(),m_prob);
-      m_prob=0;      
+      m_prob=0;   
+      if(opts.omeanpathlength.value()){    
+        m_prob2.reinitialize(m_stline.get_seeds().xsize(),
+			     m_stline.get_seeds().ysize(),
+			     m_stline.get_seeds().zsize());
+        copybasicproperties(m_stline.get_seeds().get_refvol(),m_prob2);
+        m_prob2=0;
+      }      
       if(opts.opathdir.value()){
 	m_localdir.reinitialize(m_stline.get_seeds().xsize(),
 				m_stline.get_seeds().ysize(),
@@ -611,6 +647,12 @@ namespace TRACT{
 	m_prob_alt.set_convention(opts.meshspace.value());
 	m_prob_alt.load_rois(opts.pathfile.value());
 	m_prob_alt.reset_values();
+        if(opts.omeanpathlength.value()){
+          m_prob_alt2.reinitialize(m_stline.get_seeds().get_refvol());
+	  m_prob_alt2.set_convention(opts.meshspace.value());
+	  m_prob_alt2.load_rois(opts.pathfile.value());
+	  m_prob_alt2.reset_values();
+	}
 	m_beenhere_alt.reinitialize(m_stline.get_seeds().get_refvol());
 	m_beenhere_alt.set_convention(opts.meshspace.value());
 	m_beenhere_alt.load_rois(opts.pathfile.value());
@@ -628,7 +670,14 @@ namespace TRACT{
     void initialise_matrix4();
     
     void forceNumSeeds(const int& n) {m_numseeds=n;}
-    void updateSeedLocation(int loc) {m_curloc=loc;}
+    void updateSeedLocation(int loc, int roi, vector<int>& triangles) {
+      m_curloc.triangles.clear();
+      m_curloc.loc=loc;
+      m_curloc.mesh=roi;
+      for(unsigned int i=0;i<triangles.size();i++){
+        m_curloc.triangles.push_back(triangles[i]);
+      }
+    }
 
     void store_path(){ 
       m_path=m_stline.get_path();
@@ -668,7 +717,7 @@ namespace TRACT{
     void reset_beenhere();
     void update_pathdist_multi();
     
-    void reset_prob(){m_prob=0;}
+    void reset_prob(){m_prob=0;m_prob2=0;}
     void update_seedcounts();
     void reset_targetflags(){
       for(unsigned int i=0;i<m_targflags.size();i++) m_targflags[i]=false;

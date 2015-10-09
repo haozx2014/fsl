@@ -76,7 +76,7 @@ using namespace NEWIMAGE;
 
 string LinearFwdModel::ModelVersion() const
 {
-  return "$Id: fwdmodel_linear.cc,v 1.18 2011/08/04 13:36:35 chappell Exp $";
+  return "$Id: fwdmodel_linear.cc,v 1.20 2015/09/08 13:55:19 mwebster Exp $";
 }
 
 void LinearFwdModel::ModelUsage()

@@ -74,6 +74,7 @@
 #include "newmatio.h"
 #include "bfmatrix.h"
 #include "nonlin.h"
+#include "Simplex.h"
 #include "utils/fsl_isfinite.h"
 
 using namespace std;
@@ -84,24 +85,22 @@ namespace MISCMATHS {
 // Declarations of routines for use only in this module
 
 // Main routine for Variable-Metric optimisation
-
 NonlinOut varmet(const NonlinParam& p, const NonlinCF& cfo);
 
 // Main routine for Gradient-descent optimisation
-
 NonlinOut grades(const NonlinParam& p, const NonlinCF& cfo);
 
 // Main routine for Conjugate-Gradient optimisation
-
 NonlinOut congra(const NonlinParam& p, const NonlinCF& cfo);
 
 // Main routine for scaled conjugate-gradient optimisation
-
 NonlinOut sccngr(const NonlinParam& p, const NonlinCF& cfo);
 
 // Main routine for Levenberg-Marquardt optimisation
-
 NonlinOut levmar(const NonlinParam& p, const NonlinCF& cfo);
+
+// Main routine for amoeba (Nelder-Mead) optimisation
+NonlinOut amoeba(const NonlinParam& p, const NonlinCF& cfo);
 
 LinOut linsrch(// Input
                const ColumnVector&  pdir,    // Search direction
@@ -274,6 +273,7 @@ boost::shared_ptr<BFMatrix> NonlinCF::hess(const ColumnVector&         p,
   return(hessm);
 }
 
+
 // Display (for debug purposes) matrix if it is small enough for that to make sense
 
 void VarmetMatrix::print() const
@@ -386,6 +386,9 @@ NonlinOut nonlin(const NonlinParam& p, const NonlinCF& cfo)
   case NL_GD:
     status = grades(p,cfo);
     break;
+  case NL_NM:
+    status = amoeba(p,cfo);
+    break;
   }
 
   return(status);
@@ -452,6 +455,49 @@ NonlinOut levmar(const NonlinParam& p, const NonlinCF& cfo)
   return(p.Status());
 }
 
+// Main routine for Nelder-Mead simplex optimisation
+
+NonlinOut amoeba(const NonlinParam& p, 
+		 const NonlinCF& cfo)
+{
+  // cout << "Initialsing simplex" << endl; cout.flush();
+  Simplex smplx(p.Par(),cfo,p.GetAmoebaStart());
+  p.SetCF(smplx.BestFuncVal());
+
+  while (p.NextIter()) {
+    // Check for convergence based on fractional difference 
+    // between best and worst points in simplex.
+    // cout << "New iteration: Checking for convergence" << endl; cout.flush();
+    if (zero_cf_diff_conv(smplx.WorstFuncVal(),smplx.BestFuncVal(),p.FractionalCFTolerance())) {
+      p.SetStatus(NL_CFCONV);
+      return(p.Status());
+    }
+    
+    // cout << "Attempting reflexion" << endl; cout.flush();
+    double newf = smplx.Reflect();   // Attempt reflexion
+    // Extend into an expansion if reflexion very successful
+    if (newf <= smplx.BestFuncVal()) { 
+      // cout << "Reflexion succesful: attempting expansion" << endl; cout.flush();
+      smplx.Expand(); // Attempt expansion
+    }
+    else if (newf >= smplx.SecondWorstFuncVal()) {
+      // cout << "New value worse than second worst: attempting contraction" << endl; cout.flush();
+      double worst_fval = smplx.WorstFuncVal();
+      newf = smplx.Contract();     // Do a contraction towards plane of "better" points
+      if (newf >= worst_fval) {    // Didn't work. Contract towards best point
+	// cout << "Contraction unsuccesful: contracting towards best point" << endl; cout.flush();
+	smplx.MultiContract();
+      }
+    } 
+    smplx.UpdateRankIndicies();
+    p.SetCF(smplx.BestFuncVal());
+    p.SetPar(smplx.BestPar());
+  }
+  // If we're here we've exceeded max number of iterations
+  p.SetStatus(NL_MAXITER);
+  return(p.Status());
+}
+
 // Main routine for gradient-descent optimisation. It is
 // included mainly as a debugging tool for when the more
 // advanced methods fail and one wants to pinpoint the
@@ -484,9 +530,17 @@ NonlinOut grades(const NonlinParam& np, const NonlinCF& cfo)
     // Set new cf value and parameters
     np.SetPar(np.Par() + minp.first*g);
     // Check for convergence based on small decrease of cost-function
-    if (zero_cf_diff_conv(np.CF(),minp.second,np.FractionalCFTolerance())) {np.SetCF(minp.second); np.SetStatus(NL_CFCONV); return(np.Status());}
+    if (zero_cf_diff_conv(np.CF(),minp.second,np.FractionalCFTolerance())) {
+      np.SetCF(minp.second); 
+      np.SetStatus(NL_CFCONV); 
+      return(np.Status());
+    }
     // Check for convergence based on neglible move in parameter space
-    else if (zero_par_step_conv(minp.first*g,np.Par(),np.FractionalParameterTolerance())) {np.SetCF(minp.second); np.SetStatus(NL_PARCONV); return(np.Status());}
+    else if (zero_par_step_conv(minp.first*g,np.Par(),np.FractionalParameterTolerance())) {
+      np.SetCF(minp.second); 
+      np.SetStatus(NL_PARCONV); 
+      return(np.Status());
+    }
     else {  // If no covergence
       np.SetCF(minp.second);
       g = -cfo.grad(np.Par());

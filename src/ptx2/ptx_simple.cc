@@ -62,8 +62,8 @@
     University, to negotiate a licence. Contact details are:
     innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
-#include "ptx_simple.h"
 #include "streamlines.h"
+#include "ptx_simple.h"
 
 using namespace std;
 using namespace NEWIMAGE;
@@ -117,15 +117,17 @@ void track(){
   _time=time(NULL);
 
   int keeptot=0;
+  vector<int> triangles;  //to avoid connections between vertices of the same triangle...but not used for volumes
+  triangles.push_back(-1);
   for(int SN=1; SN<=newSeeds.Nrows();SN++){
-    counter.updateSeedLocation(SN);
+    counter.updateSeedLocation(SN,-1,triangles);
     float xst=newSeeds(SN,1);
     float yst=newSeeds(SN,2);
     float zst=newSeeds(SN,3);
     keeptot += seedmanager.run(xst,yst,zst,false,-1,opts.sampvox.value());
     string add="_"+num2str(Seeds(SN,1))+"_"+num2str(Seeds(SN,2))+"_"+num2str(Seeds(SN,3));
     
-    if(opts.simpleout.value())
+    if(opts.simpleout.value()||opts.omeanpathlength.value())
       counter.save_pathdist(add);
 
     counter.reset_prob();

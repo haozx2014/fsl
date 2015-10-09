@@ -858,6 +858,13 @@ NEWMAT::ColumnVector inv_coord(const volume4D<float>&      warp,
                                   volume4D<T>&             deriv,
                                   volume<char>&            invol);
 
+  template <class T> 
+  void get_displacement_fields(// Input
+                                  const volume<T>&         vin,
+                                  const NEWMAT::Matrix&    aff,
+                                  const volume4D<float>&   dfin,
+                                  // Output
+                                  volume4D<float>&         dfout);
 
   ///////////////////////////////////////////////////////////////////////////
   // IMAGE PROCESSING ROUTINES
@@ -1597,8 +1604,45 @@ NEWMAT::ColumnVector inv_coord(const volume4D<float>&      warp,
 
     raw_general_transform(vin,aff,df,dir,dir,vout,deriv,invol);
   }
-                                
-
+ 
+  // 
+  // This routine mimics some of the code in raw_general_transform.
+  // Ideally they should be re-written to allow for code re-use
+  // but this solution is the least "invasive" in the sense of
+  // risking to introduce any new bugs.
+  // It will return a 3D displacement field in mm.
+  //
+  template <class T> 
+  void get_displacement_fields(// Input
+                                  const volume<T>&         vin,
+                                  const NEWMAT::Matrix&    aff,
+                                  const volume4D<float>&   dfin,
+                                  // Output
+                                  volume4D<float>&         dfout)
+  {
+    if (dfin.tsize() != 3) imthrow("NEWIMAGE::get_displacement_field: dfin.tsize() must be 3.",11);
+    if (!NEWIMAGE::samesize(vin,dfin[0])) imthrow("NEWIMAGE::get_displacement_field: mismatch between vin and dfin.",11);
+    if (!NEWIMAGE::samesize(dfin,dfout)) imthrow("NEWIMAGE::get_displacement_field: mismatch between dfin and dfout.",11);
+    NEWMAT::Matrix v2w = vin.sampling_mat();  // voxel->world      
+    NEWMAT::Matrix iA = aff.i();              // world->transformed_world
+    NEWMAT::ColumnVector vox(4); vox(4) = 1.0;
+    NEWMAT::ColumnVector mm(4);
+    NEWMAT::ColumnVector tmm(4);
+    for (int k=0; k<vin.zsize(); k++) {
+      vox(3) = k;
+      for (int j=0; j<vin.ysize(); j++) {
+	vox(2) = j;
+	for (int i=0; i<vin.xsize(); i++) {
+	  vox(1) = i;
+	  mm = v2w*vox;
+	  tmm = iA*mm;
+          dfout(i,j,k,0) = tmm(1) + dfin(i,j,k,0) - mm(1);
+          dfout(i,j,k,1) = tmm(2) + dfin(i,j,k,1) - mm(2);
+          dfout(i,j,k,2) = tmm(3) + dfin(i,j,k,2) - mm(3);
+	}
+      }
+    }
+  }                             
 }
 
 #ifdef I_DEFINED_ET

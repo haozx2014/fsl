@@ -78,7 +78,7 @@ using namespace NEWIMAGE;
 
 string FlobsFwdModel::ModelVersion() const
 {
-  return "$Id: fwdmodel_flobs.cc,v 1.4 2008/04/03 13:22:39 adriang Exp $";
+  return "$Id: fwdmodel_flobs.cc,v 1.6 2015/09/08 13:55:19 mwebster Exp $";
 }
 
 void FlobsFwdModel::HardcodedInitialDists(MVNDist& prior, 

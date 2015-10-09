@@ -73,9 +73,10 @@
 
 using namespace NEWIMAGE;
 
-void print_usage(const string& progname) {
-  cout << "Usage: fslstats [-t] <input> [options]" << endl << endl; 
-  cout << "-t will give a separate output line for each 3D volume of a 4D timeseries" << endl; 
+int print_usage(const string& progname) {
+  cout << "Usage: fslstats [preoptions] <input> [options]" << endl << endl; 
+  cout << "preoption -t will give a separate output line for each 3D volume of a 4D timeseries" << endl;
+  cout << "preoption -K < indexMask > will generate seperate n submasks from indexMask, for indexvalues 1..n where n is the maximum index value in indexMask, and generate statistics for each submask" << endl;
   cout << "Note - options are applied in order, e.g. -M -l 10 -M will report the non-zero mean, apply a threshold and then report the new nonzero mean" << endl << endl;
   cout << "-l <lthresh> : set lower threshold" << endl;
   cout << "-u <uthresh> : set upper threshold" << endl;
@@ -103,6 +104,7 @@ void print_usage(const string& progname) {
   cout << "-h <nbins>   : output a histogram (for the thresholded/masked voxels only) with nbins" << endl; 
   cout << "-H <nbins> <min> <max>   : output a histogram (for the thresholded/masked voxels only) with nbins and histogram limits of min and max" << endl << endl;
   cout << "Note - thresholds are not inclusive ie lthresh<allowed<uthresh" << endl;
+  return 1;
 }
 
 // Some specialised nonzero functions just for speedup
@@ -188,26 +190,37 @@ int generate_masks(volume4D<float>& mask, volume4D<float>& masknz, const volume4
   return generateNonZeroMask(mask,masknz,input);
 }
 
-int fmrib_main_float(int argc, char* argv[],const bool timeseriesMode) 
+int fmrib_main_float(int argc, char* argv[],const bool timeseriesMode, const string& indexMaskName) 
 {
   cout.setf(ios::dec); 
   cout.setf(ios::fixed, ios::floatfield); 
   cout.setf(ios::left, ios::adjustfield); 
   cout.precision(6);  
-
-  int nTimepoints(1);
   volume4D<float> vol, inputMaster;
-  if ( timeseriesMode) {
+  volume4D<int> indexMask;
+  if ( timeseriesMode || indexMaskName != "" ) 
     read_volume4D(inputMaster,argv[1]);
-    nTimepoints=inputMaster.tsize();
-  } else 
+  else 
     read_volume4D(vol,argv[1]);
-
-  for ( int timepoint=0; timepoint < nTimepoints ; timepoint++ )
-  {
+  volume4D<float> & indexMaster = (timeseriesMode ) ? vol : inputMaster;
+  if ( indexMaskName != "" ) 
+    read_volume4D(indexMask,indexMaskName);
+  int nTimepoints((timeseriesMode) ? inputMaster.tsize() : 1), nIndices((indexMaskName != "") ? indexMask.max() : 1);
+  for ( int timepoint=0; timepoint < nTimepoints ; timepoint++ ) {
+   for ( int index=1; index <= nIndices; index++ ) {
     if ( timeseriesMode )
       vol=inputMaster[timepoint];
     volume4D<float> mask, masknz;
+    if ( indexMask.nvoxels() ) {
+      if ( indexMask.tsize() != 1 ) {
+	cerr << "Index mask must be 3D" << endl;
+        return 3;
+      }
+      copyconvert(indexMask,mask);
+      mask.binarise(index-1,index+1,exclusive);
+      vol=indexMaster*mask[0];
+      generateNonZeroMask(mask,masknz,vol);
+    }
     float lthr(vol.min()-1);
     float uthr=(vol.max()+1);    
     int narg(2);
@@ -559,7 +572,9 @@ int fmrib_main_float(int argc, char* argv[],const bool timeseriesMode)
   
     narg++;
   }
-  cout << endl;
+   }
+   cout << endl;
+   
   }
   return 0;
 }
@@ -571,28 +586,30 @@ int main(int argc,char *argv[])
 
   Tracer tr("main");
   string progname(argv[0]);
-  int retval(-1);
   bool timeseriesMode(false);
-  if ( argc > 2 && string(argv[1])=="-t" ) {
+  string indexMask("");
+  while ( argc > 2 && ( string(argv[1])=="-t" || string(argv[1]) =="-K" ) ) {
+    if ( string(argv[1])=="-t" )
+      timeseriesMode=true;
+    if ( string(argv[1])=="-K" ) {
+      indexMask=string(argv[2]);
+      argv++;
+      argc--;
+    }
     argv++;
     argc--;
-    timeseriesMode=true;
   }
-  
-
+  if (argc < 3 )
+    return print_usage(progname);  
   try {
-    if (argc < 3 ) { 
-      print_usage(progname);
-      return 1; 
-    }
-    retval = fmrib_main_float(argc,argv,timeseriesMode);
+    return fmrib_main_float(argc,argv,timeseriesMode,indexMask);
   } catch(std::exception &e) {
     cerr << e.what() << endl;
   } catch (...) {
     // do nothing - just exit without garbage message
   }
 
-  return retval;
+  return -1;
   
 }
 

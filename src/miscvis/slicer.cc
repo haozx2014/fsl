@@ -84,6 +84,7 @@ void usage(void)
   printf("-t       : produce semi-transparent (dithered) edges.\n");
   printf("-n       : use nearest-neighbour interpolation for output.\n");
   printf("-u       : do not put left-right labels in output.\n\n");
+  printf("-c       : add a red dot marker to top right of image");
 
   printf("Output options:\n");
   printf("[-x/y/z <slice> <filename>]      : output sagittal, coronal or axial slice\n     (if <slice> >0 it is a fraction of image dimension, if <0, it is an absolute slice number)\n");

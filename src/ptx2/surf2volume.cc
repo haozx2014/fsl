@@ -63,12 +63,12 @@
     innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 
+#include "csv.h"
 #include "newimage/newimageio.h"
 #include "miscmaths/miscmaths.h"
 #include "miscmaths/miscprob.h"
 #include "miscmaths/SpMat.h"
 #include "meshclass/meshclass.h"
-#include "csv.h"
 
 using namespace NEWIMAGE;
 using namespace MISCMATHS;

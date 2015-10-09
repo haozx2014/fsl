@@ -2,10 +2,10 @@
 //
 // fnirtfns.cpp
 //
-// Jesper Andersson, FMRIB Image Analysis Group
+// Jesper Andersson and Matthew Webster, FMRIB Image Analysis Group
 //
 //
-/*    Copyright (C) 2012 University of Oxford  */
+/*    Copyright (C) 2012-2015 University of Oxford  */
 
 /*  Part of FSL - FMRIB's Software Library
     http://www.fmrib.ox.ac.uk/fsl
@@ -440,7 +440,7 @@ boost::shared_ptr<fnirt_clp> parse_fnirt_command_line(unsigned int   narg,
       string("name of file containing initial non-linear warps"), false, Utilities::requires_argument);
 
   Utilities::Option<string> in_intname(string("--intin"), string(""),
-      string("\tname of file/files containing initial intensity maping"), false, Utilities::requires_argument);
+      string("\tname of file/files containing initial intensity mapping"), false, Utilities::requires_argument);
 
   Utilities::Option<string> coefname(string("--cout"), string(""),
       string("\tname of output file with field coefficients"), false, Utilities::requires_argument);
@@ -493,11 +493,11 @@ boost::shared_ptr<fnirt_clp> parse_fnirt_command_line(unsigned int   narg,
 
   vector<int> applyrefmaskdefault(4,1);
   Utilities::Option<vector<int> > applyrefmask(string("--applyrefmask"),applyrefmaskdefault,
-      string("Use specified refmask if set, deafult 1 (true)"),false,Utilities::requires_argument);
+      string("Use specified refmask if set, default 1 (true)"),false,Utilities::requires_argument);
 
   vector<int> applyobjmaskdefault(4,1);
   Utilities::Option<vector<int> > applyobjmask(string("--applyinmask"),applyobjmaskdefault,
-      string("Use specified inmask if set, deafult 1 (true)"),false,Utilities::requires_argument);
+      string("Use specified inmask if set, default 1 (true)"),false,Utilities::requires_argument);
 
   Utilities::Option<int> imprefflag(string("--imprefm"), 1,
       string("If =1, use implicit masking based on value in --ref image. Default =1"),false, Utilities::requires_argument);
@@ -512,7 +512,7 @@ boost::shared_ptr<fnirt_clp> parse_fnirt_command_line(unsigned int   narg,
       string("Value to mask out in --in image. Default =0.0"),false, Utilities::requires_argument);
 
   Utilities::Option<string> minimisationmethod(string("--minmet"), string("lm"),
-      string("non-linear minimisation method [lm | scg] (Leveberg-Marquardt or Scaled Conjugate Gradient)"), 
+      string("non-linear minimisation method [lm | scg] (Levenberg-Marquardt or Scaled Conjugate Gradient)"), 
       false, Utilities::requires_argument);
 
   vector<int> maxiterdefault(4,0);
@@ -530,7 +530,7 @@ boost::shared_ptr<fnirt_clp> parse_fnirt_command_line(unsigned int   narg,
       string("(approximate) resolution (in mm) of warp basis in x-, y- and z-direction, default 10,10,10"), false, Utilities::requires_argument);
 
   Utilities::Option<int> splineorder(string("--splineorder"), 3,
-      string("Order of spline, 2->Qadratic spline, 3->Cubic spline. Default=3"),false, Utilities::requires_argument);
+      string("Order of spline, 2->Quadratic spline, 3->Cubic spline. Default=3"),false, Utilities::requires_argument);
 
   vector<float> objsmoothdefault(4,0);
   objsmoothdefault[0] = 6.0; objsmoothdefault[1] = 4.0; objsmoothdefault[2] = 2.0; objsmoothdefault[3] = 2.0;
@@ -548,7 +548,7 @@ boost::shared_ptr<fnirt_clp> parse_fnirt_command_line(unsigned int   narg,
 
   vector<float> lambdadefault(0);
   Utilities::Option<vector<float> > lambda(string("--lambda"),lambdadefault,
-      string("Weight of regularisation, default depending on --ssqlambda and --regmod switches. See user documetation."), 
+      string("Weight of regularisation, default depending on --ssqlambda and --regmod switches. See user documentation."), 
       false, Utilities::requires_argument);
 
   Utilities::Option<int> ssqlambda(string("--ssqlambda"),true,string("If set (=1), lambda is weighted by current ssq, default 1"),
@@ -569,7 +569,7 @@ boost::shared_ptr<fnirt_clp> parse_fnirt_command_line(unsigned int   narg,
 
   int intensityorderdefault = 5;
   Utilities::Option<int> intensityorder(string("--intorder"),intensityorderdefault,
-      string("Order of poynomial for mapping intensities, default 5"),false,Utilities::requires_argument);
+      string("Order of polynomial for mapping intensities, default 5"),false,Utilities::requires_argument);
    
   vector<float> biasresdefault(3,50.0);
   Utilities::Option<vector<float> > biasfieldres(string("--biasres"),biasresdefault,
@@ -584,7 +584,7 @@ boost::shared_ptr<fnirt_clp> parse_fnirt_command_line(unsigned int   narg,
   vector<int> estintdefault(4,1);
   estintdefault[3] = 0;
   Utilities::Option<vector<int> > estimateintensity(string("--estint"),estintdefault,
-      string("Estimate intensity-mapping if set, deafult 1 (true)"),false,Utilities::requires_argument);
+      string("Estimate intensity-mapping if set, default 1 (true)"),false,Utilities::requires_argument);
 
   Utilities::Option<string> numprec(string("--numprec"),string("double"),
       string("Precision for representing Hessian, double or float. Default double"),false,Utilities::requires_argument);
@@ -599,7 +599,7 @@ boost::shared_ptr<fnirt_clp> parse_fnirt_command_line(unsigned int   narg,
       string("display help info"), false, Utilities::no_argument);
 
   Utilities::Option<bool> verbose(string("-v,--verbose"), false,
-      string("Print diagonostic information while running"), false, Utilities::no_argument);
+      string("Print diagnostic information while running"), false, Utilities::no_argument);
 
   Utilities::HiddenOption<int> debug(string("--debug"), 0,
       string("Save debug information while running, levels 0 (no info), 1 (some info), 2 (little more info) or 3 (LOTS of info)"), false, Utilities::requires_argument);

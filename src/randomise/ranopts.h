@@ -153,7 +153,7 @@ class ranopts {
 
  inline ranopts::ranopts() :
    demean_data(string("-D"), false,
-	string("\tdemean data temporally before model fitting"),
+	string("\tdemean data temporally before model fitting ( demean model as well if required )"),
 	false, no_argument),
    one_samp(string("-1"), false,
 	    string("\tperform 1-sample group-mean test instead of generic permutation test"),

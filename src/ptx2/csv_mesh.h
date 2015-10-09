@@ -209,7 +209,9 @@ class CsvMesh {
   bool triangle_intersect(const vector<Pt>& segment,const int& triid)const{
     return( _triangles[triid].intersect(segment) );
   }
-
+  bool triangle_intersect(const vector<Pt>& segment,const int& triid, int& ind)const{
+    return( _triangles[triid].intersect(segment,ind) );
+  }
 
   float get_pvalue(const int& i)const{return _pvalues[i];}
   float get_tvalue(const int& i)const{return _tvalues[i];}

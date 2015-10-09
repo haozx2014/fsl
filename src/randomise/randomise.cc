@@ -86,17 +86,28 @@ public:
   bool isSet;
   vector<Matrix> EV;
   vector<int> location;
+  vector<Matrix> designAtVoxel;
+  vector< vector<int> > dofAtVoxel;
+  vector<Matrix> contrastAtVoxel;
   void setup(const vector<int>& voxelwise_ev_numbers,const vector<string>& voxelwise_ev_filenames,const volume<float>& mask, const int maximumLocation, const bool isVerbose);
-  VoxelwiseDesign() { isSet=false; }
+  VoxelwiseDesign() : isSet(false), storingByVoxel(false) {}
+  void storeByVoxel(size_t nVoxels) { storingByVoxel=true; EV.clear(); location.clear(); designAtVoxel.resize(nVoxels+1); dofAtVoxel.resize(nVoxels+1); contrastAtVoxel.resize(nVoxels+1);}
   Matrix adjustDesign(const Matrix& originalDesign,const int voxelNo);
 private:
+  bool storingByVoxel;
 };
 
 Matrix VoxelwiseDesign::adjustDesign(const Matrix& originalDesign, const int voxelNo)
 {
+  if ( storingByVoxel ) 
+    return designAtVoxel[voxelNo];
   Matrix newDesign(originalDesign);
-  for (unsigned int currentEV=0;currentEV<location.size();currentEV++)
-    newDesign.Column(location[currentEV])=EV[currentEV].Column(voxelNo);
+  for (unsigned int currentEV=0;currentEV<EV.size();currentEV++) {
+    if ( location[currentEV] < 0 )
+      newDesign.Columns( abs(location[currentEV]),abs(location[currentEV])+originalDesign.Nrows()-1 )=EV[currentEV].Column(voxelNo).AsDiagonal();
+    else
+       newDesign.Column(location[currentEV])=EV[currentEV].Column(voxelNo);
+  }
   return newDesign;
 }
 
@@ -290,7 +301,7 @@ volume4D<float> spatialStatistic, originalSpatialStatistic;
    output.store(clusterLabels,clusterSizes,mask,1,permutationNo,outputPerms);
 }
 
-Matrix tfceStatistic(ParametricStatistic& output, const Matrix& inputStatistic, const volume<float>& mask, float& tfceDelta, const float tfceHeight, const float tfceSize, const int tfceConnectivity, const int permutationNo, const bool isF, const int numContrasts, const vector<float>& dof, const bool outputPerms, const bool overrideDelta)
+Matrix tfceStatistic(ParametricStatistic& output, const Matrix& inputStatistic, const volume<float>& mask, float& tfceDelta, const float tfceHeight, const float tfceSize, const int tfceConnectivity, const int permutationNo, const bool isF, const int numContrasts, const vector<int>& dof, const bool outputPerms, const bool overrideDelta)
 {
   Matrix tstat_ce(inputStatistic);
   if ( isF ) { 
@@ -448,27 +459,51 @@ Matrix PermutedDesign(const Matrix& originalDesign,const ColumnVector& permutati
   return output;
 }
 
-Matrix calculateTstat(const Matrix& data, const Matrix& model, const Matrix& tc, Matrix& estimate, Matrix& residuals, Matrix& sigmaSquared, const float dof)
+
+ReturnMatrix sumSqr(const Matrix& mat) {
+  Matrix res(1,mat.Ncols());
+  for (int mc=1; mc<=mat.Ncols(); mc++) {
+    double sumsqr(0);
+    for (int mr=1; mr<=mat.Nrows(); mr++) {
+      double foo(mat(mr,mc));
+      sumsqr += foo*foo;
+    }
+    res(1,mc)=sumsqr;
+  }
+res.Release();
+return res;
+  }
+
+ReturnMatrix sumSqr2(const Matrix& mat) {
+  Matrix res(1,mat.Nrows());
+  res=1.0;
+  res*=SP(mat,mat);
+  res.Release();
+  return res;
+  }
+
+
+Matrix calculateTstat(const Matrix& data, const Matrix& model, const Matrix& tc, Matrix& estimate, Matrix& residuals, Matrix& sigmaSquared, const int dof)
 {
   Matrix pinvModel(pinv(model)); // inverted model used several times
   estimate=pinvModel*data;
   residuals=data-model*estimate;
   estimate=tc*estimate; //estimate now is cope
-  sigmaSquared=sum(SP(residuals,residuals))/dof;
+  sigmaSquared=sumSqr2(residuals)/(float)dof;
   residuals=diag(tc*pinvModel*pinvModel.t()*tc.t())*sigmaSquared; //residuals now is varcope
   return(SD(estimate,sqrt(residuals)));
 }
 
-Matrix calculateFStat(const Matrix& data, const Matrix& model, const Matrix& contrast, const float dof,const int rank)
+Matrix calculateFStat(const Matrix& data, const Matrix& model, const Matrix& contrast, const int dof,const int rank)
 { 
   // model is N_subject by N_ev
   // data is N_subject by N_voxels
   Matrix pinvModel(pinv(model)); // inverted model used several times
   Matrix estimate = pinvModel*data;
   Matrix residuals= data-model*estimate;
-  residuals = sum(SP(residuals,residuals))/dof; //residuals now hold sigmasquared
+  residuals = sum(SP(residuals,residuals))/(float)dof; //residuals now hold sigmasquared
   estimate = pinv((contrast*pinvModel).t()).t()*contrast*estimate;
-  estimate = sum(SP(estimate,estimate))/rank;   
+  estimate = sum(SP(estimate,estimate))/(float)rank;   
   return(SD(estimate,residuals));
 }        
 
@@ -519,7 +554,7 @@ void OutputStat(const ParametricStatistic input,const volume<float>& mask, const
  }
 }           
 
-float MVGLM_fit(const Matrix& X, const Matrix& Y, const Matrix& contrast, vector<float>& dof)
+float MVGLM_fit(const Matrix& X, const Matrix& Y, const Matrix& contrast, vector<int>& dof)
 {
   // adapted by Mark Jenkinson from code in first_utils (by Brian Patenaude)
   // Y is data : N_subject x 3
@@ -563,7 +598,7 @@ float MVGLM_fit(const Matrix& X, const Matrix& Y, const Matrix& contrast, vector
 }
 
 
-Matrix calculateMultiVariateFStat(const Matrix& model, const Matrix& data, vector<float>& dof, int nMultiVariate)
+Matrix calculateMultiVariateFStat(const Matrix& model, const Matrix& data, vector<int>& dof, int nMultiVariate)
 { 
   // model is N_subject by N_ev
   // data is N_subject by (N_vertex * 3)
@@ -584,7 +619,7 @@ Matrix calculateMultiVariateFStat(const Matrix& model, const Matrix& data, vecto
   return Fstat;
 }
 
-Matrix evaluateStatistics(const Matrix& data,const Matrix& model,const Matrix& contrast, Matrix& cope, Matrix& varcope, Matrix& sigmaSquared,vector<float>& dof,const int rank,const int multiVariate, const bool doingF)
+Matrix evaluateStatistics(const Matrix& data,const Matrix& model,const Matrix& contrast, Matrix& cope, Matrix& varcope, Matrix& sigmaSquared,vector<int>& dof,const int rank,const int multiVariate, const bool doingF)
 {
   if ( doingF ) {
     if ( multiVariate > 1 )
@@ -595,7 +630,7 @@ Matrix evaluateStatistics(const Matrix& data,const Matrix& model,const Matrix& c
     return calculateTstat(data, model, contrast, cope, varcope, sigmaSquared, dof[0]);
 }
 
-void calculatePermutationStatistics(ranopts& opts, const volume<float>& mask, Matrix& datam, Matrix& tc, Matrix& dm,int tstatnum, vector<float>& dof, Permuter& permuter, VoxelwiseDesign& voxelwiseDesign)
+void calculatePermutationStatistics(ranopts& opts, const volume<float>& mask, Matrix& datam, const Matrix& tc, Matrix& dm,int tstatnum, vector<int>& dof, Permuter& permuter, VoxelwiseDesign& voxelwiseDesign)
 {
   int nVoxels=(int)no_mask_voxels(mask);
   int rankF=MISCMATHS::rank(tc.t());
@@ -657,13 +692,10 @@ void calculatePermutationStatistics(ranopts& opts, const volume<float>& mask, Ma
     dmperm=PermutedDesign(dm,permvec,permuter.isFlipping);   
 
     if (voxelwiseDesign.isSet)
-      for(int voxel=1;voxel<=datam.Ncols();voxel++)
-	{
-	  Matrix dmtemp(voxelwiseDesign.adjustDesign(dm,voxel)), sigmaTemp(1,1), copeTemp(1,1), varcopeTemp(1,1);
-	dof[0]=ols_dof(dmtemp); 
-	if (opts.demean_data.value()) dof[0]--;
+      for(int voxel=1;voxel<=datam.Ncols();voxel++) {
+	Matrix dmtemp(voxelwiseDesign.adjustDesign(dm,voxel)), sigmaTemp(1,1), copeTemp(1,1), varcopeTemp(1,1);
 	dmperm=PermutedDesign(dmtemp,permvec,permuter.isFlipping);
-	tstat.Column(voxel)=evaluateStatistics(datam.Column(voxel), dmperm, tc, copeTemp, varcopeTemp, sigmaTemp, dof, rankF, opts.nMultiVariate.value(), (tstatnum < 0) );
+	tstat.Column(voxel)=evaluateStatistics(datam.Column(voxel), dmperm, voxelwiseDesign.contrastAtVoxel[voxel], copeTemp, varcopeTemp, sigmaTemp, voxelwiseDesign.dofAtVoxel[voxel], rankF, opts.nMultiVariate.value(), (tstatnum < 0) );
 	sigmaSquared.Column(voxel)=sigmaTemp;
 	cope.Column(voxel)=copeTemp;
 	varcope.Column(voxel)=varcopeTemp;
@@ -767,32 +799,39 @@ void calculatePermutationStatistics(ranopts& opts, const volume<float>& mask, Ma
 
 bool convertContrast(const Matrix& inputModel,const Matrix& inputContrast,const Matrix& inputData,Matrix& outputModel,Matrix& outputContrast, Matrix& outputData, const int mode, const bool debug)
 {
-    int r(inputContrast.Nrows()),p(inputContrast.Ncols());
-    Matrix tmp=(IdentityMatrix(p)-inputContrast.t()*pinv(inputContrast.t()));
-    Matrix U,V;
     DiagonalMatrix D;
-    SVD(tmp, D, U, V);
-    Matrix c2=U.Columns(1,p-r);
-    c2=c2.t();
-    Matrix C = inputContrast & c2;
-    if ( MISCMATHS::rank(C) < C.Nrows() )
-      throw Exception("Error: This (f)contrast appears to be rank defficient, please check your design.");
-    Matrix W=inputModel*C.i();
-    Matrix W1=W.Columns(1,r);
-    Matrix W2=W.Columns(r+1,W.Ncols());
+    Matrix U,V,inverseContrast=pinv(inputContrast);
+    Matrix W1=inputModel*inverseContrast;
+    Matrix W2=inputModel-inputModel*inputContrast.t()*inverseContrast.t();
+    int originalConfounds(W2.Ncols());
+    Matrix W2tmp(W2.Nrows(),0);
+    for(int col=1;col<=W2.Ncols();col++) {
+      ColumnVector tmpCol(W2.Column(col));
+      if ( !tmpCol.IsZero() )
+	W2tmp |= tmpCol;
+    }
+    W2=W2tmp;
     bool confoundsExist( W2.Ncols() > 0 );
     if ( confoundsExist ) {
-      SVD(W2,D,U,V); 
-      float confoundMax(D.Maximum()); 
+      if ( W2.Ncols() <= W2.Nrows() ) 
+	SVD(W2,D,U,V);
+      else 
+	SVD(W2.t(),D,V,U); //Note the swap of U and V for transposed input
+      float confoundMax(D.Maximum());
+      while ( D(D.Ncols()) < confoundMax*1e-10 ) 
+	D = D.SymSubMatrix(1,D.Ncols()-1);
+      if ( debug )
+	cerr << "Removed " << originalConfounds-D.Ncols() << " null confounds" << endl;
+      W2=U.Columns(1,D.Ncols()); //Multiplying by D just preserved scaling, not needed as per MJ.
       SVD(W1,D,U,V);
       float interestMax(D.Maximum());
-      if ( (interestMax>confoundMax) && (interestMax == (interestMax+(confoundMax/1000.0)))) { //we truncate confound space to float and see if it is very small compared to interest
+      if ( (interestMax>confoundMax) && (interestMax == (interestMax+(confoundMax*10.0)))) { //test if confound space is very small compared to interest
 	confoundsExist=false;
 	W2=0;
       }
     }
     if ( confoundsExist &&  ( mode == 0 || mode == 1 ) ) {
-      outputData=(IdentityMatrix(W2.Nrows())-W2*pinv(W2))*inputData;
+      outputData=(IdentityMatrix(W2.Nrows())-W2*W2.t())*inputData;
       if ( debug )
 	cerr << "Orthogonalising data wrt to confounds." << endl;
     }
@@ -801,21 +840,16 @@ bool convertContrast(const Matrix& inputModel,const Matrix& inputContrast,const 
       if ( debug )
 	cerr << "Not orthogonalising data wrt to confounds." << endl;
     }
-    
-    if ( mode == 0 ) { //Kennedy  Regress Y_a on X_a
-      outputModel=W1;
-      outputContrast=IdentityMatrix(r);
-      if ( confoundsExist ) 
-	outputModel=W1-W2*pinv(W2)*W1;
-    }
+    outputModel=W1;                  //All modes start with "base" model and contrast of  W1 and I(r)
+    outputContrast=IdentityMatrix(inputContrast.Nrows());
+    if ( mode == 0 && confoundsExist ) //Kennedy  Regress Y_a on X_a
+      outputModel=W1-W2*W2.t()*W1;
     if ( mode == 1 || mode == 2 || mode == 3 ) { //Regress Y_a (Freedman_Lane) or Y (No unconfounding) or Y_aFull ( ter Braak ) on X | Z 
-      outputModel=W1;
-      outputContrast=IdentityMatrix(r);
-      if ( W2.Ncols() > 0 ) { 
-	Matrix nuisanceContrast(r,W2.Ncols());
+      if ( confoundsExist ) {
+	Matrix nuisanceContrast(inputContrast.Nrows(),W2.Ncols());
 	nuisanceContrast=0;
-	outputContrast = outputContrast | nuisanceContrast;
-	outputModel = outputModel | W2;
+	outputContrast |= nuisanceContrast;
+	outputModel |= W2;
       }        
       if ( mode == 3 ) 
 	outputData=(IdentityMatrix(outputModel.Nrows())-outputModel*pinv(outputModel))*inputData;
@@ -828,37 +862,25 @@ bool convertContrast(const Matrix& inputModel,const Matrix& inputContrast,const 
 void analyseContrast(const Matrix& inputContrast, const Matrix& dm, const Matrix& datam, const volume<float>& mask,const Matrix& gp,const int& contrastNo,ranopts& opts, const Matrix& effectiveDesign)
 {
   //-ve num for f-stat contrast
-  Matrix NewModel,NewCon,NewDataM;
+  Matrix NewModel,NewDataM, NewCon;
   VoxelwiseDesign fullVoxelwiseDesign;
   Permuter permuter;
   bool hasConfounds(false);
-
   if (voxelwiseInput.isSet) {
-    NewDataM=datam;
-    vector<Matrix> effectiveVoxelwiseRegressors;
-    effectiveVoxelwiseRegressors.resize(inputContrast.Nrows());
-    for (unsigned int currentEV=0;currentEV<effectiveVoxelwiseRegressors.size();currentEV++) {
-      effectiveVoxelwiseRegressors.at(currentEV)=datam;
-      effectiveVoxelwiseRegressors.at(currentEV)=0;
-    }
+    fullVoxelwiseDesign.storeByVoxel(datam.Ncols());
+    NewDataM.ReSize(datam);
     for(int voxel=1;voxel<=datam.Ncols();voxel++)
     {
-      Matrix tempDesign(voxelwiseInput.adjustDesign(dm,voxel)),tempData;
-      hasConfounds=convertContrast(tempDesign,inputContrast,datam.Column(voxel),NewModel,NewCon,tempData,opts.confoundMethod.value(),opts.isDebugging.value());
+      Matrix tempData;
+      hasConfounds=convertContrast(voxelwiseInput.adjustDesign(dm,voxel),inputContrast,datam.Column(voxel),fullVoxelwiseDesign.designAtVoxel[voxel],fullVoxelwiseDesign.contrastAtVoxel[voxel],tempData,opts.confoundMethod.value(),opts.isDebugging.value()) || hasConfounds;
       NewDataM.Column(voxel)=tempData;
-      for (unsigned int currentEV=0;currentEV<effectiveVoxelwiseRegressors.size();currentEV++) 
-	effectiveVoxelwiseRegressors.at(currentEV).Column(voxel)=NewModel.Column(currentEV+1);
+      fullVoxelwiseDesign.dofAtVoxel[voxel].push_back((int)ols_dof(fullVoxelwiseDesign.designAtVoxel[voxel])-(int)opts.demean_data.value());
     }
-    fullVoxelwiseDesign.location.clear();
-    fullVoxelwiseDesign.location.resize(inputContrast.Nrows());
-    for (unsigned int currentEV=0;currentEV<effectiveVoxelwiseRegressors.size();currentEV++) 
-      fullVoxelwiseDesign.location.at(currentEV)=currentEV+1;
-    fullVoxelwiseDesign.EV.clear();
-    fullVoxelwiseDesign.EV=effectiveVoxelwiseRegressors;
     fullVoxelwiseDesign.isSet=true;
-  }
-
-  else hasConfounds=convertContrast(dm,inputContrast,datam,NewModel,NewCon,NewDataM,opts.confoundMethod.value(),opts.isDebugging.value());
+    NewModel=fullVoxelwiseDesign.designAtVoxel[1]; //Arbitrary choices
+    NewCon=fullVoxelwiseDesign.contrastAtVoxel[1];
+  } else hasConfounds=convertContrast(dm,inputContrast,datam,NewModel,NewCon,NewDataM,opts.confoundMethod.value(),opts.isDebugging.value());
+  
   if ( opts.isDebugging.value() ) {
     if ( hasConfounds ) 
       cerr << "Confounds detected." << endl;
@@ -881,7 +903,7 @@ void analyseContrast(const Matrix& inputContrast, const Matrix& dm, const Matrix
     if (contrastNo<0)  cout << " of f-test " << abs(contrastNo) << endl;
     if(opts.how_many_perms.value()) return;
   }  
-  vector<float> dof(1,ols_dof(dm)-(int)opts.demean_data.value()); 
+  vector<int> dof(1,(int)ols_dof(NewModel)-(int)opts.demean_data.value()); 
   calculatePermutationStatistics(opts,mask,NewDataM,NewCon,NewModel,contrastNo,dof,permuter,fullVoxelwiseDesign); 
 }
 
