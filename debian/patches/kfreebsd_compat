@@ -60,28 +60,6 @@
  		glDisableVertexAttribArrayARB(vertexLoc);
  		glDisableVertexAttribArrayARB(normalLoc);
  		glDisableVertexAttribArrayARB(scalarLoc);
---- a/src/eddy/eddy.cpp
-+++ b/src/eddy/eddy.cpp
-@@ -11,7 +11,9 @@
- #include "newmat.h"
- #include "newimage/newimageall.h"
- #include "miscmaths/miscmaths.h"
--#include "utils/stack_dump.h"
-+// Disable stack_dump that upstream labels as "highly non-portable"
-+// one can still use gdb to get the same information
-+//#include "utils/stack_dump.h"
- #include "EddyHelperClasses.h"
- #include "ECScanClasses.h"
- #include "DiffusionGP.h"
-@@ -58,7 +60,7 @@
- /// The entry point of eddy.
- int main(int argc, char *argv[])
- {
--  StackDump::Install(); // Gives us informative stack dump if/when program crashes
-+  //StackDump::Install(); // Gives us informative stack dump if/when program crashes
- 
-   // Parse comand line input
-   EddyCommandLineOptions clo(argc,argv); // Command Line Options
 --- a/src/topup/topup.cpp
 +++ b/src/topup/topup.cpp
 @@ -83,7 +83,9 @@

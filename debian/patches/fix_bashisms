@@ -46,7 +46,7 @@ Description: Fix bashisms in the code.
 -#!/bin/sh
 +#!/bin/bash
  echo "Merging stat images"
- for FIRSTSEED in ${ROOTNAME}_SEED1_*_p_*.nii.gz ${ROOTNAME}_SEED1_*_corrp_*.nii.gz ; do 
+ for FIRSTSEED in \`imglob -extension ${ROOTNAME}_SEED1_*_p_* ${ROOTNAME}_SEED1_*_corrp_*\` ; do 
    ADDCOMMAND=""
 --- a/src/fdt/bedpostx
 +++ b/src/fdt/bedpostx
@@ -56,6 +56,6 @@ Description: Fix bashisms in the code.
      fi
 -    if [ "x$SGE_ROOT" == "x" ]; then
 +    if [ "x$SGE_ROOT" = "x" ]; then
-         havedad=\`ps -e -o pid | grep "$$\\b" | wc -l\`        
+         havedad=\`ps -e -o pid 2>&1 | grep "$$\\b" | wc -l\`        
      fi
      sleep 180;
