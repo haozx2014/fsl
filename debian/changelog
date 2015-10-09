@@ -1,3 +1,23 @@
+fsl (5.0.9-1) UNRELEASED; urgency=medium
+
+  * New upstream release.
+    - Initial release of Verbena -- model-based analysis of perfusion from
+      DSC-MRI based on a vascular model
+    - randomise has much improved handling of voxelwise regressors
+    - dtifit has now the option for correcting for gradient non-linearities
+      unhidden
+    - select_dwi_vols allows quick extraction of a certain b-shell from DWI
+      data
+    - bedpostx has a new model, where instead of using a stick kernel to
+      represent a fibre compartment, a “zeppelin” axially symmetric tensor
+      can be used
+    - and more
+  * 'eddy' is no longer built as the sources aren't included in the upstream
+    release anymore. A new 'fsl-5.0-eddy-nonfree' package is now recommened
+    tha provides 'eddy'.
+
+ -- Michael Hanke <mih@debian.org>  Fri, 09 Oct 2015 08:15:48 +0200
+
 fsl (5.0.8-5) unstable; urgency=medium
 
   * Disable unecessary unportable debugging code that breaks on kfreebsd.

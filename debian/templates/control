@@ -89,7 +89,8 @@ Depends: mozilla-firefox | www-browser,
          libjs-excanvas,
          ${shlibs:Depends},
          ${misc:Depends}
-Recommends: fsl-atlases
+Recommends: fsl-atlases,
+          fsl-#FSLMVERSION#-eddy-nonfree,
 Suggests: fsl-feeds,
           fsl-#FSLMVERSION#-gpu,
           octave | ${octave:Depends},
