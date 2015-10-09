@@ -362,7 +362,7 @@ namespace MISCMATHS {
   
   int write_ascii_matrix(const Matrix& mat, ofstream& fs, int precision)
   {
-    fs.setf(ios::floatfield);  // use fixed or scientific notation as appropriate
+    fs.unsetf(ios::floatfield);  // use fixed or scientific notation as appropriate
     if (precision>0)  { 
       fs.precision(precision); 
     } else {

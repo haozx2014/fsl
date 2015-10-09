@@ -87,6 +87,7 @@ namespace MISCPIC{
 	compare= 0;
 	writeText=false;
 	LR_label_flag = true;
+	markRight=false;
 	trans= -10;
 	edgethresh = 0.0;
 	if(getenv("FSLDIR")!=0){
@@ -174,6 +175,8 @@ namespace MISCPIC{
       string lut, lutbase, title, cbartype;
 
       gdImagePtr cbarptr, outim;
+
+      bool markRight;
 
       vector<int> rlut, glut, blut; //stores the lut;
       unsigned char *picr, *picg, *picb;

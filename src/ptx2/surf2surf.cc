@@ -62,16 +62,13 @@
     University, to negotiate a licence. Contact details are:
     innovation@isis.ox.ac.uk quoting reference DE/9564. */
 #include "utils/options.h"
+#include "warpfns/warpfns.h"
+#include "warpfns/fnirt_file_reader.h"
 #include "newimage/newimageall.h"
 #include "csv.h"
 #include "stdlib.h"
 #include "string.h"
 #include "miscmaths/miscmaths.h"
-#include "warpfns/warpfns.h"
-#include "warpfns/fnirt_file_reader.h"
-
-
-
 
 using namespace Utilities;
 using namespace std;

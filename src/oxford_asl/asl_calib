@@ -126,6 +126,7 @@ Usage() {
     echo "   >> Look-Locker flip angle correction - to perform this provide:"
     echo " {--lfa}     : Lower flip angle (in degrees) for dual FA calibration"
     echo " {--nphases} : Number of phases (repetitions) of higher FA"
+    echo " {--fixa}    : Fix the saturation efficiency to 100% (useful if you have a low number of samples)"
     echo ""
     echo "Coil sensitivity correction:"
     echo " Calculate and apply a voxel-wise correction for coil sensitivity"
@@ -141,7 +142,7 @@ Usage() {
 }
 
 Version() {
-echo "$Id: asl_calib,v 1.25 2014/12/02 16:58:53 chappell Exp $"
+echo "$Id: asl_calib,v 1.27 2015/08/07 14:43:52 chappell Exp $"
 exit 0
 }
 
@@ -220,6 +221,8 @@ until [ -z $1 ]; do
 	    shift;;
 	--nphases) nphases=$2
 	    shift;;
+	--fixa) fixa=1
+	    ;;
 	--devel) devel=1
 	    ;;
 	--debug) debug=1
@@ -324,7 +327,7 @@ T2gm=100
 T1wm=1.0
 T2wm=50
 
-T2b=150
+T2b=150 # lu et a. 2012 MRM 67:42-49 have 154ms at 3T during normoxia
 
 # partition coeffs
 # based on Herscovitch and Raichle 1985
@@ -332,7 +335,7 @@ pccsf=1.15 # a blood water density of 0.87
 pcwm=0.82
 pcgm=0.98
 
-if [ -z $t2star ]; then
+if [ ! -z $t2star ]; then
 # we need to correct for T2* not T2 so change the defaults
 # NB these will still be overridden by specific values supplied
     T2csf=400
@@ -639,8 +642,7 @@ elif [ $mode = satrecov ]; then
     done
     echo "TIs: tislist" >> $log
 
-# Extra options for Look Locker
-
+    # Extra options for Look Locker
     if [ ! -z $fa ]; then
 	llopts="--FA=$fa"
 	if [ ! -z $nphases ]; then
@@ -652,14 +654,23 @@ elif [ $mode = satrecov ]; then
     fi
     echo "Look-Locker options: $llopts" >> $log
 
+    # Extra sat recovery options
+    if [ ! -z $fixa ]; then
+	sropts="--fixa"
+    fi
+    echo "Extra saturation recovery options: $sropts" >> $log
+
     # do fabber within the tissue reference mask with a sensible T1 prior mean
     if [ ! -z $senson ]; then
 	echo "Apply sensitivity image to data for reference tisse M0 estimation" >> $log
         # apply sensitivity map to calibration image - ONLY for the reference tissue calculations
-	fslmaths $calib -div $temp_calib/sens $temp_calib/calib_senscorr
+	${FSLDIR}/bin/fslmaths $calib -div $temp_calib/sens $temp_calib/calib_senscorr
+    else
+	# no sensitivity correction required, but copy image over ready for next command
+	${FSLDIR}/bin/imcp $calib $temp_calib/calib_senscorr
     fi
     echo "FABBER within reference tissue mask" >> $log
-    $fabber --data=$temp_calib/calib_senscorr --mask=$mask --output=$temp_calib/satrecov --data-order=singlefile --model=satrecov --noise=white --method=vb $tislist $llopts --t1=$T1r
+    $fabber --data=$temp_calib/calib_senscorr --mask=$mask --output=$temp_calib/satrecov --data-order=singlefile --model=satrecov --noise=white --method=vb $tislist $llopts $sropts --t1=$T1r
 
     # calculate M0 value
     Moval=`fslstats $temp_calib/satrecov/mean_M0t -M` # this is M0 of CSF at the TE of the sequence
@@ -675,7 +686,7 @@ elif [ $mode = satrecov ]; then
     # (note that we do not apply sensitivity correction to the data here - thius is 'built-into' the M0t map)
     echo "FABBER (again) within whole brain mask" >> $log
     if [ ! -z $outdir ]; then #NB we only bother with this if we have an output directory to put the results in
-	$fabber --data=$calib --mask=$bmask --output=$temp_calib/satrecovT --data-order=singlefile --model=satrecov --noise=white --method=vb $tislist $llopts
+	$fabber --data=$calib --mask=$bmask --output=$temp_calib/satrecovT --data-order=singlefile --model=satrecov --noise=white --method=vb $tislist $llopts $sropts 
 
 
         # save useful results to specified output directory

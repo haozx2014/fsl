@@ -77,7 +77,7 @@ using namespace NEWIMAGE;
 
 string SimpleFwdModel::ModelVersion() const
 {
-  return "$Id: fwdmodel_simple.cc,v 1.18 2007/07/27 21:58:30 adriang Exp $";
+  return "$Id: fwdmodel_simple.cc,v 1.20 2015/09/08 13:55:19 mwebster Exp $";
 }
 
 void SimpleFwdModel::Evaluate(const ColumnVector& params, ColumnVector& result) const

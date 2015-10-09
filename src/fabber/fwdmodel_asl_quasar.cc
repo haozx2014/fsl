@@ -78,7 +78,7 @@ using namespace NEWIMAGE;
 
 string QuasarFwdModel::ModelVersion() const
 {
-  return "$Id: fwdmodel_asl_quasar.cc,v 1.8 2014/02/21 13:49:09 mwebster Exp $";
+  return "$Id: fwdmodel_asl_quasar.cc,v 1.10 2015/09/08 13:55:19 mwebster Exp $";
 }
 
 void QuasarFwdModel::HardcodedInitialDists(MVNDist& prior, 

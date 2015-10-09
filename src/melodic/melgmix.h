@@ -72,12 +72,10 @@
 #ifndef __MELGMIX_h
 #define __MELGMIX_h
 
-#include "newimage/newimageall.h"
 #include "utils/log.h"
 #include "melodic.h"
 #include "utils/options.h"
 #include "meloptions.h"
-//#include "melreport.h"
 
 using namespace Utilities;
 using namespace NEWIMAGE;

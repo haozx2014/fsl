@@ -74,7 +74,7 @@
 exec $FSLTCLSH "$0" "$@"
 
 source $env(FSLDIR)/tcl/fslstart.tcl
-proc fullFirstLevelAnalysis { session } { 
+proc firstLevelMaster { session } { 
 
 global FSLDIR FSLSLASH fmri feat_files fsfroot logout confoundev_files
 #setup FEAT output directory
@@ -102,13 +102,12 @@ set FD [ pwd ]
 fsl:exec "mkdir -p logs" -n
 set logout ${FD}/logs/feat1
 
-fsl:exec "/bin/cp ${fsfroot}.fsf design.fsf"
+if { ![ file exists design.fsf ] || [ file normalize ${fsfroot}.fsf ] != [ file normalize design.fsf ] } {
+       fsl:exec "/bin/cp ${fsfroot}.fsf design.fsf"
+ }
 
-set confevs ""
-if { [ file exists confoundevs.txt ] } {
-    set confevs "confoundevs.txt"
-}
 
+       
 set haltForModel 1
 if { ! [ info exists fmri(featModelOpts) ] } {
 set fmri(featModelOpts) ""
@@ -117,7 +116,7 @@ set haltForModel 0
 
 set featModelID 0
 if { $fmri(analysis) != 0 } {
-    set featModelID [ fsl:exec "${FSLDIR}/bin/feat_model design $confevs" $fmri(featModelOpts) -N feat0_model -l logs ]
+    set featModelID [ fsl:exec "${FSLDIR}/bin/feat_model design" $fmri(featModelOpts) -N feat0_model -l logs ]
 }
 set fsfroot ${FD}/design
 
@@ -389,8 +388,8 @@ if { $done_something == 0 } {
 
     if { ! $fmri(inmelodic) } {
        if { $fmri(level) == 1 } {
-	  for { set session 1 } { $session <= $fmri(multiple) } { incr session 1 } {
-	      fullFirstLevelAnalysis $session
+	      for { set session 1 } { $session <= $fmri(multiple) } { incr session 1 } {
+	      firstLevelMaster $session
 	  }
       } else {
 
@@ -412,6 +411,7 @@ set GFD $FD
 set logout ${FD}/logs/feat1
 
 fsl:exec "/bin/cp ${fsfroot}.fsf design.fsf"
+
 fsl:exec "${FSLDIR}/bin/feat_model design"
 
 set fsfroot ${FD}/design

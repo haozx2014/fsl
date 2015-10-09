@@ -98,6 +98,7 @@ class ReadOptions {
 
   Option<bool> splitpairs;
   Option<bool> tcdiff;
+  Option<bool> surrtcdiff;
   
   Option<string> outblockform;
   Option<string> out;
@@ -171,6 +172,9 @@ help(string("-h,--help"), false,
    tcdiff(string("--diff"), false,
 	   string("Take the difference between the pairs, i.e. Tag control difference\n"),
 	   false,no_argument),
+   surrtcdiff(string("--surrdiff"), false,
+	      string("Do surround subtraction on the pairs"),
+	      false,no_argument),
 
    //basic output
    outblockform(string("--obf,--outblockform"),string("notset"),
@@ -224,6 +228,7 @@ help(string("-h,--help"), false,
  
        options.add(splitpairs);
        options.add(tcdiff);
+       options.add(surrtcdiff);
 
        options.add(out);
        options.add(outblockform);

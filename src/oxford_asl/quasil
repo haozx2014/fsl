@@ -94,7 +94,7 @@ Usage() {
 }
 
 Version() {
-echo "$Id: quasil,v 1.10 2013/01/10 17:00:39 chappell Exp $"
+echo "$Id: quasil,v 1.11.4.1 2015/09/18 16:00:14 mwebster Exp $"
 exit 0
 }
 
@@ -123,7 +123,7 @@ until [ -z $1 ]; do
 	    shift;;
        --lfa) lfa=$2
 	    shift;;
-	--disp) nodisp=1
+	--disp) disp=1
 	    ;;
 	--mfree) mfree=1
 	    ;;

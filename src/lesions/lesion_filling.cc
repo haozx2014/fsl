@@ -103,7 +103,7 @@ Option<string> lesmaskname(string("-l,--lesionmask"), string(""),
 		  true, requires_argument);
 Option<string> wmmaskname(string("-w,--wmmask"), string(""),
 		  string("filename of white matter mask image"),
-		  false, requires_argument);
+		  true, requires_argument);
 Option<string> involname(string("-i,--in"), string(""),
 		  string("input image filename (e.g. T1w image)"),
 		  true, requires_argument);

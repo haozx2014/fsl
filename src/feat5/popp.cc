@@ -233,33 +233,31 @@ ColumnVector interp1(const ColumnVector& x, const ColumnVector& y, const ColumnV
   return ans;
 }
 
-int mode(const vector<int>& vv, int init_bin_size)
+int mode(const vector<int>& vv, int binWidth)
 {
   // TODO - Introduce a min/max limitation ?  or maybe a bin size?
   // mode function - for discrete data with not much spread
   //     (e.g. interval times in a long physio trace)
   // Uses an iterative approach of merging cells until max bin contains >10% of samples
   int maxvv=*max_element(vv.begin(),vv.end());
-  ColumnVector hist(maxvv);
-  for (int n=0; n<(int) vv.size(); n++) {
-    hist(vv[n])++;
-  }
-  float totsamp=vv.size(), val=0.0;
-  int binsize=init_bin_size;
+  vector<double> hist(maxvv+1,0); //The zero bin is not used but present to make indexing easier 
+  for (int n=0; n<(int) vv.size(); n++) 
+    hist[vv[n]]++;
+  float totsamp=vv.size();
   int modev=0, maxh=0, niter=1;
-  while ((binsize<maxvv/2) && (maxh<0.1*totsamp)) {
-    if (verbose.value()) { cout << "Mode loop: binsize = " << binsize << " maxh/totsamp = " << maxh/totsamp << endl; }
+  while ((binWidth<maxvv/2) && (maxh<0.1*totsamp)) {
+    if (verbose.value()) { cout << "Mode loop: binsize = " << binWidth << " maxh/totsamp = " << maxh/totsamp << endl; }
     modev=0; maxh=0;
-    for (int n=1; n<=maxvv; n+=binsize) {
-      val=0.0;
-      for (int m=n; m<MISCMATHS::Min(n+binsize,maxvv); m++) { val+=hist(m); }
+    for (int n=1; n<=maxvv; n+=binWidth) {
+      float val(0);
+      for (int m=n; m<MISCMATHS::Min(n+binWidth,maxvv); m++) { val+=hist[m]; }
       if (val>maxh) {
 	maxh=val;
-	modev=n + binsize/2;
+	modev=n + binWidth/2;
       }
     }
     // for next time around while loop (only needed if <10% samples in max bin)
-    if ((niter++)==1) { binsize=2; } else { binsize++; }
+    (niter++)==1 ? binWidth=2 : binWidth++;
   }
   return modev;
 }

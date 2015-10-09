@@ -87,7 +87,8 @@ Usage() {
     echo "  -o <output directory>        basename of directory for output (default is input image basename followed by .anat)"
     #echo "  --list=<image list>          specifies a list of images to be averaged (either a comma separated list of image names with no spaces, or the filename for a text file containing the individual image filenames)"
     echo "  --clobber                    if .anat directory exist (as specified by -o or default from -i) then delete it and make a new one"
-    echo "  --weakbias                   used for images with little and/or smooth bias fields"
+    echo "  --strongbias                 used for images with very strong bias fields"
+    echo "  --weakbias                   used for images with smoother, more typical, bias fields (default setting)"
     echo "  --noreorient                 turn off step that does reorientation 2 standard (fslreorient2std)"
     echo "  --nocrop                     turn off step that does automated cropping (robustfov)"
     #echo "  --nobet                      turn off step that does brain extraction (BET or registration) - to use this the input image must already brain extracted"
@@ -174,7 +175,7 @@ outputname=
 anatdir=
 lesionmask=
 
-strongbias=yes;
+strongbias=no;
 do_reorient=yes;
 do_crop=yes;
 do_bet=yes;
@@ -189,8 +190,8 @@ multipleimages=no;
 use_lesionmask=no;
 
 nosearch=
-niter=5;
-smooth=10;
+niter=10;
+smooth=20;
 betfparam=0.1;
 type=1  # For FAST: 1 = T1w, 2 = T2w, 3 = PD
 
@@ -260,6 +261,11 @@ while [ $# -ge 1 ] ; do
 	--nosearch)
 	    nosearch=-nosearch; 
 	    shift;;
+	--strongbias)
+	    strongbias=yes; 
+	    niter=5;
+	    smooth=10;
+	    shift;;
 	--weakbias)
 	    strongbias=no; 
 	    niter=10;
@@ -269,7 +275,7 @@ while [ $# -ge 1 ] ; do
 	    betfparam=`get_arg1 $1`; 
 	    shift;;
 	--nocleanup)
-	    cleanup=no; 
+	    do_cleanup=no; 
 	    shift;;
 	-v)
 	    verbose=yes; 

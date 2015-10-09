@@ -88,9 +88,9 @@ bool CSV::has_crossed(const ColumnVector& x1,const ColumnVector& x2,
   // x1 and x2 in voxel space
   int ix,iy,iz;
   if(nvols>0){
-    ix=(int)round((float)x2(1));
-    iy=(int)round((float)x2(2));
-    iz=(int)round((float)x2(3));
+    ix=(int)MISCMATHS::round((float)x2(1));
+    iy=(int)MISCMATHS::round((float)x2(2));
+    iz=(int)MISCMATHS::round((float)x2(3));
 
     if(roivol(ix,iy,iz)!=0){
       for(int i=1;i<=nvols;i++){
@@ -114,9 +114,9 @@ bool CSV::has_crossed(const ColumnVector& x1,const ColumnVector& x2,
   
   vector< pair<int,int> > localtriangles;
   for(unsigned int i=0;i<crossed.size();i++){
-    int val=surfvol((int)round((float)crossed[i](1)),
-		    (int)round((float)crossed[i](2)),
-		    (int)round((float)crossed[i](3)))-1;
+    int val=surfvol((int)MISCMATHS::round((float)crossed[i](1)),
+		    (int)MISCMATHS::round((float)crossed[i](2)),
+		    (int)MISCMATHS::round((float)crossed[i](3)))-1;
     
     if(val<0)continue;
     localtriangles.insert(localtriangles.end(),triangles[val].begin(),triangles[val].end());
@@ -179,9 +179,9 @@ bool CSV::has_crossed_roi(const ColumnVector& x1,const ColumnVector& x2,
   // start by looking at volume roi
   if(nvols>0){
 
-    ix=(int)round((float)x2(1));
-    iy=(int)round((float)x2(2));
-    iz=(int)round((float)x2(3));
+    ix=(int)MISCMATHS::round((float)x2(1));
+    iy=(int)MISCMATHS::round((float)x2(2));
+    iz=(int)MISCMATHS::round((float)x2(3));
     
     if(roivol(ix,iy,iz)!=0){
       for(int i=1;i<=nvols;i++){
@@ -201,9 +201,9 @@ bool CSV::has_crossed_roi(const ColumnVector& x1,const ColumnVector& x2,
   vector< pair<int,int> > localtriangles;
   for(unsigned int i=0;i<crossed.size();i++){
     //OUT(crossed[i].t());
-    int val=surfvol((int)round((float)crossed[i](1)),
-		    (int)round((float)crossed[i](2)),
-		    (int)round((float)crossed[i](3)))-1;
+    int val=surfvol((int)MISCMATHS::round((float)crossed[i](1)),
+		    (int)MISCMATHS::round((float)crossed[i](2)),
+		    (int)MISCMATHS::round((float)crossed[i](3)))-1;
     if(val<0)continue;
     localtriangles.insert(localtriangles.end(),triangles[val].begin(),triangles[val].end());
   }
@@ -228,8 +228,7 @@ bool CSV::has_crossed_roi(const ColumnVector& x1,const ColumnVector& x2,
       int indtri=localtriangles[i].second-1;
       t = roimesh[indmesh].get_triangle(indtri);
 
-      int ind;
-      if(t.intersect(segment,ind)){// ind is 0,1 or2
+      if(t.intersect(segment)){
 	ret=true;
 	crossedrois.push_back( surfind[indmesh] );
 	
@@ -243,10 +242,40 @@ bool CSV::has_crossed_roi(const ColumnVector& x1,const ColumnVector& x2,
   return ret;
 }
 
+// this one fills a vector of which rois are crossed, but only checking volumes (ignoring surfaces)
+bool CSV::has_crossed_roi_vols(const ColumnVector& x1,
+			  vector<int>& crossedrois)const{
+  // x1 in voxel space
+  int ix,iy,iz;
+  bool ret=false;
+
+  // start by looking at volume roi
+  if(nvols>0){
+
+    ix=(int)MISCMATHS::round((float)x1(1));
+    iy=(int)MISCMATHS::round((float)x1(2));
+    iz=(int)MISCMATHS::round((float)x1(3));
+    
+    if(roivol(ix,iy,iz)!=0){
+      for(int i=1;i<=nvols;i++){
+	if(isinroi(vol2mat(ix,iy,iz),i)!=0){
+	  ret=true;
+	  crossedrois.push_back(volind[i-1]);	  
+	}
+      }
+    }
+  }
+  return ret;
+}
+
 // this one fills a vector of which rois are crossed
 // and also fills in which locations are crossed (e.g. for matrix{1,3})
 bool CSV::has_crossed_roi(const ColumnVector& x1,const ColumnVector& x2,
-			  const vector<ColumnVector>& crossed,vector<int>& crossedrois,vector<int>& crossedlocs)const{
+			  const vector<ColumnVector>& crossed,
+			  vector<int>& crossedrois,
+			  vector<int>& crossedlocs,
+			  vector< pair<int,int> >& surf_Triangle,
+			  bool closestvertex)const{
   //Tracer_Plus tr("CSV::hascrossed3");
   // x1 and x2 in voxel space
   int ix,iy,iz;
@@ -254,9 +283,9 @@ bool CSV::has_crossed_roi(const ColumnVector& x1,const ColumnVector& x2,
 
   // start by looking at volume roi
   if(nvols>0){
-    ix=(int)round((float)x2(1));
-    iy=(int)round((float)x2(2));
-    iz=(int)round((float)x2(3));
+    ix=(int)MISCMATHS::round((float)x2(1));
+    iy=(int)MISCMATHS::round((float)x2(2));
+    iz=(int)MISCMATHS::round((float)x2(3));
     
     if(roivol(ix,iy,iz)!=0){
       for(int i=1;i<=nvols;i++){
@@ -264,6 +293,10 @@ bool CSV::has_crossed_roi(const ColumnVector& x1,const ColumnVector& x2,
 	  ret=true;
 	  crossedrois.push_back(volind[i-1]);	  	  
 	  crossedlocs.push_back(vol2loc(ix,iy,iz,i-1)); 
+	  pair<int,int> mypair;			//only needed for surfaces,
+	  mypair.first=-1;			//but vectors surf_Triangle and crossedlocs need to have same size
+	  mypair.second=-1;			//it will check later if value is -1, and then it will assume that it is from a volume
+	  surf_Triangle.push_back(mypair);
 	}
       }
     }
@@ -276,9 +309,9 @@ bool CSV::has_crossed_roi(const ColumnVector& x1,const ColumnVector& x2,
     
   for(unsigned int i=0;i<crossed.size();i++){
     //OUT(crossed[i].t());
-    int val=surfvol((int)round((float)crossed[i](1)),
-		    (int)round((float)crossed[i](2)),
-		    (int)round((float)crossed[i](3)))-1;
+    int val=surfvol((int)MISCMATHS::round((float)crossed[i](1)),
+		    (int)MISCMATHS::round((float)crossed[i](2)),
+		    (int)MISCMATHS::round((float)crossed[i](3)))-1;
     if(val<0)continue;
     localtriangles.insert(localtriangles.end(),triangles[val].begin(),triangles[val].end());
   }
@@ -304,26 +337,63 @@ bool CSV::has_crossed_roi(const ColumnVector& x1,const ColumnVector& x2,
   for(unsigned int i=0;i<localtriangles.size();i++){
     indmesh=localtriangles[i].first;
     indtri=localtriangles[i].second-1;
+ 
+    // by default consider all active vertices as being crossed
+    if(!closestvertex){
+      if(roimesh[indmesh].triangle_intersect(segment,indtri)){
+        ret=true;
+        crossedrois.push_back( surfind[indmesh] );
+      
+        ind = roimesh[indmesh].get_triangle(indtri).get_vertice(0).get_no();	  
+        ind = mesh2loc[indmesh][ind];
 
-    if(roimesh[indmesh].triangle_intersect(segment,indtri)){
-      ret=true;
-      crossedrois.push_back( surfind[indmesh] );
-      // consider all active vertices as being crossed
-      ind = roimesh[indmesh].get_triangle(indtri).get_vertice(0).get_no();	  
-      ind = mesh2loc[indmesh][ind];
-      if(ind>=0)
-	crossedlocs.push_back(ind);
-      ind = roimesh[indmesh].get_triangle(indtri).get_vertice(1).get_no();	  
-      ind = mesh2loc[indmesh][ind];
-      if(ind>=0)
-	crossedlocs.push_back(ind);
-      ind = roimesh[indmesh].get_triangle(indtri).get_vertice(2).get_no();	  
-      ind = mesh2loc[indmesh][ind];
-      if(ind>=0)
-	crossedlocs.push_back(ind);	  			
+        if(ind>=0){		
+	  crossedlocs.push_back(ind);
+	  pair<int,int> mypair;
+	  mypair.first=indmesh;
+	  mypair.second=indtri;
+	  surf_Triangle.push_back(mypair);	//to avoid connections between vertices of the same triangle
+	}
+        ind = roimesh[indmesh].get_triangle(indtri).get_vertice(1).get_no();	  
+        ind = mesh2loc[indmesh][ind];
+
+        if(ind>=0){		
+	  crossedlocs.push_back(ind);
+	  pair<int,int> mypair;
+	  mypair.first=indmesh;
+	  mypair.second=indtri;
+	  surf_Triangle.push_back(mypair);	//to avoid connections between vertices of the same triangle
+	}
+        ind = roimesh[indmesh].get_triangle(indtri).get_vertice(2).get_no();	  
+        ind = mesh2loc[indmesh][ind];
+
+        if(ind>=0){
+	  crossedlocs.push_back(ind);
+	  pair<int,int> mypair;
+	  mypair.first=indmesh;
+	  mypair.second=indtri;
+	  surf_Triangle.push_back(mypair);	//to avoid connections between vertices of the same triangle
+	}
+      }       
+    // if closestvertex option, consider only the closest vertex crossed
+    }else{
+      int closest;
+      if(roimesh[indmesh].triangle_intersect(segment,indtri,closest)){
+        ret=true;
+        crossedrois.push_back( surfind[indmesh] );
+      
+        ind = roimesh[indmesh].get_triangle(indtri).get_vertice(closest).get_no();	  
+        ind = mesh2loc[indmesh][ind];
+
+        if(ind>=0){
+	  crossedlocs.push_back(ind);
+	  pair<int,int> mypair;
+	  mypair.first=indmesh;
+	  mypair.second=indtri;
+	  surf_Triangle.push_back(mypair);	//to avoid connections between vertices of the same triangle
+	}
+      }		
     }
-  
-    
   }
   return ret;
 }
@@ -382,9 +452,9 @@ int CSV::coord_sign(const int& loc,const ColumnVector& x2)const{
   line_crossed_voxels(line,crossed);
   vector< pair<int,int> > localtriangles;
   for(unsigned int i=0;i<crossed.size();i++){
-    int val=surfvol((int)round((float)crossed[i](1)),
-		    (int)round((float)crossed[i](2)),
-		    (int)round((float)crossed[i](3)))-1;
+    int val=surfvol((int)MISCMATHS::round((float)crossed[i](1)),
+		    (int)MISCMATHS::round((float)crossed[i](2)),
+		    (int)MISCMATHS::round((float)crossed[i](3)))-1;
     if(val<0)continue;
     localtriangles.insert(localtriangles.end(),triangles[val].begin(),triangles[val].end());
   }
@@ -476,17 +546,17 @@ void CSV::init_surfvol(){
 }
 void CSV::update_surfvol(const vector<ColumnVector>& v,const int& tid,const int& meshid){
   for(unsigned int i=0;i<v.size();i++){// loop over voxels crossed by triangle tid 
-    int val = surfvol((int)round((float)v[i](1)),
-		      (int)round((float)v[i](2)),
-		      (int)round((float)v[i](3)));
+    int val = surfvol((int)MISCMATHS::round((float)v[i](1)),
+		      (int)MISCMATHS::round((float)v[i](2)),
+		      (int)MISCMATHS::round((float)v[i](3)));
     if(val==0){//this voxel hasn't been labeled yet
       vector< pair<int,int> > t(1);
       t[0].first=meshid;      // remember which mesh this triangle is in
       t[0].second=tid;        // triangle id within that mesh
       triangles.push_back(t); // add to set of triangles that cross voxels
-      surfvol((int)round((float)v[i](1)),
-	      (int)round((float)v[i](2)),
-	      (int)round((float)v[i](3)))=(int)triangles.size();
+      surfvol((int)MISCMATHS::round((float)v[i](1)),
+	      (int)MISCMATHS::round((float)v[i](2)),
+	      (int)MISCMATHS::round((float)v[i](3)))=(int)triangles.size();
     }
     else{// voxel already labeled as "crossed"
       pair<int,int> mypair(meshid,tid);
@@ -627,9 +697,9 @@ void CSV::reset_values(const vector<int>& locs){
 void CSV::add_value(const int& loc,const float& val){
   if(loctype[loc]==VOLUME){
     // is locind the right thing to do here?
-    int x=(int)round((float)loccoords[loc](1));
-    int y=(int)round((float)loccoords[loc](2));
-    int z=(int)round((float)loccoords[loc](3));
+    int x=(int)MISCMATHS::round((float)loccoords[loc](1));
+    int y=(int)MISCMATHS::round((float)loccoords[loc](2));
+    int z=(int)MISCMATHS::round((float)loccoords[loc](3));
     hitvol(vol2mat(x,y,z),locsubroi[loc]+1) += val;
   }
   else if(loctype[loc]==SURFACE){
@@ -646,9 +716,9 @@ void CSV::add_value(const int& loc,const float& val){
 void CSV::set_value(const int& loc,const float& val){
   if(loctype[loc]==VOLUME){
     // is locind the right thing to do here?
-    int x=(int)round((float)loccoords[loc](1));
-    int y=(int)round((float)loccoords[loc](2));
-    int z=(int)round((float)loccoords[loc](3));
+    int x=(int)MISCMATHS::round((float)loccoords[loc](1));
+    int y=(int)MISCMATHS::round((float)loccoords[loc](2));
+    int z=(int)MISCMATHS::round((float)loccoords[loc](3));
     hitvol(vol2mat(x,y,z),locsubroi[loc]+1) = val;
   }
   else if(loctype[loc]==SURFACE){
@@ -664,9 +734,9 @@ void CSV::set_value(const int& loc,const float& val){
 float CSV::get_value(const int& loc)const{
   if(loctype[loc]==VOLUME){
     // is locind the right thing to do here?
-    int x=(int)round((float)loccoords[loc](1));
-    int y=(int)round((float)loccoords[loc](2));
-    int z=(int)round((float)loccoords[loc](3));
+    int x=(int)MISCMATHS::round((float)loccoords[loc](1));
+    int y=(int)MISCMATHS::round((float)loccoords[loc](2));
+    int z=(int)MISCMATHS::round((float)loccoords[loc](3));
     return(hitvol(vol2mat(x,y,z),locsubroi[loc]+1));
   }
   else if(loctype[loc]==SURFACE){
@@ -965,7 +1035,44 @@ void CSV::save_rois(const string& fname){
   }
 }
 
-
+void CSV::divide_rois(CSV csv2){
+  bool divVOL=false;
+  for(int i=0;i<nrois;i++){
+    if(roitype[i]==VOLUME){//divide volumes
+      if(!divVOL){
+        for (int x=1; x<=hitvol.Nrows(); x++) {
+          for (int y=1; y<=hitvol.Ncols(); y++) {
+	    if(csv2.hitvol(x,y)){
+	        hitvol(x,y)=hitvol(x,y)/csv2.hitvol(x,y);
+            }else{
+	      hitvol(x,y)=0;
+	    }
+	  }
+        }
+        divVOL=true;
+      }
+    }else{ 
+      for(unsigned int j=0;j<roimesh[roisubind[i]]._pvalues.size();j++){
+	if(csv2.roimesh[roisubind[i]]._pvalues[j]){
+	  roimesh[roisubind[i]]._pvalues[j]=roimesh[roisubind[i]]._pvalues[j]/csv2.roimesh[roisubind[i]]._pvalues[j];
+	}else{
+	  roimesh[roisubind[i]]._pvalues[j]=0;
+	}
+      }
+    }
+  }
+}
+void CSV::divide_maps(CSV csv2){
+  for(int i=0;i<maps.size();i++){
+    for (int j=1; j<=maps[i].Nrows(); j++){
+      if(csv2.maps[i](j)){
+        maps[i](j)=maps[i](j)/csv2.maps[i](j);
+      }else{
+	maps[i](j)=0;
+      }
+    }
+  }
+}
 
 void CSV::cleanup(){
   nvols=0;nsurfs=0;nvoxels=0;nlocs=0;nrois=0;
@@ -1088,7 +1195,7 @@ bool CSV::is_near_surface(const ColumnVector& pos,
       for(float z=pos(3)-zstep;z<=pos(3)+zstep;z++){
 	d=(pos(1)-x)*(pos(1)-x)+(pos(2)-y)*(pos(2)-y)+(pos(3)-z)*(pos(3)-z);
 	if(d>d2)continue;
-	int ind=surfvol((int)round(x),(int)round(y),(int)round(z))-1;
+	int ind=surfvol((int)MISCMATHS::round(x),(int)MISCMATHS::round(y),(int)MISCMATHS::round(z))-1;
 	if(ind<0)continue;
 	// potential surface detected
 	float curdist;
@@ -1123,13 +1230,13 @@ bool CSV::is_near_surface(const ColumnVector& pos,
 void CSV::find_crossed_voxels(const ColumnVector& P1,const ColumnVector& P2,vector<ColumnVector>& crossed){
   crossed.clear();
 
-  float x1 = round((float)P1(1));
-  float y1 = round((float)P1(2));
-  float z1 = round((float)P1(3));
+  float x1 = MISCMATHS::round((float)P1(1));
+  float y1 = MISCMATHS::round((float)P1(2));
+  float z1 = MISCMATHS::round((float)P1(3));
 
-  float x2 = round((float)P2(1));
-  float y2 = round((float)P2(2));
-  float z2 = round((float)P2(3));
+  float x2 = MISCMATHS::round((float)P2(1));
+  float y2 = MISCMATHS::round((float)P2(2));
+  float z2 = MISCMATHS::round((float)P2(3));
 
   float dx = (x2 - x1)*_xdim;
   float dy = (y2 - y1)*_ydim;
@@ -1143,9 +1250,9 @@ void CSV::find_crossed_voxels(const ColumnVector& P1,const ColumnVector& P2,vect
   int sy = (int)sign(dy);
   int sz = (int)sign(dz);
 
-  int x = (int)round((float)x1);
-  int y = (int)round((float)y1);
-  int z = (int)round((float)z1);
+  int x = (int)MISCMATHS::round((float)x1);
+  int y = (int)MISCMATHS::round((float)y1);
+  int z = (int)MISCMATHS::round((float)z1);
 
   ColumnVector curVox(3);
   float xd,yd,zd;
@@ -1232,19 +1339,19 @@ void CSV::find_crossed_voxels(const ColumnVector& P1,const ColumnVector& P2,vect
 void CSV::line_crossed_voxels(float line[2][3],vector<ColumnVector>& crossed)const{
   //Tracer_Plus tr("CSV::line_crossed_voxels");
   crossed.clear();
-  int minx=(int)round(line[0][0]);
-  int miny=(int)round(line[0][1]);
-  int minz=(int)round(line[0][2]);
+  int minx=(int)MISCMATHS::round(line[0][0]);
+  int miny=(int)MISCMATHS::round(line[0][1]);
+  int minz=(int)MISCMATHS::round(line[0][2]);
   int maxx=minx,maxy=miny,maxz=minz;
   int i=0;int tmpi;
   do{
-    tmpi=(int)round(line[i][0]);
+    tmpi=(int)MISCMATHS::round(line[i][0]);
     minx=tmpi<minx?tmpi:minx;
     maxx=tmpi>maxx?tmpi:maxx;
-    tmpi=(int)round(line[i][1]);
+    tmpi=(int)MISCMATHS::round(line[i][1]);
     miny=tmpi<miny?tmpi:miny;
     maxy=tmpi>maxy?tmpi:maxy;
-    tmpi=(int)round(line[i][2]);
+    tmpi=(int)MISCMATHS::round(line[i][2]);
     minz=tmpi<minz?tmpi:minz;
     maxz=tmpi>maxz?tmpi:maxz;
     i++;
@@ -1282,20 +1389,20 @@ void CSV::line_crossed_voxels(float line[2][3],vector<ColumnVector>& crossed)con
 
 // this one searches within the bounding box of the triangle for voxels crossed by the whole triangle
 void CSV::tri_crossed_voxels(float tri[3][3],vector<ColumnVector>& crossed){
-  int minx=(int)round(tri[0][0]);
-  int miny=(int)round(tri[0][1]);
-  int minz=(int)round(tri[0][2]);
+  int minx=(int)MISCMATHS::round(tri[0][0]);
+  int miny=(int)MISCMATHS::round(tri[0][1]);
+  int minz=(int)MISCMATHS::round(tri[0][2]);
   int maxx=minx,maxy=miny,maxz=minz;
   crossed.clear();
   int i=0;int tmpi;
   do{
-    tmpi=(int)round(tri[i][0]);
+    tmpi=(int)MISCMATHS::round(tri[i][0]);
     minx=tmpi<minx?tmpi:minx;
     maxx=tmpi>maxx?tmpi:maxx;
-    tmpi=(int)round(tri[i][1]);
+    tmpi=(int)MISCMATHS::round(tri[i][1]);
     miny=tmpi<miny?tmpi:miny;
     maxy=tmpi>maxy?tmpi:maxy;
-    tmpi=(int)round(tri[i][2]);
+    tmpi=(int)MISCMATHS::round(tri[i][2]);
     minz=tmpi<minz?tmpi:minz;
     maxz=tmpi>maxz?tmpi:maxz;
     i++;

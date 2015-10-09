@@ -131,7 +131,7 @@ GENERATE_ID=`$FSLDIR/bin/fsl_sub -T ${REQUESTED_TIME} -N ${BASENAME}.generate -l
 cat <<combineScript > ${DIRNAME}/${BASENAME}.defragment
 #!/bin/sh
 echo "Merging stat images"
-for FIRSTSEED in ${ROOTNAME}_SEED1_*_p_*.nii.gz ${ROOTNAME}_SEED1_*_corrp_*.nii.gz ; do 
+for FIRSTSEED in \`imglob -extension ${ROOTNAME}_SEED1_*_p_* ${ROOTNAME}_SEED1_*_corrp_*\` ; do 
   ADDCOMMAND=""
   ACTIVESEED=1
   if [ -e \$FIRSTSEED ] ; then
@@ -162,7 +162,7 @@ done
 
 echo "Renaming raw stats"
 for TYPE in _ _tfce_ ; do
-  for FIRSTSEED in ${ROOTNAME}_SEED1\${TYPE}tstat*.nii.gz ${ROOTNAME}_SEED1\${TYPE}fstat*.nii.gz ; do 
+  for FIRSTSEED in \`imglob -extension ${ROOTNAME}_SEED1\${TYPE}tstat* ${ROOTNAME}_SEED1\${TYPE}fstat*\` ; do 
     if [ -e \$FIRSTSEED ] ; then
       cp \$FIRSTSEED \${FIRSTSEED/_SEED1/}
     fi
@@ -173,10 +173,10 @@ ACTIVESEED=1
 while [ \$ACTIVESEED -le $SLOTS_PER_CONTRAST ] ; do
   rm -rf ${ROOTNAME}_SEED\${ACTIVESEED}*_p_*
   rm -rf ${ROOTNAME}_SEED\${ACTIVESEED}*_corrp_*
-  rm -rf ${ROOTNAME}_SEED\${ACTIVESEED}*stat????.nii.gz
-  rm -rf ${ROOTNAME}_SEED\${ACTIVESEED}*stat???.nii.gz
-  rm -rf ${ROOTNAME}_SEED\${ACTIVESEED}*stat??.nii.gz
-  rm -rf ${ROOTNAME}_SEED\${ACTIVESEED}*stat?.nii.gz
+  rm -rf \`imglob -extensions ${ROOTNAME}_SEED\${ACTIVESEED}*stat????\`
+  rm -rf \`imglob -extensions ${ROOTNAME}_SEED\${ACTIVESEED}*stat???\`
+  rm -rf \`imglob -extensions ${ROOTNAME}_SEED\${ACTIVESEED}*stat??\`
+  rm -rf \`imglob -extensions ${ROOTNAME}_SEED\${ACTIVESEED}*stat?\`
   rm -rf ${ROOTNAME}_SEED\${ACTIVESEED}_*perm_*.txt ${ROOTNAME}_SEED\${ACTIVESEED}_*_p_*.txt ${ROOTNAME}_SEED\${ACTIVESEED}_*_corrp_*.txt
 
   ACTIVESEED=\`expr \$ACTIVESEED + 1\`

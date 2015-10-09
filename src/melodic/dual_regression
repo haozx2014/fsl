@@ -90,7 +90,7 @@ e.g.   dual_regression groupICA.gica/groupmelodic.ica/melodic_IC 1 design.mat de
 
 <design.mat> <design.con>     can be replaced with just
 -1                            for group-mean (one-group t-test) modelling.
-If you need to add other randomise option then just edit the line after "EDIT HERE" below
+If you need to add other randomise options then edit the line after "EDIT HERE" in the dual_regression script
 
 EOF
     exit 1

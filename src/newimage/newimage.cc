@@ -152,6 +152,7 @@ namespace NEWIMAGE {
       ColumnsX = xsize;
       SizeBound = SlicesZ * RowsY * ColumnsX;
       SliceOffset = RowsY * ColumnsX;
+      maskDelimiter=0.5;
       if (SizeBound > 0) {
 	if (d != 0) {
 	  Data = d;
@@ -3754,7 +3755,7 @@ namespace NEWIMAGE {
     for (int z=mask.minz(); z<=mask.maxz(); z++) {
       for (int y=mask.miny(); y<=mask.maxy(); y++) {
 	for (int x=mask.minx(); x<=mask.maxx(); x++) {
-	  if (mask(x,y,z)>0) {
+	  if (mask(x,y,z)>mask.maskThreshold()) {
 	    for (int t=this->mint(); t<=this->maxt(); t++) {
 	      matv(t+toff,cidx) = vols[t](x+xoff,y+yoff,z+zoff);
 	    }
@@ -3785,7 +3786,7 @@ namespace NEWIMAGE {
     for (int z=mask.minz(); z<=mask.maxz(); z++) {
       for (int y=mask.miny(); y<=mask.maxy(); y++) {
 	for (int x=mask.minx(); x<=mask.maxx(); x++) {
-	  if (mask(x,y,z)>0) {
+	  if (mask(x,y,z)>mask.maskThreshold()) {
 	    voxelLabels.push_back(x+y*mask.xsize()+z*mask.xsize()*mask.ysize());
 	    for (int t=this->mint(); t<=this->maxt(); t++) {
 	      matv(t+toff,cidx) = vols[t](x+xoff,y+yoff,z+zoff);
@@ -3831,7 +3832,7 @@ namespace NEWIMAGE {
     for (int z=vols[0].minz(); z<=vols[0].maxz(); z++) {
       for (int y=vols[0].miny(); y<=vols[0].maxy(); y++) {
 	for (int x=vols[0].minx(); x<=vols[0].maxx(); x++) {
-	  if (mask(x+xoff,y+yoff,z+zoff)>0) {
+	  if (mask(x+xoff,y+yoff,z+zoff)>mask.maskThreshold()) {
 	    for (int t=this->mint(); t<=this->maxt(); t++) {
 	      vols[t](x,y,z) = (T) newmatrix(t+1,cidx);
 	    }

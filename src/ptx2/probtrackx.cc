@@ -87,6 +87,19 @@ int main ( int argc, char **argv ){
   if(opts.verbose.value()>0){
     opts.status();
   }
+  //Check the correct use of matrices
+  if(opts.matrix2out.value() && opts.lrmask.value()==""){
+    cerr<<"Error: --target2 must be specified when --omatrix2 is requested"<<endl;
+    exit(1);
+  }
+  if(opts.matrix3out.value() && opts.mask3.value()==""){
+    cerr<<"Error: --target3 (or --target3 and --lrtarget3) must be specified when --omatrix3 is requested"<<endl;
+    exit(1);
+  }
+  if(opts.matrix4out.value() && opts.dtimask.value()==""){
+    cerr<<"Error: --target4 (or --target4 and --colmask4) must be specified when --omatrix4 is requested"<<endl;
+    exit(1);
+  }
   if(opts.simple.value()){
     if( opts.matrix1out.value() || opts.matrix3out.value()){
       cerr<<"Error: cannot use matrix1 and matrix3 in simple mode"<<endl;

@@ -71,8 +71,11 @@
 /* }}} */
 
 #include "miscpic.h"
-#include "gdfonts.h"
 #include "gdfontt.h"
+#include "gdfonts.h"
+#include "gdfontmb.h"
+#include "gdfontl.h"
+#include "gdfontg.h"
 
 using namespace NEWIMAGE;
 
@@ -589,6 +592,7 @@ int miscpic::create_cbar(string cbartype)
 //template <class T>
 void miscpic::write_pic(char *fname, int width, int height)
 {
+  remove(fname);
   if ( (nlut>0) || (compare) )
     {
       if(strstr(fname,".png")==0)
@@ -610,7 +614,7 @@ void miscpic::write_pic(char *fname, int width, int height)
 
 //template <class T>
 int miscpic::write_png ( char *filename, int x_size, int y_size, 
-			    unsigned char *r, unsigned char *g, unsigned char *b)
+			 unsigned char *r, unsigned char *g, unsigned char *b)
 {  
   FILE *pngout;
 
@@ -629,15 +633,20 @@ int miscpic::write_png ( char *filename, int x_size, int y_size,
     }
   }
 
-  /*** TEST ***/
-  for (unsigned int i=0;writeText && i<textWriterVector.size();i++)
+  for (unsigned int i=0;i<textWriterVector.size();i++)
   {
     int fontclr   = gdImageColorResolve(outim, 255, 255, 255);
     unsigned char *s = (unsigned char*)textWriterVector[i].text.c_str();
     gdImageString(outim, gdFontTiny, textWriterVector[i].x , textWriterVector[i].y, s, fontclr);
-  }
-  /*** END OF TEST ***/
+    //gdImageString(outim, gdFontSmall, textWriterVector[i].x , textWriterVector[i].y, s, fontclr);
 
+  }
+  textWriterVector.clear();
+
+  if ( markRight ) {
+    int circleWidth=x_size/20;
+    gdImageFilledEllipse(outim, x_size-circleWidth, circleWidth, circleWidth, circleWidth, gdImageColorAllocate(outim, 255, 0, 0));
+  }
 
   if(!(cbartype==string(""))) add_cbar(cbartype);
   add_title(x_size);
@@ -756,7 +765,7 @@ void miscpic::addRlabel(int p, int width, int size_pic, int alt_size_pic,
 /* {{{ write sagittal slice */
 
 //template <class T>
-void miscpic::sag(float xx, int p, int imageWidth)
+  void miscpic::sag(float xx, int p, int imageWidth)
 {
   float yy, zz;
   int   y, z;
@@ -768,9 +777,10 @@ void miscpic::sag(float xx, int p, int imageWidth)
   ostringstream tempBuffer;
   tempBuffer << (int)xx;
   //Image top left is: (p%imageWidth,p/imageWidth)
-  TextWriter tempTextWriter((int)(p%imageWidth),(int)(p/imageWidth),"X="+tempBuffer.str());
-  textWriterVector.push_back(tempTextWriter);
-
+  if ( writeText ) {
+    TextWriter tempTextWriter((int)(p%imageWidth),(int)(p/imageWidth),"X="+tempBuffer.str());
+    textWriterVector.push_back(tempTextWriter);
+  }
   for(y=0; y<y_size_pic; y++)
     for(z=0; z<z_size_pic; z++)
       {
@@ -809,7 +819,7 @@ void miscpic::sag(float xx, int p, int imageWidth)
 /* {{{ write coronal slice */
 
 //template <class T>
-void miscpic::cor(float yy, int p, int imageWidth)
+  void miscpic::cor(float yy, int p, int imageWidth)
 {
   float xx, zz;
   int   x, z;
@@ -821,9 +831,10 @@ void miscpic::cor(float yy, int p, int imageWidth)
   ostringstream tempBuffer;
   tempBuffer << (int)yy;
   //Image top left is: (p%imageWidth,p/imageWidth)
-  TextWriter tempTextWriter((int)(p%imageWidth),(int)(p/imageWidth),"Y="+tempBuffer.str());
-  textWriterVector.push_back(tempTextWriter);
-
+  if ( writeText ) {
+    TextWriter tempTextWriter((int)(p%imageWidth),(int)(p/imageWidth),"Y="+tempBuffer.str());
+    textWriterVector.push_back(tempTextWriter);
+  }
   for(x=0; x<x_size_pic; x++)
     for(z=0; z<z_size_pic; z++)
       {
@@ -862,7 +873,7 @@ void miscpic::cor(float yy, int p, int imageWidth)
 /* {{{ write axial slice */
 
 //template <class T>
-void miscpic::axi(float zCoord, int p, int imageWidth)
+  void miscpic::axi(float zCoord, int p, int imageWidth)
 {
   if (zCoord<0)
     zCoord=-zCoord;
@@ -872,9 +883,10 @@ void miscpic::axi(float zCoord, int p, int imageWidth)
   ostringstream tempBuffer;
   tempBuffer << (int)zCoord;
   //Image top left is: (p%imageWidth,p/imageWidth)
-  TextWriter tempTextWriter((int)(p%imageWidth),(int)(p/imageWidth),"Z="+tempBuffer.str());
-  textWriterVector.push_back(tempTextWriter);
-
+  if ( writeText ) {
+    TextWriter tempTextWriter((int)(p%imageWidth),(int)(p/imageWidth),"Z="+tempBuffer.str());
+    textWriterVector.push_back(tempTextWriter);
+  }
   for(int x=0; x<x_size_pic; x++)
     for(int y=0; y<y_size_pic; y++)
     {
@@ -911,7 +923,6 @@ int miscpic::slicer(const volume<float>& vol1, const volume<float>& vol2,vector<
 {
   /* {{{ vars */
 int  picsetup=0, sagcorskip=0, axiskip=0, height=0, picsize=0;
-
 /* }}} */
   /* {{{ first image stuff  */
 writeText=labelSlices;
@@ -1068,8 +1079,9 @@ if (vol2.nvoxels() > 1 )
 	 exit (1);
       }
       scale /= atof(theopt);
-   }
-   else if (strncmp(theopt, "-u", 2)==0) /* Do not label the image (i.e. u for unlabeled!)  */
+   } else if (strncmp(theopt, "-c", 2)==0) { //mark image
+     markRight=true;
+   } else if (strncmp(theopt, "-u", 2)==0) /* Do not label the image (i.e. u for unlabeled!)  */
       LR_label_flag = false;
    else if (strncmp(theopt, "-i", 2)==0) { /* set intensity range */
       theopt = strtok(NULL,discard);

@@ -83,8 +83,8 @@ using namespace Utilities;
 // The two strings below specify the title and example usage that is
 //  printed out as the help or usage message
 
-string title="robustfov \nCopyright(c) 2012, University of Oxford (Mark Jenkinson)";
-string examples="robustfov [options] -i <image>";
+string title="robustfov \nCopyright(c) 2012, University of Oxford (Mark Jenkinson)\n\nReduce FOV of image to remove lower head and neck.";
+string examples="robustfov [options] -i <image> -r <outputimage>\nrobustfov [options] -i <image>";
 
 // Each (global) object below specificies as option and can be accessed
 //  anywhere in this file (since they are global).  The order of the

@@ -69,7 +69,6 @@
     University, to negotiate a licence. Contact details are:
     innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
-#include "newimage/newimageall.h"
 #include "utils/log.h"
 #include "meloptions.h"
 #include "meldata.h"
@@ -81,7 +80,6 @@
 #include "libprob.h"
 
 using namespace Utilities;
-using namespace NEWIMAGE;
 
 namespace Melodic{
 

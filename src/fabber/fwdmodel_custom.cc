@@ -72,7 +72,7 @@
  * Template written by Adrian Groves, 2008
  * FMRIB Centre, University of Oxford
  *
- * Last modified: $Date: 2009/01/23 12:58:53 $ $Author: adriang $ $Revision: 1.1 $
+ * Last modified: $Date: 2015/09/08 13:55:19 $ $Author: mwebster $ $Revision: 1.3 $
  */
 
 #include "fwdmodel_custom.h"
@@ -160,7 +160,7 @@ void CustomFwdModel::NameParams(vector<string>& names) const
 
 string CustomFwdModel::ModelVersion() const
 { 
-  return "$Id: fwdmodel_custom.cc,v 1.1 2009/01/23 12:58:53 adriang Exp $";
+  return "$Id: fwdmodel_custom.cc,v 1.3 2015/09/08 13:55:19 mwebster Exp $";
 }
 
 void CustomFwdModel::HardcodedInitialDists(MVNDist& prior, MVNDist& posterior) const

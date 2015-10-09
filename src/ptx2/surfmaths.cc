@@ -1,9 +1,9 @@
 /*   surfmaths.cc 
      uniary and binary operations from fslmaths applied to surfaces
 
-     Saad Jbabdi, FMRIB Image Analysis Group
+     Saad Jbabdi and Matthew Webster, FMRIB Image Analysis Group
 
-     Copyright (C) 2012 University of Oxford  */
+     Copyright (C) 2012-2014 University of Oxford  */
      
 
 /*  Part of FSL - FMRIB's Software Library
@@ -69,10 +69,10 @@
     innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
      
-#include "newmeshclass/newmesh.h"
+#include "newmesh/newmesh.h"
 #include "miscmaths/miscmaths.h"
 #include "utils/fsl_isfinite.h"
-#include "libprob/libprob.h"
+#include "libprob.h"
 
 using namespace MISCMATHS;
 using namespace NEWMESH;
@@ -118,7 +118,7 @@ int printUsage(const string& programName)
 }
 
 void loadSurface(const newmesh& iSurf,newmesh& tmpSurf,const string& fname){
-  tmpSurf.load_gifti_new(fname,false);
+  tmpSurf.load_gifti(fname,false);
   if(tmpSurf.npvalues()!=iSurf.npvalues()){
     cerr<<"Error: surfaces do not have the same number of vertices"<<endl;
     exit(1);
@@ -138,7 +138,7 @@ int check_for_output_name(int i, int argc_1)
 
 int inputParser(int argc, char *argv[]){
   newmesh inputSurface;
-  inputSurface.load_gifti_new(string(argv[1]),false);
+  inputSurface.load_gifti(string(argv[1]),false);
   int i=2;
   for (i = 2; i < argc-1; i++){    
     newmesh temp_surface;    

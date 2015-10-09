@@ -1,76 +1,29 @@
-/*    Copyright (C) 2012 University of Oxford  */
+/*! \file nonlin.h
+    \brief Declarations for nonlinear optimisation
 
-/*  Part of FSL - FMRIB's Software Library
-    http://www.fmrib.ox.ac.uk/fsl
-    fsl@fmrib.ox.ac.uk
-    
-    Developed at FMRIB (Oxford Centre for Functional Magnetic Resonance
-    Imaging of the Brain), Department of Clinical Neurology, Oxford
-    University, Oxford, UK
-    
-    
-    LICENCE
-    
-    FMRIB Software Library, Release 5.0 (c) 2012, The University of
-    Oxford (the "Software")
-    
-    The Software remains the property of the University of Oxford ("the
-    University").
-    
-    The Software is distributed "AS IS" under this Licence solely for
-    non-commercial use in the hope that it will be useful, but in order
-    that the University as a charitable foundation protects its assets for
-    the benefit of its educational and research purposes, the University
-    makes clear that no condition is made or to be implied, nor is any
-    warranty given or to be implied, as to the accuracy of the Software,
-    or that it will be suitable for any particular purpose or for use
-    under any specific conditions. Furthermore, the University disclaims
-    all responsibility for the use which is made of the Software. It
-    further disclaims any liability for the outcomes arising from using
-    the Software.
-    
-    The Licensee agrees to indemnify the University and hold the
-    University harmless from and against any and all claims, damages and
-    liabilities asserted by third parties (including claims for
-    negligence) which arise directly or indirectly from the use of the
-    Software or the sale of any products based on the Software.
-    
-    No part of the Software may be reproduced, modified, transmitted or
-    transferred in any form or by any means, electronic or mechanical,
-    without the express permission of the University. The permission of
-    the University is not required if the said reproduction, modification,
-    transmission or transference is done without financial return, the
-    conditions of this Licence are imposed upon the receiver of the
-    product, and all original and amended source code is included in any
-    transmitted product. You may be held legally responsible for any
-    copyright infringement that is caused or encouraged by your failure to
-    abide by these terms and conditions.
-    
-    You are not permitted under this Licence to use this Software
-    commercially. Use for which any financial return is received shall be
-    defined as commercial use, and includes (1) integration of all or part
-    of the source code or the Software into a product for sale or license
-    by or on behalf of Licensee to third parties or (2) use of the
-    Software or any derivative of it for research with the final aim of
-    developing software products for sale or license to a third party or
-    (3) use of the Software or any derivative of it for research with the
-    final aim of developing non-software products for sale or license to a
-    third party, or (4) use of the Software to provide any service to an
-    external organisation for which payment is received. If you are
-    interested in using the Software commercially, please contact Isis
-    Innovation Limited ("Isis"), the technology transfer company of the
-    University, to negotiate a licence. Contact details are:
-    innovation@isis.ox.ac.uk quoting reference DE/9564. */
-// Declarations for nonlinear optimisation
+    \author Jesper Andersson
+    \version 1.0b, 2009.
+*/
+// Contains declaration for nonlinear optimisation
+//
+// Simplex.h
+//
+// Jesper Andersson, FMRIB Image Analysis Group
+//
+// Copyright (C) 2009 University of Oxford 
+//
 
 #ifndef nonlin_h
 #define nonlin_h
 
 #include <string>
 #include <vector>
+#include <iostream>
+#include <iomanip>
 #include <boost/shared_ptr.hpp>
 #include "bfmatrix.h"
 #include "newmat.h"
+#include "newmatio.h"
 
 namespace MISCMATHS {
 
@@ -78,7 +31,8 @@ enum NLMethod {NL_VM,                               // Variable-Metric (see NRin
                NL_CG,                               // Conjugate-Gradient (see NRinC)
                NL_SCG,                              // Scaled Conjugate-Gradient (See Moller 1993).
                NL_LM,                               // Levenberg-Marquardt (see NRinC)
-               NL_GD};                              // Gradient Descent
+               NL_GD,                               // Gradient Descent
+               NL_NM};                              // Nelder-Mead simplex method (see NRinC)
 
 enum LMType {LM_L, LM_LM};                          // Levenberg or Levenberg-Marquardt
 
@@ -135,6 +89,7 @@ public:
               bool                  plogcf=false,
               bool                  ploglambda=false,
               bool                  plogpar=false, 
+	      bool                  pverb=false,
               int                   pmaxiter=200,
               double                pcftol=1.0e-8,
               double                pgtol=1.0e-8,
@@ -151,14 +106,15 @@ public:
               double                pltol=1.0e20,
 	      int                   pcg_maxiter=200,
 	      double                pcg_tol=1.0e-6,
-              double                plambda=0.1)
-    : npar(pnpar), mtd(pmtd), logcf(plogcf), 
-    loglambda(ploglambda), logpar(plogpar), maxiter(pmaxiter), 
-    cftol(pcftol), gtol(pgtol), ptol(pptol), vmut(pvmut), 
-    alpha(palpha), stepmax(pstepmax), lm_maxiter(plm_maxiter),
+	      double                plambda=0.1)
+    : npar(pnpar), mtd(pmtd), logcf(plogcf), loglambda(ploglambda), 
+    logpar(plogpar), verb(pverb), maxiter(pmaxiter), pw(10), pp(5), 
+    cfw(10), cfp(5), cftol(pcftol), gtol(pgtol), ptol(pptol), 
+    vmut(pvmut), alpha(palpha), stepmax(pstepmax), lm_maxiter(plm_maxiter),
     maxrestart(pmaxrestart), autoscale(pautoscale), cgut(pcgut), 
     lm_ftol(plm_ftol), lmtype(plmtype), ltol(pltol), cg_maxiter(pcg_maxiter), 
-    cg_tol(pcg_tol), lambda(), cf(), par(), niter(0), nrestart(0), status(NL_UNDEFINED)
+    cg_tol(pcg_tol), lambda(), cf(), par(), niter(0), 
+    nrestart(0), status(NL_UNDEFINED)
   {
     lambda.push_back(plambda);
     if (ppar.Nrows()) SetStartingEstimate(ppar);
@@ -167,6 +123,8 @@ public:
       tmp = 0.0;
       SetStartingEstimate(tmp);
     }
+    amoeba_start.ReSize(npar);
+    amoeba_start = 1.0;
   }
   ~NonlinParam() {}                  
 
@@ -192,26 +150,30 @@ public:
   double LambdaConvergenceCriterion() const {return(ltol);}
   int EquationSolverMaxIter() const {return(cg_maxiter);}
   double EquationSolverTol() const {return(cg_tol);}
+  NEWMAT::ColumnVector GetAmoebaStart() const {return(amoeba_start);}
   bool LoggingParameters() const {return(logpar);}
   bool LoggingCostFunction() const {return(logcf);}
   bool LoggingLambda() const {return(loglambda);}
+  bool Verbose() const {return(verb);}
 
   // Routines to get output
 
   double Lambda() const {return(lambda.back());}
-  double InitialLambda() const {if (loglambda) return(lambda[0]); else {throw NonlinException("InitialLabda: Lambda not logged"); return(0.0);}}
-  const std::vector<double>& LambdaHistory() const {if (loglambda) return(lambda); else {throw NonlinException("InitialLabda: Lambda not logged"); return(lambda);}}
+  double InitialLambda() const {if (loglambda) return(lambda[0]); else throw NonlinException("InitialLabda: Lambda not logged"); }
+  const std::vector<double>& LambdaHistory() const {if (loglambda) return(lambda); else throw NonlinException("InitialLabda: Lambda not logged"); }
   const NEWMAT::ColumnVector& Par() const {return(par.back());}
-  const NEWMAT::ColumnVector& InitialPar() const {if (logpar) return(par[0]); else {throw NonlinException("InitialPar: Parameters not logged"); return(par[0]);}}
-  const std::vector<NEWMAT::ColumnVector>& ParHistory() const {if (logpar) return(par); else {throw NonlinException("ParHistory: Parameters not logged"); return(par);}}
+  const NEWMAT::ColumnVector& InitialPar() const {if (logpar) return(par[0]); else throw NonlinException("InitialPar: Parameters not logged"); }
+  const std::vector<NEWMAT::ColumnVector>& ParHistory() const {if (logpar) return(par); else throw NonlinException("ParHistory: Parameters not logged"); }
   double CF() const {return(cf.back());}
-  double InitialCF() const {if (logcf) return(cf[0]); else {throw NonlinException("InitialCF: Cost-function not logged"); return(cf[0]);}}
-  const std::vector<double> CFHistory() const {if (logcf) return(cf); else {throw NonlinException("CFHistory: Cost-function not logged"); return(cf);}}
+  double InitialCF() const {if (logcf) return(cf[0]); else throw NonlinException("InitialCF: Cost-function not logged"); }
+  const std::vector<double> CFHistory() const {if (logcf) return(cf); else throw NonlinException("CFHistory: Cost-function not logged"); }
   NonlinOut Status() const {return(status);}
-  bool Success() const { switch(status) { case NL_UNDEFINED: case NL_MAXITER: case NL_LM_MAXITER: return(false); break; default: return(true); } };
+  bool Success() const { switch(status) { case NL_UNDEFINED: case NL_MAXITER: case NL_LM_MAXITER: return(false); default: return(true); } };
   std::string TextStatus() const;
       
   // Routines to set values of steering parameters
+  void SetVerbose(bool on=true) {verb = on;}
+  void SetPrintWidthPrecision(int ppw, int ppp, int pcfw, int pcfp) {pw=ppw; pp=ppp; cfw=pcfw; cfp=pcfp;}
   void SetMethod(NLMethod pmtd) {mtd = pmtd;}
   void LogCF(bool flag=true) {logcf = flag;}
   void LogPar(bool flag=true) {logpar = flag;}
@@ -261,6 +223,10 @@ public:
   }
   void SetEquationSolverMaxIter(int pcg_maxiter) {cg_maxiter = pcg_maxiter;}
   void SetEquationSolverTol(double pcg_tol) {cg_tol = pcg_tol;}
+  void SetStartAmoeba(const NEWMAT::ColumnVector& l) {
+    if (l.Nrows() != npar) throw NonlinException("SetStartAmoeba: npar and amoeba mismatch");
+    else amoeba_start = l;
+  }
 
   
   // Reset is used to reset a NonlinParam object after it has run to convergence, thereby allowing it
@@ -273,10 +239,12 @@ public:
     if (p.Nrows() != npar) throw NonlinException("SetPar: Mismatch between starting vector and # of parameters");
     if (logpar || !par.size()) par.push_back(p); 
     else par[0] = p;
+    if (Verbose()) std::cout << std::setw(pw) << std::setprecision(pp) << "p = " << p.t();
   }
   void SetCF(double pcf) const {
     if (logcf || !cf.size()) cf.push_back(pcf); 
     else cf[0] = pcf;
+    if (Verbose()) std::cout << std::setw(cfw) << std::setprecision(cfp) << "cf = " << pcf << std::endl;
   }
   void SetLambda(double pl) const {
     if (loglambda || !lambda.size()) lambda.push_back(pl); 
@@ -296,7 +264,12 @@ private:
   bool                       logcf;      // If true, history of cost-function is logged
   bool                       loglambda;  // If true, history of lambda is logged
   bool                       logpar;     // If true history of parameters is logged
+  bool                       verb;       // Prints parameter and cf values for each iteration
   int                        maxiter;    // Maximum # of iterations allowed
+  int                        pw;         // Print-width of parameter values
+  int                        pp;         // Print-precision of parameter values
+  int                        cfw;        // Print-width of cost function
+  int                        cfp;        // Print-precision of cost function
   double                     cftol;      // Tolerance for cost-function gonvergence criterion
   double                     gtol;       // Tolerance for gradient convergence criterion
   double                     ptol;       // Tolerance for parameter convergence criterion
@@ -322,6 +295,9 @@ private:
   int                        cg_maxiter; // Maximum # of iterations for iterative "inverse" of Hessian
   double                     cg_tol;     // Tolerance for iterative "inverse" of Hessian
 
+  //         Parameters that apply to amoeba/simplex algorithm
+
+  NEWMAT::ColumnVector       amoeba_start; // If set, specifies what the initial amoeba looks like.
   //
   //         OUTPUT PARAMETERS
   //

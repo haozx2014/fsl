@@ -2,9 +2,9 @@
 
 #   slices_summary - create summary picture from a 4D image and list of timepoints to use
 #
-#   Stephen Smith, FMRIB Image Analysis Group
+#   Stephen Smith and Matthew Webster, FMRIB Image Analysis Group
 #
-#   Copyright (C) 2010-2012 University of Oxford
+#   Copyright (C) 2010-2015 University of Oxford
 #
 #   Part of FSL - FMRIB's Software Library
 #   http://www.fmrib.ox.ac.uk/fsl
@@ -73,11 +73,12 @@ export LC_ALL=C
 Usage() {
     echo ""
     echo "Usage:"
-    echo "slices_summary <4D_input> <threshold> <background_image> <pictures.sum> [-1]"
+    echo "slices_summary <4D_input> <threshold> <background_image> <pictures.sum> [-1] [-d]"
     echo "slices_summary <pictures.sum> <output.png> <space-separated list of timepoints to use; first timepoint is 0>"
     echo ""
     echo "The first usage creates the full set of summary PNG images, into a new directory <pictures.sum>"
     echo "  [-1] option: generate single-slice summary images instead of 3-slice"
+    echo "  [-d] option: make background darker and colour brighter, for greater colour visibility"
     echo ""
     echo "The second usage processes the timepoint list, combining summary slices across all timepoints into a single PNG image."
     echo ""
@@ -113,11 +114,20 @@ if [ `${FSLDIR}/bin/imtest $1` = 1 ] ; then
     Usage
   fi
   out=$4
+  shift 4
 
   allthree=1
-  if [ _$5 = _-1 ] ; then
+  if [ _$1 = _-1 ] ; then
     echo "Generating single-slice summary images instead of 3-slice"
     allthree=0
+    shift
+  fi
+
+  darkbg=0
+  if [ _$1 = _-d ] ; then
+    echo "Making the background darker"
+    darkbg=1
+    shift
   fi
 
   mkdir -p $out
@@ -126,14 +136,25 @@ if [ `${FSLDIR}/bin/imtest $1` = 1 ] ; then
   bgdimx=`${FSLDIR}/bin/fslval $bg dim1`
   bgdimy=`${FSLDIR}/bin/fslval $bg dim2`
   bgrange=`${FSLDIR}/bin/fslstats $bg -l 0.01 -r`
-
-  uthresh=`${FSLDIR}/bin/fslstats $in -l 0.01 -P 50`
-  uthresh=`${FSLDIR}/bin/fslstats $in -l $uthresh -P 99.9`
-  echo "Upper threshold is $uthresh"
+  if [ $darkbg = 1 ] ; then
+    bgr1=`echo $bgrange | awk '{print $1}'`
+    bgr2=`echo $bgrange | awk '{print $2}'`
+    bgr2=`echo "$bgr2 $bgr1 - 2 * $bgr1 + p" | dc -`
+    bgrange="$bgr1 $bgr2"
+  fi
 
   ${FSLDIR}/bin/fslsplit $in ${out}/vol
   cd $out
   for grot in `${FSLDIR}/bin/imglob vol*` ; do
+    if [ $darkbg = 0 ] ; then
+      uthresh=`${FSLDIR}/bin/fslstats $grot -l 0.01 -P 50`
+      uthresh=`${FSLDIR}/bin/fslstats $grot -l $uthresh -P 99.9`
+    else
+      uthresh=`${FSLDIR}/bin/fslstats $grot -l $lthresh -P 99.9`
+      uthresh=`echo "10 k $uthresh $lthresh - 2 / $lthresh + p" | dc -`
+    fi
+    echo "Upper colour threshold is $uthresh"
+
     DD=`echo $grot | awk -F vol '{print $2}'`
     fslecho  "[$DD \c"
     ${FSLDIR}/bin/fslsplit $grot grot_ -z

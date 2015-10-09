@@ -262,9 +262,9 @@ int main(int argc,char *argv[]){
       else
 	data_vox = NewimageCoord2NewimageCoord(data2surf_warp,false,refvol,data[0],xx);
 	
-      ix = (int)round((float)data_vox(1));
-      iy = (int)round((float)data_vox(2));
-      iz = (int)round((float)data_vox(3));
+      ix = (int)MISCMATHS::round((float)data_vox(1));
+      iy = (int)MISCMATHS::round((float)data_vox(2));
+      iz = (int)MISCMATHS::round((float)data_vox(3));
             
       for(int j=0;j<data.tsize();j++){	
 	vals[j].push_back(data(ix,iy,iz,j));
@@ -280,9 +280,9 @@ int main(int argc,char *argv[]){
 	else
 	  data_vox = NewimageCoord2NewimageCoord(data2surf_warp,false,refvol,data[0],xx);
 
-	ix = (int)round((float)data_vox(1));
-	iy = (int)round((float)data_vox(2));
-	iz = (int)round((float)data_vox(3));
+	ix = (int)MISCMATHS::round((float)data_vox(1));
+	iy = (int)MISCMATHS::round((float)data_vox(2));
+	iz = (int)MISCMATHS::round((float)data_vox(3));
 	
 	for(int j=0;j<data.tsize();j++){
 	  vals[j].push_back(data(ix,iy,iz,j));

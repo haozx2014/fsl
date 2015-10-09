@@ -118,6 +118,7 @@ namespace NEWIMAGE {
 
     T* Data;
     bool data_owner;
+    mutable double maskDelimiter;
     int SizeBound;
     int SliceOffset;
 
@@ -297,7 +298,7 @@ namespace NEWIMAGE {
     int intent_code() const { return IntentCode; }
     float intent_param(int n) const;
     void set_intent(int intent_code, float p1, float p2, float p3) const;
-
+    inline T maskThreshold() const { return (T)maskDelimiter; }
     T min() const { return minmax().min; }
     T max() const { return minmax().max; }
     int mincoordx() const { return minmax().minx; }
@@ -1046,7 +1047,7 @@ namespace NEWIMAGE {
      for (int z=mask.minz(); z<=mask.maxz(); z++) {
        for (int y=mask.miny(); y<=mask.maxy(); y++) {
          for (int x=mask.minx(); x<=mask.maxx(); x++) {
-	   if (mask.value(x,y,z)>(T) 0.5) n++;
+	   if (mask.value(x,y,z)>mask.maskThreshold()) n++;
          }
        }
      }
@@ -1061,7 +1062,7 @@ namespace NEWIMAGE {
        for (int z=mask.minz(); z<=mask.maxz(); z++) {
 	 for (int y=mask.miny(); y<=mask.maxy(); y++) {
 	   for (int x=mask.minx(); x<=mask.maxx(); x++) {
-	     if (mask.value(x,y,z,t)>(T) 0.5) n++;
+	     if (mask.value(x,y,z,t)>mask[0].maskThreshold()) n++;
 	   }
 	 }
        }

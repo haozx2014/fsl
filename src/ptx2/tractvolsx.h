@@ -137,8 +137,8 @@ namespace TRACTVOLSX{
 	  return 0;
 	}
 	else{
-	  float rtmp=(float)rand()/float(RAND_MAX) * float(fibvec.size()-1);
-	  return (fibvec[ (int)round(rtmp) ]);
+	  double rtmp=(rand()/(double(RAND_MAX)+1)) * fibvec.size();
+	  return (fibvec[ (int)floor(rtmp) ]);
 	}
       }
 
@@ -147,7 +147,8 @@ namespace TRACTVOLSX{
 	  return 0;
 	}
 	if(mode==3){//sample all
-	  return int(round((float)(nfibres-1)*(float)rand()/float(RAND_MAX)));
+	  double rtmp=(rand()/(double(RAND_MAX)+1)) * nfibres;
+	  return int(floor(rtmp));
 	}
 	else{
 	  if(mode==1){//sample all>thresh
@@ -162,8 +163,8 @@ namespace TRACTVOLSX{
 	      return 0;
 	    }
 	    else{
-	      float rtmp=(float)rand()/float(RAND_MAX) * float(fibvec.size()-1);
-	      return (fibvec[ (int)round(rtmp) ]);
+	      double rtmp=(rand()/(double(RAND_MAX)+1)) * fibvec.size();
+	      return (fibvec[ (int)floor(rtmp) ]);
 	    }
 	  }
 	  else if(mode==2){//sample all>thresh in proportion of f (default)
@@ -314,7 +315,7 @@ namespace TRACTVOLSX{
 	  return th_ph_f;
 	}
 
-	int samp=(int)round((float)rand()/float(RAND_MAX)*(float)(nsamples-1))+1;
+	int samp=(int)MISCMATHS::round((float)rand()/float(RAND_MAX)*(float)(nsamples-1))+1;
 
 	float theta=0,phi=0;
 	float dotmax=0,dottmp=0;
@@ -348,6 +349,11 @@ namespace TRACTVOLSX{
 	      else if(locrule==2){ // like locrule=1 but with angle threshold
 		ColumnVector dir(3);dir<<r_x<<r_y<<r_z;
 		fibind=sample_fibre(col,samp,dir);
+		theta=thsamples[fibind](samp,col);
+		phi=phsamples[fibind](samp,col);
+	      }
+	      else if (locrule==3) { 
+		fibind=sample_fibre(col,samp,2);
 		theta=thsamples[fibind](samp,col);
 		phi=phsamples[fibind](samp,col);
 	      }

@@ -1088,7 +1088,7 @@ void TopupCF::WriteUnwarped(const std::string&               fname,
   if (TracePrint()) cout << "Entering TopupCF::WriteUnwarped" << endl;
 
   NEWIMAGE::volume4D<float> out = hdr;
-  NEWIMAGE::copybasicproperties(hdr,out);
+  
   for (unsigned int i=0; i<_sm.NoOfScans(); i++) {
     out[i] = _sm.GetScan(i,_field);
     out[i] *= sf;
@@ -1103,6 +1103,8 @@ void TopupCF::WriteUnwarped(const std::string&               fname,
       }
     }
   }
+  
+  NEWIMAGE::copybasicproperties(hdr,out);
   write_volume4D(out,fname);
 
   if (TracePrint()) cout << "Leaving TopupCF::WriteUnwarped" << endl;
@@ -1141,6 +1143,16 @@ void TopupCF::WriteField(const std::string& fname) const
   if (TracePrint()) cout << "Entering TopupCF::WriteField" << endl;
 
   TopupFileWriter  write_it(fname,_sm.GetScan(0,_field),_field);
+
+  if (TracePrint()) cout << "Leaving TopupCF::WriteField" << endl;
+}
+
+void TopupCF::WriteField(const std::string&               fname,
+			 const NEWIMAGE::volume4D<float>& hdr) const
+{
+  if (TracePrint()) cout << "Entering TopupCF::WriteField" << endl;
+
+  TopupFileWriter  write_it(fname,hdr[0],_field);
 
   if (TracePrint()) cout << "Leaving TopupCF::WriteField" << endl;
 }

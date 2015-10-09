@@ -156,6 +156,7 @@ void prepare_data_gpu_MCMC_record(	//INPUT
 					thrust::device_vector<float>&			rs0_gpu,
 					thrust::device_vector<float>&			rd_gpu,
 					thrust::device_vector<float>&			rdstd_gpu,
+					thrust::device_vector<float>&			rR_gpu,
 					thrust::device_vector<float>&			rth_gpu,
 					thrust::device_vector<float>&			rph_gpu,
 					thrust::device_vector<float>&			rf_gpu);
@@ -167,6 +168,7 @@ void record_finish_voxels(	//INPUT
 				thrust::device_vector<float>&			rs0_gpu,
 				thrust::device_vector<float>&			rd_gpu,
 				thrust::device_vector<float>&			rdstd_gpu,
+				thrust::device_vector<float>&			rR_gpu,
 				thrust::device_vector<float>&			rth_gpu,
 				thrust::device_vector<float>&			rph_gpu,
 				thrust::device_vector<float>&			rf_gpu,

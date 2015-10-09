@@ -108,20 +108,8 @@ echo $FSLDIR/bin/fslmerge -t $out $imlist
 $FSLDIR/bin/fslmerge -t $out $imlist
 
 subjnum=0;
-vxlopts="";
-vxfopts="";
-while [ $subjnum -lt $numsubj ] ; do
-    znum=`echo $subjnum + $maxcol + 1 | bc`
-    vxlopts="${vxlopts},${znum}";
-    znum=`$FSLDIR/bin/zeropad $znum 4`;
-    $FSLDIR/bin/fslmaths $out -roi 0 -1 0 -1 0 -1 $subjnum 1 ${out}_${znum}
-    vxfopts="${vxfopts},${out}_${znum}";
-    subjnum=`echo $subjnum + 1 | bc`;
-done
-# remove leading comma
-vxlopts=${vxlopts/,/}
-vxfopts=${vxfopts/,/}
-$FSLDIR/bin/imrm $out
+vxfopts="$out";
+vxlopts="-`echo $maxcol + 1 | bc`"
 
 # MAKE NEW DESIGN MATRIX
 # build up an identity matrix and zero contrast vector of appropriate sizes

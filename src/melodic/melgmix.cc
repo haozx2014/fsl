@@ -70,9 +70,7 @@
     innovation@isis.ox.ac.uk quoting reference DE/9564. */
 
 #include "newimage/newimageall.h"
-//#include "melmmopts.h"
 #include "melgmix.h"
-//#include "melmm.h"
 #include "utils/log.h"
 #include "miscmaths/miscprob.h"
 #include <time.h>
