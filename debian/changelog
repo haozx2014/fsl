@@ -1,3 +1,10 @@
+fsl (5.0.8-6) UNRELEASED; urgency=medium
+
+  * debian/fsl.sh - place FSL's bin path first (not the last) within adjusted
+    $PATH (Closes: #804881)
+
+ -- Yaroslav Halchenko <debian@onerussian.com>  Sun, 13 Dec 2015 21:31:21 -0500
+
 fsl (5.0.8-5) unstable; urgency=medium
 
   * Disable unecessary unportable debugging code that breaks on kfreebsd.
