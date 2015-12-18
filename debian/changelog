@@ -1,11 +1,11 @@
-fsl (5.0.8-6) UNRELEASED; urgency=medium
+fsl (5.0.9-2) neurodebian; urgency=medium
 
   * debian/fsl.sh - place FSL's bin path first (not the last) within adjusted
     $PATH (Closes: #804881)
 
  -- Yaroslav Halchenko <debian@onerussian.com>  Sun, 13 Dec 2015 21:31:21 -0500
 
-fsl (5.0.9-1) UNRELEASED; urgency=medium
+fsl (5.0.9-1) neurodebian; urgency=medium
 
   * New upstream release.
     - Initial release of Verbena -- model-based analysis of perfusion from
