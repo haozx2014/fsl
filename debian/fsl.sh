@@ -18,7 +18,7 @@ FSLDIR=/usr/share/fsl/5.0
 POSSUMDIR=$FSLDIR
 
 # add the fsl binary path to the search path
-PATH=$PATH:/usr/lib/fsl/5.0
+PATH=/usr/lib/fsl/5.0:$PATH
 
 # The following variable selects the default output image type
 # Legal values are:
