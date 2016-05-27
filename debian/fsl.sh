@@ -4,15 +4,10 @@
 
 # Written by Mark Jenkinson, FMRIB Analysis Group, University of Oxford
 # Modified for Debian by Michael Hanke <michael.hanke@gmail.com>
-# and Yaroslav Halchenko <debian@onerussian.com>
-
-function clean_out_fslpaths() {
-	echo "$1" | tr ":" "\n" | grep -v "/usr/\(lib\|share\)/fsl/" | tr -s "\n" ":" | sed 's/:$//'
-}
 
 # clean out previous fsl PATH components: DO NOT EDIT THE NEXT TWO LINES
-PATH=$( clean_out_fslpaths $PATH )
-LD_LIBRARY_PATH=$( clean_out_fslpaths $LD_LIBRARY_PATH )
+PATH=$( echo $PATH | tr ":" "\n" | grep  -v "/usr/lib/fsl/" | tr -s "\n" ":" | sed 's/:$//')
+LD_LIBRARY_PATH=$( echo $LD_LIBRARY_PATH | tr ":" "\n" | grep  -v "/usr/lib/fsl/" | tr -s "\n" ":" | sed 's/:$//')
 
 #### Set up standard FSL user environment variables ####
 
@@ -23,7 +18,7 @@ FSLDIR=/usr/share/fsl/5.0
 POSSUMDIR=$FSLDIR
 
 # add the fsl binary path to the search path
-PATH=/usr/lib/fsl/5.0:$PATH
+PATH=$PATH:/usr/lib/fsl/5.0
 
 # The following variable selects the default output image type
 # Legal values are:

@@ -1,3 +1,10 @@
+fsl (5.0.9-3) neurodebian; urgency=medium
+
+  * Move 'fslview' from a dependency into recommends. It can no longer be
+    built in Debian unstable.
+
+ -- Michael Hanke <mih@debian.org>  Fri, 27 May 2016 14:06:02 +0200
+
 fsl (5.0.9-2) neurodebian; urgency=medium
 
   * debian/fsl.sh - place FSL's bin path first (not the last) within adjusted
@@ -21,7 +28,7 @@ fsl (5.0.9-1) neurodebian; urgency=medium
     - and more
   * 'eddy' is no longer built as the sources aren't included in the upstream
     release anymore. A new 'fsl-5.0-eddy-nonfree' package is now recommened
-    tha provides 'eddy'.
+    that provides 'eddy'.
 
  -- Michael Hanke <mih@debian.org>  Fri, 09 Oct 2015 08:15:48 +0200
 
