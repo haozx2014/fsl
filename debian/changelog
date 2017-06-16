@@ -1,3 +1,9 @@
+fsl (5.0.9-4) neurodebian; urgency=medium
+
+  * debian/patches/up_in_compar to fix FTBFS of melodic on 17.04
+
+ -- Yaroslav Halchenko <debian@onerussian.com>  Thu, 15 Jun 2017 21:20:23 -0400
+
 fsl (5.0.9-3) neurodebian; urgency=medium
 
   * Move 'fslview' from a dependency into recommends. It can no longer be

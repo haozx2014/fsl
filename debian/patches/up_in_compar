@@ -1,0 +1,11 @@
+--- a/src/melodic/meldata.cc
++++ b/src/melodic/meldata.cc
+@@ -994,7 +994,7 @@ namespace Melodic{
+       Resels = 1.0;
+       
+       in.open(logger.appendDir("smoothest").c_str(), ios::in);
+-      if(in>0){
++      if(in){
+ 				for(int ctr=1; ctr<7; ctr++)
+ 					in >> str;
+ 				in.close();

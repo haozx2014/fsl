@@ -6,3 +6,4 @@ debian_sge
 debian_build_cfg
 up_longoptions=
 kfreebsd_compat
+up_in_compar
