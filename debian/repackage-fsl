@@ -1,0 +1,111 @@
+#!/bin/sh
+# Repackage FSL upstream sources. Removes unnecessary 3rd party software and
+# non-free binaries. Additionally FSL is split into 3 individual source
+# packages.
+# 1 GPL'ed: fslview (application) -- discontinued
+# 2 non-free: fsl (applications), fsldata (datasets, discarded)
+#
+# Usage:
+#   repackage-fsl <upstream version> <tarball>
+#
+
+set -e
+
+# make working directory
+CURDIR=$(pwd)
+WDIR=$(mktemp -d)
+ORIG_VERSION=$1
+ORIGSRC=$2
+
+if [ -z "$ORIG_VERSION" -o -z "$ORIGSRC" ]; then
+  echo "Call with: <upstream version> <src tarball>"
+  exit 1
+fi
+# put upstream source tarball into working dir
+ORIGSRC_PATH=$(readlink -f ${ORIGSRC})
+cd $WDIR
+ln -s $ORIGSRC_PATH
+
+# unpack the source tarball
+echo "Unpacking sources"
+if [ "${ORIGSRC##*.}" = "bz2" ]; then TARARG="j"
+elif [ "${ORIGSRC##*.}" = "gz" ]; then TARARG="z"
+elif [ "${ORIGSRC##*.}" = "tar" ]; then TARARG=""; fi
+tar xvf${TARARG} $ORIGSRC_PATH
+
+###############
+# repackaging #
+###############
+echo "Repackaging"
+
+# perform a make distclean in all relevant source dirs
+#echo "Run 'distclean'"
+#find fsl/src -maxdepth 1 -type d -print -exec bash -c 'export FSLCONFDIR=`pwd`/fsl/config && export FSLMACHTYPE=generic && cd {} &&  make distclean' \;
+#find fsl/extras/src -maxdepth 1 -type d -print -exec bash -c 'export FSLCONFDIR=`pwd`/fsl/config && export FSLMACHTYPE=generic && cd {} && make distclean' \;
+
+# build information for other operation systems are unecessary
+rm -rf fsl/config/*gcc*
+rm -rf fsl/config/*llvm*
+
+echo "Remove old dependency files"
+find fsl -name depend.mk -exec rm -f {} \;
+
+echo "Remove CVS stuff"
+find fsl -type d -name CVS -exec rm -rf {} \;
+
+echo "Remove backup files"
+find fsl -name '*~' -exec rm -rf {} \;
+find fsl -name '.DS_Store' -delete
+
+echo "Purge unnecessary source code of external software"
+parts="libiconv libgd libgdc libpng newmat newran zlib include irtk tcl tk libnlopt libsqlite libxml++2.34.0 libxml2-2.9.2"
+for p in $parts; do 
+	rm -rf fsl/extras/src/$p
+done
+rm -rf fsl/extras/include
+
+echo "Remove FSL parts that are available from other packages"
+parts="niftiio znzlib newmat giftiio"
+for p in $parts; do
+	rm -rf fsl/src/$p
+done
+
+echo "Remove FSLView sources"
+rm -rf fsl/src/fslview
+
+# remove all of the wiki (goes into data package)
+rm -r fsl/doc/wiki
+
+# Unecessarily many files have executable permissions.
+echo "Fix file permissions"
+find fsl -type f -regex '.*.\(ppm\|gif\|tcl\|xbm\|ico\|png\|css\|fig\|cc\|h\|cpp\|c\|html\|jpg\)$' -exec chmod -x {} \;
+
+# Only these file need to be executable.
+#chmod +x fsl/build
+#chmod +x fsl/extras/build
+#chmod +x fsl/config/common/buildproj
+#chmod +x fsl/src/siena/makedoc
+
+# remove data
+rm -r fsl/data
+
+echo "Append version to source directory names"
+mv fsl fsl-$ORIG_VERSION.orig
+
+
+echo "Compress repackaged tarballs"
+tar czf fsl_$ORIG_VERSION.orig.tar.gz fsl-$ORIG_VERSION.orig
+
+
+echo "Copy tarballs to final destination"
+mv fsl_$ORIG_VERSION.orig.tar.gz $CURDIR
+
+
+echo "Clean working directory"
+rm -rf $WDIR
+
+
+echo "Done"
+
+exit 0
+
